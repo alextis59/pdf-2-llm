@@ -19,6 +19,11 @@ test("RunLengthDecode decodes literal and repeat runs", () => {
   assert.equal(text(decode(encoded, "/RunLengthDecode")), "abczzz");
 });
 
+test("LZWDecode decodes literal and dictionary-reference codes", () => {
+  assert.equal(text(decode(packLzwCodes([256, 65, 66, 67, 257]), "/LZWDecode")), "ABC");
+  assert.equal(text(decode(packLzwCodes([256, 65, 66, 258, 260, 257]), "/LZWDecode")), "ABABABA");
+});
+
 test("FlateDecode decodes compressed bytes", () => {
   const encoded = deflateSync(Buffer.from("Flate text", "latin1"));
   assert.equal(text(decode(encoded, "/FlateDecode")), "Flate text");
@@ -54,7 +59,7 @@ test("corrupt filter chains report the failing stage", () => {
   );
 
   assert.throws(
-    () => decode("00>", "[/ASCIIHexDecode /LZWDecode /FlateDecode]"),
+    () => decode("00>", "[/ASCIIHexDecode /Crypt /FlateDecode]"),
     (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.filter_unsupported"
   );
 });
@@ -87,6 +92,16 @@ test("FlateDecode applies TIFF horizontal differencing predictor", () => {
     10, 20, 30, 13, 25, 37,
     4, 6, 8, 6, 9, 12
   ]);
+});
+
+test("LZWDecode applies TIFF horizontal differencing predictor", () => {
+  const encoded = packLzwCodes([256, 10, 20, 30, 3, 5, 7, 257]);
+  const dictionary = parsePdfValue(
+    "<< /Filter /LZWDecode /DecodeParms << /Predictor 2 /Columns 2 /Colors 3 /BitsPerComponent 8 >> >>"
+  ).value;
+  const decoded = decodeStreamBytes(encoded, dictionary).bytes;
+
+  assert.deepEqual([...decoded], [10, 20, 30, 13, 25, 37]);
 });
 
 test("raster image filters are metadata-only pass-through filters", () => {
@@ -133,8 +148,8 @@ test("decoder enforces limits and reports corrupt streams", () => {
   );
 
   assert.throws(
-    () => decode("not lzw", "/LZWDecode"),
-    (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.filter_unsupported"
+    () => decode(new Uint8Array([0]), "/LZWDecode"),
+    (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.lzw_eod_missing"
   );
 });
 
@@ -144,6 +159,7 @@ test("decoder enforces maxBytes across every supported filter path", () => {
     ["ASCIIHexDecode", () => decode("616263>", "/ASCIIHexDecode", { maxBytes: 2 })],
     ["ASCII85Decode", () => decode("z~>", "/ASCII85Decode", { maxBytes: 3 })],
     ["RunLengthDecode", () => decode(new Uint8Array([254, 97, 128]), "/RunLengthDecode", { maxBytes: 2 })],
+    ["LZWDecode", () => decode(packLzwCodes([256, 65, 66, 67, 257]), "/LZWDecode", { maxBytes: 2 })],
     [
       "Predictor",
       () =>
@@ -172,6 +188,24 @@ function decode(input, filter, options = {}) {
   const bytes = typeof input === "string" ? Buffer.from(input, "latin1") : input;
   const dictionary = parsePdfValue(`<< /Filter ${filter} >>`).value;
   return decodeStreamBytes(bytes, dictionary, options).bytes;
+}
+
+function packLzwCodes(codes, codeSize = 9) {
+  const bits = [];
+  for (const code of codes) {
+    for (let shift = codeSize - 1; shift >= 0; shift -= 1) {
+      bits.push((code >> shift) & 1);
+    }
+  }
+  while (bits.length % 8 !== 0) {
+    bits.push(0);
+  }
+
+  const bytes = new Uint8Array(bits.length / 8);
+  for (let index = 0; index < bits.length; index += 1) {
+    bytes[index >> 3] |= bits[index] << (7 - (index & 7));
+  }
+  return bytes;
 }
 
 function text(bytes) {

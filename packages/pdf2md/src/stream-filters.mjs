@@ -18,6 +18,8 @@ const filterAliases = new Map([
   ["ASCII85Decode", "ASCII85Decode"],
   ["RL", "RunLengthDecode"],
   ["RunLengthDecode", "RunLengthDecode"],
+  ["LZW", "LZWDecode"],
+  ["LZWDecode", "LZWDecode"],
   ["DCT", "DCTDecode"],
   ["DCTDecode", "DCTDecode"],
   ["JPX", "JPXDecode"],
@@ -87,6 +89,10 @@ function decodeOneFilter(bytes, filter, parms, maxBytes) {
 
   if (filter === "RunLengthDecode") {
     return decodeRunLength(bytes, maxBytes);
+  }
+
+  if (filter === "LZWDecode") {
+    return applyPredictor(decodeLzw(bytes, parms, maxBytes), parms, maxBytes);
   }
 
   throw new PdfStreamDecodeError(`Unsupported stream filter "${filter}".`, {
@@ -268,6 +274,102 @@ function decodeRunLength(bytes, maxBytes) {
   });
 }
 
+function decodeLzw(bytes, parms, maxBytes) {
+  const earlyChange = numberParm(parms, "EarlyChange", 1);
+  if (earlyChange !== 0 && earlyChange !== 1) {
+    throw new PdfStreamDecodeError(`Unsupported LZW EarlyChange value ${earlyChange}.`, {
+      code: "pdf.stream.lzw_early_change_unsupported"
+    });
+  }
+
+  let dictionary = createLzwDictionary();
+  let codeSize = 9;
+  let nextCode = 258;
+  let previous = null;
+  let sawEod = false;
+  const output = [];
+  const reader = {
+    bitOffset: 0
+  };
+
+  while (true) {
+    const code = readLzwCode(bytes, reader, codeSize);
+    if (code === null) {
+      break;
+    }
+
+    if (code === 256) {
+      dictionary = createLzwDictionary();
+      codeSize = 9;
+      nextCode = 258;
+      previous = null;
+      continue;
+    }
+
+    if (code === 257) {
+      sawEod = true;
+      break;
+    }
+
+    let entry = dictionary[code] ?? null;
+    if (!entry && previous && code === nextCode) {
+      entry = concatLzwEntry(previous, previous[0]);
+    }
+    if (!entry) {
+      throw new PdfStreamDecodeError("LZWDecode referenced an invalid code.", {
+        code: "pdf.stream.lzw_code_invalid"
+      });
+    }
+
+    appendOutputBytes(output, entry, maxBytes, "LZWDecode");
+    if (previous && nextCode <= 4095) {
+      dictionary[nextCode] = concatLzwEntry(previous, entry[0]);
+      nextCode += 1;
+      if (codeSize < 12 && nextCode + earlyChange >= 1 << codeSize) {
+        codeSize += 1;
+      }
+    }
+    previous = entry;
+  }
+
+  if (!sawEod) {
+    throw new PdfStreamDecodeError("LZWDecode missing EOD marker.", {
+      code: "pdf.stream.lzw_eod_missing"
+    });
+  }
+  return new Uint8Array(output);
+}
+
+function createLzwDictionary() {
+  const dictionary = Array(258).fill(null);
+  for (let value = 0; value < 256; value += 1) {
+    dictionary[value] = new Uint8Array([value]);
+  }
+  return dictionary;
+}
+
+function concatLzwEntry(prefix, byte) {
+  const entry = new Uint8Array(prefix.length + 1);
+  entry.set(prefix);
+  entry[prefix.length] = byte;
+  return entry;
+}
+
+function readLzwCode(bytes, reader, codeSize) {
+  if (reader.bitOffset + codeSize > bytes.byteLength * 8) {
+    return null;
+  }
+
+  let code = 0;
+  for (let index = 0; index < codeSize; index += 1) {
+    const byte = bytes[reader.bitOffset >> 3];
+    const bit = (byte >> (7 - (reader.bitOffset & 7))) & 1;
+    code = (code << 1) | bit;
+    reader.bitOffset += 1;
+  }
+  return code;
+}
+
 function applyPredictor(bytes, parms, maxBytes) {
   const predictor = numberParm(parms, "Predictor", 1);
   if (predictor === 1) {
@@ -404,7 +506,9 @@ function enforceMaxBytes(bytes, maxBytes, filter) {
 
 function appendOutputBytes(output, bytes, maxBytes, filter) {
   enforceOutputLength(output.length + bytes.length, maxBytes, filter);
-  output.push(...bytes);
+  for (const byte of bytes) {
+    output.push(byte);
+  }
 }
 
 function enforceOutputLength(length, maxBytes, filter) {

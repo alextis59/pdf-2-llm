@@ -7,7 +7,14 @@ import { createRng, randomBytes, randomInt } from "../utils.mjs";
 
 export function runStreamFiltersFuzz({ iterations = 200, seed = 0x51 } = {}) {
   const rng = createRng(seed);
-  const filters = ["FlateDecode", "ASCIIHexDecode", "ASCII85Decode", "RunLengthDecode", "UnknownFilter"];
+  const filters = [
+    "FlateDecode",
+    "ASCIIHexDecode",
+    "ASCII85Decode",
+    "RunLengthDecode",
+    "LZWDecode",
+    "UnknownFilter"
+  ];
   let decoded = 0;
   let rejected = 0;
 
