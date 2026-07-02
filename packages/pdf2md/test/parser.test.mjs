@@ -126,6 +126,19 @@ test("parsePdfDocument resolves compressed object streams", async () => {
   assert.equal(result.diagnostics.extraction.parser.objects, 7);
 });
 
+test("parsePdfDocument resolves incremental xref Prev chains with newest objects", async () => {
+  const bytes = createIncrementalUpdateTestPdf();
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.xrefMode, "classic-xref+prev");
+  assert.equal(document.xrefSections.length, 2);
+  assert.equal(document.getObject(1).offset, document.xrefEntries.find((entry) => entry.objectNumber === 1).offset);
+  assert.equal(document.pages.length, 1);
+  assert.equal(document.pages[0].objectNumber, 7);
+  assert.equal(result.markdown, "# Updated Incremental Fixture\n");
+});
+
 test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {
   const toUnicode = [
     "/CIDInit /ProcSet findresource begin",
@@ -332,6 +345,61 @@ function createObjectStreamTestPdf() {
   body += `stream\n${xrefStream.toString("binary")}endstream\nendobj\n`;
   body += `startxref\n${offsets[xrefObjectId]}\n%%EOF\n`;
   return Buffer.from(body, "binary");
+}
+
+function createIncrementalUpdateTestPdf() {
+  const initialObjects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 /Resources << /Font << /F1 4 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject("BT /F1 22 Tf 20 200 Td (Original Incremental Fixture) Tj ET\n")
+  ];
+  let body = "%PDF-1.4\n";
+  const initialOffsets = [0];
+  initialObjects.forEach((object, index) => {
+    const objectId = index + 1;
+    initialOffsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${object}\nendobj\n`;
+  });
+  const previousXref = Buffer.byteLength(body, "binary");
+  body += classicXrefSection(initialOffsets, 6, 1);
+
+  const updatedObjects = new Map([
+    [1, "<< /Type /Catalog /Pages 6 0 R >>"],
+    [
+      6,
+      "<< /Type /Pages /Kids [7 0 R] /Count 1 /Resources << /Font << /F1 4 0 R >> >> /MediaBox [0 0 300 400] >>"
+    ],
+    [7, "<< /Type /Page /Parent 6 0 R /Contents 8 0 R >>"],
+    [8, streamObject("BT /F1 22 Tf 20 200 Td (Updated Incremental Fixture) Tj ET\n")]
+  ]);
+  const updatedOffsets = new Map();
+  for (const [objectId, object] of updatedObjects) {
+    updatedOffsets.set(objectId, Buffer.byteLength(body, "binary"));
+    body += `${objectId} 0 obj\n${object}\nendobj\n`;
+  }
+  const latestXref = Buffer.byteLength(body, "binary");
+  body += "xref\n";
+  body += `1 1\n${xrefLine(updatedOffsets.get(1), 0, true)}\n`;
+  body += `6 3\n${xrefLine(updatedOffsets.get(6), 0, true)}\n${xrefLine(updatedOffsets.get(7), 0, true)}\n${xrefLine(updatedOffsets.get(8), 0, true)}\n`;
+  body += `trailer\n<< /Size 9 /Root 1 0 R /Prev ${previousXref} >>\n`;
+  body += `startxref\n${latestXref}\n%%EOF\n`;
+  return Buffer.from(body, "binary");
+}
+
+function classicXrefSection(offsets, size, rootObjectNumber) {
+  let body = `xref\n0 ${size}\n`;
+  body += "0000000000 65535 f\n";
+  for (let objectId = 1; objectId < size; objectId += 1) {
+    body += `${xrefLine(offsets[objectId], 0, true)}\n`;
+  }
+  body += `trailer\n<< /Size ${size} /Root ${rootObjectNumber} 0 R >>\n`;
+  return body;
+}
+
+function xrefLine(offset, generationNumber, inUse) {
+  return `${String(offset).padStart(10, "0")} ${String(generationNumber).padStart(5, "0")} ${inUse ? "n" : "f"}`;
 }
 
 function createXrefStreamBytes(offsets) {

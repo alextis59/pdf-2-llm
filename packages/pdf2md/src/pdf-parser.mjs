@@ -51,7 +51,7 @@ export function parsePdfDocument(bytes, options = {}) {
   const source = Buffer.from(reader.bytes).toString("latin1");
   const version = readPdfVersion(source);
   const startXref = readStartXref(source);
-  const { entries, trailer, xrefMode } = parseXref(source, reader.bytes, startXref, {
+  const { entries, trailer, xrefMode, sections } = parseXrefChain(source, reader.bytes, startXref, {
     maxDecodedStreamBytes,
     mode
   });
@@ -87,6 +87,7 @@ export function parsePdfDocument(bytes, options = {}) {
     version,
     startXref,
     xrefMode,
+    xrefSections: sections,
     trailer,
     xrefEntries: entries,
     objects,
@@ -127,6 +128,69 @@ function loadCompressedObjectStreams(objects, entries) {
 export function parsePdfValue(input, offset = 0) {
   const source = typeof input === "string" ? input : Buffer.from(input).toString("latin1");
   return new ObjectParser(source, offset).parseValue();
+}
+
+function parseXrefChain(source, bytes, startOffset, options = {}) {
+  const parsedSections = [];
+  const sectionSummaries = [];
+  const seenOffsets = new Set();
+  let offset = startOffset;
+
+  while (Number.isInteger(offset) && offset >= 0) {
+    if (seenOffsets.has(offset)) {
+      throw new PdfSyntaxError("XRef Prev chain contains a cycle.", {
+        offset,
+        code: "pdf.xref.prev_cycle"
+      });
+    }
+    seenOffsets.add(offset);
+
+    const section = parseXref(source, bytes, offset, options);
+    parsedSections.push(section);
+    sectionSummaries.push({
+      offset,
+      mode: section.xrefMode,
+      entries: section.entries.length
+    });
+
+    const previousOffset = section.trailer?.entries?.Prev;
+    if (!Number.isInteger(previousOffset)) {
+      return {
+        entries: mergeXrefEntries(parsedSections),
+        trailer: parsedSections[0].trailer,
+        xrefMode: formatXrefMode(sectionSummaries),
+        sections: sectionSummaries
+      };
+    }
+    offset = previousOffset;
+  }
+
+  throw new PdfSyntaxError("XRef Prev offset is malformed.", {
+    offset: startOffset,
+    code: "pdf.xref.prev_malformed"
+  });
+}
+
+function mergeXrefEntries(sections) {
+  const entries = [];
+  const seen = new Set();
+  for (const section of sections) {
+    for (const entry of section.entries) {
+      const key = objectKey(entry.objectNumber, entry.generationNumber);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      entries.push(entry);
+    }
+  }
+  return entries;
+}
+
+function formatXrefMode(sections) {
+  const modes = [...new Set(sections.map((section) => section.mode))];
+  const mode = modes.length === 1 ? modes[0] : modes.join("+");
+  return sections.length > 1 ? `${mode}+prev` : mode;
 }
 
 function readPdfVersion(source) {
