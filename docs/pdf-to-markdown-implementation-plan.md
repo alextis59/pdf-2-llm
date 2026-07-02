@@ -414,7 +414,7 @@ assets.
 - [ ] Remove obvious page numbers only when confidence is high.
 - [x] Serialize CommonMark paragraphs, headings, and lists.
 - [x] Escape Markdown metacharacters.
-- [ ] Add page anchors.
+- [x] Add page anchors.
 - [ ] Preserve uncertain ordering with warnings.
 
 Gate 1 acceptance:

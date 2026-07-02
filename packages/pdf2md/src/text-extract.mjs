@@ -38,15 +38,17 @@ function documentTextLines(document) {
   );
 }
 
-export function linesToMarkdown(lines) {
+export function linesToMarkdown(lines, options = {}) {
   lines = removeRepeatedRunningContent(lines);
   const blocks = [];
   let previousWasList = false;
+  const anchoredPages = new Set();
 
   for (let index = 0; index < lines.length; index += 1) {
     const table = readTableAt(lines, index);
     if (table) {
       previousWasList = false;
+      appendPageAnchor(blocks, table.rows[0][0]?.pageIndex, options, anchoredPages);
       blocks.push(formatTable(table.rows));
       index = table.endIndex - 1;
       continue;
@@ -57,6 +59,8 @@ export function linesToMarkdown(lines) {
     if (text.length === 0) {
       continue;
     }
+
+    appendPageAnchor(blocks, line.pageIndex, options, anchoredPages);
 
     if (line.fontSize >= 20) {
       previousWasList = false;
@@ -90,6 +94,14 @@ export function linesToMarkdown(lines) {
   }
 
   return blocks.length > 0 ? `${blocks.join("\n\n")}\n` : "";
+}
+
+function appendPageAnchor(blocks, pageIndex, options, anchoredPages) {
+  if (!options.pageAnchors || !Number.isInteger(pageIndex) || anchoredPages.has(pageIndex)) {
+    return;
+  }
+  anchoredPages.add(pageIndex);
+  blocks.push(`<a id="page-${pageIndex + 1}"></a>`);
 }
 
 function parseListItem(text) {

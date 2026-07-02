@@ -84,7 +84,9 @@ export async function convertPdfToMarkdown(input, options = {}) {
   }
 
   const textLines = pdfVersion ? extractTextLines(normalized.bytes, { document: pdfDocument }) : [];
-  const markdown = linesToMarkdown(textLines);
+  const markdown = linesToMarkdown(textLines, {
+    pageAnchors: options.markdown?.pageAnchors === true
+  });
   warnings.push(...unicodeMappingWarnings(textLines));
 
   if (textLines.length > 0) {
@@ -274,6 +276,7 @@ function summarizeOptions(options) {
   return {
     pageRange: options.pageRange ?? null,
     output: options.output ?? "markdown",
+    pageAnchors: options.markdown?.pageAnchors === true,
     ocrEnabled: options.ocr?.enabled ?? null,
     webgpuRequired: options.webgpu?.required ?? false,
     tablesEnabled: options.tables?.enabled ?? null,

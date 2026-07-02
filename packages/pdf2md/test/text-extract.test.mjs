@@ -47,3 +47,18 @@ test("linesToMarkdown escapes Markdown metacharacters in text and tables", () =>
     "literal \\*star\\* and \\[label\\] uses \\\\ slash\n\n\\# not heading\n\n| A\\|B | Value |\n| --- | ---: |\n| x\\*y | 3 |\n"
   );
 });
+
+test("linesToMarkdown can add page anchors", () => {
+  const markdown = linesToMarkdown(
+    [
+      { text: "Page One", fontSize: 22, x: 10, y: 40, pageIndex: 0 },
+      { text: "Page Two", fontSize: 22, x: 10, y: 40, pageIndex: 1 }
+    ],
+    { pageAnchors: true }
+  );
+
+  assert.equal(
+    markdown,
+    '<a id="page-1"></a>\n\n# Page One\n\n<a id="page-2"></a>\n\n# Page Two\n'
+  );
+});

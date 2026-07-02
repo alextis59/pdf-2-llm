@@ -15,6 +15,9 @@ export type ConvertOptions = {
     end?: number;
   };
   output?: "markdown" | "json";
+  markdown?: {
+    pageAnchors?: boolean;
+  };
   password?: string | (() => string | Promise<string>);
   security?: {
     maxBytes?: number;

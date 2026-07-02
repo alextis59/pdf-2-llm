@@ -37,6 +37,15 @@ test("convertPdfToMarkdown supports path input", async () => {
   assert.equal(result.diagnostics.input.pdfVersion, "1.4");
 });
 
+test("convertPdfToMarkdown can emit Markdown page anchors", async () => {
+  const result = await convertPdfToMarkdown(fixturePath.pathname, {
+    markdown: { pageAnchors: true }
+  });
+
+  assert.match(result.markdown, /^<a id="page-1"><\/a>\n\n# Synthetic Simple Text/);
+  assert.equal(result.diagnostics.options.pageAnchors, true);
+});
+
 test("CLI emits JSON scaffold output", () => {
   const cliPath = new URL("../src/cli.mjs", import.meta.url);
   const run = spawnSync(process.execPath, [cliPath.pathname, fixturePath.pathname, "--json"], {
