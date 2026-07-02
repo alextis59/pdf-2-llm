@@ -1,0 +1,48 @@
+import { readFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import assert from "node:assert/strict";
+import test from "node:test";
+import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
+
+const fixturePath = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
+
+test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", async () => {
+  const bytes = await readFile(fixturePath);
+  const progress = [];
+  const result = await convertPdfToMarkdown(bytes, {
+    ocr: { enabled: false },
+    onProgress(event) {
+      progress.push(event.stage);
+    }
+  });
+
+  assert.equal(result.markdown, "");
+  assert.equal(result.ir.schemaVersion, "0.1.0");
+  assert.equal(result.ir.sourceType, "digital");
+  assert.equal(result.diagnostics.input.bytes, bytes.byteLength);
+  assert.equal(result.diagnostics.input.pdfVersion, "1.4");
+  assert.equal(result.diagnostics.input.sha256, createHash("sha256").update(bytes).digest("hex"));
+  assert.deepEqual(progress, ["start", "complete"]);
+  assert.ok(result.warnings.some((warning) => warning.code === warningCodes.ConversionNotImplemented));
+  assert.ok(result.warnings.some((warning) => warning.code === warningCodes.OcrDisabled));
+});
+
+test("convertPdfToMarkdown supports path input", async () => {
+  const result = await convertPdfToMarkdown(fixturePath.pathname);
+  assert.equal(result.diagnostics.input.source.type, "path");
+  assert.equal(result.diagnostics.input.pdfVersion, "1.4");
+});
+
+test("CLI emits JSON scaffold output", () => {
+  const cliPath = new URL("../src/cli.mjs", import.meta.url);
+  const run = spawnSync(process.execPath, [cliPath.pathname, fixturePath.pathname, "--json"], {
+    encoding: "utf8"
+  });
+  assert.equal(run.status, 0, run.stderr);
+  const result = JSON.parse(run.stdout);
+  assert.equal(result.diagnostics.input.pdfVersion, "1.4");
+  assert.ok(
+    result.warnings.some((warning) => warning.code === warningCodes.ConversionNotImplemented)
+  );
+});

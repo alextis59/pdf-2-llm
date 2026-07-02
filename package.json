@@ -3,13 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "check": "npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze && npm run corpus:oracles && npm run corpus:acceptance",
+    "build": "npm run build --workspace @pdf-2-llm/pdf2md",
+    "check": "npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze && npm run corpus:oracles && npm run corpus:acceptance && npm run build && npm run test:api",
     "corpus:acceptance": "node scripts/corpus/validate-acceptance.mjs --all --allow-empty",
     "corpus:analyze": "node scripts/corpus/analyze.mjs --all --dry-run",
     "corpus:candidates": "node scripts/corpus/retrieve.mjs --all --dry-run",
     "corpus:generate": "node scripts/corpus/generate-fixtures.mjs",
     "corpus:oracles": "node scripts/corpus/extract-oracles.mjs --all --dry-run",
-    "corpus:validate": "node scripts/corpus/validate-manifest.mjs"
+    "corpus:validate": "node scripts/corpus/validate-manifest.mjs",
+    "test:api": "npm run test --workspace @pdf-2-llm/pdf2md"
   }
 }

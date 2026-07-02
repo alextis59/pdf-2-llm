@@ -290,49 +290,49 @@ Goal: create stable contracts so agents can implement modules independently.
 
 ### 1.1 Public API
 
-- [ ] Define `convertPdfToMarkdown(input, options)` TypeScript API.
-- [ ] Define browser, Node, worker, and CLI entrypoints.
-- [ ] Define `ConvertResult` with Markdown, assets, JSON IR, warnings,
+- [x] Define `convertPdfToMarkdown(input, options)` TypeScript API.
+- [x] Define browser, Node, worker, and CLI entrypoints.
+- [x] Define `ConvertResult` with Markdown, assets, JSON IR, warnings,
   diagnostics, timing, and confidence.
-- [ ] Define option groups for OCR, WebGPU, assets, tables, security limits,
+- [x] Define option groups for OCR, WebGPU, assets, tables, security limits,
   page ranges, and output format.
-- [ ] Define streaming/progress callbacks for large PDFs.
-- [ ] Define cancellation with `AbortSignal`.
-- [ ] Define password callback behavior for encrypted PDFs.
-- [ ] Define deterministic output requirements for tests.
+- [x] Define streaming/progress callbacks for large PDFs.
+- [x] Define cancellation with `AbortSignal`.
+- [x] Define password callback behavior for encrypted PDFs.
+- [x] Define deterministic output requirements for tests.
 
 ### 1.2 Internal IR Schemas
 
-- [ ] Define `DocumentIr`.
-- [ ] Define `PageIr`.
-- [ ] Define `PageElement` variants for text, table, figure, equation, form
+- [x] Define `DocumentIr`.
+- [x] Define `PageIr`.
+- [x] Define `PageElement` variants for text, table, figure, equation, form
   field, annotation, and asset reference.
-- [ ] Define `TextSpan` with Unicode text, glyph ids, font metadata, geometry,
+- [x] Define `TextSpan` with Unicode text, glyph ids, font metadata, geometry,
   direction, confidence, and source.
-- [ ] Define table cell, row, column, span, and sidecar models.
-- [ ] Define warnings and diagnostics taxonomy.
+- [x] Define table cell, row, column, span, and sidecar models.
+- [x] Define warnings and diagnostics taxonomy.
 - [ ] Define source maps from Markdown back to page regions.
-- [ ] Add schema versioning.
+- [x] Add schema versioning.
 - [ ] Add JSON schema tests for serialized IR.
 
 ### 1.3 Build System
 
 - [ ] Create Rust workspace.
-- [ ] Create TypeScript package workspace.
+- [x] Create TypeScript package workspace.
 - [ ] Add `wasm-bindgen` or equivalent WASM bridge.
-- [ ] Add Node build target.
-- [ ] Add browser build target.
-- [ ] Add worker bundle target.
+- [x] Add Node build target.
+- [x] Add browser build target.
+- [x] Add worker bundle target.
 - [ ] Add single-threaded WASM build.
 - [ ] Add threaded WASM build behind feature detection.
-- [ ] Add local examples for Node and browser.
+- [x] Add local examples for Node and browser.
 - [ ] Add CI commands for Rust tests, TypeScript tests, lint, build, and corpus
   smoke tests.
 
 ### 1.4 Quality Gates
 
 - [ ] Add unit test framework for Rust.
-- [ ] Add unit/integration test framework for TypeScript.
+- [x] Add unit/integration test framework for TypeScript.
 - [ ] Add snapshot testing for Markdown and IR.
 - [ ] Add rendered HTML diff helper.
 - [ ] Add oracle comparison helper.
@@ -345,7 +345,7 @@ Definition of done:
 
 - [ ] `npm run build` succeeds.
 - [ ] `cargo test --workspace` succeeds.
-- [ ] A synthetic single-page PDF can pass through a stub pipeline and return
+- [x] A synthetic single-page PDF can pass through a stub pipeline and return
   structured diagnostics.
 - [ ] The corpus runner can list accepted PDFs and skip future gates.
 

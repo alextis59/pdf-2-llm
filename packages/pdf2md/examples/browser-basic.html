@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>pdf2md browser scaffold</title>
+  </head>
+  <body>
+    <input id="file" type="file" accept="application/pdf">
+    <pre id="output"></pre>
+    <script type="module">
+      import { convertPdfToMarkdown } from "../src/browser.mjs";
+
+      const input = document.querySelector("#file");
+      const output = document.querySelector("#output");
+
+      input.addEventListener("change", async () => {
+        const file = input.files[0];
+        if (!file) {
+          return;
+        }
+        const result = await convertPdfToMarkdown(await file.arrayBuffer());
+        output.textContent = JSON.stringify(result.diagnostics, null, 2);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "name": "@pdf-2-llm/pdf2md",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/node.mjs",
+  "types": "./src/index.d.ts",
+  "bin": {
+    "pdf2md": "./src/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "node": "./src/node.mjs",
+      "browser": "./src/browser.mjs",
+      "default": "./src/index.mjs"
+    },
+    "./node": {
+      "types": "./src/index.d.ts",
+      "default": "./src/node.mjs"
+    },
+    "./browser": {
+      "types": "./src/index.d.ts",
+      "default": "./src/browser.mjs"
+    },
+    "./worker": {
+      "types": "./src/index.d.ts",
+      "default": "./src/worker.mjs"
+    },
+    "./schema": {
+      "default": "./src/schema.mjs"
+    }
+  },
+  "scripts": {
+    "build": "node --check src/index.mjs && node --check src/node.mjs && node --check src/browser.mjs && node --check src/worker.mjs && node --check src/cli.mjs && node --check src/schema.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}

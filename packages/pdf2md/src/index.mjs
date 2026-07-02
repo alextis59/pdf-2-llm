@@ -1,0 +1,178 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { performance } from "node:perf_hooks";
+import {
+  createDocumentIr,
+  createWarning,
+  schemaVersion,
+  warningCodes
+} from "./schema.mjs";
+
+const defaultSecurityLimits = Object.freeze({
+  maxBytes: 100 * 1024 * 1024,
+  maxPages: 5000,
+  timeoutMs: 120000
+});
+
+export { schemaVersion, warningCodes };
+
+export async function convertPdfToMarkdown(input, options = {}) {
+  const startedAt = performance.now();
+  throwIfAborted(options.signal);
+  emitProgress(options, "start", 0);
+
+  const normalized = await normalizeInput(input);
+  throwIfAborted(options.signal);
+
+  const security = {
+    ...defaultSecurityLimits,
+    ...(options.security ?? {})
+  };
+
+  const warnings = [];
+  if (normalized.bytes.byteLength > security.maxBytes) {
+    warnings.push(
+      createWarning(warningCodes.InputTooLarge, "Input exceeds configured maxBytes.", {
+        maxBytes: security.maxBytes,
+        bytes: normalized.bytes.byteLength
+      })
+    );
+  }
+
+  const pdfVersion = readPdfVersion(normalized.bytes);
+  if (!pdfVersion) {
+    warnings.push(
+      createWarning(warningCodes.InvalidPdfHeader, "Input does not start with a PDF header.")
+    );
+  }
+
+  if (options.ocr?.enabled === false) {
+    warnings.push(createWarning(warningCodes.OcrDisabled, "OCR is disabled by options."));
+  }
+
+  if (options.webgpu?.required === true) {
+    warnings.push(
+      createWarning(
+        warningCodes.WebGpuUnavailable,
+        "WebGPU execution is not available in the scaffold implementation."
+      )
+    );
+  }
+
+  warnings.push(
+    createWarning(
+      warningCodes.ConversionNotImplemented,
+      "The scaffold validates input and returns contracts, but PDF conversion is not implemented yet."
+    )
+  );
+
+  const ir = createDocumentIr({ sourceType: pdfVersion ? "digital" : "unknown" });
+  ir.warnings = warnings;
+
+  const elapsedMs = performance.now() - startedAt;
+  const result = {
+    markdown: "",
+    assets: [],
+    ir,
+    warnings,
+    diagnostics: {
+      schemaVersion,
+      input: {
+        bytes: normalized.bytes.byteLength,
+        sha256: sha256(normalized.bytes),
+        source: normalized.source,
+        pdfVersion
+      },
+      options: summarizeOptions(options),
+      timing: {
+        elapsedMs
+      }
+    },
+    confidence: {
+      overall: 0,
+      text: 0,
+      layout: 0,
+      tables: 0
+    }
+  };
+
+  emitProgress(options, "complete", 1);
+  return result;
+}
+
+async function normalizeInput(input) {
+  if (typeof input === "string") {
+    return {
+      bytes: new Uint8Array(await readFile(input)),
+      source: {
+        type: "path",
+        value: input
+      }
+    };
+  }
+
+  if (input instanceof ArrayBuffer) {
+    return {
+      bytes: new Uint8Array(input),
+      source: {
+        type: "array-buffer"
+      }
+    };
+  }
+
+  if (ArrayBuffer.isView(input)) {
+    return {
+      bytes: new Uint8Array(input.buffer, input.byteOffset, input.byteLength),
+      source: {
+        type: "uint8-array"
+      }
+    };
+  }
+
+  if (input && ArrayBuffer.isView(input.bytes)) {
+    return {
+      bytes: new Uint8Array(input.bytes.buffer, input.bytes.byteOffset, input.bytes.byteLength),
+      source: {
+        type: input.sourceType ?? "object"
+      }
+    };
+  }
+
+  throw new TypeError("input must be a path, ArrayBuffer, Uint8Array, or object with bytes");
+}
+
+function readPdfVersion(bytes) {
+  if (bytes.byteLength < 8) {
+    return null;
+  }
+  const header = Buffer.from(bytes.subarray(0, Math.min(bytes.byteLength, 32))).toString("ascii");
+  const match = header.match(/^%PDF-(\d\.\d)/);
+  return match ? match[1] : null;
+}
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function summarizeOptions(options) {
+  return {
+    pageRange: options.pageRange ?? null,
+    output: options.output ?? "markdown",
+    ocrEnabled: options.ocr?.enabled ?? null,
+    webgpuRequired: options.webgpu?.required ?? false,
+    tablesEnabled: options.tables?.enabled ?? null,
+    assetsEnabled: options.assets?.enabled ?? null
+  };
+}
+
+function emitProgress(options, stage, progress) {
+  if (typeof options.onProgress === "function") {
+    options.onProgress({ stage, progress });
+  }
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) {
+    throw new DOMException("Operation aborted", "AbortError");
+  }
+}
