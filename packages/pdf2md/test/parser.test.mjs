@@ -89,6 +89,43 @@ test("parsePdfDocument decodes Flate content streams for text extraction", async
   assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
 });
 
+test("parsePdfDocument records metadata for raster image XObject filters", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> /XObject << /ImJpeg 6 0 R /ImJpx 7 0 R /ImFax 8 0 R /ImJbig 9 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject("BT /F1 22 Tf 20 200 Td (Image Metadata Fixture) Tj ET\n"),
+    imageStreamObject("/DCTDecode", "/DeviceRGB"),
+    imageStreamObject("/JPXDecode", "/DeviceRGB"),
+    imageStreamObject("/CCITTFaxDecode", "/DeviceGray"),
+    imageStreamObject("/JBIG2Decode", "/DeviceGray")
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+  const images = document.pages[0].resources.xobjects;
+
+  assert.equal(document.streams.length, 5);
+  assert.equal(images.ImJpeg.mediaType, "image/jpeg");
+  assert.equal(images.ImJpeg.width, 8);
+  assert.equal(images.ImJpeg.height, 4);
+  assert.equal(images.ImJpeg.colorSpace, "DeviceRGB");
+  assert.deepEqual(images.ImJpeg.filters, ["DCTDecode"]);
+  assert.deepEqual(images.ImJpx.filters, ["JPXDecode"]);
+  assert.deepEqual(images.ImFax.filters, ["CCITTFaxDecode"]);
+  assert.deepEqual(images.ImJbig.filters, ["JBIG2Decode"]);
+  assert.deepEqual(
+    Object.values(images).map((image) => image.skippedFilters[0].reason),
+    ["metadata-only", "metadata-only", "metadata-only", "metadata-only"]
+  );
+  assert.equal(result.markdown, "# Image Metadata Fixture\n");
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
+  assert.deepEqual(
+    result.diagnostics.pages[0].images.map((image) => image.mediaType),
+    ["image/jpeg", "image/jp2", "image/g3fax", "image/jbig2"]
+  );
+});
+
 test("parsePdfDocument resolves xref stream entries", async () => {
   const bytes = createXrefStreamTestPdf([
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -509,6 +546,13 @@ function objectStreamObject(objects) {
   const objectStream = `${header} ${values}`;
   const first = Buffer.byteLength(`${header} `, "binary");
   return streamObject(deflateSync(Buffer.from(objectStream, "binary")), `/Type /ObjStm /N ${objects.length} /First ${first} /Filter /FlateDecode`);
+}
+
+function imageStreamObject(filter, colorSpace) {
+  return streamObject(
+    Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
+    `/Type /XObject /Subtype /Image /Width 8 /Height 4 /BitsPerComponent 8 /ColorSpace ${colorSpace} /Filter ${filter}`
+  );
 }
 
 function streamObject(contents, extraDictionary = "") {

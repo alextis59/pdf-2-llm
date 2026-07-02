@@ -476,6 +476,7 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
       decodedLength: decoded.bytes.byteLength,
       filters: decoded.filters,
       decodeParms: decoded.decodeParms,
+      skippedFilters: decoded.skippedFilters,
       text: Buffer.from(decoded.bytes).toString("latin1")
     };
 
@@ -757,10 +758,12 @@ function resolveContentStreams(contents, getObject) {
 function resolveResources(resourcesValue, getObject) {
   const resources = resolveValue(resourcesValue, getObject);
   const fonts = {};
+  const xobjects = {};
 
   if (!isDict(resources)) {
     return {
-      fonts
+      fonts,
+      xobjects
     };
   }
 
@@ -786,9 +789,80 @@ function resolveResources(resourcesValue, getObject) {
     }
   }
 
+  const xObjectDictionary = resolveValue(resources.entries.XObject, getObject);
+  if (isDict(xObjectDictionary)) {
+    for (const [name, xObjectValue] of Object.entries(xObjectDictionary.entries)) {
+      const xObject = getObject(xObjectValue);
+      const xObjectDict = resolveValue(xObjectValue, getObject);
+      if (!isDict(xObjectDict)) {
+        continue;
+      }
+
+      const filters = xObject?.stream?.filters ?? filterNames(xObjectDict);
+      xobjects[name] = {
+        objectNumber: xObject?.objectNumber ?? null,
+        generationNumber: xObject?.generationNumber ?? null,
+        subtype: nameValue(xObjectDict.entries.Subtype),
+        width: numberValue(xObjectDict.entries.Width),
+        height: numberValue(xObjectDict.entries.Height),
+        bitsPerComponent: numberValue(xObjectDict.entries.BitsPerComponent),
+        colorSpace: summarizeColorSpace(xObjectDict.entries.ColorSpace),
+        filters,
+        skippedFilters: xObject?.stream?.skippedFilters ?? [],
+        mediaType: imageMediaType(filters),
+        rawLength: xObject?.stream?.rawLength ?? null,
+        decodedLength: xObject?.stream?.decodedLength ?? null
+      };
+    }
+  }
+
   return {
-    fonts
+    fonts,
+    xobjects
   };
+}
+
+function filterNames(dictionary) {
+  const filterValue = dictionary?.entries?.Filter;
+  if (!filterValue) {
+    return [];
+  }
+  const values = filterValue.type === "array" ? filterValue.items : [filterValue];
+  return values.map((value) => nameValue(value)).filter(Boolean);
+}
+
+function imageMediaType(filters) {
+  if (filters.includes("DCTDecode")) {
+    return "image/jpeg";
+  }
+  if (filters.includes("JPXDecode")) {
+    return "image/jp2";
+  }
+  if (filters.includes("JBIG2Decode")) {
+    return "image/jbig2";
+  }
+  if (filters.includes("CCITTFaxDecode")) {
+    return "image/g3fax";
+  }
+  return null;
+}
+
+function numberValue(value) {
+  return typeof value === "number" ? value : null;
+}
+
+function summarizeColorSpace(value) {
+  if (value?.type === "name") {
+    return value.value;
+  }
+  if (value?.type === "array") {
+    const first = value.items[0];
+    return first?.type === "name" ? first.value : "array";
+  }
+  if (value?.type === "ref") {
+    return "indirect";
+  }
+  return null;
 }
 
 function resolveValue(value, getObject) {

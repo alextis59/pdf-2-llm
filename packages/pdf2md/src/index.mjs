@@ -190,7 +190,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
             mediaBox: page.mediaBox,
             cropBox: page.cropBox,
             contentStreams: page.contentStreams.length,
-            fonts: Object.keys(page.resources.fonts)
+            fonts: Object.keys(page.resources.fonts),
+            images: summarizePageImages(page)
           }))
         : []
     },
@@ -204,6 +205,24 @@ export async function convertPdfToMarkdown(input, options = {}) {
 
   emitProgress(options, "complete", 1);
   return result;
+}
+
+function summarizePageImages(page) {
+  return Object.entries(page.resources.xobjects ?? {})
+    .filter(([, xobject]) => xobject.subtype === "Image")
+    .map(([name, image]) => ({
+      name,
+      objectNumber: image.objectNumber,
+      width: image.width,
+      height: image.height,
+      bitsPerComponent: image.bitsPerComponent,
+      colorSpace: image.colorSpace,
+      filters: image.filters,
+      skippedFilters: image.skippedFilters.map((item) => item.filter),
+      mediaType: image.mediaType,
+      rawLength: image.rawLength,
+      decodedLength: image.decodedLength
+    }));
 }
 
 function unicodeMappingWarnings(textLines) {

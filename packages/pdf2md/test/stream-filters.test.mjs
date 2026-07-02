@@ -43,6 +43,23 @@ test("FlateDecode applies PNG predictors", () => {
   assert.deepEqual([...decoded], [1, 2, 3, 4, 5, 6]);
 });
 
+test("raster image filters are metadata-only pass-through filters", () => {
+  const encoded = Buffer.from("ffd8ff", "hex").toString("hex") + ">";
+  const dictionary = parsePdfValue("<< /Filter [/ASCIIHexDecode /DCTDecode] >>").value;
+  const decoded = decodeStreamBytes(Buffer.from(encoded, "latin1"), dictionary);
+
+  assert.deepEqual([...decoded.bytes], [0xff, 0xd8, 0xff]);
+  assert.deepEqual(decoded.filters, ["ASCIIHexDecode", "DCTDecode"]);
+  assert.deepEqual(decoded.skippedFilters, [
+    {
+      filter: "DCTDecode",
+      reason: "metadata-only",
+      mediaType: "image/jpeg",
+      family: "raster-image"
+    }
+  ]);
+});
+
 test("decoder enforces limits and reports corrupt streams", () => {
   assert.throws(
     () => decode("48656c6c6f>", "/ASCIIHexDecode", { maxBytes: 2 }),
@@ -57,6 +74,11 @@ test("decoder enforces limits and reports corrupt streams", () => {
   assert.throws(
     () => decode(new Uint8Array([2, 97]), "/RunLengthDecode"),
     (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.runlength_truncated"
+  );
+
+  assert.throws(
+    () => decode("not lzw", "/LZWDecode"),
+    (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.filter_unsupported"
   );
 });
 

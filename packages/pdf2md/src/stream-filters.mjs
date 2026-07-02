@@ -17,25 +17,50 @@ const filterAliases = new Map([
   ["A85", "ASCII85Decode"],
   ["ASCII85Decode", "ASCII85Decode"],
   ["RL", "RunLengthDecode"],
-  ["RunLengthDecode", "RunLengthDecode"]
+  ["RunLengthDecode", "RunLengthDecode"],
+  ["DCT", "DCTDecode"],
+  ["DCTDecode", "DCTDecode"],
+  ["JPX", "JPXDecode"],
+  ["JPXDecode", "JPXDecode"],
+  ["CCF", "CCITTFaxDecode"],
+  ["CCITTFaxDecode", "CCITTFaxDecode"],
+  ["JBIG2Decode", "JBIG2Decode"]
+]);
+
+const metadataOnlyFilters = new Map([
+  ["DCTDecode", { mediaType: "image/jpeg", family: "raster-image" }],
+  ["JPXDecode", { mediaType: "image/jp2", family: "raster-image" }],
+  ["CCITTFaxDecode", { mediaType: "image/g3fax", family: "raster-image" }],
+  ["JBIG2Decode", { mediaType: "image/jbig2", family: "raster-image" }]
 ]);
 
 export function decodeStreamBytes(bytes, dictionary, { maxBytes = 50 * 1024 * 1024 } = {}) {
   const filters = readFilters(dictionary);
   const decodeParms = readDecodeParms(dictionary, filters.length);
   let output = bytes;
+  const skippedFilters = [];
 
   for (let index = 0; index < filters.length; index += 1) {
     const filter = filters[index];
     const parms = decodeParms[index];
-    output = decodeOneFilter(output, filter, parms, maxBytes);
+    const metadataOnly = metadataOnlyFilters.get(filter);
+    if (metadataOnly) {
+      skippedFilters.push({
+        filter,
+        reason: "metadata-only",
+        ...metadataOnly
+      });
+    } else {
+      output = decodeOneFilter(output, filter, parms, maxBytes);
+    }
     enforceMaxBytes(output, maxBytes, filter);
   }
 
   return {
     bytes: output,
     filters,
-    decodeParms
+    decodeParms,
+    skippedFilters
   };
 }
 
