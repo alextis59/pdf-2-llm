@@ -90,7 +90,9 @@ export function linesToMarkdown(lines, options = {}) {
     }
 
     previousWasList = false;
-    blocks.push(escapeMarkdownParagraph(text));
+    const paragraph = readParagraphAt(lines, index, text);
+    blocks.push(escapeMarkdownParagraph(paragraph.text));
+    index = paragraph.endIndex - 1;
   }
 
   return blocks.length > 0 ? `${blocks.join("\n\n")}\n` : "";
@@ -155,6 +157,64 @@ function escapeMarkdownInline(value) {
 
 function escapeMarkdownTableCell(value) {
   return escapeMarkdownInline(value).replace(/\|/g, "\\|");
+}
+
+function readParagraphAt(lines, startIndex, firstText) {
+  const parts = [firstText];
+  let previous = lines[startIndex];
+  let index = startIndex + 1;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = normalizeText(line.text);
+    if (
+      text.length === 0 ||
+      line.fontSize >= 15 ||
+      parseListItem(text) ||
+      startsWithMarkdownBlockMarker(text) ||
+      readTableAt(lines, index) ||
+      !isParagraphContinuation(previous, line)
+    ) {
+      break;
+    }
+
+    parts.push(text);
+    previous = line;
+    index += 1;
+  }
+
+  return {
+    text: parts.join(" "),
+    endIndex: index
+  };
+}
+
+function startsWithMarkdownBlockMarker(text) {
+  return /^([#>]|\d+[.)]\s|[-+]\s)/.test(text);
+}
+
+function isParagraphContinuation(previous, next) {
+  if (
+    !Number.isFinite(previous.x) ||
+    !Number.isFinite(previous.y) ||
+    !Number.isFinite(next.x) ||
+    !Number.isFinite(next.y)
+  ) {
+    return false;
+  }
+  if ((previous.pageIndex ?? null) !== (next.pageIndex ?? null)) {
+    return false;
+  }
+  if (Math.abs(previous.x - next.x) > 4 || Math.abs(previous.fontSize - next.fontSize) > 0.5) {
+    return false;
+  }
+
+  const verticalGap = Math.abs(previous.y - next.y);
+  if (verticalGap <= 0 || verticalGap > Math.max(14, previous.fontSize * 1.35)) {
+    return false;
+  }
+
+  return !/[.!?:;)]$/.test(normalizeText(previous.text));
 }
 
 function readTableAt(lines, startIndex) {
@@ -239,6 +299,9 @@ function removeRepeatedRunningContent(lines) {
   }
 
   return lines.filter((line) => {
+    if (isPageNumberCandidate(line)) {
+      return false;
+    }
     if (!isRunningContentCandidate(line)) {
       return true;
     }
@@ -248,4 +311,11 @@ function removeRepeatedRunningContent(lines) {
 
 function isRunningContentCandidate(line) {
   return line.fontSize <= 10 && Number.isFinite(line.y) && (line.y >= 740 || line.y <= 60);
+}
+
+function isPageNumberCandidate(line) {
+  if (!isRunningContentCandidate(line)) {
+    return false;
+  }
+  return /^(?:page\s*)?\d+(?:\s*\/\s*\d+)?$/i.test(normalizeWhitespace(line.text));
 }

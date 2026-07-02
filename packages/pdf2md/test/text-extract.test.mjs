@@ -62,3 +62,27 @@ test("linesToMarkdown can add page anchors", () => {
     '<a id="page-1"></a>\n\n# Page One\n\n<a id="page-2"></a>\n\n# Page Two\n'
   );
 });
+
+test("linesToMarkdown groups wrapped lines into paragraphs", () => {
+  const markdown = linesToMarkdown([
+    { text: "A wrapped paragraph continues", fontSize: 12, x: 72, y: 680, pageIndex: 0 },
+    { text: "on the next visual line.", fontSize: 12, x: 72, y: 666, pageIndex: 0 },
+    { text: "A separate paragraph.", fontSize: 12, x: 72, y: 630, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "A wrapped paragraph continues on the next visual line.\n\nA separate paragraph.\n"
+  );
+});
+
+test("linesToMarkdown removes high-confidence page numbers", () => {
+  const markdown = linesToMarkdown([
+    { text: "Page Number Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: "Body text.", fontSize: 12, x: 72, y: 680, pageIndex: 0 },
+    { text: "1", fontSize: 9, x: 300, y: 40, pageIndex: 0 },
+    { text: "2 / 3", fontSize: 9, x: 300, y: 40, pageIndex: 1 }
+  ]);
+
+  assert.equal(markdown, "# Page Number Fixture\n\nBody text.\n");
+});

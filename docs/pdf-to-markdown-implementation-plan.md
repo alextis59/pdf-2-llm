@@ -406,12 +406,12 @@ assets.
 
 ### 2.5 Line, Paragraph, And Markdown MVP
 
-- [ ] Group glyphs into spans.
-- [ ] Group spans into lines.
-- [ ] Group lines into paragraphs.
+- [x] Group glyphs into spans.
+- [x] Group spans into lines.
+- [x] Group lines into paragraphs.
 - [x] Infer simple headings from size and spacing.
 - [x] Infer simple bullet and numbered lists.
-- [ ] Remove obvious page numbers only when confidence is high.
+- [x] Remove obvious page numbers only when confidence is high.
 - [x] Serialize CommonMark paragraphs, headings, and lists.
 - [x] Escape Markdown metacharacters.
 - [x] Add page anchors.
