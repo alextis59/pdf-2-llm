@@ -51,6 +51,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   lines = orderLinesForReading(lines);
   const headingModel = createHeadingModel(lines);
   const listIndentModel = createListIndentModel(lines);
+  const codeModel = createCodeModel(lines);
   const blocks = [];
   let previousWasList = false;
   const anchoredPages = new Set();
@@ -72,6 +73,14 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     }
 
     appendPageAnchor(blocks, line.pageIndex, options, anchoredPages);
+
+    const codeBlock = readCodeBlockAt(lines, index, headingModel, codeModel);
+    if (codeBlock) {
+      previousWasList = false;
+      blocks.push(createMarkdownBlock(formatCodeBlock(codeBlock.sourceLines), "code", codeBlock.sourceLines));
+      index = codeBlock.endIndex - 1;
+      continue;
+    }
 
     const headingLevel = headingLevelForLine(line, headingModel);
     if (headingLevel !== null) {
@@ -201,6 +210,114 @@ function listIndentLevelForLine(line, listIndentModel) {
     }
   }
   return bestIndex;
+}
+
+function createCodeModel(lines) {
+  const positions = lines
+    .filter((line) => normalizeText(line.text ?? "").length > 0)
+    .map((line) => line.x)
+    .filter(Number.isFinite);
+  return {
+    bodyLeft: positions.length > 0 ? Math.min(...positions) : 0
+  };
+}
+
+function readCodeBlockAt(lines, startIndex, headingModel, codeModel) {
+  const sourceLines = [];
+  let hasMonospace = false;
+  let index = startIndex;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = normalizeText(line.text ?? "");
+    if (
+      text.length === 0 ||
+      parseListItem(text) ||
+      headingLevelForLine(line, headingModel) !== null ||
+      readTableAt(lines, index)
+    ) {
+      break;
+    }
+
+    const kind = codeLineKind(line, codeModel);
+    if (!kind) {
+      break;
+    }
+    if (
+      sourceLines.length > 0 &&
+      !isCodeBlockContinuation(sourceLines[sourceLines.length - 1], line)
+    ) {
+      break;
+    }
+    hasMonospace ||= kind === "monospace";
+    sourceLines.push(line);
+    index += 1;
+  }
+
+  if (sourceLines.length === 0 || (!hasMonospace && sourceLines.length < 2)) {
+    return null;
+  }
+
+  return {
+    sourceLines,
+    endIndex: index
+  };
+}
+
+function codeLineKind(line, codeModel) {
+  if (isMonospaceLine(line)) {
+    return "monospace";
+  }
+  if (
+    Number.isFinite(line.x) &&
+    line.x >= codeModel.bodyLeft + 32 &&
+    isCodeLikeText(normalizeText(line.text ?? ""))
+  ) {
+    return "indented";
+  }
+  return null;
+}
+
+function isCodeBlockContinuation(previous, next) {
+  if ((previous.pageIndex ?? null) !== (next.pageIndex ?? null)) {
+    return false;
+  }
+  if (!Number.isFinite(previous.y) || !Number.isFinite(next.y)) {
+    return true;
+  }
+  const verticalGap = Math.abs(previous.y - next.y);
+  return verticalGap <= Math.max(24, (previous.fontSize ?? 12) * 2);
+}
+
+function isMonospaceLine(line) {
+  return [line.fontName, line.font?.baseFont, line.font?.name]
+    .filter(Boolean)
+    .some((name) => /courier|mono|consolas|menlo|monaco|typewriter/i.test(name));
+}
+
+function isCodeLikeText(text) {
+  return (
+    /[{}();=<>]/.test(text) ||
+    /^(?:const|let|var|function|class|if|else|for|while|return|import|export)\b/.test(text)
+  );
+}
+
+function formatCodeBlock(lines) {
+  const fence = lines.some((line) => normalizeText(line.text ?? "").includes("```")) ? "~~~" : "```";
+  const positions = lines.map((line) => line.x).filter(Number.isFinite);
+  const left = positions.length > 0 ? Math.min(...positions) : 0;
+  return [
+    fence,
+    ...lines.map((line) => `${codeIndent(line, left)}${normalizeText(line.text ?? "")}`),
+    fence
+  ].join("\n");
+}
+
+function codeIndent(line, left) {
+  if (!Number.isFinite(line.x) || !Number.isFinite(left)) {
+    return "";
+  }
+  return " ".repeat(Math.max(0, Math.round((line.x - left) / 12)));
 }
 
 function createHeadingModel(lines) {

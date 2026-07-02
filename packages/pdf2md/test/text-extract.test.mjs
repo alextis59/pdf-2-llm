@@ -48,6 +48,47 @@ test("linesToMarkdown infers nested lists from indentation", () => {
   );
 });
 
+test("linesToMarkdown infers fenced code blocks from monospace text and indentation", () => {
+  const markdown = linesToMarkdown([
+    { text: "Code Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: "Intro paragraph.", fontSize: 12, x: 72, y: 690, pageIndex: 0 },
+    {
+      text: "function add(a, b) {",
+      fontSize: 12,
+      fontName: "FMono",
+      font: { baseFont: "Courier" },
+      x: 96,
+      y: 650,
+      pageIndex: 0
+    },
+    {
+      text: "return a + b;",
+      fontSize: 12,
+      fontName: "FMono",
+      font: { baseFont: "Courier" },
+      x: 120,
+      y: 634,
+      pageIndex: 0
+    },
+    {
+      text: "}",
+      fontSize: 12,
+      fontName: "FMono",
+      font: { baseFont: "Courier" },
+      x: 96,
+      y: 618,
+      pageIndex: 0
+    },
+    { text: "const value = add(1, 2);", fontSize: 12, x: 120, y: 578, pageIndex: 0 },
+    { text: "return value;", fontSize: 12, x: 120, y: 562, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "# Code Fixture\n\nIntro paragraph.\n\n```\nfunction add(a, b) {\n  return a + b;\n}\n```\n\n```\nconst value = add(1, 2);\nreturn value;\n```\n"
+  );
+});
+
 test("linesToMarkdown infers heading levels across the document", () => {
   const markdown = linesToMarkdown([
     { text: "Document Title", fontSize: 24, x: 72, y: 720, pageIndex: 0 },
