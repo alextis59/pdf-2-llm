@@ -1,0 +1,81 @@
+{
+  "id": "synthetic-footnote",
+  "analyzedAt": "2026-07-02T00:00:00.000Z",
+  "path": "corpus/generated/synthetic-footnote.pdf",
+  "bytes": 807,
+  "sha256": "13692f8f565914da0c9a45ac99eb522600dbae8cff4e73497923bdc26699271e",
+  "manifest": {
+    "kind": "scientific-paper",
+    "features": [
+      "born-digital",
+      "footnote",
+      "scientific-layout"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/synthetic-footnote.yaml"
+  },
+  "pdfVersion": "1.4",
+  "pages": {
+    "staticPageObjectCount": 1,
+    "pdfinfo": null
+  },
+  "header": {
+    "pdfVersion": "1.4",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 1,
+    "pageBoxes": [
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [],
+    "classicXrefCount": 1,
+    "xrefStreamCount": 0,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": false,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": false
+  },
+  "contentSignals": {
+    "beginTextOps": 3,
+    "endTextOps": 3,
+    "textShowOps": 3,
+    "imageXObjects": 0,
+    "pathOperators": 8,
+    "fontObjects": 2,
+    "cidFonts": 0,
+    "cidSystemInfo": 0,
+    "toUnicodeMaps": 0,
+    "encodings": 1,
+    "missingToUnicodeLikely": true,
+    "estimatedTextShowOpsPerPage": 3,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "externalTools": {},
+  "toolOutputs": {},
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

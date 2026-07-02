@@ -1,0 +1,3 @@
+# Cropped Page Fixture
+
+Visible Crop Text

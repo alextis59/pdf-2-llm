@@ -1,0 +1,32 @@
+id: synthetic-simple-text
+gate: text-mvp
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_main_text
+  - preserve_heading
+  - preserve_paragraph_order
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Synthetic Simple Text"
+  - page: 1
+    contains: "This fixture validates basic paragraph extraction."
+structure:
+  expected:
+    - heading_level_1
+    - paragraphs
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Exact-output generated fixture with one heading and two paragraphs."

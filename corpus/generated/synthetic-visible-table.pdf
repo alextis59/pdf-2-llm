@@ -1,0 +1,48 @@
+%PDF-1.4
+% pdf-2-llm generated fixture
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 476 >>
+stream
+BT /F1 22 Tf 72 720 Td (Visible Table) Tj ET
+72 610 360 90 re S
+192 610 m 192 700 l S
+312 610 m 312 700 l S
+72 670 m 432 670 l S
+72 640 m 432 640 l S
+BT /F1 11 Tf 82 680 Td (Quarter) Tj ET
+BT /F1 11 Tf 202 680 Td (Revenue) Tj ET
+BT /F1 11 Tf 322 680 Td (Cost) Tj ET
+BT /F1 11 Tf 82 650 Td (Q1) Tj ET
+BT /F1 11 Tf 202 650 Td (100) Tj ET
+BT /F1 11 Tf 322 650 Td (50) Tj ET
+BT /F1 11 Tf 82 620 Td (Q2) Tj ET
+BT /F1 11 Tf 202 620 Td (120) Tj ET
+BT /F1 11 Tf 322 620 Td (60) Tj ET
+
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f
+0000000039 00000 n
+0000000088 00000 n
+0000000145 00000 n
+0000000242 00000 n
+0000000368 00000 n
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+895
+%%EOF

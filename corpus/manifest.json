@@ -1,4 +1,274 @@
 {
   "schemaVersion": 1,
-  "entries": []
+  "entries": [
+    {
+      "id": "synthetic-borderless-table",
+      "kind": "borderless-table",
+      "path": "corpus/generated/synthetic-borderless-table.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Whitespace-aligned borderless table fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "e5c532de1d67a53ce41a768bb6ea12ae0f68313b7a33c124a0a67c602a03bbef",
+      "bytes": 976,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "borderless-table",
+        "aligned-columns"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-borderless-table.yaml",
+      "notes": "Whitespace-aligned borderless table fixture."
+    },
+    {
+      "id": "synthetic-cropped-page",
+      "kind": "rotated-cropped",
+      "path": "corpus/generated/synthetic-cropped-page.pdf",
+      "source": {
+        "type": "generated",
+        "description": "CropBox fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "cf4240dfdf2d34917a6ca5d9e8b5977ca852322c5b1bdf135fb8cfc026ee15af",
+      "bytes": 723,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "cropped-page"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-cropped-page.yaml",
+      "notes": "CropBox fixture."
+    },
+    {
+      "id": "synthetic-footnote",
+      "kind": "scientific-paper",
+      "path": "corpus/generated/synthetic-footnote.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Body text with footnote fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "13692f8f565914da0c9a45ac99eb522600dbae8cff4e73497923bdc26699271e",
+      "bytes": 807,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "footnote",
+        "scientific-layout"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-footnote.yaml",
+      "notes": "Body text with footnote fixture."
+    },
+    {
+      "id": "synthetic-header-footer",
+      "kind": "long-document",
+      "path": "corpus/generated/synthetic-header-footer.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Two-page repeated header and footer fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "43cdb1a9ac5b8c0572caf10eca409855796b8205399e6239fa1de43b28ad6884",
+      "bytes": 1145,
+      "pages": 2,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "multi-page",
+        "headers",
+        "footers"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-header-footer.yaml",
+      "notes": "Two-page repeated header and footer fixture."
+    },
+    {
+      "id": "synthetic-headings-lists",
+      "kind": "synthetic",
+      "path": "corpus/generated/synthetic-headings-lists.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Headings and simple list fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "5c01e20d156bc474b59f85bb08cb600dfe3bc38315b3e7d0e01176c9eb6c2e02",
+      "bytes": 832,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "headings",
+        "lists"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-headings-lists.yaml",
+      "notes": "Headings and simple list fixture."
+    },
+    {
+      "id": "synthetic-rotated-page",
+      "kind": "rotated-cropped",
+      "path": "corpus/generated/synthetic-rotated-page.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Page rotation fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "20d989f2250ecb24121bb680d9e7c0def36e04697f81649de7503b42a2b84f51",
+      "bytes": 742,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "rotated-page"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-rotated-page.yaml",
+      "notes": "Page rotation fixture."
+    },
+    {
+      "id": "synthetic-simple-text",
+      "kind": "synthetic",
+      "path": "corpus/generated/synthetic-simple-text.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Simple one-page born-digital text fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "3636a7445b31af9a6477573d94f52366db7b08b6a5c5bc3488c3c1064ab280b3",
+      "bytes": 800,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "paragraphs",
+        "headings"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-simple-text.yaml",
+      "notes": "Simple one-page born-digital text fixture."
+    },
+    {
+      "id": "synthetic-two-column",
+      "kind": "synthetic",
+      "path": "corpus/generated/synthetic-two-column.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Two-column reading-order fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "68c8556b17fffeb8be83141bdc46b36791bdf876d8eba3b0f3c49c85cefe870d",
+      "bytes": 880,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "two-column",
+        "reading-order"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-two-column.yaml",
+      "notes": "Two-column reading-order fixture."
+    },
+    {
+      "id": "synthetic-vector-figure",
+      "kind": "vector-heavy",
+      "path": "corpus/generated/synthetic-vector-figure.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Vector figure and caption fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "b644d87e0509be0a958a0cf0c39b15f607d977ad41c8b685114cbb7b9aa0c2b5",
+      "bytes": 780,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "vector-figure",
+        "caption"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-vector-figure.yaml",
+      "notes": "Vector figure and caption fixture."
+    },
+    {
+      "id": "synthetic-visible-table",
+      "kind": "visible-table",
+      "path": "corpus/generated/synthetic-visible-table.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Visible grid table fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "2144bf6a6cb817366145a0108b1f6b5ec111d0006dd97024a892659e68ef84f3",
+      "bytes": 1072,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "visible-table",
+        "ruling-lines"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-visible-table.yaml",
+      "notes": "Visible grid table fixture."
+    }
+  ]
 }

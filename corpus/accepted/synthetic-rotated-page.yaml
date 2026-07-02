@@ -1,0 +1,29 @@
+id: synthetic-rotated-page
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - read_rotated_page
+  - normalize_coordinates
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - drop_rotated_text
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Rotated Page Fixture"
+structure:
+  expected:
+    - page_rotation_90
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "The page dictionary has Rotate 90 and simple visible text."

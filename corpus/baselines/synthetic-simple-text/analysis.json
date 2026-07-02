@@ -1,0 +1,81 @@
+{
+  "id": "synthetic-simple-text",
+  "analyzedAt": "2026-07-02T00:00:00.000Z",
+  "path": "corpus/generated/synthetic-simple-text.pdf",
+  "bytes": 800,
+  "sha256": "3636a7445b31af9a6477573d94f52366db7b08b6a5c5bc3488c3c1064ab280b3",
+  "manifest": {
+    "kind": "synthetic",
+    "features": [
+      "born-digital",
+      "paragraphs",
+      "headings"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/synthetic-simple-text.yaml"
+  },
+  "pdfVersion": "1.4",
+  "pages": {
+    "staticPageObjectCount": 1,
+    "pdfinfo": null
+  },
+  "header": {
+    "pdfVersion": "1.4",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 1,
+    "pageBoxes": [
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [],
+    "classicXrefCount": 1,
+    "xrefStreamCount": 0,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": false,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": false
+  },
+  "contentSignals": {
+    "beginTextOps": 3,
+    "endTextOps": 3,
+    "textShowOps": 3,
+    "imageXObjects": 0,
+    "pathOperators": 6,
+    "fontObjects": 2,
+    "cidFonts": 0,
+    "cidSystemInfo": 0,
+    "toUnicodeMaps": 0,
+    "encodings": 1,
+    "missingToUnicodeLikely": true,
+    "estimatedTextShowOpsPerPage": 3,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "externalTools": {},
+  "toolOutputs": {},
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

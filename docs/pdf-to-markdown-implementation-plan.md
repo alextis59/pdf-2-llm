@@ -144,7 +144,7 @@ Checklist:
 
 - [x] Create initial candidate list for every corpus group.
 - [ ] Label each candidate as `commit-ok`, `local-only`, or `do-not-use`.
-- [ ] Prefer generated fixtures when exact expected output matters.
+- [x] Prefer generated fixtures when exact expected output matters.
 - [ ] Prefer public-domain government or standards-adjacent PDFs for committed
   external fixtures.
 - [ ] Avoid committing copyrighted reports unless redistribution is explicitly
@@ -252,16 +252,16 @@ review:
 
 Checklist:
 
-- [ ] Add `corpus/accepted/<id>.yaml` files for the initial corpus.
+- [x] Add `corpus/accepted/<id>.yaml` files for the initial corpus.
 - [x] Define gate labels such as `text-mvp`, `robust-parser`, `layout-v1`,
   `tables-v1`, `ocr-v1`, `webgpu-v1`, and `advanced-v1`.
-- [ ] Add `must` assertions for required extraction behavior.
-- [ ] Add `mustNot` assertions for hallucination, unsafe, or misleading output.
-- [ ] Add snippet assertions for critical text.
-- [ ] Add structural assertions for headings, lists, paragraphs, tables,
+- [x] Add `must` assertions for required extraction behavior.
+- [x] Add `mustNot` assertions for hallucination, unsafe, or misleading output.
+- [x] Add snippet assertions for critical text.
+- [x] Add structural assertions for headings, lists, paragraphs, tables,
   fields, assets, links, and page anchors.
-- [ ] Add metric thresholds only when the oracle is reliable enough.
-- [ ] Add expected warnings for unsupported features.
+- [x] Add metric thresholds only when the oracle is reliable enough.
+- [x] Add expected warnings for unsupported features.
 - [ ] Add explicit skip reasons for local-only or future-gate PDFs.
 - [x] Require human review for every acceptance file before it becomes gating.
 
@@ -829,10 +829,10 @@ Minimum release bars for a serious beta:
 
 - [x] Create corpus directories and manifest schema.
 - [x] Add retrieval and analysis script skeletons.
-- [ ] Generate the first synthetic exact-output PDFs.
+- [x] Generate the first synthetic exact-output PDFs.
 - [ ] Retrieve a small public-domain/public-license external PDF set.
 - [ ] Run static analysis and oracle extraction on the first corpus batch.
-- [ ] Write acceptance YAML for the first 10 PDFs.
+- [x] Write acceptance YAML for the first 10 PDFs.
 - [ ] Implement project scaffolding and stub API.
 - [ ] Make the corpus runner list PDFs and report skipped gates.
 - [ ] Start Gate 1 parser and text extraction work only after the first

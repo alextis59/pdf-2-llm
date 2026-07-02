@@ -15,6 +15,7 @@ const selectedIds = readOptions("--id");
 const selectedFiles = readOptions("--file");
 const skipTools = hasFlag("--no-tools");
 const maxToolBytes = Number.parseInt(readOption("--max-tool-bytes") ?? `${5 * 1024 * 1024}`, 10);
+const analyzedAt = readOption("--analyzed-at") ?? new Date().toISOString();
 
 function hasFlag(name) {
   return args.includes(name);
@@ -49,6 +50,7 @@ Options:
   --manifest <path>        Manifest path. Defaults to corpus/manifest.json.
   --root <path>            Repository root. Defaults to cwd.
   --max-tool-bytes <n>     Maximum captured bytes per external tool.
+  --analyzed-at <iso>      Timestamp to write into analysis JSON.
 `;
 }
 
@@ -352,13 +354,14 @@ async function analyzePdf(target) {
 
   return {
     id: target.id,
-    analyzedAt: new Date().toISOString(),
+    analyzedAt,
     path: relativeToRoot(target.path),
     bytes: bytes.length,
     sha256: sha256(bytes),
     manifest: target.manifestEntry
       ? {
           kind: target.manifestEntry.kind,
+          features: target.manifestEntry.features ?? [],
           redistributable: target.manifestEntry.redistributable,
           acceptanceFile: target.manifestEntry.acceptanceFile
         }
@@ -400,10 +403,11 @@ async function writeInventoryReport(analyses) {
   ];
 
   for (const analysis of analyses) {
-    const features = Object.entries(analysis.documentFeatures)
+    const detectedFeatures = Object.entries(analysis.documentFeatures)
       .filter(([, enabled]) => enabled)
-      .map(([name]) => name)
-      .join(", ");
+      .map(([name]) => name);
+    const manifestFeatures = analysis.manifest?.features ?? [];
+    const features = [...new Set([...manifestFeatures, ...detectedFeatures])].join(", ");
     lines.push(
       `| ${analysis.id} | ${analysis.bytes} | ${analysis.sha256} | ${analysis.pdfVersion ?? "unknown"} | ${analysis.pages.pdfinfo ?? analysis.pages.staticPageObjectCount ?? 0} | ${features || "none detected"} |`
     );

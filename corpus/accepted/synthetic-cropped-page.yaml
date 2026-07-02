@@ -1,0 +1,29 @@
+id: synthetic-cropped-page
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - respect_crop_box
+  - preserve_visible_crop_text
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - prefer_hidden_media_box_content
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Visible Crop Text"
+structure:
+  expected:
+    - crop_box
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "The page has a CropBox and visible text inside the cropped region."

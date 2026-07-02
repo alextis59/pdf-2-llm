@@ -1,0 +1,6 @@
+# Borderless Table
+
+| Item | Count | Price |
+| --- | ---: | ---: |
+| Pencil | 4 | 2.00 |
+| Notebook | 2 | 7.50 |

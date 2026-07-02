@@ -1,0 +1,32 @@
+id: synthetic-footnote
+gate: layout-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - detect_footnote_region
+  - preserve_footnote_text
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - interleave_footnote_inside_body_sentence
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "A measured result refers to note 1."
+  - page: 1
+    contains: "1. Footnote text belongs after the paragraph."
+structure:
+  expected:
+    - paragraph
+    - footnote
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "The footnote is spatially separated near the bottom of the page."

@@ -1,0 +1,5 @@
+# Footnote Fixture
+
+A measured result refers to note 1.
+
+1. Footnote text belongs after the paragraph.

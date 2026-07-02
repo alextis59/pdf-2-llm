@@ -1,0 +1,504 @@
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import process from "node:process";
+
+const repoRoot = process.cwd();
+const generatedAt = "2026-07-02";
+const command = "npm run corpus:generate";
+
+function pdfString(value) {
+  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function text(x, y, size, value) {
+  return `BT /F1 ${size} Tf ${x} ${y} Td (${pdfString(value)}) Tj ET`;
+}
+
+function line(x1, y1, x2, y2) {
+  return `${x1} ${y1} m ${x2} ${y2} l S`;
+}
+
+function rect(x, y, width, height) {
+  return `${x} ${y} ${width} ${height} re S`;
+}
+
+function streamObject(content) {
+  return `<< /Length ${Buffer.byteLength(content, "binary")} >>\nstream\n${content}\nendstream`;
+}
+
+function createPdf({ pages }) {
+  const objects = new Map();
+  const catalogId = 1;
+  const pagesId = 2;
+  const fontId = 3;
+  const pageIds = [];
+
+  objects.set(
+    fontId,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+  );
+
+  pages.forEach((page, index) => {
+    const pageId = 4 + index * 2;
+    const contentId = pageId + 1;
+    pageIds.push(pageId);
+    const content = `${page.operations.join("\n")}\n`;
+    objects.set(contentId, streamObject(content));
+
+    const mediaBox = page.mediaBox ?? [0, 0, 612, 792];
+    const cropBox = page.cropBox ? `/CropBox [${page.cropBox.join(" ")}] ` : "";
+    const rotate = page.rotate ? `/Rotate ${page.rotate} ` : "";
+    objects.set(
+      pageId,
+      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [${mediaBox.join(" ")}] ${cropBox}${rotate}/Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`
+    );
+  });
+
+  objects.set(
+    pagesId,
+    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`
+  );
+  objects.set(catalogId, `<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+
+  const maxObjectId = Math.max(...objects.keys());
+  let body = "%PDF-1.4\n% pdf-2-llm generated fixture\n";
+  const offsets = Array(maxObjectId + 1).fill(0);
+
+  for (let objectId = 1; objectId <= maxObjectId; objectId += 1) {
+    const objectBody = objects.get(objectId);
+    if (!objectBody) {
+      continue;
+    }
+    offsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${objectBody}\nendobj\n`;
+  }
+
+  const xrefOffset = Buffer.byteLength(body, "binary");
+  body += `xref\n0 ${maxObjectId + 1}\n`;
+  body += "0000000000 65535 f\n";
+  for (let objectId = 1; objectId <= maxObjectId; objectId += 1) {
+    body += `${String(offsets[objectId]).padStart(10, "0")} 00000 n\n`;
+  }
+  body += `trailer\n<< /Size ${maxObjectId + 1} /Root ${catalogId} 0 R >>\n`;
+  body += `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  return Buffer.from(body, "binary");
+}
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function yamlList(items) {
+  return items.map((item) => `  - ${item}`).join("\n");
+}
+
+function yamlQuoted(value) {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function acceptanceYaml(fixture) {
+  const snippets = fixture.snippets
+    .map((snippet) => `  - page: ${snippet.page}\n    contains: ${yamlQuoted(snippet.contains)}`)
+    .join("\n");
+  const structures = fixture.structures
+    .map((item) => `    - ${item}`)
+    .join("\n");
+
+  return `id: ${fixture.id}
+gate: ${fixture.gate}
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+${yamlList(fixture.must)}
+mustNot:
+${yamlList([
+  "invent_missing_values",
+  "emit_binary_garbage",
+  ...fixture.mustNot
+])}
+metrics:
+  minTextCoverage: ${fixture.minTextCoverage}
+  maxUnexpectedWarnings: 0
+snippets:
+${snippets}
+structure:
+  expected:
+${structures}
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "${generatedAt}"
+  notes: ${yamlQuoted(fixture.reviewNotes)}
+`;
+}
+
+function manifestEntry(fixture, pdfBytes) {
+  return {
+    id: fixture.id,
+    kind: fixture.kind,
+    path: `corpus/generated/${fixture.id}.pdf`,
+    source: {
+      type: "generated",
+      description: fixture.description,
+      command
+    },
+    retrievedAt: generatedAt,
+    license: {
+      name: "Generated test fixture",
+      notes: "Created from repository fixture-generation code for unrestricted project testing."
+    },
+    redistributable: true,
+    sha256: sha256(pdfBytes),
+    bytes: pdfBytes.length,
+    pages: fixture.pages.length,
+    pdfVersion: "1.4",
+    features: fixture.features,
+    acceptanceFile: `corpus/accepted/${fixture.id}.yaml`,
+    notes: fixture.description
+  };
+}
+
+const fixtures = [
+  {
+    id: "synthetic-simple-text",
+    kind: "synthetic",
+    gate: "text-mvp",
+    features: ["born-digital", "paragraphs", "headings"],
+    description: "Simple one-page born-digital text fixture.",
+    minTextCoverage: 1,
+    must: ["extract_main_text", "preserve_heading", "preserve_paragraph_order"],
+    mustNot: [],
+    structures: ["heading_level_1", "paragraphs"],
+    snippets: [
+      { page: 1, contains: "Synthetic Simple Text" },
+      { page: 1, contains: "This fixture validates basic paragraph extraction." }
+    ],
+    reviewNotes: "Exact-output generated fixture with one heading and two paragraphs.",
+    expectedMarkdown:
+      "# Synthetic Simple Text\n\nThis fixture validates basic paragraph extraction.\n\nThe expected output is deterministic.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Synthetic Simple Text"),
+          text(72, 680, 12, "This fixture validates basic paragraph extraction."),
+          text(72, 660, 12, "The expected output is deterministic.")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-headings-lists",
+    kind: "synthetic",
+    gate: "text-mvp",
+    features: ["born-digital", "headings", "lists"],
+    description: "Headings and simple list fixture.",
+    minTextCoverage: 1,
+    must: ["extract_headings", "extract_bullet_list", "preserve_list_order"],
+    mustNot: [],
+    structures: ["heading_level_1", "heading_level_2", "unordered_list"],
+    snippets: [
+      { page: 1, contains: "Implementation Checklist" },
+      { page: 1, contains: "Parse objects" }
+    ],
+    reviewNotes: "Exact-output generated fixture with visible list markers.",
+    expectedMarkdown:
+      "# Implementation Checklist\n\n## Parser\n\n- Parse objects\n- Decode streams\n- Emit warnings\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Implementation Checklist"),
+          text(72, 682, 16, "Parser"),
+          text(90, 650, 12, "- Parse objects"),
+          text(90, 630, 12, "- Decode streams"),
+          text(90, 610, 12, "- Emit warnings")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-two-column",
+    kind: "synthetic",
+    gate: "layout-v1",
+    features: ["born-digital", "two-column", "reading-order"],
+    description: "Two-column reading-order fixture.",
+    minTextCoverage: 1,
+    must: ["detect_columns", "preserve_left_then_right_reading_order"],
+    mustNot: ["interleave_columns_line_by_line"],
+    structures: ["two_columns", "reading_order"],
+    snippets: [
+      { page: 1, contains: "Left column starts here." },
+      { page: 1, contains: "Right column starts here." }
+    ],
+    reviewNotes: "Expected order is left column top-down, then right column top-down.",
+    expectedMarkdown:
+      "# Two Column Fixture\n\nLeft column starts here.\n\nLeft column continues here.\n\nRight column starts here.\n\nRight column continues here.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Two Column Fixture"),
+          text(72, 670, 12, "Left column starts here."),
+          text(72, 650, 12, "Left column continues here."),
+          text(330, 670, 12, "Right column starts here."),
+          text(330, 650, 12, "Right column continues here.")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-visible-table",
+    kind: "visible-table",
+    gate: "tables-v1",
+    features: ["born-digital", "visible-table", "ruling-lines"],
+    description: "Visible grid table fixture.",
+    minTextCoverage: 1,
+    must: ["detect_visible_table", "preserve_table_cells", "emit_gfm_table"],
+    mustNot: ["flatten_table_to_unstructured_paragraph"],
+    structures: ["gfm_table", "three_columns", "three_rows"],
+    snippets: [
+      { page: 1, contains: "Quarter" },
+      { page: 1, contains: "Q2" }
+    ],
+    reviewNotes: "Grid lines and cell text are generated at deterministic coordinates.",
+    expectedMarkdown:
+      "# Visible Table\n\n| Quarter | Revenue | Cost |\n| --- | ---: | ---: |\n| Q1 | 100 | 50 |\n| Q2 | 120 | 60 |\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Visible Table"),
+          rect(72, 610, 360, 90),
+          line(192, 610, 192, 700),
+          line(312, 610, 312, 700),
+          line(72, 670, 432, 670),
+          line(72, 640, 432, 640),
+          text(82, 680, 11, "Quarter"),
+          text(202, 680, 11, "Revenue"),
+          text(322, 680, 11, "Cost"),
+          text(82, 650, 11, "Q1"),
+          text(202, 650, 11, "100"),
+          text(322, 650, 11, "50"),
+          text(82, 620, 11, "Q2"),
+          text(202, 620, 11, "120"),
+          text(322, 620, 11, "60")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-borderless-table",
+    kind: "borderless-table",
+    gate: "tables-v1",
+    features: ["born-digital", "borderless-table", "aligned-columns"],
+    description: "Whitespace-aligned borderless table fixture.",
+    minTextCoverage: 1,
+    must: ["detect_borderless_table", "preserve_column_alignment"],
+    mustNot: ["merge_adjacent_columns"],
+    structures: ["borderless_table", "aligned_numeric_columns"],
+    snippets: [
+      { page: 1, contains: "Item" },
+      { page: 1, contains: "Notebook" }
+    ],
+    reviewNotes: "Columns are aligned without ruling lines to test whitespace inference.",
+    expectedMarkdown:
+      "# Borderless Table\n\n| Item | Count | Price |\n| --- | ---: | ---: |\n| Pencil | 4 | 2.00 |\n| Notebook | 2 | 7.50 |\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Borderless Table"),
+          text(72, 680, 11, "Item"),
+          text(220, 680, 11, "Count"),
+          text(330, 680, 11, "Price"),
+          text(72, 650, 11, "Pencil"),
+          text(220, 650, 11, "4"),
+          text(330, 650, 11, "2.00"),
+          text(72, 620, 11, "Notebook"),
+          text(220, 620, 11, "2"),
+          text(330, 620, 11, "7.50")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-rotated-page",
+    kind: "rotated-cropped",
+    gate: "robust-parser",
+    features: ["born-digital", "rotated-page"],
+    description: "Page rotation fixture.",
+    minTextCoverage: 1,
+    must: ["read_rotated_page", "normalize_coordinates"],
+    mustNot: ["drop_rotated_text"],
+    structures: ["page_rotation_90"],
+    snippets: [{ page: 1, contains: "Rotated Page Fixture" }],
+    reviewNotes: "The page dictionary has Rotate 90 and simple visible text.",
+    expectedMarkdown: "# Rotated Page Fixture\n\nText remains readable after rotation normalization.\n",
+    pages: [
+      {
+        rotate: 90,
+        operations: [
+          text(72, 720, 22, "Rotated Page Fixture"),
+          text(72, 680, 12, "Text remains readable after rotation normalization.")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-cropped-page",
+    kind: "rotated-cropped",
+    gate: "robust-parser",
+    features: ["born-digital", "cropped-page"],
+    description: "CropBox fixture.",
+    minTextCoverage: 1,
+    must: ["respect_crop_box", "preserve_visible_crop_text"],
+    mustNot: ["prefer_hidden_media_box_content"],
+    structures: ["crop_box"],
+    snippets: [{ page: 1, contains: "Visible Crop Text" }],
+    reviewNotes: "The page has a CropBox and visible text inside the cropped region.",
+    expectedMarkdown: "# Cropped Page Fixture\n\nVisible Crop Text\n",
+    pages: [
+      {
+        cropBox: [36, 300, 576, 756],
+        operations: [
+          text(72, 720, 22, "Cropped Page Fixture"),
+          text(72, 680, 12, "Visible Crop Text")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-header-footer",
+    kind: "long-document",
+    gate: "layout-v1",
+    features: ["born-digital", "multi-page", "headers", "footers"],
+    description: "Two-page repeated header and footer fixture.",
+    minTextCoverage: 1,
+    must: ["detect_repeated_header", "detect_repeated_footer", "preserve_body_text"],
+    mustNot: ["repeat_running_header_in_body"],
+    structures: ["multi_page", "header_footer_removal"],
+    snippets: [
+      { page: 1, contains: "First page body." },
+      { page: 2, contains: "Second page body." }
+    ],
+    reviewNotes: "Header and footer repeat across both pages and should be removable.",
+    expectedMarkdown: "# Header Footer Fixture\n\nFirst page body.\n\nSecond page body.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 760, 10, "Running Header"),
+          text(72, 720, 22, "Header Footer Fixture"),
+          text(72, 680, 12, "First page body."),
+          text(280, 40, 10, "Page Footer")
+        ]
+      },
+      {
+        operations: [
+          text(72, 760, 10, "Running Header"),
+          text(72, 700, 12, "Second page body."),
+          text(280, 40, 10, "Page Footer")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-footnote",
+    kind: "scientific-paper",
+    gate: "layout-v1",
+    features: ["born-digital", "footnote", "scientific-layout"],
+    description: "Body text with footnote fixture.",
+    minTextCoverage: 1,
+    must: ["detect_footnote_region", "preserve_footnote_text"],
+    mustNot: ["interleave_footnote_inside_body_sentence"],
+    structures: ["paragraph", "footnote"],
+    snippets: [
+      { page: 1, contains: "A measured result refers to note 1." },
+      { page: 1, contains: "1. Footnote text belongs after the paragraph." }
+    ],
+    reviewNotes: "The footnote is spatially separated near the bottom of the page.",
+    expectedMarkdown:
+      "# Footnote Fixture\n\nA measured result refers to note 1.\n\n1. Footnote text belongs after the paragraph.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Footnote Fixture"),
+          text(72, 680, 12, "A measured result refers to note 1."),
+          line(72, 120, 240, 120),
+          text(72, 96, 9, "1. Footnote text belongs after the paragraph.")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-vector-figure",
+    kind: "vector-heavy",
+    gate: "advanced-v1",
+    features: ["born-digital", "vector-figure", "caption"],
+    description: "Vector figure and caption fixture.",
+    minTextCoverage: 1,
+    must: ["detect_vector_figure_region", "preserve_caption"],
+    mustNot: ["invent_chart_data"],
+    structures: ["figure", "caption", "vector_paths"],
+    snippets: [
+      { page: 1, contains: "Figure 1. A generated vector box." },
+      { page: 1, contains: "Vector Figure Fixture" }
+    ],
+    reviewNotes: "The figure is represented by vector paths plus a visible caption.",
+    expectedMarkdown:
+      "# Vector Figure Fixture\n\n![Figure 1](assets/synthetic-vector-figure-page-1-figure-1.png)\n\nFigure 1. A generated vector box.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Vector Figure Fixture"),
+          rect(120, 520, 240, 120),
+          line(120, 520, 360, 640),
+          line(120, 640, 360, 520),
+          text(120, 490, 11, "Figure 1. A generated vector box.")
+        ]
+      }
+    ]
+  }
+];
+
+async function writeFixtureFiles(fixture) {
+  const pdfBytes = createPdf({ pages: fixture.pages });
+  await writeFile(path.join(repoRoot, "corpus", "generated", `${fixture.id}.pdf`), pdfBytes);
+  await writeFile(
+    path.join(repoRoot, "corpus", "expected", `${fixture.id}.md`),
+    fixture.expectedMarkdown
+  );
+  await writeFile(
+    path.join(repoRoot, "corpus", "accepted", `${fixture.id}.yaml`),
+    acceptanceYaml(fixture)
+  );
+  return manifestEntry(fixture, pdfBytes);
+}
+
+async function updateManifest(entries) {
+  const manifestPath = path.join(repoRoot, "corpus", "manifest.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  const generatedIds = new Set(entries.map((entry) => entry.id));
+  const retainedEntries = manifest.entries.filter((entry) => !generatedIds.has(entry.id));
+  manifest.entries = [...retainedEntries, ...entries].sort((left, right) =>
+    left.id.localeCompare(right.id)
+  );
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+async function main() {
+  await mkdir(path.join(repoRoot, "corpus", "generated"), { recursive: true });
+  await mkdir(path.join(repoRoot, "corpus", "expected"), { recursive: true });
+  await mkdir(path.join(repoRoot, "corpus", "accepted"), { recursive: true });
+
+  const entries = [];
+  for (const fixture of fixtures) {
+    entries.push(await writeFixtureFiles(fixture));
+    console.log(`generated ${fixture.id}`);
+  }
+  await updateManifest(entries);
+  console.log(`updated corpus/manifest.json with ${entries.length} generated fixture(s)`);
+}
+
+await main();

@@ -1,0 +1,33 @@
+id: synthetic-headings-lists
+gate: text-mvp
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_headings
+  - extract_bullet_list
+  - preserve_list_order
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Implementation Checklist"
+  - page: 1
+    contains: "Parse objects"
+structure:
+  expected:
+    - heading_level_1
+    - heading_level_2
+    - unordered_list
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Exact-output generated fixture with visible list markers."

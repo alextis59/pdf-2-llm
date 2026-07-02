@@ -1,0 +1,7 @@
+# Implementation Checklist
+
+## Parser
+
+- Parse objects
+- Decode streams
+- Emit warnings

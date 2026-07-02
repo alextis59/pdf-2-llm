@@ -1,0 +1,34 @@
+id: synthetic-visible-table
+gate: tables-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - detect_visible_table
+  - preserve_table_cells
+  - emit_gfm_table
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - flatten_table_to_unstructured_paragraph
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Quarter"
+  - page: 1
+    contains: "Q2"
+structure:
+  expected:
+    - gfm_table
+    - three_columns
+    - three_rows
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Grid lines and cell text are generated at deterministic coordinates."

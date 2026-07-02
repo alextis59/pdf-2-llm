@@ -8,6 +8,7 @@
     "corpus:acceptance": "node scripts/corpus/validate-acceptance.mjs --all --allow-empty",
     "corpus:analyze": "node scripts/corpus/analyze.mjs --all --dry-run",
     "corpus:candidates": "node scripts/corpus/retrieve.mjs --all --dry-run",
+    "corpus:generate": "node scripts/corpus/generate-fixtures.mjs",
     "corpus:validate": "node scripts/corpus/validate-manifest.mjs"
   }
 }

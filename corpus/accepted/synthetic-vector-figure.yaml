@@ -1,0 +1,33 @@
+id: synthetic-vector-figure
+gate: advanced-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - detect_vector_figure_region
+  - preserve_caption
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - invent_chart_data
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Figure 1. A generated vector box."
+  - page: 1
+    contains: "Vector Figure Fixture"
+structure:
+  expected:
+    - figure
+    - caption
+    - vector_paths
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "The figure is represented by vector paths plus a visible caption."

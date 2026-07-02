@@ -1,0 +1,32 @@
+id: synthetic-two-column
+gate: layout-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - detect_columns
+  - preserve_left_then_right_reading_order
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - interleave_columns_line_by_line
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Left column starts here."
+  - page: 1
+    contains: "Right column starts here."
+structure:
+  expected:
+    - two_columns
+    - reading_order
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Expected order is left column top-down, then right column top-down."

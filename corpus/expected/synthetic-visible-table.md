@@ -1,0 +1,6 @@
+# Visible Table
+
+| Quarter | Revenue | Cost |
+| --- | ---: | ---: |
+| Q1 | 100 | 50 |
+| Q2 | 120 | 60 |
