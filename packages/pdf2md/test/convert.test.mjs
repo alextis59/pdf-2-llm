@@ -142,6 +142,7 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
 test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async () => {
   const result = await convertPdfToMarkdown(visibleTableFixturePath.pathname);
   const rulingLines = result.diagnostics.extraction.rulingLines;
+  const rulingGrids = result.diagnostics.extraction.rulingGrids;
 
   assert.equal(rulingLines.total, 8);
   assert.equal(rulingLines.horizontal, 4);
@@ -152,6 +153,27 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
       total: 8,
       horizontal: 4,
       vertical: 4
+    }
+  ]);
+  assert.equal(rulingGrids.total, 1);
+  assert.equal(rulingGrids.complete, 1);
+  assert.deepEqual(rulingGrids.pages, [
+    {
+      pageIndex: 0,
+      total: 1,
+      complete: 1,
+      grids: [
+        {
+          rows: 3,
+          columns: 3,
+          cells: 9,
+          x1: 72,
+          y1: 610,
+          x2: 432,
+          y2: 700,
+          complete: true
+        }
+      ]
     }
   ]);
 });

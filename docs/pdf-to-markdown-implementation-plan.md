@@ -529,7 +529,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 
 - [x] Detect ruling lines from path operators.
 - [x] Merge near-collinear segments.
-- [ ] Infer grid rows and columns.
+- [x] Infer grid rows and columns.
 - [ ] Assign text boxes to cells.
 - [ ] Detect row and column spans.
 - [ ] Export GFM tables when no spans are present.

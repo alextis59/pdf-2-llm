@@ -17,6 +17,7 @@ import {
   extractTextLines,
   linesToMarkdownWithSourceMap
 } from "./text-extract.mjs";
+import { inferRulingGrids } from "./table-grid.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 
 const defaultSecurityLimits = Object.freeze({
@@ -138,6 +139,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     pdfVersion && !encryptedWithoutText
       ? extractRulingLines(normalized.bytes, { document: pdfDocument })
       : [];
+  const rulingGrids = inferRulingGrids(rulingLines);
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
@@ -220,6 +222,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         taggedStructureConflicts: markdownResult.taggedStructureConflicts.length,
         layout: markdownResult.layout,
         rulingLines: summarizeRulingLines(rulingLines),
+        rulingGrids: summarizeRulingGrids(rulingGrids),
         parser: pdfDocument
           ? {
               mode: pdfDocument.xrefMode,
@@ -305,6 +308,48 @@ function summarizeRulingLines(rulingLines) {
     total: rulingLines.length,
     horizontal: rulingLines.filter((line) => line.orientation === "horizontal").length,
     vertical: rulingLines.filter((line) => line.orientation === "vertical").length,
+    pages: [...pages.values()].sort((left, right) => {
+      if (left.pageIndex === null) {
+        return 1;
+      }
+      if (right.pageIndex === null) {
+        return -1;
+      }
+      return left.pageIndex - right.pageIndex;
+    })
+  };
+}
+
+function summarizeRulingGrids(rulingGrids) {
+  const pages = new Map();
+  for (const grid of rulingGrids) {
+    const pageIndex = grid.pageIndex ?? null;
+    const page = pages.get(pageIndex) ?? {
+      pageIndex,
+      total: 0,
+      complete: 0,
+      grids: []
+    };
+    page.total += 1;
+    if (grid.complete) {
+      page.complete += 1;
+    }
+    page.grids.push({
+      rows: grid.rows,
+      columns: grid.columns,
+      cells: grid.cells,
+      x1: grid.x1,
+      y1: grid.y1,
+      x2: grid.x2,
+      y2: grid.y2,
+      complete: grid.complete
+    });
+    pages.set(pageIndex, page);
+  }
+
+  return {
+    total: rulingGrids.length,
+    complete: rulingGrids.filter((grid) => grid.complete).length,
     pages: [...pages.values()].sort((left, right) => {
       if (left.pageIndex === null) {
         return 1;
