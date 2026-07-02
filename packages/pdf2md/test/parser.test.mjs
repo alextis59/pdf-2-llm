@@ -154,6 +154,28 @@ test("parsePdfDocument reports corrupt stream filters with structured syntax err
   );
 });
 
+test("parsePdfDocument supports strict and tolerant stream length handling", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObjectWithLength("BT /F1 22 Tf 20 200 Td (Tolerant Fixture) Tj ET\n", 999999)
+  ]);
+
+  assert.throws(
+    () => parsePdfDocument(bytes),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.stream.length_out_of_bounds"
+  );
+
+  const document = parsePdfDocument(bytes, { mode: "tolerant" });
+  const result = await convertPdfToMarkdown(bytes, { parser: { mode: "tolerant" } });
+
+  assert.match(document.pages[0].contentStreams[0].text, /Tolerant Fixture/);
+  assert.equal(result.markdown, "# Tolerant Fixture\n");
+  assert.equal(result.diagnostics.options.parserMode, "tolerant");
+});
+
 test("parser reports bounded byte-reader and syntax errors with codes and offsets", async () => {
   const bytes = await readFile(fixturePath);
 
@@ -226,4 +248,9 @@ function createTestPdf(objects) {
 function streamObject(contents, extraDictionary = "") {
   const bytes = typeof contents === "string" ? Buffer.from(contents, "binary") : Buffer.from(contents);
   return `<< /Length ${bytes.byteLength}${extraDictionary ? ` ${extraDictionary}` : ""} >>\nstream\n${bytes.toString("binary")}endstream`;
+}
+
+function streamObjectWithLength(contents, length) {
+  const bytes = typeof contents === "string" ? Buffer.from(contents, "binary") : Buffer.from(contents);
+  return `<< /Length ${length} >>\nstream\n${bytes.toString("binary")}endstream`;
 }

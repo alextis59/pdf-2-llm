@@ -47,10 +47,11 @@ export class ByteReader {
 export function parsePdfDocument(bytes, options = {}) {
   const reader = new ByteReader(bytes, options);
   const maxDecodedStreamBytes = options.maxDecodedStreamBytes ?? options.maxBytes ?? 50 * 1024 * 1024;
+  const mode = options.mode ?? options.parseMode ?? "strict";
   const source = Buffer.from(reader.bytes).toString("latin1");
   const version = readPdfVersion(source);
   const startXref = readStartXref(source);
-  const { entries, trailer } = parseClassicXref(source, startXref);
+  const { entries, trailer } = parseClassicXref(source, startXref, { mode });
   const objects = new Map();
   const streams = [];
 
@@ -59,7 +60,8 @@ export function parsePdfDocument(bytes, options = {}) {
       continue;
     }
     const object = parseIndirectObjectAt(source, reader.bytes, entry.offset, {
-      maxDecodedStreamBytes
+      maxDecodedStreamBytes,
+      mode
     });
     objects.set(objectKey(object.objectNumber, object.generationNumber), object);
     if (object.stream) {
@@ -126,13 +128,21 @@ function readStartXref(source) {
   return Number.parseInt(match[1], 10);
 }
 
-function parseClassicXref(source, offset) {
+function parseClassicXref(source, offset, { mode = "strict" } = {}) {
   let cursor = offset;
   if (!source.startsWith("xref", cursor)) {
-    throw new PdfSyntaxError("Only classic xref tables are supported by this parser slice.", {
-      offset,
-      code: "pdf.xref.unsupported"
-    });
+    if (mode === "tolerant") {
+      const recoveredOffset = source.indexOf("xref", offset);
+      if (recoveredOffset !== -1) {
+        cursor = recoveredOffset;
+      }
+    }
+    if (!source.startsWith("xref", cursor)) {
+      throw new PdfSyntaxError("Only classic xref tables are supported by this parser slice.", {
+        offset,
+        code: "pdf.xref.unsupported"
+      });
+    }
   }
 
   cursor += "xref".length;
@@ -210,27 +220,7 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
     }
 
     const streamStart = cursor;
-    const streamLength = readDirectStreamLength(parsed.value);
-    let streamEnd;
-    if (Number.isInteger(streamLength) && streamLength >= 0) {
-      streamEnd = streamStart + streamLength;
-    } else {
-      const endstreamOffset = source.indexOf("endstream", streamStart);
-      if (endstreamOffset === -1) {
-        throw new PdfSyntaxError("Missing endstream marker.", {
-          offset: streamStart,
-          code: "pdf.stream.end_missing"
-        });
-      }
-      streamEnd = trimTrailingLineEnding(source, endstreamOffset);
-    }
-
-    if (streamEnd > bytes.byteLength) {
-      throw new PdfSyntaxError("Stream length exceeds file bounds.", {
-        offset: streamStart,
-        code: "pdf.stream.length_out_of_bounds"
-      });
-    }
+    const streamEnd = resolveStreamEnd(source, bytes, streamStart, parsed.value, options.mode);
 
     const streamBytes = bytes.subarray(streamStart, streamEnd);
     let decoded;
@@ -288,6 +278,31 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
     offset,
     endOffset: endObjectOffset + "endobj".length
   };
+}
+
+function resolveStreamEnd(source, bytes, streamStart, dictionary, mode = "strict") {
+  const streamLength = readDirectStreamLength(dictionary);
+  if (Number.isInteger(streamLength) && streamLength >= 0) {
+    const streamEnd = streamStart + streamLength;
+    if (streamEnd <= bytes.byteLength) {
+      return streamEnd;
+    }
+    if (mode !== "tolerant") {
+      throw new PdfSyntaxError("Stream length exceeds file bounds.", {
+        offset: streamStart,
+        code: "pdf.stream.length_out_of_bounds"
+      });
+    }
+  }
+
+  const endstreamOffset = source.indexOf("endstream", streamStart);
+  if (endstreamOffset === -1) {
+    throw new PdfSyntaxError("Missing endstream marker.", {
+      offset: streamStart,
+      code: "pdf.stream.end_missing"
+    });
+  }
+  return trimTrailingLineEnding(source, endstreamOffset);
 }
 
 function readDirectStreamLength(value) {

@@ -364,7 +364,7 @@ assets.
 - [x] Implement xref table parsing.
 - [x] Implement trailer parsing.
 - [x] Implement object lookup.
-- [ ] Implement strict and tolerant parse modes.
+- [x] Implement strict and tolerant parse modes.
 - [x] Return structured errors with byte offsets.
 - [x] Add unit tests for all primitive object types.
 - [ ] Add fuzz tests for tokenizer and object parser.

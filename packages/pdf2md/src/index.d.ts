@@ -18,6 +18,9 @@ export type ConvertOptions = {
   markdown?: {
     pageAnchors?: boolean;
   };
+  parser?: {
+    mode?: "strict" | "tolerant";
+  };
   password?: string | (() => string | Promise<string>);
   security?: {
     maxBytes?: number;

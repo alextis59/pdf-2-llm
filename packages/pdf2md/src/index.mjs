@@ -55,7 +55,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
   if (pdfVersion) {
     try {
       pdfDocument = parsePdfDocument(normalized.bytes, {
-        maxBytes: security.maxBytes
+        maxBytes: security.maxBytes,
+        mode: options.parser?.mode ?? "strict"
       });
     } catch (error) {
       if (error instanceof PdfSyntaxError) {
@@ -327,6 +328,7 @@ function summarizeOptions(options) {
     pageRange: options.pageRange ?? null,
     output: options.output ?? "markdown",
     pageAnchors: options.markdown?.pageAnchors === true,
+    parserMode: options.parser?.mode ?? "strict",
     ocrEnabled: options.ocr?.enabled ?? null,
     webgpuRequired: options.webgpu?.required ?? false,
     tablesEnabled: options.tables?.enabled ?? null,
