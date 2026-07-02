@@ -18,6 +18,8 @@ mustNot:
   - flatten_all_sections_into_one_paragraph
 metrics:
   minTextCoverage: 0.95
+  minTaggedMarkedContent: 1
+  maxTaggedStructureConflicts: 0
   maxUnexpectedWarnings: 3
 snippets:
   - page: 1

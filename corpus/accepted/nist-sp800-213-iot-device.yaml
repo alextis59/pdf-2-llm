@@ -19,6 +19,8 @@ metrics:
   minTextCoverage: 0.95
   minRunningContentPrecision: 1
   minRunningContentRecall: 1
+  minTaggedMarkedContent: 1
+  maxTaggedStructureConflicts: 0
   maxUnexpectedWarnings: 3
 snippets:
   - page: 1

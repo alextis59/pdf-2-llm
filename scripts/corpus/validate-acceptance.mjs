@@ -362,6 +362,15 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
     }
   }
 
+  for (const metricName of ["minTaggedMarkedContent", "maxTaggedStructureConflicts"]) {
+    if (metrics.has(metricName)) {
+      const value = readNumber(metrics.get(metricName));
+      if (!Number.isInteger(value) || value < 0) {
+        errors.push(`${relativePath}: metrics.${metricName} must be a non-negative integer`);
+      }
+    }
+  }
+
   return errors;
 }
 

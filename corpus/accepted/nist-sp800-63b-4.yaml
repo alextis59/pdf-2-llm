@@ -22,6 +22,8 @@ metrics:
   minRunningContentRecall: 1
   maxRssDeltaBytes: 268435456
   maxHeapUsedDeltaBytes: 16777216
+  minTaggedMarkedContent: 1
+  maxTaggedStructureConflicts: 0
   maxUnexpectedWarnings: 3
 snippets:
   - page: 1
