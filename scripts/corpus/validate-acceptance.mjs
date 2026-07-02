@@ -346,7 +346,11 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
     }
   }
 
-  for (const metricName of ["maxReadingOrderDistance", "minTableCellAdjacency"]) {
+  for (const metricName of [
+    "maxReadingOrderDistance",
+    "minTableCellAdjacency",
+    "minTableSpanAccuracy"
+  ]) {
     if (!metrics.has(metricName)) {
       continue;
     }

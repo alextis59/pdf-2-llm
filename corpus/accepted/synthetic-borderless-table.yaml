@@ -13,6 +13,7 @@ mustNot:
 metrics:
   minTextCoverage: 1
   minTableCellAdjacency: 1
+  minTableSpanAccuracy: 1
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1

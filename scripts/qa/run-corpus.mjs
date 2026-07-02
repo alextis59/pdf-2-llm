@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { convertPdfToMarkdown } from "../../packages/pdf2md/src/index.mjs";
 import { compareTableCellAdjacency } from "./table-adjacency.mjs";
+import { compareTableSpanAccuracy } from "./table-span-accuracy.mjs";
 
 const args = process.argv.slice(2);
 const repoRoot = path.resolve(readOption("--root") ?? process.cwd());
@@ -115,6 +116,7 @@ async function loadAcceptance(entry) {
     expectedMode: scalars.get("expectedMode"),
     gating: scalars.get("gating") === "true",
     minTableCellAdjacency: readNumber(metrics.get("minTableCellAdjacency")),
+    minTableSpanAccuracy: readNumber(metrics.get("minTableSpanAccuracy")),
     skipReason: scalars.get("skipReason") ?? ""
   };
 }
@@ -214,7 +216,11 @@ async function runCase(corpusCase) {
     );
   }
 
-  if (assertMarkdown || acceptance.minTableCellAdjacency !== null) {
+  if (
+    assertMarkdown ||
+    acceptance.minTableCellAdjacency !== null ||
+    acceptance.minTableSpanAccuracy !== null
+  ) {
     expected = await readExpectedMarkdown(entry);
   }
 
@@ -239,6 +245,22 @@ async function runCase(corpusCase) {
       `tableCellAdjacency=${formatNumber(adjacency.score)} min=${formatNumber(
         acceptance.minTableCellAdjacency
       )} matched=${adjacency.matchedPairs}/${adjacency.expectedPairs}`
+    );
+  }
+
+  if (acceptance.minTableSpanAccuracy !== null) {
+    const spanAccuracy = compareTableSpanAccuracy(expected, result.markdown);
+    if (spanAccuracy.score + Number.EPSILON < acceptance.minTableSpanAccuracy) {
+      errors.push(
+        `table span accuracy ${formatNumber(spanAccuracy.score)} below ${formatNumber(
+          acceptance.minTableSpanAccuracy
+        )} (${spanAccuracy.matchedCells}/${spanAccuracy.expectedCells} expected cells matched)`
+      );
+    }
+    details.push(
+      `tableSpanAccuracy=${formatNumber(spanAccuracy.score)} min=${formatNumber(
+        acceptance.minTableSpanAccuracy
+      )} matched=${spanAccuracy.matchedCells}/${spanAccuracy.expectedCells}`
     );
   }
 
