@@ -538,10 +538,10 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 
 ### 5.2 Borderless Tables
 
-- [ ] Detect aligned text columns.
+- [x] Detect aligned text columns.
 - [ ] Distinguish tables from multi-column prose.
-- [ ] Infer header rows.
-- [ ] Infer numeric alignment.
+- [x] Infer header rows.
+- [x] Infer numeric alignment.
 - [ ] Track confidence per table.
 - [ ] Warn or preserve as preformatted text when confidence is low.
 
@@ -556,7 +556,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 
 Gate 4 acceptance:
 
-- [ ] Visible-border synthetic tables pass exact structure tests.
+- [x] Visible-border synthetic tables pass exact structure tests.
 - [ ] Simple public tables meet cell text and adjacency thresholds.
 - [ ] Complex tables use HTML or sidecar fallback instead of broken GFM.
 - [ ] Low-confidence tables emit warnings.

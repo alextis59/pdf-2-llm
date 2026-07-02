@@ -60,3 +60,17 @@ test("text MVP matches expected markdown for simple generated fixtures", async (
     assert.equal(result.markdown, expected);
   }
 });
+
+test("table MVP matches expected markdown for generated table fixtures", async () => {
+  const cases = [
+    "synthetic-visible-table",
+    "synthetic-borderless-table"
+  ];
+
+  for (const id of cases) {
+    const pdf = new URL(`../../../corpus/generated/${id}.pdf`, import.meta.url);
+    const expected = await readFile(new URL(`../../../corpus/expected/${id}.md`, import.meta.url), "utf8");
+    const result = await convertPdfToMarkdown(pdf.pathname);
+    assert.equal(result.markdown, expected);
+  }
+});
