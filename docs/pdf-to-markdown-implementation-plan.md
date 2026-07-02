@@ -334,7 +334,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [ ] Add unit test framework for Rust.
 - [x] Add unit/integration test framework for TypeScript.
 - [x] Add snapshot testing for Markdown.
-- [ ] Add snapshot testing for serialized IR.
+- [x] Add snapshot testing for serialized IR.
 - [ ] Add rendered HTML diff helper.
 - [ ] Add oracle comparison helper.
 - [x] Add corpus runner with `--gate`, `--id`, and `--update-snapshots`.

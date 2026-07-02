@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "0.1.0",
+  "sourceType": "digital",
+  "pages": [
+    {
+      "pageIndex": 0,
+      "widthPt": 612,
+      "heightPt": 792,
+      "rotation": 0,
+      "sourceType": "digital",
+      "elements": []
+    }
+  ],
+  "metadata": {},
+  "assets": [],
+  "warnings": [
+    {
+      "code": "text.heuristic_content_stream",
+      "message": "Text was extracted from parsed content streams.",
+      "details": {}
+    }
+  ]
+}
