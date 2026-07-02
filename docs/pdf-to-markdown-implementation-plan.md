@@ -496,11 +496,11 @@ Goal: improve reading order and document structure for real-world documents.
 
 ### 4.2 Headers, Footers, And Repeated Content
 
-- [ ] Detect repeated page headers.
-- [ ] Detect repeated page footers.
+- [x] Detect repeated page headers.
+- [x] Detect repeated page footers.
 - [ ] Detect page numbers.
 - [ ] Preserve meaningful running titles when configured.
-- [ ] Remove repeated boilerplate only above a confidence threshold.
+- [x] Remove repeated boilerplate only above a confidence threshold.
 - [ ] Add precision/recall tests against accepted manuals and reports.
 
 ### 4.3 Semantic Structure

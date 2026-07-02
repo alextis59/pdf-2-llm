@@ -25,6 +25,7 @@ export function extractTextLines(bytes) {
 }
 
 export function linesToMarkdown(lines) {
+  lines = removeRepeatedRunningContent(lines);
   const blocks = [];
   let previousWasList = false;
 
@@ -228,4 +229,25 @@ function formatTable(rows) {
 
 function isNumericCell(value) {
   return /^[-+]?\d+(?:\.\d+)?%?$/.test(value);
+}
+
+function removeRepeatedRunningContent(lines) {
+  const runningCounts = new Map();
+  for (const line of lines) {
+    if (isRunningContentCandidate(line)) {
+      const key = normalizeWhitespace(line.text);
+      runningCounts.set(key, (runningCounts.get(key) ?? 0) + 1);
+    }
+  }
+
+  return lines.filter((line) => {
+    if (!isRunningContentCandidate(line)) {
+      return true;
+    }
+    return (runningCounts.get(normalizeWhitespace(line.text)) ?? 0) < 2;
+  });
+}
+
+function isRunningContentCandidate(line) {
+  return line.fontSize <= 10 && Number.isFinite(line.y) && (line.y >= 740 || line.y <= 60);
 }
