@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { inferRulingGrids } from "../src/table-grid.mjs";
+import { assignTextLinesToGridCells, inferRulingGrids } from "../src/table-grid.mjs";
 
 test("inferRulingGrids infers rows and columns from a complete ruled table", () => {
   const lines = [
@@ -71,6 +71,55 @@ test("inferRulingGrids marks grids incomplete when inferred crossings are missin
   assert.equal(grids[0].complete, false);
 });
 
+test("assignTextLinesToGridCells assigns text boxes to cells in visual row order", () => {
+  const [grid] = inferRulingGrids([
+    horizontal(72, 610, 432, 610),
+    horizontal(72, 640, 432, 640),
+    horizontal(72, 670, 432, 670),
+    horizontal(72, 700, 432, 700),
+    vertical(72, 610, 72, 700),
+    vertical(192, 610, 192, 700),
+    vertical(312, 610, 312, 700),
+    vertical(432, 610, 432, 700)
+  ]);
+  const [table] = assignTextLinesToGridCells(
+    [grid],
+    [
+      textLine("Visible Table", 72, 720, 143, 22),
+      textLine("Quarter", 82, 680, 38.5, 11),
+      textLine("Revenue", 202, 680, 38.5, 11),
+      textLine("Cost", 322, 680, 22, 11),
+      textLine("Q1", 82, 650, 11, 11),
+      textLine("100", 202, 650, 16.5, 11),
+      textLine("50", 322, 650, 11, 11),
+      textLine("Q2", 82, 620, 11, 11),
+      textLine("120", 202, 620, 16.5, 11),
+      textLine("60", 322, 620, 11, 11)
+    ]
+  );
+
+  assert.equal(table.rows, 3);
+  assert.equal(table.columns, 3);
+  assert.equal(table.assignedTextLines, 9);
+  assert.equal(table.nonEmptyCells, 9);
+  assert.deepEqual(
+    table.cells
+      .filter((cell) => cell.text)
+      .map((cell) => [cell.rowIndex, cell.columnIndex, cell.text]),
+    [
+      [0, 0, "Quarter"],
+      [0, 1, "Revenue"],
+      [0, 2, "Cost"],
+      [1, 0, "Q1"],
+      [1, 1, "100"],
+      [1, 2, "50"],
+      [2, 0, "Q2"],
+      [2, 1, "120"],
+      [2, 2, "60"]
+    ]
+  );
+});
+
 function horizontal(x1, y1, x2, y2) {
   return rulingLine("horizontal", x1, y1, x2, y2);
 }
@@ -92,5 +141,16 @@ function rulingLine(orientation, x1, y1, x2, y2) {
     pageIndex: 0,
     streamIndex: 0,
     source: "path-operator"
+  };
+}
+
+function textLine(text, x, y, width, height) {
+  return {
+    text,
+    x,
+    y,
+    width,
+    height,
+    pageIndex: 0
   };
 }

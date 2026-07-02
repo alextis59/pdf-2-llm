@@ -143,6 +143,7 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
   const result = await convertPdfToMarkdown(visibleTableFixturePath.pathname);
   const rulingLines = result.diagnostics.extraction.rulingLines;
   const rulingGrids = result.diagnostics.extraction.rulingGrids;
+  const rulingTables = result.diagnostics.extraction.rulingTables;
 
   assert.equal(rulingLines.total, 8);
   assert.equal(rulingLines.horizontal, 4);
@@ -172,6 +173,36 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
           x2: 432,
           y2: 700,
           complete: true
+        }
+      ]
+    }
+  ]);
+  assert.equal(rulingTables.total, 1);
+  assert.equal(rulingTables.assignedTextLines, 9);
+  assert.equal(rulingTables.nonEmptyCells, 9);
+  assert.deepEqual(rulingTables.pages, [
+    {
+      pageIndex: 0,
+      total: 1,
+      assignedTextLines: 9,
+      nonEmptyCells: 9,
+      tables: [
+        {
+          rows: 3,
+          columns: 3,
+          assignedTextLines: 9,
+          nonEmptyCells: 9,
+          cells: [
+            { rowIndex: 0, columnIndex: 0, text: "Quarter", lineCount: 1 },
+            { rowIndex: 0, columnIndex: 1, text: "Revenue", lineCount: 1 },
+            { rowIndex: 0, columnIndex: 2, text: "Cost", lineCount: 1 },
+            { rowIndex: 1, columnIndex: 0, text: "Q1", lineCount: 1 },
+            { rowIndex: 1, columnIndex: 1, text: "100", lineCount: 1 },
+            { rowIndex: 1, columnIndex: 2, text: "50", lineCount: 1 },
+            { rowIndex: 2, columnIndex: 0, text: "Q2", lineCount: 1 },
+            { rowIndex: 2, columnIndex: 1, text: "120", lineCount: 1 },
+            { rowIndex: 2, columnIndex: 2, text: "60", lineCount: 1 }
+          ]
         }
       ]
     }

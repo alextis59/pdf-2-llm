@@ -17,7 +17,7 @@ import {
   extractTextLines,
   linesToMarkdownWithSourceMap
 } from "./text-extract.mjs";
-import { inferRulingGrids } from "./table-grid.mjs";
+import { assignTextLinesToGridCells, inferRulingGrids } from "./table-grid.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 
 const defaultSecurityLimits = Object.freeze({
@@ -140,6 +140,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       ? extractRulingLines(normalized.bytes, { document: pdfDocument })
       : [];
   const rulingGrids = inferRulingGrids(rulingLines);
+  const rulingTables = assignTextLinesToGridCells(rulingGrids, textLines);
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
@@ -223,6 +224,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         layout: markdownResult.layout,
         rulingLines: summarizeRulingLines(rulingLines),
         rulingGrids: summarizeRulingGrids(rulingGrids),
+        rulingTables: summarizeRulingTables(rulingTables),
         parser: pdfDocument
           ? {
               mode: pdfDocument.xrefMode,
@@ -350,6 +352,53 @@ function summarizeRulingGrids(rulingGrids) {
   return {
     total: rulingGrids.length,
     complete: rulingGrids.filter((grid) => grid.complete).length,
+    pages: [...pages.values()].sort((left, right) => {
+      if (left.pageIndex === null) {
+        return 1;
+      }
+      if (right.pageIndex === null) {
+        return -1;
+      }
+      return left.pageIndex - right.pageIndex;
+    })
+  };
+}
+
+function summarizeRulingTables(rulingTables) {
+  const pages = new Map();
+  for (const table of rulingTables) {
+    const pageIndex = table.pageIndex ?? null;
+    const page = pages.get(pageIndex) ?? {
+      pageIndex,
+      total: 0,
+      assignedTextLines: 0,
+      nonEmptyCells: 0,
+      tables: []
+    };
+    page.total += 1;
+    page.assignedTextLines += table.assignedTextLines;
+    page.nonEmptyCells += table.nonEmptyCells;
+    page.tables.push({
+      rows: table.rows,
+      columns: table.columns,
+      assignedTextLines: table.assignedTextLines,
+      nonEmptyCells: table.nonEmptyCells,
+      cells: table.cells
+        .filter((cell) => cell.lineCount > 0)
+        .map((cell) => ({
+          rowIndex: cell.rowIndex,
+          columnIndex: cell.columnIndex,
+          text: cell.text,
+          lineCount: cell.lineCount
+        }))
+    });
+    pages.set(pageIndex, page);
+  }
+
+  return {
+    total: rulingTables.length,
+    assignedTextLines: rulingTables.reduce((sum, table) => sum + table.assignedTextLines, 0),
+    nonEmptyCells: rulingTables.reduce((sum, table) => sum + table.nonEmptyCells, 0),
     pages: [...pages.values()].sort((left, right) => {
       if (left.pageIndex === null) {
         return 1;

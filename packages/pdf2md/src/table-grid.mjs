@@ -19,6 +19,53 @@ export function inferRulingGrids(rulingLines, options = {}) {
   return grids;
 }
 
+export function assignTextLinesToGridCells(rulingGrids, textLines, options = {}) {
+  const tolerance = options.cellAssignmentTolerance ?? 0.5;
+  return rulingGrids.map((grid, gridIndex) => {
+    const cells = createGridCells(grid);
+    const byCellKey = new Map(cells.map((cell) => [`${cell.rowIndex}:${cell.columnIndex}`, cell]));
+
+    for (const line of textLines) {
+      if ((line.pageIndex ?? null) !== (grid.pageIndex ?? null)) {
+        continue;
+      }
+      const center = lineCenter(line);
+      const columnIndex = intervalIndexForCoordinate(center.x, grid.xEdges, tolerance);
+      const bottomRowIndex = intervalIndexForCoordinate(center.y, grid.yEdges, tolerance);
+      if (columnIndex === null || bottomRowIndex === null) {
+        continue;
+      }
+      const rowIndex = grid.rows - 1 - bottomRowIndex;
+      const cell = byCellKey.get(`${rowIndex}:${columnIndex}`);
+      if (cell) {
+        cell.lines.push(line);
+      }
+    }
+
+    for (const cell of cells) {
+      cell.lines.sort(compareTextLinesForCell);
+      cell.text = cell.lines.map((line) => normalizeText(line.text)).filter(Boolean).join(" ");
+      cell.lineCount = cell.lines.length;
+    }
+
+    const nonEmptyCells = cells.filter((cell) => cell.lineCount > 0);
+    return {
+      type: "ruling-table-cells",
+      pageIndex: grid.pageIndex,
+      gridIndex,
+      rows: grid.rows,
+      columns: grid.columns,
+      xEdges: grid.xEdges,
+      yEdges: grid.yEdges,
+      cellCount: grid.cells,
+      assignedTextLines: nonEmptyCells.reduce((sum, cell) => sum + cell.lineCount, 0),
+      nonEmptyCells: nonEmptyCells.length,
+      cells,
+      source: "ruling-grid"
+    };
+  });
+}
+
 function inferPageRulingGrids(pageLines, options) {
   const horizontalLines = pageLines.filter((line) => line.orientation === "horizontal");
   const verticalLines = pageLines.filter((line) => line.orientation === "vertical");
@@ -118,6 +165,27 @@ function createGridFromComponent(component, options) {
   };
 }
 
+function createGridCells(grid) {
+  const cells = [];
+  for (let rowIndex = 0; rowIndex < grid.rows; rowIndex += 1) {
+    const bottomRowIndex = grid.rows - 1 - rowIndex;
+    for (let columnIndex = 0; columnIndex < grid.columns; columnIndex += 1) {
+      cells.push({
+        rowIndex,
+        columnIndex,
+        x1: grid.xEdges[columnIndex],
+        y1: grid.yEdges[bottomRowIndex],
+        x2: grid.xEdges[columnIndex + 1],
+        y2: grid.yEdges[bottomRowIndex + 1],
+        text: "",
+        lineCount: 0,
+        lines: []
+      });
+    }
+  }
+  return cells;
+}
+
 function countGridIntersections(horizontalLines, verticalLines, tolerance) {
   let count = 0;
   for (const horizontalLine of horizontalLines) {
@@ -128,6 +196,36 @@ function countGridIntersections(horizontalLines, verticalLines, tolerance) {
     }
   }
   return count;
+}
+
+function intervalIndexForCoordinate(coordinate, edges, tolerance) {
+  for (let index = 0; index < edges.length - 1; index += 1) {
+    if (coordinate >= edges[index] - tolerance && coordinate <= edges[index + 1] + tolerance) {
+      return index;
+    }
+  }
+  return null;
+}
+
+function lineCenter(line) {
+  const x = Number.isFinite(line.x) ? line.x : 0;
+  const y = Number.isFinite(line.y) ? line.y : 0;
+  const width = Number.isFinite(line.width) ? line.width : 0;
+  const height = Number.isFinite(line.height) ? line.height : 0;
+  return {
+    x: x + width / 2,
+    y: y + height / 2
+  };
+}
+
+function compareTextLinesForCell(left, right) {
+  const leftCenter = lineCenter(left);
+  const rightCenter = lineCenter(right);
+  return rightCenter.y - leftCenter.y || leftCenter.x - rightCenter.x;
+}
+
+function normalizeText(text) {
+  return String(text ?? "").replace(/\s+/g, " ").trim();
 }
 
 function lineIntersects(horizontalLine, verticalLine, tolerance) {
