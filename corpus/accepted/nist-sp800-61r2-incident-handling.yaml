@@ -1,0 +1,47 @@
+id: nist-sp800-61r2-incident-handling
+gate: layout-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_title
+  - preserve_nist_publication_identifier
+  - preserve_withdrawn_notice
+  - preserve_tagged_pdf_signal
+  - preserve_section_headings
+  - preserve_lists
+  - preserve_tables
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - omit_withdrawn_notice
+  - flatten_all_sections_into_one_paragraph
+metrics:
+  minTextCoverage: 0.95
+  maxUnexpectedWarnings: 3
+snippets:
+  - page: 1
+    contains: "Withdrawn NIST Technical Series Publication"
+  - page: 2
+    contains: "Computer Security Incident Handling Guide"
+  - page: 4
+    contains: "Reports on Computer Systems Technology"
+structure:
+  expected:
+    - tagged_pdf
+    - withdrawal_notice
+    - title_page
+    - section_headings
+    - lists
+    - tables
+warnings:
+  allowed:
+    - repeated_running_content
+    - complex_table_html_fallback
+    - form_metadata_only
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Accepted from NIST source URL after pdfinfo confirmed tagged, unencrypted PDF 1.6 with 80 pages and AcroForm metadata; snippets were checked with pdftotext and the withdrawal notice is expected content."

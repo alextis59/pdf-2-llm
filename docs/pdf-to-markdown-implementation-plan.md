@@ -420,7 +420,7 @@ assets.
 Gate 1 acceptance:
 
 - [x] All `text-mvp` synthetic PDFs pass exact or near-exact snapshots.
-- [ ] At least five simple public born-digital PDFs meet text coverage
+- [x] At least five simple public born-digital PDFs meet text coverage
   thresholds.
 - [x] No parser panics on the full initial corpus.
 - [x] Unsupported PDFs produce structured warnings or future-gate skips.

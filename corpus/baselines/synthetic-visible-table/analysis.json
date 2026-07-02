@@ -6,6 +6,7 @@
   "sha256": "2144bf6a6cb817366145a0108b1f6b5ec111d0006dd97024a892659e68ef84f3",
   "manifest": {
     "kind": "visible-table",
+    "pages": 1,
     "features": [
       "born-digital",
       "visible-table",
@@ -17,6 +18,7 @@
   "pdfVersion": "1.4",
   "pages": {
     "staticPageObjectCount": 1,
+    "manifest": 1,
     "pdfinfo": null
   },
   "header": {

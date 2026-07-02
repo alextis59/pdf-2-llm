@@ -1,39 +1,38 @@
 {
-  "id": "nist-sp800-63b-4",
+  "id": "nist-sp800-30r1-risk-assessment",
   "analyzedAt": "2026-07-02T00:00:00.000Z",
-  "path": "corpus/raw/public/nist-sp800-63b-4.pdf",
-  "bytes": 993734,
-  "sha256": "d9ab89576b5ae2cfb3ba37781110788dea27a85a5079496dbfc1a79834670afd",
+  "path": "corpus/raw/public/nist-sp800-30r1-risk-assessment.pdf",
+  "bytes": 826897,
+  "sha256": "f214087f0bdb35932a28c16eb93932a33c67a6edfb5e6f1638866bd201c98e04",
   "manifest": {
-    "kind": "long-document",
-    "pages": 129,
+    "kind": "born-digital",
+    "pages": 95,
     "features": [
       "born-digital",
       "tagged",
-      "long-document",
       "government-report",
       "headings",
+      "lists",
       "tables",
-      "references",
-      "acroform-metadata"
+      "appendices"
     ],
     "redistributable": true,
-    "acceptanceFile": "corpus/accepted/nist-sp800-63b-4.yaml"
+    "acceptanceFile": "corpus/accepted/nist-sp800-30r1-risk-assessment.yaml"
   },
-  "pdfVersion": "1.7",
+  "pdfVersion": "1.5",
   "pages": {
-    "staticPageObjectCount": 130,
-    "manifest": 129,
+    "staticPageObjectCount": 95,
+    "manifest": 95,
     "pdfinfo": null
   },
   "header": {
-    "pdfVersion": "1.7",
+    "pdfVersion": "1.5",
     "hasPdfHeader": true,
     "hasEofMarker": true,
-    "startxrefCount": 3
+    "startxrefCount": 4
   },
   "structure": {
-    "pageObjectCount": 130,
+    "pageObjectCount": 95,
     "pageBoxes": [
       {
         "type": "CropBox",
@@ -940,15 +939,15 @@
       0
     ],
     "classicXrefCount": 0,
-    "xrefStreamCount": 3,
-    "objectStreamCount": 174,
+    "xrefStreamCount": 4,
+    "objectStreamCount": 93,
     "linearizedHint": true,
     "encrypted": false
   },
   "documentFeatures": {
     "tagged": true,
     "roleMap": false,
-    "acroForm": true,
+    "acroForm": false,
     "xfa": false,
     "annotations": true,
     "outlines": true,
@@ -959,16 +958,16 @@
   "contentSignals": {
     "beginTextOps": 0,
     "endTextOps": 0,
-    "textShowOps": 222,
-    "imageXObjects": 1,
-    "pathOperators": 40,
-    "fontObjects": 133,
+    "textShowOps": 214,
+    "imageXObjects": 2,
+    "pathOperators": 30,
+    "fontObjects": 95,
     "cidFonts": 0,
     "cidSystemInfo": 0,
     "toUnicodeMaps": 0,
     "encodings": 0,
     "missingToUnicodeLikely": true,
-    "estimatedTextShowOpsPerPage": 1.7076923076923076,
+    "estimatedTextShowOpsPerPage": 2.2526315789473683,
     "imageDominantLikely": false,
     "pathHeavyLikely": false
   },

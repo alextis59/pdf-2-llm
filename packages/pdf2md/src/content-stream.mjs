@@ -600,7 +600,7 @@ function readHexString(source, startOffset) {
 }
 
 function bytesToLatin1(bytes) {
-  return String.fromCharCode(...bytes);
+  return Buffer.from(bytes).toString("latin1");
 }
 
 function readNumber(source, offset) {

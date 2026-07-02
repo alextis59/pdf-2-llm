@@ -6,6 +6,7 @@
   "sha256": "43cdb1a9ac5b8c0572caf10eca409855796b8205399e6239fa1de43b28ad6884",
   "manifest": {
     "kind": "long-document",
+    "pages": 2,
     "features": [
       "born-digital",
       "multi-page",
@@ -18,6 +19,7 @@
   "pdfVersion": "1.4",
   "pages": {
     "staticPageObjectCount": 2,
+    "manifest": 2,
     "pdfinfo": null
   },
   "header": {

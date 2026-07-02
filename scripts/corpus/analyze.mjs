@@ -231,6 +231,10 @@ function parsePdfInfoPages(stdout) {
   return match ? Number.parseInt(match[1], 10) : null;
 }
 
+function readManifestPages(entry) {
+  return Number.isInteger(entry?.pages) ? entry.pages : null;
+}
+
 async function runTool(command, argsForCommand, timeoutMs = 15000) {
   return new Promise((resolve) => {
     const child = spawn(command, argsForCommand, {
@@ -351,6 +355,7 @@ async function analyzePdf(target) {
   const pdfInfoPages = tools.pdfinfo?.available && tools.pdfinfo.status === 0
     ? parsePdfInfoPages(tools.pdfinfo.stdout)
     : null;
+  const manifestPages = readManifestPages(target.manifestEntry);
 
   return {
     id: target.id,
@@ -361,6 +366,7 @@ async function analyzePdf(target) {
     manifest: target.manifestEntry
       ? {
           kind: target.manifestEntry.kind,
+          pages: manifestPages,
           features: target.manifestEntry.features ?? [],
           redistributable: target.manifestEntry.redistributable,
           acceptanceFile: target.manifestEntry.acceptanceFile
@@ -369,6 +375,7 @@ async function analyzePdf(target) {
     pdfVersion: staticAnalysis.header.pdfVersion,
     pages: {
       staticPageObjectCount: staticAnalysis.structure.pageObjectCount,
+      manifest: manifestPages,
       pdfinfo: pdfInfoPages
     },
     ...staticAnalysis,
@@ -408,8 +415,9 @@ async function writeInventoryReport(analyses) {
       .map(([name]) => name);
     const manifestFeatures = analysis.manifest?.features ?? [];
     const features = [...new Set([...manifestFeatures, ...detectedFeatures])].join(", ");
+    const pages = analysis.pages.pdfinfo ?? analysis.pages.manifest ?? analysis.pages.staticPageObjectCount ?? 0;
     lines.push(
-      `| ${analysis.id} | ${analysis.bytes} | ${analysis.sha256} | ${analysis.pdfVersion ?? "unknown"} | ${analysis.pages.pdfinfo ?? analysis.pages.staticPageObjectCount ?? 0} | ${features || "none detected"} |`
+      `| ${analysis.id} | ${analysis.bytes} | ${analysis.sha256} | ${analysis.pdfVersion ?? "unknown"} | ${pages} | ${features || "none detected"} |`
     );
   }
 

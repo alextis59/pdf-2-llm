@@ -28,6 +28,58 @@
           "disposition": "commit-ok",
           "retrievalCommand": "node scripts/corpus/retrieve.mjs --id nist-sp800-207-zero-trust",
           "notes": "Born-digital NIST report for headings, paragraphs, figures, references, and government-report layout."
+        },
+        {
+          "id": "nist-sp800-218-secure-software",
+          "sourceType": "url",
+          "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-218.pdf",
+          "targetPath": "corpus/raw/_incoming/nist-sp800-218-secure-software.pdf",
+          "licenseName": "NIST Special Publication, not subject to copyright in the United States",
+          "licenseUrl": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+          "licenseNotes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id nist-sp800-218-secure-software",
+          "notes": "Born-digital NIST SSDF report for concise headings, tables, references, and framework-style prose."
+        },
+        {
+          "id": "nist-sp800-61r2-incident-handling",
+          "sourceType": "url",
+          "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r2.pdf",
+          "targetPath": "corpus/raw/_incoming/nist-sp800-61r2-incident-handling.pdf",
+          "licenseName": "NIST Special Publication, not subject to copyright in the United States",
+          "licenseUrl": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+          "licenseNotes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id nist-sp800-61r2-incident-handling",
+          "notes": "Born-digital NIST incident handling guide for headings, lists, tables, appendices, and references."
+        },
+        {
+          "id": "nist-sp800-30r1-risk-assessment",
+          "sourceType": "url",
+          "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-30r1.pdf",
+          "targetPath": "corpus/raw/_incoming/nist-sp800-30r1-risk-assessment.pdf",
+          "licenseName": "NIST Special Publication, not subject to copyright in the United States",
+          "licenseUrl": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+          "licenseNotes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id nist-sp800-30r1-risk-assessment",
+          "notes": "Born-digital NIST risk assessment guide for title pages, section hierarchy, lists, tables, and appendices."
+        },
+        {
+          "id": "nist-sp800-213-iot-device",
+          "sourceType": "url",
+          "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-213.pdf",
+          "targetPath": "corpus/raw/_incoming/nist-sp800-213-iot-device.pdf",
+          "licenseName": "NIST Special Publication, not subject to copyright in the United States",
+          "licenseUrl": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+          "licenseNotes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id nist-sp800-213-iot-device",
+          "notes": "Born-digital NIST IoT device cybersecurity guidance for concise title pages, section headings, lists, and references."
         }
       ]
     },

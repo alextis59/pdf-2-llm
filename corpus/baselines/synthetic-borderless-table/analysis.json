@@ -6,6 +6,7 @@
   "sha256": "e5c532de1d67a53ce41a768bb6ea12ae0f68313b7a33c124a0a67c602a03bbef",
   "manifest": {
     "kind": "borderless-table",
+    "pages": 1,
     "features": [
       "born-digital",
       "borderless-table",
@@ -17,6 +18,7 @@
   "pdfVersion": "1.4",
   "pages": {
     "staticPageObjectCount": 1,
+    "manifest": 1,
     "pdfinfo": null
   },
   "header": {

@@ -187,7 +187,7 @@ function bytesToHex(bytes) {
 }
 
 function bytesToLatin1(bytes) {
-  return String.fromCharCode(...bytes);
+  return Buffer.from(bytes).toString("latin1");
 }
 
 function latin1Bytes(value) {

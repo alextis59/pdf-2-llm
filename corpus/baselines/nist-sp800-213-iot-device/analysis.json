@@ -1,94 +1,39 @@
 {
-  "id": "nist-sp800-63b-4",
+  "id": "nist-sp800-213-iot-device",
   "analyzedAt": "2026-07-02T00:00:00.000Z",
-  "path": "corpus/raw/public/nist-sp800-63b-4.pdf",
-  "bytes": 993734,
-  "sha256": "d9ab89576b5ae2cfb3ba37781110788dea27a85a5079496dbfc1a79834670afd",
+  "path": "corpus/raw/public/nist-sp800-213-iot-device.pdf",
+  "bytes": 2386815,
+  "sha256": "8f90d1fc02a3436444dca859b2f66e97942f443c07109798aeaee1315a6c60ae",
   "manifest": {
-    "kind": "long-document",
-    "pages": 129,
+    "kind": "born-digital",
+    "pages": 47,
     "features": [
       "born-digital",
       "tagged",
-      "long-document",
       "government-report",
       "headings",
-      "tables",
+      "lists",
       "references",
-      "acroform-metadata"
+      "optimized-pdf"
     ],
     "redistributable": true,
-    "acceptanceFile": "corpus/accepted/nist-sp800-63b-4.yaml"
+    "acceptanceFile": "corpus/accepted/nist-sp800-213-iot-device.yaml"
   },
-  "pdfVersion": "1.7",
+  "pdfVersion": "1.6",
   "pages": {
-    "staticPageObjectCount": 130,
-    "manifest": 129,
+    "staticPageObjectCount": 47,
+    "manifest": 47,
     "pdfinfo": null
   },
   "header": {
-    "pdfVersion": "1.7",
+    "pdfVersion": "1.6",
     "hasPdfHeader": true,
     "hasEofMarker": true,
-    "startxrefCount": 3
+    "startxrefCount": 2
   },
   "structure": {
-    "pageObjectCount": 130,
+    "pageObjectCount": 47,
     "pageBoxes": [
-      {
-        "type": "CropBox",
-        "values": [
-          0,
-          0,
-          612,
-          792
-        ]
-      },
-      {
-        "type": "MediaBox",
-        "values": [
-          0,
-          0,
-          612,
-          792
-        ]
-      },
-      {
-        "type": "CropBox",
-        "values": [
-          0,
-          0,
-          612,
-          792
-        ]
-      },
-      {
-        "type": "MediaBox",
-        "values": [
-          0,
-          0,
-          612,
-          792
-        ]
-      },
-      {
-        "type": "CropBox",
-        "values": [
-          0,
-          0,
-          612,
-          792
-        ]
-      },
-      {
-        "type": "MediaBox",
-        "values": [
-          0,
-          0,
-          612,
-          792
-        ]
-      },
       {
         "type": "CropBox",
         "values": [
@@ -940,15 +885,15 @@
       0
     ],
     "classicXrefCount": 0,
-    "xrefStreamCount": 3,
-    "objectStreamCount": 174,
+    "xrefStreamCount": 2,
+    "objectStreamCount": 53,
     "linearizedHint": true,
     "encrypted": false
   },
   "documentFeatures": {
     "tagged": true,
     "roleMap": false,
-    "acroForm": true,
+    "acroForm": false,
     "xfa": false,
     "annotations": true,
     "outlines": true,
@@ -959,16 +904,16 @@
   "contentSignals": {
     "beginTextOps": 0,
     "endTextOps": 0,
-    "textShowOps": 222,
-    "imageXObjects": 1,
-    "pathOperators": 40,
-    "fontObjects": 133,
+    "textShowOps": 521,
+    "imageXObjects": 24,
+    "pathOperators": 74,
+    "fontObjects": 47,
     "cidFonts": 0,
     "cidSystemInfo": 0,
     "toUnicodeMaps": 0,
     "encodings": 0,
     "missingToUnicodeLikely": true,
-    "estimatedTextShowOpsPerPage": 1.7076923076923076,
+    "estimatedTextShowOpsPerPage": 11.085106382978724,
     "imageDominantLikely": false,
     "pathHeavyLikely": false
   },

@@ -6,6 +6,7 @@
   "sha256": "b644d87e0509be0a958a0cf0c39b15f607d977ad41c8b685114cbb7b9aa0c2b5",
   "manifest": {
     "kind": "vector-heavy",
+    "pages": 1,
     "features": [
       "born-digital",
       "vector-figure",
@@ -17,6 +18,7 @@
   "pdfVersion": "1.4",
   "pages": {
     "staticPageObjectCount": 1,
+    "manifest": 1,
     "pdfinfo": null
   },
   "header": {

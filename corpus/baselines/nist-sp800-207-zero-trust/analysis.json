@@ -6,6 +6,7 @@
   "sha256": "0290d6ece24874287316f4bf430fef770aa4ec08a2227c8f2c1e5b2ff975e03d",
   "manifest": {
     "kind": "born-digital",
+    "pages": 59,
     "features": [
       "born-digital",
       "tagged",
@@ -21,6 +22,7 @@
   "pdfVersion": "1.6",
   "pages": {
     "staticPageObjectCount": 59,
+    "manifest": 59,
     "pdfinfo": null
   },
   "header": {

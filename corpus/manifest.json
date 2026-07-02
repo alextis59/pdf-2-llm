@@ -34,6 +34,136 @@
       "notes": "Born-digital NIST report for headings, paragraphs, figures, references, and government-report layout."
     },
     {
+      "id": "nist-sp800-218-secure-software",
+      "kind": "born-digital",
+      "path": "corpus/raw/public/nist-sp800-218-secure-software.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-218.pdf",
+        "description": "Born-digital NIST SSDF report for concise headings, tables, references, and framework-style prose."
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "NIST Special Publication, not subject to copyright in the United States",
+        "url": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+        "notes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated."
+      },
+      "redistributable": true,
+      "sha256": "617746e553a9e2da49bfbd4eef0dfc3094758a39b869314e4173ac36605cde22",
+      "bytes": 739891,
+      "pages": 36,
+      "pdfVersion": "1.6",
+      "features": [
+        "born-digital",
+        "tagged",
+        "government-report",
+        "headings",
+        "tables",
+        "references",
+        "optimized-pdf"
+      ],
+      "acceptanceFile": "corpus/accepted/nist-sp800-218-secure-software.yaml",
+      "notes": "Born-digital NIST SSDF report for concise headings, tables, references, and framework-style prose."
+    },
+    {
+      "id": "nist-sp800-61r2-incident-handling",
+      "kind": "born-digital",
+      "path": "corpus/raw/public/nist-sp800-61r2-incident-handling.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-61r2.pdf",
+        "description": "Born-digital NIST incident handling guide for headings, lists, tables, appendices, and references."
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "NIST Special Publication, not subject to copyright in the United States",
+        "url": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+        "notes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated."
+      },
+      "redistributable": true,
+      "sha256": "b1c5ead0632dcfb979c59d8c462b094ad2465ddaf62d5c246289d6d9b4419df1",
+      "bytes": 1744473,
+      "pages": 80,
+      "pdfVersion": "1.6",
+      "features": [
+        "born-digital",
+        "tagged",
+        "government-report",
+        "withdrawn-notice",
+        "headings",
+        "lists",
+        "tables",
+        "references",
+        "acroform-metadata"
+      ],
+      "acceptanceFile": "corpus/accepted/nist-sp800-61r2-incident-handling.yaml",
+      "notes": "Born-digital NIST incident handling guide for headings, lists, tables, appendices, and references; the source PDF includes a NIST withdrawal notice."
+    },
+    {
+      "id": "nist-sp800-30r1-risk-assessment",
+      "kind": "born-digital",
+      "path": "corpus/raw/public/nist-sp800-30r1-risk-assessment.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-30r1.pdf",
+        "description": "Born-digital NIST risk assessment guide for title pages, section hierarchy, lists, tables, and appendices."
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "NIST Special Publication, not subject to copyright in the United States",
+        "url": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+        "notes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated."
+      },
+      "redistributable": true,
+      "sha256": "f214087f0bdb35932a28c16eb93932a33c67a6edfb5e6f1638866bd201c98e04",
+      "bytes": 826897,
+      "pages": 95,
+      "pdfVersion": "1.5",
+      "features": [
+        "born-digital",
+        "tagged",
+        "government-report",
+        "headings",
+        "lists",
+        "tables",
+        "appendices"
+      ],
+      "acceptanceFile": "corpus/accepted/nist-sp800-30r1-risk-assessment.yaml",
+      "notes": "Born-digital NIST risk assessment guide for title pages, section hierarchy, lists, tables, and appendices."
+    },
+    {
+      "id": "nist-sp800-213-iot-device",
+      "kind": "born-digital",
+      "path": "corpus/raw/public/nist-sp800-213-iot-device.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-213.pdf",
+        "description": "Born-digital NIST IoT device cybersecurity guidance for concise title pages, section headings, lists, and references."
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "NIST Special Publication, not subject to copyright in the United States",
+        "url": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+        "notes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated."
+      },
+      "redistributable": true,
+      "sha256": "8f90d1fc02a3436444dca859b2f66e97942f443c07109798aeaee1315a6c60ae",
+      "bytes": 2386815,
+      "pages": 47,
+      "pdfVersion": "1.6",
+      "features": [
+        "born-digital",
+        "tagged",
+        "government-report",
+        "headings",
+        "lists",
+        "references",
+        "optimized-pdf"
+      ],
+      "acceptanceFile": "corpus/accepted/nist-sp800-213-iot-device.yaml",
+      "notes": "Born-digital NIST IoT device cybersecurity guidance for concise title pages, section headings, lists, and references."
+    },
+    {
       "id": "nist-sp800-63b-4",
       "kind": "long-document",
       "path": "corpus/raw/public/nist-sp800-63b-4.pdf",

@@ -1,0 +1,46 @@
+id: nist-sp800-30r1-risk-assessment
+gate: layout-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_title
+  - preserve_nist_publication_identifier
+  - preserve_tagged_pdf_signal
+  - preserve_section_headings
+  - preserve_lists
+  - preserve_tables
+  - preserve_appendices
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - drop_title_page_metadata
+  - flatten_all_sections_into_one_paragraph
+metrics:
+  minTextCoverage: 0.95
+  maxUnexpectedWarnings: 3
+snippets:
+  - page: 1
+    contains: "NIST Special Publication 800-30 Revision 1"
+  - page: 1
+    contains: "Guide for Conducting Risk Assessments"
+  - page: 3
+    contains: "This publication may be used by nongovernmental organizations on a voluntary basis and is not subject to copyright in the United States."
+structure:
+  expected:
+    - tagged_pdf
+    - title_page
+    - section_headings
+    - lists
+    - tables
+    - appendices
+warnings:
+  allowed:
+    - repeated_running_content
+    - complex_table_html_fallback
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Accepted from NIST source URL after pdfinfo confirmed tagged, unencrypted PDF 1.5 with 95 pages; snippets were checked with pdftotext."

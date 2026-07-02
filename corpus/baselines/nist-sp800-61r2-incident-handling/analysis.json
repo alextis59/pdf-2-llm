@@ -1,0 +1,100 @@
+{
+  "id": "nist-sp800-61r2-incident-handling",
+  "analyzedAt": "2026-07-02T00:00:00.000Z",
+  "path": "corpus/raw/public/nist-sp800-61r2-incident-handling.pdf",
+  "bytes": 1744473,
+  "sha256": "b1c5ead0632dcfb979c59d8c462b094ad2465ddaf62d5c246289d6d9b4419df1",
+  "manifest": {
+    "kind": "born-digital",
+    "pages": 80,
+    "features": [
+      "born-digital",
+      "tagged",
+      "government-report",
+      "withdrawn-notice",
+      "headings",
+      "lists",
+      "tables",
+      "references",
+      "acroform-metadata"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/nist-sp800-61r2-incident-handling.yaml"
+  },
+  "pdfVersion": "1.6",
+  "pages": {
+    "staticPageObjectCount": 1,
+    "manifest": 80,
+    "pdfinfo": null
+  },
+  "header": {
+    "pdfVersion": "1.6",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 2
+  },
+  "structure": {
+    "pageObjectCount": 1,
+    "pageBoxes": [
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [
+      0
+    ],
+    "classicXrefCount": 0,
+    "xrefStreamCount": 2,
+    "objectStreamCount": 52,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": true,
+    "roleMap": false,
+    "acroForm": true,
+    "xfa": false,
+    "annotations": true,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": true
+  },
+  "contentSignals": {
+    "beginTextOps": 0,
+    "endTextOps": 0,
+    "textShowOps": 307,
+    "imageXObjects": 10,
+    "pathOperators": 74,
+    "fontObjects": 9,
+    "cidFonts": 1,
+    "cidSystemInfo": 1,
+    "toUnicodeMaps": 5,
+    "encodings": 5,
+    "missingToUnicodeLikely": false,
+    "estimatedTextShowOpsPerPage": 307,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "externalTools": {},
+  "toolOutputs": {},
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

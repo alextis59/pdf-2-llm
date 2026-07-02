@@ -6,6 +6,7 @@
   "sha256": "3636a7445b31af9a6477573d94f52366db7b08b6a5c5bc3488c3c1064ab280b3",
   "manifest": {
     "kind": "synthetic",
+    "pages": 1,
     "features": [
       "born-digital",
       "paragraphs",
@@ -17,6 +18,7 @@
   "pdfVersion": "1.4",
   "pages": {
     "staticPageObjectCount": 1,
+    "manifest": 1,
     "pdfinfo": null
   },
   "header": {

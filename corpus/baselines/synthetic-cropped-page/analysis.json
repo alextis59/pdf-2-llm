@@ -6,6 +6,7 @@
   "sha256": "cf4240dfdf2d34917a6ca5d9e8b5977ca852322c5b1bdf135fb8cfc026ee15af",
   "manifest": {
     "kind": "rotated-cropped",
+    "pages": 1,
     "features": [
       "born-digital",
       "cropped-page"
@@ -16,6 +17,7 @@
   "pdfVersion": "1.4",
   "pages": {
     "staticPageObjectCount": 1,
+    "manifest": 1,
     "pdfinfo": null
   },
   "header": {
