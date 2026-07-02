@@ -1,0 +1,5 @@
+Vector Figure Fixture
+
+Figure 1. A generated vector box.
+
+

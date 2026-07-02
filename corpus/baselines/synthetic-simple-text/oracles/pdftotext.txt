@@ -1,0 +1,5 @@
+Synthetic Simple Text
+This fixture validates basic paragraph extraction.
+The expected output is deterministic.
+
+

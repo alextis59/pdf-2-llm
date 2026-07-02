@@ -1,0 +1,48 @@
+id: nist-sp800-63b-4
+gate: layout-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_title
+  - preserve_nist_publication_identifier
+  - preserve_tagged_pdf_signal
+  - preserve_section_headings
+  - preserve_tables
+  - preserve_references
+  - report_form_metadata
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - drop_authenticator_requirement_tables
+  - treat_acroform_metadata_as_user_filled_values
+metrics:
+  minTextCoverage: 0.95
+  maxUnexpectedWarnings: 3
+snippets:
+  - page: 1
+    contains: "NIST SP 800-63B-4"
+  - page: 1
+    contains: "Digital Identity Guidelines"
+  - page: 4
+    contains: "This publication may be used by nongovernmental organizations on a voluntary basis and is not subject to copyright in the United States."
+structure:
+  expected:
+    - tagged_pdf
+    - title_page
+    - long_document
+    - section_headings
+    - tables
+    - references
+    - acroform_metadata
+warnings:
+  allowed:
+    - repeated_running_content
+    - complex_table_html_fallback
+    - form_metadata_only
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Accepted from NIST source URL after pdfinfo confirmed tagged, unencrypted PDF 1.7 with 129 pages and AcroForm metadata; snippets were checked with pdftotext."

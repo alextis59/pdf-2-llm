@@ -1,0 +1,44 @@
+id: nist-sp800-207-zero-trust
+gate: layout-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_title
+  - preserve_nist_publication_identifier
+  - preserve_tagged_pdf_signal
+  - preserve_section_headings
+  - preserve_references
+  - preserve_page_anchors
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - drop_title_page_metadata
+  - flatten_all_sections_into_one_paragraph
+metrics:
+  minTextCoverage: 0.95
+  maxUnexpectedWarnings: 2
+snippets:
+  - page: 1
+    contains: "NIST Special Publication 800-207"
+  - page: 1
+    contains: "Zero Trust Architecture"
+  - page: 3
+    contains: "This publication may be used by nongovernmental organizations on a voluntary basis and is not subject to copyright in the United States."
+structure:
+  expected:
+    - tagged_pdf
+    - title_page
+    - section_headings
+    - references
+    - figures
+warnings:
+  allowed:
+    - repeated_running_content
+    - figure_asset_fallback
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Accepted from NIST source URL after pdfinfo confirmed tagged, unencrypted PDF 1.6 with 59 pages; snippets were checked with pdftotext."

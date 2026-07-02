@@ -1,0 +1,10 @@
+Two Column Fixture
+Left column starts here.
+
+Right column starts here.
+
+Left column continues here.
+
+Right column continues here.
+
+

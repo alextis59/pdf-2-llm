@@ -2,6 +2,71 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "nist-sp800-207-zero-trust",
+      "kind": "born-digital",
+      "path": "corpus/raw/public/nist-sp800-207-zero-trust.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://nvlpubs.nist.gov/nistpubs/specialpublications/NIST.SP.800-207.pdf",
+        "description": "Born-digital NIST report for headings, paragraphs, figures, references, and government-report layout."
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "NIST Special Publication, not subject to copyright in the United States",
+        "url": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+        "notes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated."
+      },
+      "redistributable": true,
+      "sha256": "0290d6ece24874287316f4bf430fef770aa4ec08a2227c8f2c1e5b2ff975e03d",
+      "bytes": 966908,
+      "pages": 59,
+      "pdfVersion": "1.6",
+      "features": [
+        "born-digital",
+        "tagged",
+        "government-report",
+        "headings",
+        "figures",
+        "references",
+        "optimized-pdf"
+      ],
+      "acceptanceFile": "corpus/accepted/nist-sp800-207-zero-trust.yaml",
+      "notes": "Born-digital NIST report for headings, paragraphs, figures, references, and government-report layout."
+    },
+    {
+      "id": "nist-sp800-63b-4",
+      "kind": "long-document",
+      "path": "corpus/raw/public/nist-sp800-63b-4.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-63B-4.pdf",
+        "description": "Long tagged NIST report for streaming, headings, references, AcroForm metadata, and repeated running content."
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "NIST Special Publication, not subject to copyright in the United States",
+        "url": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+        "notes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated."
+      },
+      "redistributable": true,
+      "sha256": "d9ab89576b5ae2cfb3ba37781110788dea27a85a5079496dbfc1a79834670afd",
+      "bytes": 993734,
+      "pages": 129,
+      "pdfVersion": "1.7",
+      "features": [
+        "born-digital",
+        "tagged",
+        "long-document",
+        "government-report",
+        "headings",
+        "tables",
+        "references",
+        "acroform-metadata"
+      ],
+      "acceptanceFile": "corpus/accepted/nist-sp800-63b-4.yaml",
+      "notes": "Long tagged NIST report for streaming, headings, references, AcroForm metadata, and repeated running content."
+    },
+    {
       "id": "synthetic-borderless-table",
       "kind": "borderless-table",
       "path": "corpus/generated/synthetic-borderless-table.pdf",

@@ -150,11 +150,11 @@ Checklist:
 - [x] Avoid committing copyrighted reports unless redistribution is explicitly
   allowed.
 - [x] Store source URLs and retrieval commands before downloading.
-- [ ] Download candidates into `corpus/raw/_incoming/`.
-- [ ] Compute SHA-256 for every incoming PDF.
-- [ ] Run static analysis on every incoming PDF before acceptance review.
-- [ ] Move accepted raw PDFs into stable corpus group directories.
-- [ ] Remove or quarantine PDFs that cannot be legally retained or tested.
+- [x] Download candidates into `corpus/raw/_incoming/`.
+- [x] Compute SHA-256 for every incoming PDF.
+- [x] Run static analysis on every incoming PDF before acceptance review.
+- [x] Move accepted raw PDFs into stable corpus group directories.
+- [x] Remove or quarantine PDFs that cannot be legally retained or tested.
 
 ### 0.3 Retrieval Tooling
 
@@ -208,7 +208,7 @@ Checklist:
   drawings.
 - [x] Produce per-PDF analysis JSON under `corpus/baselines/<id>/analysis.json`.
 - [ ] Produce low-resolution page preview images for human review.
-- [ ] Produce oracle text outputs under `corpus/baselines/<id>/oracles/`.
+- [x] Produce oracle text outputs under `corpus/baselines/<id>/oracles/`.
 - [x] Add analysis summaries to `corpus/reports/corpus-inventory.md`.
 
 ### 0.5 Acceptance Criteria Files
@@ -830,8 +830,8 @@ Minimum release bars for a serious beta:
 - [x] Create corpus directories and manifest schema.
 - [x] Add retrieval and analysis script skeletons.
 - [x] Generate the first synthetic exact-output PDFs.
-- [ ] Retrieve a small public-domain/public-license external PDF set.
-- [ ] Run static analysis and oracle extraction on the first corpus batch.
+- [x] Retrieve a small public-domain/public-license external PDF set.
+- [x] Run static analysis and oracle extraction on the first corpus batch.
 - [x] Write acceptance YAML for the first 10 PDFs.
 - [ ] Implement project scaffolding and stub API.
 - [ ] Make the corpus runner list PDFs and report skipped gates.
