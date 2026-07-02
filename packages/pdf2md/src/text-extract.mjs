@@ -43,8 +43,9 @@ export function linesToMarkdown(lines, options = {}) {
 }
 
 export function linesToMarkdownWithSourceMap(lines, options = {}) {
+  const pageNumberRegions = pageNumberRegionsByPage(lines);
   lines = removeRepeatedRunningContent(lines);
-  const layout = analyzeLineLayout(lines);
+  const layout = analyzeLineLayout(lines, { pageNumberRegions });
   lines = orderLinesForReading(lines);
   const blocks = [];
   let previousWasList = false;
@@ -211,9 +212,13 @@ function orderLinesForReading(lines) {
   return groupLinesByPage(lines).flatMap(orderPageLinesForReading);
 }
 
-function analyzeLineLayout(lines) {
+function analyzeLineLayout(lines, { pageNumberRegions = new Map() } = {}) {
   return {
-    pages: groupLinesByPage(lines).map(classifyPageLayout)
+    pages: groupLinesByPage(lines).map((pageGroup) =>
+      classifyPageLayout(pageGroup, {
+        pageNumbers: pageNumberRegions.get(pageGroupKey(pageGroup)) ?? []
+      })
+    )
   };
 }
 
@@ -235,7 +240,7 @@ function groupLinesByPage(lines) {
   return pageGroups;
 }
 
-function classifyPageLayout(indexedLines) {
+function classifyPageLayout(indexedLines, { pageNumbers = [] } = {}) {
   const pageIndex = pageIndexForGroup(indexedLines);
   if (indexedLines.length === 0 || !indexedLines.every((item) => hasLineGeometry(item.line))) {
     return {
@@ -247,7 +252,8 @@ function classifyPageLayout(indexedLines) {
       sidebars: [],
       callouts: [],
       footnotes: [],
-      captions: []
+      captions: [],
+      pageNumbers
     };
   }
 
@@ -269,13 +275,48 @@ function classifyPageLayout(indexedLines) {
     sidebars: regions.sidebars,
     callouts: regions.callouts,
     footnotes: regions.footnotes,
-    captions: regions.captions
+    captions: regions.captions,
+    pageNumbers
   };
 }
 
 function pageIndexForGroup(indexedLines) {
   const line = indexedLines.find((item) => Number.isInteger(item.line.pageIndex))?.line;
   return Number.isInteger(line?.pageIndex) ? line.pageIndex : null;
+}
+
+function pageGroupKey(indexedLines) {
+  const line = indexedLines.find((item) => Number.isInteger(item.line.pageIndex))?.line;
+  return line ? pageKey(line) : "page:unknown";
+}
+
+function pageKey(line) {
+  return Number.isInteger(line.pageIndex) ? `page:${line.pageIndex}` : "page:unknown";
+}
+
+function pageNumberRegionsByPage(lines) {
+  const regions = new Map();
+  for (const line of lines) {
+    if (!isPageNumberCandidate(line)) {
+      continue;
+    }
+    const key = pageKey(line);
+    const pageRegions = regions.get(key) ?? [];
+    pageRegions.push(lineRegion("page-number", line));
+    regions.set(key, pageRegions);
+  }
+  return regions;
+}
+
+function lineRegion(kind, line) {
+  return {
+    kind,
+    x: roundNumber(finiteOr(line.x, 0)),
+    y: roundNumber(finiteOr(line.y, 0)),
+    width: roundNumber(Math.max(1, finiteOr(line.width, 1))),
+    height: roundNumber(Math.max(1, finiteOr(line.height, line.fontSize ?? 10))),
+    rows: 1
+  };
 }
 
 function rowSpansColumns(row, columns) {
@@ -358,6 +399,10 @@ function rowText(row) {
 
 function roundNumber(value) {
   return Math.round(value * 1000) / 1000;
+}
+
+function finiteOr(value, fallback) {
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function orderPageLinesForReading(indexedLines) {

@@ -214,14 +214,16 @@ test("linesToMarkdownWithSourceMap reports figure and table caption regions", ()
 });
 
 test("linesToMarkdown removes high-confidence page numbers", () => {
-  const markdown = linesToMarkdown([
+  const result = linesToMarkdownWithSourceMap([
     { text: "Page Number Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
     { text: "Body text.", fontSize: 12, x: 72, y: 680, pageIndex: 0 },
-    { text: "1", fontSize: 9, x: 300, y: 40, pageIndex: 0 },
-    { text: "2 / 3", fontSize: 9, x: 300, y: 40, pageIndex: 1 }
+    { text: "1", fontSize: 9, x: 300, y: 40, width: 5, height: 9, pageIndex: 0 },
+    { text: "2 / 3", fontSize: 9, x: 300, y: 40, width: 20, height: 9, pageIndex: 1 }
   ]);
 
-  assert.equal(markdown, "# Page Number Fixture\n\nBody text.\n");
+  assert.equal(result.markdown, "# Page Number Fixture\n\nBody text.\n");
+  assert.equal(result.layout.pages[0].pageNumbers.length, 1);
+  assert.equal(result.layout.pages[0].pageNumbers[0].kind, "page-number");
 });
 
 test("linesToMarkdownWithSourceMap maps Markdown blocks back to page regions", () => {
