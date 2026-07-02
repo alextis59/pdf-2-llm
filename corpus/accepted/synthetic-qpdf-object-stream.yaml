@@ -1,0 +1,34 @@
+id: synthetic-qpdf-object-stream
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - resolve_qpdf_xref_stream
+  - resolve_qpdf_object_stream
+  - extract_main_text
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - drop_compressed_page_objects
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Synthetic Simple Text"
+  - page: 1
+    contains: "This fixture validates basic paragraph extraction."
+structure:
+  expected:
+    - xref_stream
+    - object_stream
+    - paragraphs
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Generated with qpdf --object-streams=generate --stream-data=compress from synthetic-simple-text."

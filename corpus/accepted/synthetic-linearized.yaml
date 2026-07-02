@@ -1,0 +1,34 @@
+id: synthetic-linearized
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - resolve_linearized_pdf
+  - follow_xref_prev_chain
+  - extract_main_text
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - ignore_newest_xref_revision
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Synthetic Simple Text"
+  - page: 1
+    contains: "This fixture validates basic paragraph extraction."
+structure:
+  expected:
+    - linearized
+    - xref_prev_chain
+    - paragraphs
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Generated with qpdf --linearize from synthetic-simple-text."

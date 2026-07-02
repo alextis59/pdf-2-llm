@@ -19,6 +19,14 @@ const damagedXrefFixturePath = new URL(
   "../../../corpus/generated/synthetic-damaged-xref.pdf",
   import.meta.url
 );
+const linearizedFixturePath = new URL(
+  "../../../corpus/generated/synthetic-linearized.pdf",
+  import.meta.url
+);
+const qpdfObjectStreamFixturePath = new URL(
+  "../../../corpus/generated/synthetic-qpdf-object-stream.pdf",
+  import.meta.url
+);
 
 test("parsePdfValue parses primitive object types", () => {
   const parsed = parsePdfValue(
@@ -195,6 +203,25 @@ test("parsePdfDocument resolves hybrid-reference xref streams", async () => {
   assert.equal(document.pages.length, 1);
   assert.equal(document.pages[0].objectNumber, 6);
   assert.equal(result.markdown, "# Hybrid Reference Fixture\n");
+});
+
+test("parsePdfDocument resolves qpdf-generated linearized and object-stream variants", async () => {
+  const linearizedBytes = await readFile(linearizedFixturePath);
+  const objectStreamBytes = await readFile(qpdfObjectStreamFixturePath);
+
+  const linearizedDocument = parsePdfDocument(linearizedBytes);
+  const linearizedResult = await convertPdfToMarkdown(linearizedBytes);
+  const objectStreamDocument = parsePdfDocument(objectStreamBytes);
+  const objectStreamResult = await convertPdfToMarkdown(objectStreamBytes);
+
+  assert.equal(linearizedDocument.xrefMode, "classic-xref+prev");
+  assert.equal(linearizedDocument.xrefSections.length, 2);
+  assert.equal(linearizedDocument.pages.length, 1);
+  assert.equal(linearizedResult.markdown, "# Synthetic Simple Text\n\nThis fixture validates basic paragraph extraction.\n\nThe expected output is deterministic.\n");
+  assert.equal(objectStreamDocument.xrefMode, "xref-stream");
+  assert.ok([...objectStreamDocument.objects.values()].some((object) => object.compressed === true));
+  assert.equal(objectStreamDocument.pages.length, 1);
+  assert.equal(objectStreamResult.markdown, "# Synthetic Simple Text\n\nThis fixture validates basic paragraph extraction.\n\nThe expected output is deterministic.\n");
 });
 
 test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {

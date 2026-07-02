@@ -387,6 +387,33 @@
       "notes": "Headings and simple list fixture."
     },
     {
+      "id": "synthetic-linearized",
+      "kind": "linearized",
+      "path": "corpus/generated/synthetic-linearized.pdf",
+      "source": {
+        "type": "generated",
+        "description": "qpdf linearized rewrite of the synthetic simple-text fixture.",
+        "command": "qpdf --linearize corpus/generated/synthetic-simple-text.pdf corpus/generated/synthetic-linearized.pdf"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code and rewritten with qpdf for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "b3fc51a3fa513d82f60fdd3b452682faab6a4219ceebac42212803da49564f3f",
+      "bytes": 1333,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "linearized",
+        "xref-prev"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-linearized.yaml",
+      "notes": "qpdf linearized rewrite of the synthetic simple-text fixture."
+    },
+    {
       "id": "synthetic-object-stream",
       "kind": "pdf-feature",
       "path": "corpus/generated/synthetic-object-stream.pdf",
@@ -413,6 +440,34 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-object-stream.yaml",
       "notes": "PDF 1.5 object stream fixture with compressed page tree objects."
+    },
+    {
+      "id": "synthetic-qpdf-object-stream",
+      "kind": "pdf-feature",
+      "path": "corpus/generated/synthetic-qpdf-object-stream.pdf",
+      "source": {
+        "type": "generated",
+        "description": "qpdf object-stream and xref-stream rewrite of the synthetic simple-text fixture.",
+        "command": "qpdf --object-streams=generate --stream-data=compress corpus/generated/synthetic-simple-text.pdf corpus/generated/synthetic-qpdf-object-stream.pdf"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code and rewritten with qpdf for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "8efda216f1115f6d44a578975fdd805b10657786df0c277101a15eb45fe438f2",
+      "bytes": 814,
+      "pages": 1,
+      "pdfVersion": "1.5",
+      "features": [
+        "born-digital",
+        "xref-stream",
+        "object-stream",
+        "qpdf-generated"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-qpdf-object-stream.yaml",
+      "notes": "qpdf object-stream and xref-stream rewrite of the synthetic simple-text fixture."
     },
     {
       "id": "synthetic-rotated-page",
