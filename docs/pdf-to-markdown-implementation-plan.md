@@ -143,13 +143,13 @@ review by hand, then it can expand after the pipeline stabilizes.
 Checklist:
 
 - [x] Create initial candidate list for every corpus group.
-- [ ] Label each candidate as `commit-ok`, `local-only`, or `do-not-use`.
+- [x] Label each candidate as `commit-ok`, `local-only`, or `do-not-use`.
 - [x] Prefer generated fixtures when exact expected output matters.
-- [ ] Prefer public-domain government or standards-adjacent PDFs for committed
+- [x] Prefer public-domain government or standards-adjacent PDFs for committed
   external fixtures.
-- [ ] Avoid committing copyrighted reports unless redistribution is explicitly
+- [x] Avoid committing copyrighted reports unless redistribution is explicitly
   allowed.
-- [ ] Store source URLs and retrieval commands before downloading.
+- [x] Store source URLs and retrieval commands before downloading.
 - [ ] Download candidates into `corpus/raw/_incoming/`.
 - [ ] Compute SHA-256 for every incoming PDF.
 - [ ] Run static analysis on every incoming PDF before acceptance review.

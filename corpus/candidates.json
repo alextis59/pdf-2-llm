@@ -15,7 +15,21 @@
       "minimumCount": 5,
       "strategy": "Retrieve public reports with normal selectable text.",
       "why": "Baseline text, paragraphs, headings, and links.",
-      "candidates": []
+      "candidates": [
+        {
+          "id": "nist-sp800-207-zero-trust",
+          "sourceType": "url",
+          "url": "https://nvlpubs.nist.gov/nistpubs/specialpublications/NIST.SP.800-207.pdf",
+          "targetPath": "corpus/raw/_incoming/nist-sp800-207-zero-trust.pdf",
+          "licenseName": "NIST Special Publication, not subject to copyright in the United States",
+          "licenseUrl": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+          "licenseNotes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id nist-sp800-207-zero-trust",
+          "notes": "Born-digital NIST report for headings, paragraphs, figures, references, and government-report layout."
+        }
+      ]
     },
     {
       "id": "tagged-accessible-pdfs",
@@ -23,7 +37,21 @@
       "minimumCount": 5,
       "strategy": "Retrieve public tagged PDF and PDF/UA examples.",
       "why": "Tests tag preference and tag versus geometry validation.",
-      "candidates": []
+      "candidates": [
+        {
+          "id": "section508-executive-guide",
+          "sourceType": "url",
+          "url": "https://assets.section508.gov/assets/files/Executive%20Guide%20to%20Federal%20IT%20Accessibility.pdf",
+          "targetPath": "corpus/raw/local-only/section508-executive-guide.pdf",
+          "licenseName": "U.S. federal accessibility resource, redistribution pending review",
+          "licenseUrl": "https://www.section508.gov/create/pdfs/",
+          "licenseNotes": "Use locally until the PDF's redistribution status and tagging quality are reviewed.",
+          "redistributable": false,
+          "disposition": "local-only",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id section508-executive-guide",
+          "notes": "Accessibility-focused government PDF candidate for tagged/accessibility analysis."
+        }
+      ]
     },
     {
       "id": "broken-or-unusual-fonts",
@@ -103,7 +131,21 @@
       "minimumCount": 3,
       "strategy": "Retrieve open manuals over 500 pages, with one over 1000 pages if practical.",
       "why": "Tests streaming, repeated headers, and memory behavior.",
-      "candidates": []
+      "candidates": [
+        {
+          "id": "nist-sp800-63b-4",
+          "sourceType": "url",
+          "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-63B-4.pdf",
+          "targetPath": "corpus/raw/_incoming/nist-sp800-63b-4.pdf",
+          "licenseName": "NIST Special Publication, not subject to copyright in the United States",
+          "licenseUrl": "https://www.nist.gov/itl/publications/nist-special-publication-800-series-general-information",
+          "licenseNotes": "NIST states SP 800 publications are not subject to copyright in the United States; attribution is appreciated.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id nist-sp800-63b-4",
+          "notes": "Long born-digital NIST report candidate for streaming, headings, references, and repeated running content."
+        }
+      ]
     },
     {
       "id": "scientific-papers",
@@ -143,7 +185,21 @@
       "minimumCount": 5,
       "strategy": "Retrieve public forms with fields and check boxes.",
       "why": "Tests AcroForm and field-value extraction.",
-      "candidates": []
+      "candidates": [
+        {
+          "id": "irs-fw9-2024",
+          "sourceType": "url",
+          "url": "https://www.irs.gov/pub/irs-pdf/fw9.pdf",
+          "targetPath": "corpus/raw/local-only/irs-fw9-2024.pdf",
+          "licenseName": "IRS.gov official form, local-only until redistribution review",
+          "licenseUrl": "https://www.irs.gov/about-irs/use-of-content-from-irsgov",
+          "licenseNotes": "IRS.gov content has restrictions around official seal, names, and symbols; use locally until reviewed.",
+          "redistributable": false,
+          "disposition": "local-only",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id irs-fw9-2024",
+          "notes": "Official IRS W-9 form candidate for AcroForm, check box, and government-form extraction."
+        }
+      ]
     },
     {
       "id": "invoices-receipts",

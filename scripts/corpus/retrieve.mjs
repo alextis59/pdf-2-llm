@@ -57,6 +57,7 @@ const allowedKinds = new Set([
 
 const idPattern = /^[a-z0-9][a-z0-9-]*$/;
 const sourceTypes = new Set(["url", "local-file"]);
+const dispositions = new Set(["commit-ok", "local-only", "do-not-use", "needs-review"]);
 const acceptedPdfContentTypes = new Set([
   "application/pdf",
   "application/x-pdf",
@@ -238,6 +239,11 @@ function validateCandidate(candidate, location, errors, { groupId, groupKind, ca
   validateString(candidate.licenseName, `${location}.licenseName`, errors);
   validateString(candidate.licenseNotes, `${location}.licenseNotes`, errors);
   validateBoolean(candidate.redistributable, `${location}.redistributable`, errors);
+  const disposition = validateString(candidate.disposition, `${location}.disposition`, errors);
+  if (disposition && !dispositions.has(disposition)) {
+    errors.push(`${location}.disposition is unsupported: ${disposition}`);
+  }
+  validateString(candidate.retrievalCommand, `${location}.retrievalCommand`, errors);
   validateString(candidate.notes, `${location}.notes`, errors);
 
   if (candidate.expectedSha256 && !/^[a-f0-9]{64}$/.test(candidate.expectedSha256)) {
@@ -254,6 +260,14 @@ function validateCandidate(candidate, location, errors, { groupId, groupKind, ca
 
   if (candidate.redistributable === false && targetPath && !targetPath.startsWith("corpus/raw/local-only/")) {
     errors.push(`${location}.targetPath must be under corpus/raw/local-only/ when redistributable is false`);
+  }
+
+  if (candidate.disposition === "local-only" && candidate.redistributable !== false) {
+    errors.push(`${location}.disposition local-only requires redistributable false`);
+  }
+
+  if (candidate.disposition === "commit-ok" && candidate.redistributable !== true) {
+    errors.push(`${location}.disposition commit-ok requires redistributable true`);
   }
 
   if (candidate.redistributable === true && sourceType === "url" && targetPath && !targetPath.startsWith("corpus/raw/_incoming/")) {
@@ -418,6 +432,7 @@ async function writeRetrievalRecord(candidate, source, actualHash, byteLength) {
       notes: candidate.licenseNotes
     },
     redistributable: candidate.redistributable,
+    disposition: candidate.disposition,
     sha256: actualHash,
     bytes: byteLength,
     notes: candidate.notes,
@@ -490,7 +505,7 @@ async function main() {
   if (dryRun) {
     for (const candidate of selected) {
       console.log(
-        `${candidate.id}: group=${candidate.group}, source=${candidate.sourceType}, target=${candidate.targetPath}, redistributable=${candidate.redistributable}, license=${candidate.licenseName}`
+        `${candidate.id}: group=${candidate.group}, source=${candidate.sourceType}, target=${candidate.targetPath}, disposition=${candidate.disposition}, redistributable=${candidate.redistributable}, license=${candidate.licenseName}`
       );
     }
     console.log(`Dry run selected ${selected.length} candidate(s).`);
