@@ -179,6 +179,24 @@ test("linesToMarkdownWithSourceMap reports footnote regions", () => {
   assert.equal(page.footnotes[0].rows, 1);
 });
 
+test("linesToMarkdownWithSourceMap reports figure and table caption regions", () => {
+  const result = linesToMarkdownWithSourceMap([
+    { text: "Caption Fixture", fontSize: 22, x: 72, y: 720, width: 160, pageIndex: 0 },
+    { text: "Figure 1. A generated vector box.", fontSize: 11, x: 120, y: 490, width: 190, pageIndex: 0 },
+    { text: "Table 1. Revenue by quarter.", fontSize: 11, x: 72, y: 420, width: 170, pageIndex: 0 }
+  ]);
+
+  const captions = result.layout.pages[0].captions;
+  assert.deepEqual(
+    captions.map((caption) => caption.target),
+    ["figure", "table"]
+  );
+  assert.deepEqual(
+    captions.map((caption) => caption.kind),
+    ["caption", "caption"]
+  );
+});
+
 test("linesToMarkdown removes high-confidence page numbers", () => {
   const markdown = linesToMarkdown([
     { text: "Page Number Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },

@@ -246,7 +246,8 @@ function classifyPageLayout(indexedLines) {
       columns: [],
       sidebars: [],
       callouts: [],
-      footnotes: []
+      footnotes: [],
+      captions: []
     };
   }
 
@@ -267,7 +268,8 @@ function classifyPageLayout(indexedLines) {
     })),
     sidebars: regions.sidebars,
     callouts: regions.callouts,
-    footnotes: regions.footnotes
+    footnotes: regions.footnotes,
+    captions: regions.captions
   };
 }
 
@@ -293,7 +295,11 @@ function detectLayoutRegions(rows, columns) {
   return {
     sidebars: detectSidebarRegions(columns),
     callouts: rows.filter(isCalloutRow).map((row) => createRegion("callout", [row])),
-    footnotes: rows.filter(isFootnoteRow).map((row) => createRegion("footnote", [row]))
+    footnotes: rows.filter(isFootnoteRow).map((row) => createRegion("footnote", [row])),
+    captions: rows
+      .map((row) => ({ row, target: captionTarget(row) }))
+      .filter((item) => item.target !== null)
+      .map(({ row, target }) => createRegion("caption", [row], { target }))
   };
 }
 
@@ -317,6 +323,17 @@ function isCalloutRow(row) {
 
 function isFootnoteRow(row) {
   return row.y <= 160 && row.fontSize <= 10 && /^(?:\d+|[a-z])[\.)]\s+/.test(rowText(row));
+}
+
+function captionTarget(row) {
+  const text = rowText(row);
+  if (/^(?:figure|fig\.?)\s+\d+[\.:]\s+/i.test(text)) {
+    return "figure";
+  }
+  if (/^table\s+\d+[\.:]\s+/i.test(text)) {
+    return "table";
+  }
+  return null;
 }
 
 function createRegion(kind, rows, extra = {}) {

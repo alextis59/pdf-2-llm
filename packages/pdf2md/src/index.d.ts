@@ -106,6 +106,7 @@ export type PageLayoutDiagnostics = {
   sidebars: LayoutRegionDiagnostics[];
   callouts: LayoutRegionDiagnostics[];
   footnotes: LayoutRegionDiagnostics[];
+  captions: LayoutRegionDiagnostics[];
 };
 
 export type LayoutColumnDiagnostics = {
@@ -115,13 +116,14 @@ export type LayoutColumnDiagnostics = {
 };
 
 export type LayoutRegionDiagnostics = {
-  kind: "sidebar" | "callout" | "footnote";
+  kind: "sidebar" | "callout" | "footnote" | "caption";
   x: number;
   y: number;
   width: number;
   height: number;
   rows: number;
   columnIndex?: number;
+  target?: "figure" | "table";
 };
 
 export type PageDiagnostics = {

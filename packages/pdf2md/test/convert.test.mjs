@@ -14,6 +14,10 @@ const footnoteFixturePath = new URL(
   "../../../corpus/generated/synthetic-footnote.pdf",
   import.meta.url
 );
+const vectorFigureFixturePath = new URL(
+  "../../../corpus/generated/synthetic-vector-figure.pdf",
+  import.meta.url
+);
 
 test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", async () => {
   const bytes = await readFile(fixturePath);
@@ -104,6 +108,16 @@ test("convertPdfToMarkdown reports footnote layout regions", async () => {
   assert.equal(page.footnotes.length, 1);
   assert.equal(page.footnotes[0].kind, "footnote");
   assert.match(result.markdown, /1\. Footnote text belongs after the paragraph\./);
+});
+
+test("convertPdfToMarkdown reports figure caption layout regions", async () => {
+  const result = await convertPdfToMarkdown(vectorFigureFixturePath.pathname);
+  const page = result.diagnostics.extraction.layout.pages[0];
+
+  assert.equal(page.captions.length, 1);
+  assert.equal(page.captions[0].kind, "caption");
+  assert.equal(page.captions[0].target, "figure");
+  assert.match(result.markdown, /Figure 1\. A generated vector box\./);
 });
 
 test("text MVP matches expected markdown for simple generated fixtures", async () => {
