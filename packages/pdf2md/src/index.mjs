@@ -18,6 +18,7 @@ import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
   maxPages: 5000,
+  maxObjects: 100000,
   timeoutMs: 120000
 });
 
@@ -60,6 +61,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
   if (pdfVersion) {
     const parserOptions = {
       maxBytes: security.maxBytes,
+      maxObjects: security.maxObjects,
+      deadline,
       mode: options.parser?.mode ?? "strict"
     };
     try {

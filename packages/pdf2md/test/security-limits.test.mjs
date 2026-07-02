@@ -18,6 +18,18 @@ test("converter reports maxBytes violations without panicking", async () => {
   assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
 });
 
+test("converter reports maxObjects violations without panicking", async () => {
+  const bytes = await readFile(fixturePath);
+  const result = await convertPdfToMarkdown(bytes, {
+    ocr: { enabled: false },
+    security: { maxObjects: 1 }
+  });
+  const parseFailure = result.warnings.find((warning) => warning.code === warningCodes.PdfParseFailed);
+
+  assert.equal(parseFailure?.details.code, "pdf.object_limit_exceeded");
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+});
+
 test("converter rejects a pre-aborted signal", async () => {
   const bytes = await readFile(fixturePath);
   const controller = new AbortController();

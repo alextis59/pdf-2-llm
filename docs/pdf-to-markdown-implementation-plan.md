@@ -466,8 +466,8 @@ Goal: expand PDF compatibility before adding more semantic features.
 - [x] Implement object scanning fallback.
 - [x] Recover from damaged xref tables when possible.
 - [x] Distinguish repaired output from trusted output in diagnostics.
-- [ ] Add mutated damaged corpus fixtures.
-- [ ] Add timeout and max-object limits.
+- [x] Add mutated damaged corpus fixtures.
+- [x] Add timeout and max-object limits.
 - [x] Add tests that unrecoverable files fail gracefully.
 
 Gate 2 acceptance:

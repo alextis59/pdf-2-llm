@@ -1,0 +1,35 @@
+id: synthetic-damaged-xref
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: false
+skipReason: "Requires tolerant parser repair mode; covered by targeted API tests."
+must:
+  - repair_damaged_xref
+  - scan_indirect_objects
+  - preserve_decrypted_text_order
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - trust_repaired_output_without_diagnostics
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Synthetic Simple Text"
+  - page: 1
+    contains: "This fixture validates basic paragraph extraction."
+structure:
+  expected:
+    - object_scan_repair
+    - paragraphs
+warnings:
+  allowed:
+    - pdf.parse_failed
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Mutated from synthetic-simple-text by corrupting the first in-use classic xref row."

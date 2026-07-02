@@ -55,14 +55,19 @@ export class ByteReader {
 export function parsePdfDocument(bytes, options = {}) {
   const reader = new ByteReader(bytes, options);
   const maxDecodedStreamBytes = options.maxDecodedStreamBytes ?? options.maxBytes ?? 50 * 1024 * 1024;
+  const maxObjects = readMaxObjects(options.maxObjects);
   const mode = options.mode ?? options.parseMode ?? "strict";
   const source = Buffer.from(reader.bytes).toString("latin1");
   const version = readPdfVersion(source);
+  throwIfParserTimedOut(options.deadline);
   const xref = readXrefData(source, reader.bytes, {
     maxDecodedStreamBytes,
+    maxObjects,
+    deadline: options.deadline,
     mode
   });
   const { startXref, entries, trailer, xrefMode, sections, repaired = false, repairReason = null } = xref;
+  enforceObjectLimit(entries.length, maxObjects);
   const encryption = createEncryptionContext(trailer, entries, source, reader.bytes, {
     maxDecodedStreamBytes,
     mode,
@@ -72,6 +77,7 @@ export function parsePdfDocument(bytes, options = {}) {
   const streams = [];
 
   for (const entry of entries) {
+    throwIfParserTimedOut(options.deadline);
     if (!entry.inUse || entry.offset <= 0) {
       continue;
     }
@@ -364,6 +370,7 @@ export function parsePdfValue(input, offset = 0) {
 }
 
 function readXrefData(source, bytes, options = {}) {
+  throwIfParserTimedOut(options.deadline);
   try {
     const startXref = readStartXref(source);
     return {
@@ -386,6 +393,7 @@ function scanObjectsForRepair(source, bytes, options, cause) {
   let match;
 
   while ((match = objectHeaderPattern.exec(source)) !== null) {
+    throwIfParserTimedOut(options.deadline);
     const offset = match.index;
     if (!isObjectHeaderBoundary(source, offset)) {
       continue;
@@ -402,8 +410,12 @@ function scanObjectsForRepair(source, bytes, options, cause) {
         offset,
         inUse: true
       });
+      enforceObjectLimit(entriesByKey.size, options.maxObjects);
       objectHeaderPattern.lastIndex = Math.max(objectHeaderPattern.lastIndex, object.endOffset);
-    } catch {
+    } catch (error) {
+      if (isRepairFatalError(error)) {
+        throw error;
+      }
       objectHeaderPattern.lastIndex = offset + match[0].length;
     }
   }
@@ -455,6 +467,35 @@ function findLastTrailerDictionary(source) {
     offset = source.lastIndexOf("trailer", offset - 1);
   }
   return null;
+}
+
+function readMaxObjects(maxObjects) {
+  const value = maxObjects ?? 100000;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new RangeError("maxObjects must be a non-negative integer");
+  }
+  return value;
+}
+
+function enforceObjectLimit(count, maxObjects) {
+  if (count > maxObjects) {
+    throw new PdfSyntaxError("PDF object count exceeds parser object limit.", {
+      code: "pdf.object_limit_exceeded"
+    });
+  }
+}
+
+function throwIfParserTimedOut(deadline) {
+  if (Number.isFinite(deadline) && performance.now() >= deadline) {
+    throw new DOMException("Operation timed out", "TimeoutError");
+  }
+}
+
+function isRepairFatalError(error) {
+  return (
+    error instanceof DOMException ||
+    (error instanceof PdfSyntaxError && error.code === "pdf.object_limit_exceeded")
+  );
 }
 
 function parseXrefChain(source, bytes, startOffset, options = {}) {

@@ -250,6 +250,33 @@
       "notes": "CropBox fixture."
     },
     {
+      "id": "synthetic-damaged-xref",
+      "kind": "damaged",
+      "path": "corpus/generated/synthetic-damaged-xref.pdf",
+      "source": {
+        "type": "mutated",
+        "description": "Synthetic simple-text PDF with the first in-use xref row corrupted.",
+        "command": "mutate corpus/generated/synthetic-simple-text.pdf by replacing the first in-use xref offset with xxxxxxxxxx"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code and mutated for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "fa0fbdbfd99feabaac67f8853564d5e9f43e505d200c09a73eb2d2c1bdfaeb8e",
+      "bytes": 800,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "damaged-xref",
+        "repair-mode"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-damaged-xref.yaml",
+      "notes": "Damaged xref fixture for tolerant object-scan repair mode."
+    },
+    {
       "id": "synthetic-encrypted-rc4-40",
       "kind": "encrypted",
       "path": "corpus/generated/synthetic-encrypted-rc4-40.pdf",

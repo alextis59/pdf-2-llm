@@ -15,6 +15,10 @@ const encryptedRc4FixturePath = new URL(
   "../../../corpus/generated/synthetic-encrypted-rc4-40.pdf",
   import.meta.url
 );
+const damagedXrefFixturePath = new URL(
+  "../../../corpus/generated/synthetic-damaged-xref.pdf",
+  import.meta.url
+);
 
 test("parsePdfValue parses primitive object types", () => {
   const parsed = parsePdfValue(
@@ -281,14 +285,7 @@ test("parsePdfDocument supports strict and tolerant stream length handling", asy
 });
 
 test("tolerant parser repairs damaged xref tables by scanning object headers", async () => {
-  const bytes = createTestPdf([
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
-    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
-    streamObject("BT /F1 22 Tf 20 200 Td (Repaired XRef Fixture) Tj ET\n")
-  ]);
-  const damaged = corruptFirstInUseXrefEntry(bytes);
+  const damaged = await readFile(damagedXrefFixturePath);
 
   assert.throws(
     () => parsePdfDocument(damaged),
@@ -303,7 +300,10 @@ test("tolerant parser repairs damaged xref tables by scanning object headers", a
   assert.equal(document.xrefMode, "object-scan-repair");
   assert.equal(document.startXref, null);
   assert.equal(document.pages.length, 1);
-  assert.equal(result.markdown, "# Repaired XRef Fixture\n");
+  assert.equal(
+    result.markdown,
+    "# Synthetic Simple Text\n\nThis fixture validates basic paragraph extraction.\n\nThe expected output is deterministic.\n"
+  );
   assert.equal(result.diagnostics.extraction.parser.mode, "object-scan-repair");
   assert.equal(result.diagnostics.extraction.parser.repaired, true);
   assert.equal(result.diagnostics.extraction.parser.repairReason, "pdf.xref.entry_malformed");
@@ -344,6 +344,11 @@ test("parser reports bounded byte-reader and syntax errors with codes and offset
       error instanceof PdfSyntaxError &&
       error.code === "pdf.array.unterminated" &&
       Number.isInteger(error.offset)
+  );
+
+  assert.throws(
+    () => parsePdfDocument(bytes, { deadline: 0 }),
+    (error) => error.name === "TimeoutError" && error.message === "Operation timed out"
   );
 });
 
@@ -505,19 +510,6 @@ function createTestPdf(objects, { trailerEntries = "" } = {}) {
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${trailerEntries} >>\n`;
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
   return Buffer.from(body, "binary");
-}
-
-function corruptFirstInUseXrefEntry(bytes) {
-  const source = Buffer.from(bytes).toString("binary");
-  const xrefOffset = source.indexOf("xref");
-  if (xrefOffset === -1) {
-    throw new Error("fixture does not contain a classic xref table");
-  }
-  const beforeXref = source.slice(0, xrefOffset);
-  const damagedXref = source
-    .slice(xrefOffset)
-    .replace(/\d{10} 00000 n/, "xxxxxxxxxx 00000 n");
-  return Buffer.from(`${beforeXref}${damagedXref}`, "binary");
 }
 
 function createEncryptedTestPdf(label) {

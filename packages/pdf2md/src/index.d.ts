@@ -29,6 +29,7 @@ export type ConvertOptions = {
   security?: {
     maxBytes?: number;
     maxPages?: number;
+    maxObjects?: number;
     timeoutMs?: number;
   };
   ocr?: {
