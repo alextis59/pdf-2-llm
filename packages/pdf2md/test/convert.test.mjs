@@ -14,6 +14,10 @@ const footnoteFixturePath = new URL(
   "../../../corpus/generated/synthetic-footnote.pdf",
   import.meta.url
 );
+const headerFooterFixturePath = new URL(
+  "../../../corpus/generated/synthetic-header-footer.pdf",
+  import.meta.url
+);
 const vectorFigureFixturePath = new URL(
   "../../../corpus/generated/synthetic-vector-figure.pdf",
   import.meta.url
@@ -69,6 +73,17 @@ test("convertPdfToMarkdown can emit Markdown page anchors", async () => {
 
   assert.match(result.markdown, /^<a id="page-1"><\/a>\n\n# Synthetic Simple Text/);
   assert.equal(result.diagnostics.options.pageAnchors, true);
+});
+
+test("convertPdfToMarkdown can preserve configured running titles", async () => {
+  const result = await convertPdfToMarkdown(headerFooterFixturePath.pathname, {
+    markdown: { preserveRunningTitles: true }
+  });
+
+  assert.match(result.markdown, /^Running Header\n\n# Header Footer Fixture/);
+  assert.match(result.markdown, /Running Header\n\nSecond page body\./);
+  assert.doesNotMatch(result.markdown, /Page Footer/);
+  assert.equal(result.diagnostics.options.preserveRunningTitles, true);
 });
 
 test("CLI emits JSON scaffold output", () => {

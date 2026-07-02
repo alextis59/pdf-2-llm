@@ -133,7 +133,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
-    pageAnchors: options.markdown?.pageAnchors === true
+    pageAnchors: options.markdown?.pageAnchors === true,
+    preserveRunningTitles: options.markdown?.preserveRunningTitles === true
   });
   const markdown = markdownResult.markdown;
   const sourceMap = createMarkdownSourceMap(markdownResult.sourceMap);
@@ -404,6 +405,7 @@ function summarizeOptions(options) {
     pageRange: options.pageRange ?? null,
     output: options.output ?? "markdown",
     pageAnchors: options.markdown?.pageAnchors === true,
+    preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
     parserMode: options.parser?.mode ?? "strict",
     passwordProvided: options.password != null,
     ocrEnabled: options.ocr?.enabled ?? null,

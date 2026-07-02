@@ -44,7 +44,9 @@ export function linesToMarkdown(lines, options = {}) {
 
 export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const pageNumberRegions = pageNumberRegionsByPage(lines);
-  lines = removeRepeatedRunningContent(lines);
+  lines = removeRepeatedRunningContent(lines, {
+    preserveRunningTitles: options.preserveRunningTitles === true
+  });
   const layout = analyzeLineLayout(lines, { pageNumberRegions });
   lines = orderLinesForReading(lines);
   const blocks = [];
@@ -783,7 +785,7 @@ function isNumericCell(value) {
   return /^[-+]?\d+(?:\.\d+)?%?$/.test(value);
 }
 
-function removeRepeatedRunningContent(lines) {
+function removeRepeatedRunningContent(lines, options = {}) {
   const runningCounts = new Map();
   for (const line of lines) {
     if (isRunningContentCandidate(line)) {
@@ -799,6 +801,9 @@ function removeRepeatedRunningContent(lines) {
     if (!isRunningContentCandidate(line)) {
       return true;
     }
+    if (options.preserveRunningTitles && isRunningTitleCandidate(line)) {
+      return true;
+    }
     return (runningCounts.get(normalizeWhitespace(line.text)) ?? 0) < 2;
   });
 }
@@ -812,4 +817,13 @@ function isPageNumberCandidate(line) {
     return false;
   }
   return /^(?:page\s*)?\d+(?:\s*\/\s*\d+)?$/i.test(normalizeWhitespace(line.text));
+}
+
+function isRunningTitleCandidate(line) {
+  return (
+    line.fontSize <= 10 &&
+    Number.isFinite(line.y) &&
+    line.y >= 740 &&
+    /[A-Za-z]/.test(normalizeWhitespace(line.text))
+  );
 }

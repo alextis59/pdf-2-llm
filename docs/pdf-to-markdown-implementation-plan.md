@@ -499,7 +499,7 @@ Goal: improve reading order and document structure for real-world documents.
 - [x] Detect repeated page headers.
 - [x] Detect repeated page footers.
 - [x] Detect page numbers.
-- [ ] Preserve meaningful running titles when configured.
+- [x] Preserve meaningful running titles when configured.
 - [x] Remove repeated boilerplate only above a confidence threshold.
 - [ ] Add precision/recall tests against accepted manuals and reports.
 

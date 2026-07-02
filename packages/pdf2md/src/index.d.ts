@@ -21,6 +21,7 @@ export type ConvertOptions = {
   output?: "markdown" | "json";
   markdown?: {
     pageAnchors?: boolean;
+    preserveRunningTitles?: boolean;
   };
   parser?: {
     mode?: "strict" | "tolerant";

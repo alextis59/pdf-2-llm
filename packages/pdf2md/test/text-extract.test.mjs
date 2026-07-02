@@ -226,6 +226,27 @@ test("linesToMarkdown removes high-confidence page numbers", () => {
   assert.equal(result.layout.pages[0].pageNumbers[0].kind, "page-number");
 });
 
+test("linesToMarkdown can preserve configured running titles", () => {
+  const lines = [
+    { text: "Running Header", fontSize: 10, x: 72, y: 760, pageIndex: 0 },
+    { text: "Header Footer Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: "First page body.", fontSize: 12, x: 72, y: 680, pageIndex: 0 },
+    { text: "Page Footer", fontSize: 10, x: 280, y: 40, pageIndex: 0 },
+    { text: "Running Header", fontSize: 10, x: 72, y: 760, pageIndex: 1 },
+    { text: "Second page body.", fontSize: 12, x: 72, y: 680, pageIndex: 1 },
+    { text: "Page Footer", fontSize: 10, x: 280, y: 40, pageIndex: 1 }
+  ];
+
+  assert.equal(
+    linesToMarkdown(lines),
+    "# Header Footer Fixture\n\nFirst page body.\n\nSecond page body.\n"
+  );
+  assert.equal(
+    linesToMarkdown(lines, { preserveRunningTitles: true }),
+    "Running Header\n\n# Header Footer Fixture\n\nFirst page body.\n\nRunning Header\n\nSecond page body.\n"
+  );
+});
+
 test("linesToMarkdownWithSourceMap maps Markdown blocks back to page regions", () => {
   const result = linesToMarkdownWithSourceMap(
     [
