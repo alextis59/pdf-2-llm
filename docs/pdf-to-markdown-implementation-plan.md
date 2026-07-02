@@ -336,7 +336,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [ ] Add snapshot testing for Markdown and IR.
 - [ ] Add rendered HTML diff helper.
 - [ ] Add oracle comparison helper.
-- [ ] Add corpus runner with `--gate`, `--id`, and `--update-snapshots`.
+- [x] Add corpus runner with `--gate`, `--id`, and `--update-snapshots`.
 - [ ] Add performance benchmark harness.
 - [ ] Add memory-limit and timeout tests.
 - [ ] Add fuzz target skeletons.
@@ -347,7 +347,7 @@ Definition of done:
 - [ ] `cargo test --workspace` succeeds.
 - [x] A synthetic single-page PDF can pass through a stub pipeline and return
   structured diagnostics.
-- [ ] The corpus runner can list accepted PDFs and skip future gates.
+- [x] The corpus runner can list accepted PDFs and skip future gates.
 
 ## Phase 2: Gate 1 - Born-Digital Text MVP
 
@@ -834,6 +834,6 @@ Minimum release bars for a serious beta:
 - [x] Run static analysis and oracle extraction on the first corpus batch.
 - [x] Write acceptance YAML for the first 10 PDFs.
 - [ ] Implement project scaffolding and stub API.
-- [ ] Make the corpus runner list PDFs and report skipped gates.
+- [x] Make the corpus runner list PDFs and report skipped gates.
 - [ ] Start Gate 1 parser and text extraction work only after the first
   acceptance files exist.
