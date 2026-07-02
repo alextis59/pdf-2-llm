@@ -447,7 +447,7 @@ Goal: expand PDF compatibility before adding more semantic features.
 - [x] Implement CCITT/JBIG2/JPEG/JPEG2000 metadata detection even before full
   raster support.
 - [x] Implement predictor variants needed by image and object streams.
-- [ ] Add bounded allocation tests for all filters.
+- [x] Add bounded allocation tests for all filters.
 - [ ] Add corrupt filter-chain tests.
 
 ### 3.3 Encryption And Password Handling

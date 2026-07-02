@@ -78,15 +78,15 @@ function decodeOneFilter(bytes, filter, parms, maxBytes) {
   }
 
   if (filter === "ASCIIHexDecode") {
-    return decodeAsciiHex(bytes);
+    return decodeAsciiHex(bytes, maxBytes);
   }
 
   if (filter === "ASCII85Decode") {
-    return decodeAscii85(bytes);
+    return decodeAscii85(bytes, maxBytes);
   }
 
   if (filter === "RunLengthDecode") {
-    return decodeRunLength(bytes);
+    return decodeRunLength(bytes, maxBytes);
   }
 
   throw new PdfStreamDecodeError(`Unsupported stream filter "${filter}".`, {
@@ -126,7 +126,7 @@ function readDecodeParms(dictionary, filterCount) {
   return Array(filterCount).fill(parmsValue);
 }
 
-function decodeAsciiHex(bytes) {
+function decodeAsciiHex(bytes, maxBytes) {
   const text = Buffer.from(bytes).toString("latin1");
   let hex = "";
 
@@ -150,6 +150,7 @@ function decodeAsciiHex(bytes) {
     hex += "0";
   }
 
+  enforceOutputLength(hex.length / 2, maxBytes, "ASCIIHexDecode");
   const output = new Uint8Array(hex.length / 2);
   for (let index = 0; index < output.length; index += 1) {
     output[index] = Number.parseInt(hex.slice(index * 2, index * 2 + 2), 16);
@@ -157,7 +158,7 @@ function decodeAsciiHex(bytes) {
   return output;
 }
 
-function decodeAscii85(bytes) {
+function decodeAscii85(bytes, maxBytes) {
   const text = Buffer.from(bytes).toString("latin1");
   const output = [];
   let group = "";
@@ -180,7 +181,7 @@ function decodeAscii85(bytes) {
           code: "pdf.stream.ascii85_invalid_z"
         });
       }
-      output.push(0, 0, 0, 0);
+      appendOutputBytes(output, [0, 0, 0, 0], maxBytes, "ASCII85Decode");
       continue;
     }
     if (char < "!" || char > "u") {
@@ -191,7 +192,7 @@ function decodeAscii85(bytes) {
 
     group += char;
     if (group.length === 5) {
-      output.push(...decodeAscii85Group(group, 4));
+      appendOutputBytes(output, decodeAscii85Group(group, 4), maxBytes, "ASCII85Decode");
       group = "";
     }
   }
@@ -203,7 +204,12 @@ function decodeAscii85(bytes) {
       });
     }
     const outputBytes = group.length - 1;
-    output.push(...decodeAscii85Group(group.padEnd(5, "u"), outputBytes));
+    appendOutputBytes(
+      output,
+      decodeAscii85Group(group.padEnd(5, "u"), outputBytes),
+      maxBytes,
+      "ASCII85Decode"
+    );
   }
 
   return new Uint8Array(output);
@@ -222,7 +228,7 @@ function decodeAscii85Group(group, outputBytes) {
   ].slice(0, outputBytes);
 }
 
-function decodeRunLength(bytes) {
+function decodeRunLength(bytes, maxBytes) {
   const output = [];
   for (let index = 0; index < bytes.length; index += 1) {
     const length = bytes[index];
@@ -236,6 +242,7 @@ function decodeRunLength(bytes) {
           code: "pdf.stream.runlength_truncated"
         });
       }
+      enforceOutputLength(output.length + count, maxBytes, "RunLengthDecode");
       for (let cursor = 0; cursor < count; cursor += 1) {
         output.push(bytes[index + 1 + cursor]);
       }
@@ -249,6 +256,7 @@ function decodeRunLength(bytes) {
         code: "pdf.stream.runlength_truncated"
       });
     }
+    enforceOutputLength(output.length + count, maxBytes, "RunLengthDecode");
     for (let cursor = 0; cursor < count; cursor += 1) {
       output.push(bytes[index + 1]);
     }
@@ -391,7 +399,16 @@ function numberParm(parms, key, fallback) {
 }
 
 function enforceMaxBytes(bytes, maxBytes, filter) {
-  if (bytes.byteLength > maxBytes) {
+  enforceOutputLength(bytes.byteLength, maxBytes, filter);
+}
+
+function appendOutputBytes(output, bytes, maxBytes, filter) {
+  enforceOutputLength(output.length + bytes.length, maxBytes, filter);
+  output.push(...bytes);
+}
+
+function enforceOutputLength(length, maxBytes, filter) {
+  if (length > maxBytes) {
     throw new PdfStreamDecodeError(`${filter} decoded output exceeds byte limit.`, {
       code: "pdf.stream.decoded_too_large"
     });

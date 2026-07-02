@@ -109,6 +109,36 @@ test("decoder enforces limits and reports corrupt streams", () => {
   );
 });
 
+test("decoder enforces maxBytes across every supported filter path", () => {
+  const tooLargeCases = [
+    ["FlateDecode", () => decode(deflateSync(Buffer.from("abc", "latin1")), "/FlateDecode", { maxBytes: 2 })],
+    ["ASCIIHexDecode", () => decode("616263>", "/ASCIIHexDecode", { maxBytes: 2 })],
+    ["ASCII85Decode", () => decode("z~>", "/ASCII85Decode", { maxBytes: 3 })],
+    ["RunLengthDecode", () => decode(new Uint8Array([254, 97, 128]), "/RunLengthDecode", { maxBytes: 2 })],
+    [
+      "Predictor",
+      () =>
+        decode(
+          deflateSync(new Uint8Array([0, 1, 2, 3])),
+          "/FlateDecode /DecodeParms << /Predictor 15 /Columns 3 >>",
+          { maxBytes: 2 }
+        )
+    ],
+    ["DCTDecode", () => decode(new Uint8Array([1, 2, 3]), "/DCTDecode", { maxBytes: 2 })],
+    ["JPXDecode", () => decode(new Uint8Array([1, 2, 3]), "/JPXDecode", { maxBytes: 2 })],
+    ["CCITTFaxDecode", () => decode(new Uint8Array([1, 2, 3]), "/CCITTFaxDecode", { maxBytes: 2 })],
+    ["JBIG2Decode", () => decode(new Uint8Array([1, 2, 3]), "/JBIG2Decode", { maxBytes: 2 })]
+  ];
+
+  for (const [filter, run] of tooLargeCases) {
+    assert.throws(
+      run,
+      (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.decoded_too_large",
+      filter
+    );
+  }
+});
+
 function decode(input, filter, options = {}) {
   const bytes = typeof input === "string" ? Buffer.from(input, "latin1") : input;
   const dictionary = parsePdfValue(`<< /Filter ${filter} >>`).value;
