@@ -139,6 +139,19 @@ test("parsePdfDocument resolves incremental xref Prev chains with newest objects
   assert.equal(result.markdown, "# Updated Incremental Fixture\n");
 });
 
+test("parsePdfDocument resolves hybrid-reference xref streams", async () => {
+  const bytes = createHybridReferenceTestPdf();
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.xrefMode, "classic-xref+hybrid-xref-stream");
+  assert.equal(document.xrefSections.length, 1);
+  assert.equal(document.getObject(4).compressed, true);
+  assert.equal(document.pages.length, 1);
+  assert.equal(document.pages[0].objectNumber, 6);
+  assert.equal(result.markdown, "# Hybrid Reference Fixture\n");
+});
+
 test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {
   const toUnicode = [
     "/CIDInit /ProcSet findresource begin",
@@ -386,6 +399,58 @@ function createIncrementalUpdateTestPdf() {
   body += `trailer\n<< /Size 9 /Root 1 0 R /Prev ${previousXref} >>\n`;
   body += `startxref\n${latestXref}\n%%EOF\n`;
   return Buffer.from(body, "binary");
+}
+
+function createHybridReferenceTestPdf() {
+  let body = "%PDF-1.5\n";
+  const offsets = [0];
+  const directObjects = [
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject("BT /F1 22 Tf 20 200 Td (Hybrid Reference Fixture) Tj ET\n"),
+    objectStreamObject([
+      { objectNumber: 4, value: "<< /Type /Catalog /Pages 5 0 R >>" },
+      {
+        objectNumber: 5,
+        value: "<< /Type /Pages /Kids [6 0 R] /Count 1 /Resources << /Font << /F1 1 0 R >> >> /MediaBox [0 0 300 400] >>"
+      },
+      { objectNumber: 6, value: "<< /Type /Page /Parent 5 0 R /Contents 2 0 R >>" }
+    ])
+  ];
+
+  directObjects.forEach((object, index) => {
+    const objectId = index + 1;
+    offsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefStreamObjectId = 7;
+  offsets[xrefStreamObjectId] = Buffer.byteLength(body, "binary");
+  const xrefStream = createHybridXrefStreamBytes();
+  body += `${xrefStreamObjectId} 0 obj\n`;
+  body += `<< /Type /XRef /Size 8 /Index [4 3] /W [1 4 2] /Length ${xrefStream.byteLength} >>\n`;
+  body += `stream\n${xrefStream.toString("binary")}endstream\nendobj\n`;
+
+  const classicXrefOffset = Buffer.byteLength(body, "binary");
+  body += "xref\n0 8\n";
+  body += "0000000000 65535 f\n";
+  body += `${xrefLine(offsets[1], 0, true)}\n`;
+  body += `${xrefLine(offsets[2], 0, true)}\n`;
+  body += `${xrefLine(offsets[3], 0, true)}\n`;
+  body += `${xrefLine(0, 0, false)}\n`;
+  body += `${xrefLine(0, 0, false)}\n`;
+  body += `${xrefLine(0, 0, false)}\n`;
+  body += `${xrefLine(offsets[xrefStreamObjectId], 0, true)}\n`;
+  body += `trailer\n<< /Size 8 /Root 4 0 R /XRefStm ${offsets[xrefStreamObjectId]} >>\n`;
+  body += `startxref\n${classicXrefOffset}\n%%EOF\n`;
+  return Buffer.from(body, "binary");
+}
+
+function createHybridXrefStreamBytes() {
+  const bytes = Buffer.alloc(21);
+  writeXrefStreamEntry(bytes, 0, 2, 3, 0);
+  writeXrefStreamEntry(bytes, 7, 2, 3, 1);
+  writeXrefStreamEntry(bytes, 14, 2, 3, 2);
+  return bytes;
 }
 
 function classicXrefSection(offsets, size, rootObjectNumber) {

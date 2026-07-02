@@ -435,7 +435,7 @@ Goal: expand PDF compatibility before adding more semantic features.
 
 - [x] Implement xref streams.
 - [x] Implement object streams.
-- [ ] Implement hybrid-reference files.
+- [x] Implement hybrid-reference files.
 - [x] Implement incremental update resolution.
 - [x] Prefer newest object revisions.
 - [ ] Add tests for generated qpdf variants.

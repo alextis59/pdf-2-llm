@@ -145,7 +145,7 @@ function parseXrefChain(source, bytes, startOffset, options = {}) {
     }
     seenOffsets.add(offset);
 
-    const section = parseXref(source, bytes, offset, options);
+    const section = parseHybridXrefSection(source, bytes, parseXref(source, bytes, offset, options), options);
     parsedSections.push(section);
     sectionSummaries.push({
       offset,
@@ -229,6 +229,20 @@ function parseXref(source, bytes, offset, options = {}) {
     return parseClassicXref(source, offset, options);
   }
   return parseXrefStream(source, bytes, offset, options);
+}
+
+function parseHybridXrefSection(source, bytes, section, options = {}) {
+  const xrefStreamOffset = section.trailer?.entries?.XRefStm;
+  if (!Number.isInteger(xrefStreamOffset)) {
+    return section;
+  }
+
+  const streamSection = parseXrefStream(source, bytes, xrefStreamOffset, options);
+  return {
+    entries: mergeXrefEntries([streamSection, section]),
+    trailer: section.trailer,
+    xrefMode: `${section.xrefMode}+hybrid-xref-stream`
+  };
 }
 
 function parseClassicXref(source, offset, { mode = "strict" } = {}) {
