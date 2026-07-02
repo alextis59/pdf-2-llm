@@ -221,6 +221,43 @@ test("linesToMarkdownWithSourceMap exports no-span ruling tables as GFM", () => 
   assert.equal(result.sourceMap.entries[1].regions.length, 6);
 });
 
+test("linesToMarkdownWithSourceMap exports span-bearing ruling tables as HTML", () => {
+  const title = textLine("Spanned Table Fixture", 72, 720, 150, 22);
+  const merged = textLine("Revenue <Total>", 82, 684, 80, 11);
+  const quarter = textLine("Q1 & Q2", 82, 640, 38, 11);
+  const amount = textLine('100 "net"', 202, 636, 50, 11);
+  const result = linesToMarkdownWithSourceMap(
+    [title, merged, quarter, amount],
+    {
+      rulingTables: [
+        {
+          pageIndex: 0,
+          rows: 2,
+          columns: 2,
+          hasSpans: true,
+          rowSpans: 0,
+          columnSpans: 1,
+          coveredCells: 1,
+          cells: [
+            tableCell(0, 0, "Revenue <Total>", [merged], { columnSpan: 2 }),
+            tableCell(0, 1, "", [], { coveredBy: { rowIndex: 0, columnIndex: 0 } }),
+            tableCell(1, 0, "Q1 & Q2", [quarter]),
+            tableCell(1, 1, '100 "net"', [amount])
+          ]
+        }
+      ]
+    }
+  );
+
+  assert.equal(
+    result.markdown,
+    "# Spanned Table Fixture\n\n<table>\n  <thead>\n    <tr>\n      <th colspan=\"2\">Revenue &lt;Total&gt;</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>Q1 &amp; Q2</td>\n      <td>100 &quot;net&quot;</td>\n    </tr>\n  </tbody>\n</table>\n"
+  );
+  assert.equal(result.sourceMap.entries.length, 2);
+  assert.equal(result.sourceMap.entries[1].kind, "table");
+  assert.equal(result.sourceMap.entries[1].regions.length, 3);
+});
+
 test("linesToMarkdown preserves URL and email links", () => {
   const markdown = linesToMarkdown([
     {
@@ -489,7 +526,7 @@ function textLine(text, x, y, width, fontSize) {
   };
 }
 
-function tableCell(rowIndex, columnIndex, text, lines) {
+function tableCell(rowIndex, columnIndex, text, lines, overrides = {}) {
   return {
     rowIndex,
     columnIndex,
@@ -498,6 +535,7 @@ function tableCell(rowIndex, columnIndex, text, lines) {
     lineCount: lines.length,
     rowSpan: 1,
     columnSpan: 1,
-    coveredBy: null
+    coveredBy: null,
+    ...overrides
   };
 }

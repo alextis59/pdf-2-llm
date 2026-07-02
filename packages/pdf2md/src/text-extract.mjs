@@ -120,11 +120,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       previousWasList = false;
       appendPageAnchor(blocks, rulingTable.pageIndex, options, anchoredPages);
       blocks.push(
-        createMarkdownBlock(
-          formatMarkdownTableCells(rulingTable.rows),
-          "table",
-          rulingTable.sourceLines
-        )
+        createMarkdownBlock(rulingTable.markdown, "table", rulingTable.sourceLines)
       );
       index = rulingTable.endIndex - 1;
       continue;
@@ -589,6 +585,14 @@ function formatAutolink(target) {
 
 function escapeMarkdownTableCell(value) {
   return escapeMarkdownInline(value).replace(/\|/g, "\\|");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function readParagraphAt(lines, startIndex, firstText, headingModel, rulingTableExports = new Map()) {
@@ -1147,10 +1151,11 @@ function createRulingTableExports(lines, rulingTables) {
 }
 
 function createRulingTableExport(table, lines, lineIndexes) {
-  if (!isGfmExportableRulingTable(table)) {
+  if (!isRulingTableExportable(table)) {
     return null;
   }
 
+  const hasSpans = hasRulingTableSpans(table);
   const rows = rulingTableRows(table);
   if (
     rows.length < 2 ||
@@ -1182,32 +1187,34 @@ function createRulingTableExport(table, lines, lineIndexes) {
     startIndex,
     endIndex,
     pageIndex: table.pageIndex ?? sourceLines[0]?.pageIndex,
-    rows,
+    markdown: hasSpans ? formatHtmlRulingTable(table) : formatMarkdownTableCells(rows),
     sourceLines: [...sourceLines].sort(
       (left, right) => lineIndexes.get(left) - lineIndexes.get(right)
     )
   };
 }
 
-function isGfmExportableRulingTable(table) {
-  if (
-    !table ||
-    !Array.isArray(table.cells) ||
-    table.rows < 2 ||
-    table.columns < 2 ||
+function isRulingTableExportable(table) {
+  return (
+    table &&
+    Array.isArray(table.cells) &&
+    table.rows >= 2 &&
+    table.columns >= 2
+  );
+}
+
+function hasRulingTableSpans(table) {
+  return (
     table.hasSpans === true ||
     table.rowSpans > 0 ||
     table.columnSpans > 0 ||
-    table.coveredCells > 0
-  ) {
-    return false;
-  }
-
-  return table.cells.every(
-    (cell) =>
-      !cell.coveredBy &&
-      (cell.rowSpan ?? 1) === 1 &&
-      (cell.columnSpan ?? 1) === 1
+    table.coveredCells > 0 ||
+    table.cells.some(
+      (cell) =>
+        cell.coveredBy ||
+        (cell.rowSpan ?? 1) > 1 ||
+        (cell.columnSpan ?? 1) > 1
+    )
   );
 }
 
@@ -1225,6 +1232,60 @@ function rulingTableRows(table) {
     rows.push(row);
   }
   return rows;
+}
+
+function formatHtmlRulingTable(table) {
+  const rows = rulingTableCellRows(table);
+  const bodyRows = rows.slice(1);
+  return [
+    "<table>",
+    "  <thead>",
+    formatHtmlTableRow(rows[0], "th", "    "),
+    "  </thead>",
+    "  <tbody>",
+    ...bodyRows.map((row) => formatHtmlTableRow(row, "td", "    ")),
+    "  </tbody>",
+    "</table>"
+  ].join("\n");
+}
+
+function rulingTableCellRows(table) {
+  const cellsByPosition = new Map(
+    table.cells.map((cell) => [`${cell.rowIndex}:${cell.columnIndex}`, cell])
+  );
+  const rows = [];
+  for (let rowIndex = 0; rowIndex < table.rows; rowIndex += 1) {
+    const row = [];
+    for (let columnIndex = 0; columnIndex < table.columns; columnIndex += 1) {
+      const cell = cellsByPosition.get(`${rowIndex}:${columnIndex}`);
+      if (!cell || cell.coveredBy) {
+        continue;
+      }
+      row.push(cell);
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function formatHtmlTableRow(cells, tagName, indent) {
+  return [
+    `${indent}<tr>`,
+    ...cells.map((cell) => `${indent}  ${formatHtmlTableCell(cell, tagName)}`),
+    `${indent}</tr>`
+  ].join("\n");
+}
+
+function formatHtmlTableCell(cell, tagName) {
+  const attributes = [];
+  if ((cell.rowSpan ?? 1) > 1) {
+    attributes.push(`rowspan="${cell.rowSpan}"`);
+  }
+  if ((cell.columnSpan ?? 1) > 1) {
+    attributes.push(`colspan="${cell.columnSpan}"`);
+  }
+  const attributeText = attributes.length > 0 ? ` ${attributes.join(" ")}` : "";
+  return `<${tagName}${attributeText}>${escapeHtml(normalizeText(cell.text))}</${tagName}>`;
 }
 
 function sourceLinesForRulingTable(table) {

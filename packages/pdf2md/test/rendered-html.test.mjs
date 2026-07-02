@@ -24,6 +24,20 @@ Second paragraph with & detail.
   });
 });
 
+test("renderer preserves raw HTML table blocks", () => {
+  const html = renderMarkdownToHtml(`<table>
+  <tbody>
+    <tr>
+      <td colspan="2">Merged</td>
+    </tr>
+  </tbody>
+</table>
+`);
+
+  assert.match(html, /<td colspan="2">Merged<\/td>/);
+  assert.equal(analyzeRenderedHtml(html).tableCount, 1);
+});
+
 test("rendered HTML evaluator passes configured readability thresholds", () => {
   const result = evaluateRenderedHtml(
     {

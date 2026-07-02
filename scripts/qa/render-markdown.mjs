@@ -34,6 +34,10 @@ function renderBlock(block) {
     return firstLine.trim();
   }
 
+  if (isRawHtmlTableBlock(block)) {
+    return block.trim();
+  }
+
   const heading = firstLine.match(/^(#{1,6})\s+(.+)$/);
   if (heading && lines.length === 1) {
     const level = heading[1].length;
@@ -53,6 +57,10 @@ function renderBlock(block) {
   }
 
   return `<p>${escapeHtml(lines.join(" "))}</p>`;
+}
+
+function isRawHtmlTableBlock(block) {
+  return /^<table(?:\s[^>]*)?>[\s\S]*<\/table>$/.test(block.trim());
 }
 
 function isTableBlock(lines) {
