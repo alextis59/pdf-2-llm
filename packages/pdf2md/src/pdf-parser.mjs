@@ -51,7 +51,10 @@ export function parsePdfDocument(bytes, options = {}) {
   const source = Buffer.from(reader.bytes).toString("latin1");
   const version = readPdfVersion(source);
   const startXref = readStartXref(source);
-  const { entries, trailer } = parseClassicXref(source, startXref, { mode });
+  const { entries, trailer, xrefMode } = parseXref(source, reader.bytes, startXref, {
+    maxDecodedStreamBytes,
+    mode
+  });
   const objects = new Map();
   const streams = [];
 
@@ -82,6 +85,7 @@ export function parsePdfDocument(bytes, options = {}) {
   return {
     version,
     startXref,
+    xrefMode,
     trailer,
     xrefEntries: entries,
     objects,
@@ -128,6 +132,13 @@ function readStartXref(source) {
   return Number.parseInt(match[1], 10);
 }
 
+function parseXref(source, bytes, offset, options = {}) {
+  if (source.startsWith("xref", offset)) {
+    return parseClassicXref(source, offset, options);
+  }
+  return parseXrefStream(source, bytes, offset, options);
+}
+
 function parseClassicXref(source, offset, { mode = "strict" } = {}) {
   let cursor = offset;
   if (!source.startsWith("xref", cursor)) {
@@ -155,7 +166,8 @@ function parseClassicXref(source, offset, { mode = "strict" } = {}) {
       const parsed = parsePdfValue(source, cursor);
       return {
         entries,
-        trailer: parsed.value
+        trailer: parsed.value,
+        xrefMode: "classic-xref"
       };
     }
 
@@ -187,6 +199,115 @@ function parseClassicXref(source, offset, { mode = "strict" } = {}) {
     offset: cursor,
     code: "pdf.xref.trailer_missing"
   });
+}
+
+function parseXrefStream(source, bytes, offset, options = {}) {
+  const object = parseIndirectObjectAt(source, bytes, offset, options);
+  if (!isDict(object.value) || nameValue(object.value.entries.Type) !== "XRef" || !object.stream) {
+    throw new PdfSyntaxError("startxref does not point to a supported xref table or stream.", {
+      offset,
+      code: "pdf.xref.unsupported"
+    });
+  }
+
+  return {
+    entries: readXrefStreamEntries(object.value, object.stream.bytes, object.offset),
+    trailer: object.value,
+    xrefMode: "xref-stream"
+  };
+}
+
+function readXrefStreamEntries(dictionary, bytes, offset) {
+  const size = dictionary.entries.Size;
+  if (!Number.isInteger(size) || size < 0) {
+    throw new PdfSyntaxError("XRef stream is missing a valid Size entry.", {
+      offset,
+      code: "pdf.xref.stream_size_malformed"
+    });
+  }
+
+  const widths = numberArray(dictionary.entries.W);
+  if (!widths || widths.length !== 3 || !widths.every((value) => Number.isInteger(value) && value >= 0)) {
+    throw new PdfSyntaxError("XRef stream is missing a valid W array.", {
+      offset,
+      code: "pdf.xref.stream_w_malformed"
+    });
+  }
+
+  const index = numberArray(dictionary.entries.Index) ?? [0, size];
+  if (index.length % 2 !== 0 || !index.every((value) => Number.isInteger(value) && value >= 0)) {
+    throw new PdfSyntaxError("XRef stream has a malformed Index array.", {
+      offset,
+      code: "pdf.xref.stream_index_malformed"
+    });
+  }
+
+  const entryWidth = widths[0] + widths[1] + widths[2];
+  if (entryWidth <= 0) {
+    throw new PdfSyntaxError("XRef stream entry width must be positive.", {
+      offset,
+      code: "pdf.xref.stream_w_malformed"
+    });
+  }
+
+  const entries = [];
+  let cursor = 0;
+  for (let pairIndex = 0; pairIndex < index.length; pairIndex += 2) {
+    const firstObject = index[pairIndex];
+    const count = index[pairIndex + 1];
+    for (let itemIndex = 0; itemIndex < count; itemIndex += 1) {
+      if (cursor + entryWidth > bytes.byteLength) {
+        throw new PdfSyntaxError("XRef stream ended before all entries were decoded.", {
+          offset,
+          code: "pdf.xref.stream_truncated"
+        });
+      }
+      const type = widths[0] === 0 ? 1 : readBigEndianInteger(bytes, cursor, widths[0]);
+      cursor += widths[0];
+      const field2 = readBigEndianInteger(bytes, cursor, widths[1]);
+      cursor += widths[1];
+      const field3 = readBigEndianInteger(bytes, cursor, widths[2]);
+      cursor += widths[2];
+      entries.push(xrefStreamEntry(firstObject + itemIndex, type, field2, field3));
+    }
+  }
+  return entries;
+}
+
+function readBigEndianInteger(bytes, offset, width) {
+  let value = 0;
+  for (let index = 0; index < width; index += 1) {
+    value = value * 256 + bytes[offset + index];
+  }
+  return value;
+}
+
+function xrefStreamEntry(objectNumber, type, field2, field3) {
+  if (type === 0) {
+    return {
+      objectNumber,
+      generationNumber: field3,
+      offset: field2,
+      inUse: false
+    };
+  }
+  if (type === 1) {
+    return {
+      objectNumber,
+      generationNumber: field3,
+      offset: field2,
+      inUse: true
+    };
+  }
+  return {
+    objectNumber,
+    generationNumber: 0,
+    offset: 0,
+    inUse: false,
+    compressed: true,
+    objectStreamNumber: field2,
+    objectStreamIndex: field3
+  };
 }
 
 function parseIndirectObjectAt(source, bytes, offset, options = {}) {

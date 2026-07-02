@@ -89,6 +89,27 @@ test("parsePdfDocument decodes Flate content streams for text extraction", async
   assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
 });
 
+test("parsePdfDocument resolves xref stream entries", async () => {
+  const bytes = createXrefStreamTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject("BT /F1 22 Tf 20 200 Td (XRef Stream Fixture) Tj ET\n")
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.xrefMode, "xref-stream");
+  assert.equal(document.trailer.entries.Size, 7);
+  assert.equal(document.xrefEntries.length, 7);
+  assert.equal(document.objects.size, 6);
+  assert.equal(document.pages.length, 1);
+  assert.equal(document.pages[0].resources.fonts.F1.baseFont, "Helvetica");
+  assert.equal(result.markdown, "# XRef Stream Fixture\n");
+  assert.equal(result.diagnostics.extraction.parser.mode, "xref-stream");
+});
+
 test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {
   const toUnicode = [
     "/CIDInit /ProcSet findresource begin",
@@ -211,16 +232,16 @@ test("public converter uses parsed content streams for generated PDFs", async ()
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
 });
 
-test("public converter reports unsupported parser structures as warnings", async () => {
-  const unsupportedXrefStream = Buffer.from(
+test("public converter reports malformed xref streams as warnings", async () => {
+  const malformedXrefStream = Buffer.from(
     "%PDF-1.5\n1 0 obj\n<< /Type /XRef /Length 0 >>\nstream\n\nendstream\nendobj\nstartxref\n9\n%%EOF\n",
     "latin1"
   );
-  const result = await convertPdfToMarkdown(unsupportedXrefStream);
+  const result = await convertPdfToMarkdown(malformedXrefStream);
   const parseWarning = result.warnings.find((warning) => warning.code === warningCodes.PdfParseFailed);
 
   assert.ok(parseWarning);
-  assert.equal(parseWarning.details.code, "pdf.xref.unsupported");
+  assert.equal(parseWarning.details.code, "pdf.xref.stream_size_malformed");
   assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
 });
 
@@ -243,6 +264,41 @@ function createTestPdf(objects) {
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
   return Buffer.from(body, "binary");
+}
+
+function createXrefStreamTestPdf(objects) {
+  let body = "%PDF-1.5\n";
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    const objectId = index + 1;
+    offsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefObjectId = objects.length + 1;
+  offsets[xrefObjectId] = Buffer.byteLength(body, "binary");
+  const xrefStream = createXrefStreamBytes(offsets);
+  body += `${xrefObjectId} 0 obj\n`;
+  body += `<< /Type /XRef /Size ${xrefObjectId + 1} /Root 1 0 R /W [1 4 2] /Length ${xrefStream.byteLength} >>\n`;
+  body += `stream\n${xrefStream.toString("binary")}endstream\nendobj\n`;
+  body += `startxref\n${offsets[xrefObjectId]}\n%%EOF\n`;
+  return Buffer.from(body, "binary");
+}
+
+function createXrefStreamBytes(offsets) {
+  const bytes = Buffer.alloc(offsets.length * 7);
+  writeXrefStreamEntry(bytes, 0, 0, 0, 65535);
+  for (let objectId = 1; objectId < offsets.length; objectId += 1) {
+    writeXrefStreamEntry(bytes, objectId * 7, 1, offsets[objectId], 0);
+  }
+  return bytes;
+}
+
+function writeXrefStreamEntry(bytes, offset, type, field2, field3) {
+  bytes[offset] = type;
+  bytes.writeUInt32BE(field2, offset + 1);
+  bytes.writeUInt16BE(field3, offset + 5);
 }
 
 function streamObject(contents, extraDictionary = "") {

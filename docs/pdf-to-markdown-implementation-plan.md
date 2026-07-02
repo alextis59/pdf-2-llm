@@ -433,7 +433,7 @@ Goal: expand PDF compatibility before adding more semantic features.
 
 ### 3.1 Modern Object Structures
 
-- [ ] Implement xref streams.
+- [x] Implement xref streams.
 - [ ] Implement object streams.
 - [ ] Implement hybrid-reference files.
 - [ ] Implement incremental update resolution.
