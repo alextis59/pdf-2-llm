@@ -446,7 +446,7 @@ Goal: expand PDF compatibility before adding more semantic features.
 - [ ] Implement LZW decode if required by corpus.
 - [x] Implement CCITT/JBIG2/JPEG/JPEG2000 metadata detection even before full
   raster support.
-- [ ] Implement predictor variants needed by image and object streams.
+- [x] Implement predictor variants needed by image and object streams.
 - [ ] Add bounded allocation tests for all filters.
 - [ ] Add corrupt filter-chain tests.
 

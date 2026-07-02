@@ -265,17 +265,28 @@ function applyPredictor(bytes, parms, maxBytes) {
   if (predictor === 1) {
     return bytes;
   }
-  if (predictor < 10 || predictor > 15) {
-    throw new PdfStreamDecodeError(`Unsupported predictor ${predictor}.`, {
-      code: "pdf.stream.predictor_unsupported"
-    });
-  }
 
   const colors = numberParm(parms, "Colors", 1);
   const bitsPerComponent = numberParm(parms, "BitsPerComponent", 8);
   const columns = numberParm(parms, "Columns", 1);
   const bytesPerPixel = Math.max(1, Math.ceil((colors * bitsPerComponent) / 8));
   const rowLength = Math.ceil((columns * colors * bitsPerComponent) / 8);
+
+  if (predictor === 2) {
+    return applyTiffPredictor(bytes, {
+      bitsPerComponent,
+      bytesPerPixel,
+      rowLength,
+      maxBytes
+    });
+  }
+
+  if (predictor < 10 || predictor > 15) {
+    throw new PdfStreamDecodeError(`Unsupported predictor ${predictor}.`, {
+      code: "pdf.stream.predictor_unsupported"
+    });
+  }
+
   const rowWithFilterLength = rowLength + 1;
 
   if (rowLength <= 0 || bytes.length % rowWithFilterLength !== 0) {
@@ -302,6 +313,32 @@ function applyPredictor(bytes, parms, maxBytes) {
     outputOffset += rowLength;
   }
 
+  return output;
+}
+
+function applyTiffPredictor(bytes, { bitsPerComponent, bytesPerPixel, rowLength, maxBytes }) {
+  if (bitsPerComponent !== 8) {
+    throw new PdfStreamDecodeError(
+      `Unsupported TIFF predictor bit depth ${bitsPerComponent}.`,
+      {
+        code: "pdf.stream.predictor_unsupported"
+      }
+    );
+  }
+  if (rowLength <= 0 || bytes.length % rowLength !== 0) {
+    throw new PdfStreamDecodeError("TIFF predictor data does not align with row size.", {
+      code: "pdf.stream.predictor_row_mismatch"
+    });
+  }
+
+  const output = new Uint8Array(bytes);
+  enforceMaxBytes(output, maxBytes, "Predictor");
+  for (let rowOffset = 0; rowOffset < output.length; rowOffset += rowLength) {
+    for (let index = bytesPerPixel; index < rowLength; index += 1) {
+      output[rowOffset + index] =
+        (output[rowOffset + index] + output[rowOffset + index - bytesPerPixel]) & 0xff;
+    }
+  }
   return output;
 }
 

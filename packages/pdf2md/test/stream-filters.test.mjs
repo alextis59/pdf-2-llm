@@ -43,6 +43,23 @@ test("FlateDecode applies PNG predictors", () => {
   assert.deepEqual([...decoded], [1, 2, 3, 4, 5, 6]);
 });
 
+test("FlateDecode applies TIFF horizontal differencing predictor", () => {
+  const predictedRows = new Uint8Array([
+    10, 20, 30, 3, 5, 7,
+    4, 6, 8, 2, 3, 4
+  ]);
+  const encoded = deflateSync(predictedRows);
+  const dictionary = parsePdfValue(
+    "<< /Filter /FlateDecode /DecodeParms << /Predictor 2 /Columns 2 /Colors 3 /BitsPerComponent 8 >> >>"
+  ).value;
+  const decoded = decodeStreamBytes(encoded, dictionary).bytes;
+
+  assert.deepEqual([...decoded], [
+    10, 20, 30, 13, 25, 37,
+    4, 6, 8, 6, 9, 12
+  ]);
+});
+
 test("raster image filters are metadata-only pass-through filters", () => {
   const encoded = Buffer.from("ffd8ff", "hex").toString("hex") + ">";
   const dictionary = parsePdfValue("<< /Filter [/ASCIIHexDecode /DCTDecode] >>").value;
@@ -74,6 +91,16 @@ test("decoder enforces limits and reports corrupt streams", () => {
   assert.throws(
     () => decode(new Uint8Array([2, 97]), "/RunLengthDecode"),
     (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.runlength_truncated"
+  );
+
+  assert.throws(
+    () =>
+      decode(
+        deflateSync(new Uint8Array([0])),
+        "/FlateDecode /DecodeParms << /Predictor 2 /Columns 1 /BitsPerComponent 1 >>"
+      ),
+    (error) =>
+      error instanceof PdfStreamDecodeError && error.code === "pdf.stream.predictor_unsupported"
   );
 
   assert.throws(
