@@ -1,5 +1,7 @@
 import { extractContentStreamTextLines } from "./content-stream.mjs";
 
+const linkPattern = /(https?:\/\/[^\s<>()\[\]{}]+|www\.[^\s<>()\[\]{}]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+
 export function extractTextLines(bytes, { document = null } = {}) {
   if (document) {
     return documentTextLines(document);
@@ -397,7 +399,36 @@ function escapeMarkdownParagraph(value) {
 }
 
 function escapeMarkdownInline(value) {
+  let result = "";
+  let offset = 0;
+  for (const match of value.matchAll(linkPattern)) {
+    result += escapeMarkdownText(value.slice(offset, match.index));
+    const { target, trailing } = splitLinkTrailingPunctuation(match[0]);
+    result += formatAutolink(target);
+    result += escapeMarkdownText(trailing);
+    offset = match.index + match[0].length;
+  }
+  result += escapeMarkdownText(value.slice(offset));
+  return result;
+}
+
+function escapeMarkdownText(value) {
   return value.replace(/\\/g, "\\\\").replace(/([`*_[\]])/g, "\\$1");
+}
+
+function splitLinkTrailingPunctuation(value) {
+  const match = value.match(/^(.+?)([.,;:!?]+)?$/);
+  return {
+    target: match?.[1] ?? value,
+    trailing: match?.[2] ?? ""
+  };
+}
+
+function formatAutolink(target) {
+  if (/^www\./i.test(target)) {
+    return `<https://${target}>`;
+  }
+  return `<${target}>`;
 }
 
 function escapeMarkdownTableCell(value) {

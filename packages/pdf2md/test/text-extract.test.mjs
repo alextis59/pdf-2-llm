@@ -122,6 +122,30 @@ test("linesToMarkdown escapes Markdown metacharacters in text and tables", () =>
   );
 });
 
+test("linesToMarkdown preserves URL and email links", () => {
+  const markdown = linesToMarkdown([
+    {
+      text: "Visit https://example.com/docs and contact support@example.com.",
+      fontSize: 12,
+      x: 72,
+      y: 720,
+      pageIndex: 0
+    },
+    {
+      text: "Mirror at www.example.org/path.",
+      fontSize: 12,
+      x: 72,
+      y: 700,
+      pageIndex: 0
+    }
+  ]);
+
+  assert.equal(
+    markdown,
+    "Visit <https://example.com/docs> and contact <support@example.com>.\n\nMirror at <https://www.example.org/path>.\n"
+  );
+});
+
 test("linesToMarkdown can add page anchors", () => {
   const markdown = linesToMarkdown(
     [

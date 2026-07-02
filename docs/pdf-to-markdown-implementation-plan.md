@@ -508,7 +508,7 @@ Goal: improve reading order and document structure for real-world documents.
 - [x] Infer heading levels across the document.
 - [x] Infer nested lists.
 - [x] Infer code blocks from monospace text and indentation.
-- [ ] Preserve links.
+- [x] Preserve links.
 - [ ] Integrate outlines/bookmarks as optional structure signals.
 - [ ] Prefer tagged PDF structure when tags are consistent with geometry.
 - [ ] Warn when tags conflict with visible layout.
