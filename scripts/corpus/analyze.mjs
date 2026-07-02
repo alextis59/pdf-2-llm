@@ -235,6 +235,148 @@ function readManifestPages(entry) {
   return Number.isInteger(entry?.pages) ? entry.pages : null;
 }
 
+function parsePdfImagesByPage(stdout) {
+  const pages = new Map();
+  for (const line of stdout.split(/\r?\n/)) {
+    const columns = line.trim().split(/\s+/);
+    if (columns.length < 14 || !/^\d+$/.test(columns[0])) {
+      continue;
+    }
+    const page = Number.parseInt(columns[0], 10);
+    const type = columns[2];
+    const width = Number.parseInt(columns[3], 10);
+    const height = Number.parseInt(columns[4], 10);
+    const xPpi = Number.parseInt(columns[12], 10);
+    const yPpi = Number.parseInt(columns[13], 10);
+    if (type === "smask" || !Number.isInteger(page) || !Number.isInteger(width) || !Number.isInteger(height)) {
+      continue;
+    }
+    const displayedWidth = xPpi > 0 ? (width / xPpi) * 72 : null;
+    const displayedHeight = yPpi > 0 ? (height / yPpi) * 72 : null;
+    const displayedArea =
+      displayedWidth !== null && displayedHeight !== null ? displayedWidth * displayedHeight : null;
+    const current = pages.get(page) ?? {
+      page,
+      imageCount: 0,
+      totalImagePixels: 0,
+      maxImagePixels: 0,
+      totalDisplayedImageArea: 0,
+      maxDisplayedImageArea: 0
+    };
+    const pixels = width * height;
+    current.imageCount += 1;
+    current.totalImagePixels += pixels;
+    current.maxImagePixels = Math.max(current.maxImagePixels, pixels);
+    if (displayedArea !== null) {
+      current.totalDisplayedImageArea += displayedArea;
+      current.maxDisplayedImageArea = Math.max(current.maxDisplayedImageArea, displayedArea);
+    }
+    pages.set(page, current);
+  }
+  return pages;
+}
+
+function parseBboxTextByPage(stdout) {
+  const pages = new Map();
+  const pagePattern = /<page\b([^>]*)>([\s\S]*?)<\/page>/g;
+  let pageNumber = 0;
+  for (const pageMatch of stdout.matchAll(pagePattern)) {
+    pageNumber += 1;
+    const attributes = pageMatch[1];
+    const body = pageMatch[2];
+    const width = readXmlNumberAttribute(attributes, "width");
+    const height = readXmlNumberAttribute(attributes, "height");
+    let wordBoxes = 0;
+    let totalWordBoxArea = 0;
+
+    const wordPattern = /<word\b([^>]*)>/g;
+    for (const wordMatch of body.matchAll(wordPattern)) {
+      const wordAttributes = wordMatch[1];
+      const xMin = readXmlNumberAttribute(wordAttributes, "xMin");
+      const yMin = readXmlNumberAttribute(wordAttributes, "yMin");
+      const xMax = readXmlNumberAttribute(wordAttributes, "xMax");
+      const yMax = readXmlNumberAttribute(wordAttributes, "yMax");
+      if ([xMin, yMin, xMax, yMax].some((value) => value === null)) {
+        continue;
+      }
+      wordBoxes += 1;
+      totalWordBoxArea += Math.max(0, xMax - xMin) * Math.max(0, yMax - yMin);
+    }
+
+    pages.set(pageNumber, {
+      page: pageNumber,
+      width,
+      height,
+      wordBoxes,
+      totalWordBoxArea,
+      textAreaRatio: width && height ? totalWordBoxArea / (width * height) : null
+    });
+  }
+  return pages;
+}
+
+function readXmlNumberAttribute(attributes, name) {
+  const match = attributes.match(new RegExp(`${name}="([-+]?\\d*\\.?\\d+)"`));
+  return match ? Number.parseFloat(match[1]) : null;
+}
+
+function buildOcrOverlaySignals(tools) {
+  const pdfimages = tools.pdfimages;
+  const pdftotextBbox = tools.pdftotextBbox;
+  const toolBacked =
+    pdfimages?.available === true &&
+    pdfimages.status === 0 &&
+    pdftotextBbox?.available === true &&
+    pdftotextBbox.status === 0;
+
+  if (!toolBacked) {
+    return {
+      toolBacked: false,
+      hiddenOcrOverlayLikely: false,
+      candidatePages: [],
+      notes: [
+        "Hidden OCR overlay detection requires successful pdfimages -list and pdftotext -bbox outputs."
+      ]
+    };
+  }
+
+  const imagesByPage = parsePdfImagesByPage(pdfimages.stdout);
+  const textByPage = parseBboxTextByPage(pdftotextBbox.stdout);
+  const candidatePages = [];
+
+  for (const [page, imageSignals] of imagesByPage) {
+    const textSignals = textByPage.get(page);
+    if (!textSignals || textSignals.wordBoxes === 0) {
+      continue;
+    }
+    const pageArea = textSignals.width && textSignals.height ? textSignals.width * textSignals.height : null;
+    const imageAreaRatio = pageArea ? imageSignals.totalDisplayedImageArea / pageArea : null;
+    const imageDominantLikely = imageAreaRatio !== null && imageAreaRatio >= 0.5;
+    if (!imageDominantLikely) {
+      continue;
+    }
+    candidatePages.push({
+      page,
+      imageCount: imageSignals.imageCount,
+      totalImagePixels: imageSignals.totalImagePixels,
+      maxImagePixels: imageSignals.maxImagePixels,
+      imageAreaRatio,
+      wordBoxes: textSignals.wordBoxes,
+      textAreaRatio: textSignals.textAreaRatio,
+      imageDominantLikely
+    });
+  }
+
+  return {
+    toolBacked: true,
+    hiddenOcrOverlayLikely: candidatePages.some((page) => page.wordBoxes >= 10),
+    candidatePages,
+    notes: [
+      "Candidates indicate image-heavy pages that also expose text boxes; human review should confirm whether the text layer is visible, OCR, or misleading."
+    ]
+  };
+}
+
 async function runTool(command, argsForCommand, timeoutMs = 15000) {
   return new Promise((resolve) => {
     const child = spawn(command, argsForCommand, {
@@ -308,6 +450,7 @@ async function runExternalTools(filePath) {
   const tools = {
     pdfinfo: await runTool("pdfinfo", [filePath]),
     pdfimages: await runTool("pdfimages", ["-list", filePath]),
+    pdftotextBbox: await runTool("pdftotext", ["-bbox", filePath, "-"]),
     qpdfJson: await runTool("qpdf", ["--json", filePath]),
     mutoolInfo: await runTool("mutool", ["info", filePath])
   };
@@ -379,6 +522,7 @@ async function analyzePdf(target) {
       pdfinfo: pdfInfoPages
     },
     ...staticAnalysis,
+    ocrOverlaySignals: buildOcrOverlaySignals(tools),
     externalTools: summarizeTools(tools),
     toolOutputs: toolOutputPaths,
     notes: [

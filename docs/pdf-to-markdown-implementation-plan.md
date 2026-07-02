@@ -201,7 +201,7 @@ Checklist:
   embedded files.
 - [x] Count text operators and estimate glyph density per page.
 - [x] Detect image-dominant pages and likely scanned pages.
-- [ ] Detect hidden OCR overlays by comparing text boxes with image-dominant
+- [x] Detect hidden OCR overlays by comparing text boxes with image-dominant
   pages.
 - [x] Detect fonts, encodings, ToUnicode CMaps, CID fonts, and missing maps.
 - [x] Detect path-heavy pages that likely contain tables, charts, or vector
