@@ -505,7 +505,7 @@ Goal: improve reading order and document structure for real-world documents.
 
 ### 4.3 Semantic Structure
 
-- [ ] Infer heading levels across the document.
+- [x] Infer heading levels across the document.
 - [ ] Infer nested lists.
 - [ ] Infer code blocks from monospace text and indentation.
 - [ ] Preserve links.

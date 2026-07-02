@@ -49,6 +49,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   });
   const layout = analyzeLineLayout(lines, { pageNumberRegions });
   lines = orderLinesForReading(lines);
+  const headingModel = createHeadingModel(lines);
   const blocks = [];
   let previousWasList = false;
   const anchoredPages = new Set();
@@ -71,15 +72,16 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
 
     appendPageAnchor(blocks, line.pageIndex, options, anchoredPages);
 
-    if (line.fontSize >= 20) {
+    const headingLevel = headingLevelForLine(line, headingModel);
+    if (headingLevel !== null) {
       previousWasList = false;
-      blocks.push(createMarkdownBlock(`# ${escapeMarkdownInline(text)}`, "heading", [line]));
-      continue;
-    }
-
-    if (line.fontSize >= 15) {
-      previousWasList = false;
-      blocks.push(createMarkdownBlock(`## ${escapeMarkdownInline(text)}`, "heading", [line]));
+      blocks.push(
+        createMarkdownBlock(
+          `${"#".repeat(headingLevel)} ${escapeMarkdownInline(text)}`,
+          "heading",
+          [line]
+        )
+      );
       continue;
     }
 
@@ -101,7 +103,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     }
 
     previousWasList = false;
-    const paragraph = readParagraphAt(lines, index, text);
+    const paragraph = readParagraphAt(lines, index, text, headingModel);
     blocks.push(
       createMarkdownBlock(escapeMarkdownParagraph(paragraph.text), "paragraph", paragraph.sourceLines)
     );
@@ -147,6 +149,58 @@ function parseListItem(text) {
   return null;
 }
 
+function createHeadingModel(lines) {
+  const bodyFontSize = dominantFontSize(lines);
+  const fontSizes = uniqueSortedFontSizes(lines);
+  const minimumHeadingSize = Math.max(15, bodyFontSize + 2);
+  let headingSizes = fontSizes.filter((fontSize) => fontSize >= minimumHeadingSize);
+  if (headingSizes.length === 0 && fontSizes.length === 1 && fontSizes[0] >= 15) {
+    headingSizes = [fontSizes[0]];
+  }
+  headingSizes = headingSizes.slice(0, 6);
+  const levelByFontSize = new Map(
+    headingSizes.map((fontSize, index) => [fontSize, index + 1])
+  );
+  return {
+    bodyFontSize,
+    levelByFontSize
+  };
+}
+
+function dominantFontSize(lines) {
+  const counts = new Map();
+  for (const line of lines) {
+    const fontSize = roundedFontSize(line.fontSize);
+    if (!Number.isFinite(fontSize) || normalizeText(line.text ?? "").length === 0) {
+      continue;
+    }
+    counts.set(fontSize, (counts.get(fontSize) ?? 0) + 1);
+  }
+
+  let bestSize = 12;
+  let bestCount = 0;
+  for (const [fontSize, count] of counts) {
+    if (count > bestCount || (count === bestCount && fontSize < bestSize)) {
+      bestSize = fontSize;
+      bestCount = count;
+    }
+  }
+  return bestSize;
+}
+
+function uniqueSortedFontSizes(lines) {
+  return [...new Set(lines.map((line) => roundedFontSize(line.fontSize)).filter(Number.isFinite))]
+    .sort((left, right) => right - left);
+}
+
+function headingLevelForLine(line, headingModel) {
+  return headingModel.levelByFontSize.get(roundedFontSize(line.fontSize)) ?? null;
+}
+
+function roundedFontSize(fontSize) {
+  return Number.isFinite(fontSize) ? Math.round(fontSize * 2) / 2 : Number.NaN;
+}
+
 function normalizeWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -179,7 +233,7 @@ function escapeMarkdownTableCell(value) {
   return escapeMarkdownInline(value).replace(/\|/g, "\\|");
 }
 
-function readParagraphAt(lines, startIndex, firstText) {
+function readParagraphAt(lines, startIndex, firstText, headingModel) {
   const parts = [firstText];
   let previous = lines[startIndex];
   let index = startIndex + 1;
@@ -189,7 +243,7 @@ function readParagraphAt(lines, startIndex, firstText) {
     const text = normalizeText(line.text);
     if (
       text.length === 0 ||
-      line.fontSize >= 15 ||
+      headingLevelForLine(line, headingModel) !== null ||
       parseListItem(text) ||
       startsWithMarkdownBlockMarker(text) ||
       readTableAt(lines, index) ||

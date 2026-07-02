@@ -32,6 +32,23 @@ test("linesToMarkdown infers headings and ordered lists", () => {
   assert.equal(markdown, "# Title\n\n## Section\n\n1. First\n2. Second\n");
 });
 
+test("linesToMarkdown infers heading levels across the document", () => {
+  const markdown = linesToMarkdown([
+    { text: "Document Title", fontSize: 24, x: 72, y: 720, pageIndex: 0 },
+    { text: "Major Section", fontSize: 18, x: 72, y: 680, pageIndex: 0 },
+    { text: "Body text starts here.", fontSize: 12, x: 72, y: 650, pageIndex: 0 },
+    { text: "Minor Section", fontSize: 16, x: 72, y: 620, pageIndex: 0 },
+    { text: "More body text.", fontSize: 12, x: 72, y: 590, pageIndex: 0 },
+    { text: "Another Major Section", fontSize: 18, x: 72, y: 720, pageIndex: 1 },
+    { text: "Second page body.", fontSize: 12, x: 72, y: 690, pageIndex: 1 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "# Document Title\n\n## Major Section\n\nBody text starts here.\n\n### Minor Section\n\nMore body text.\n\n## Another Major Section\n\nSecond page body.\n"
+  );
+});
+
 test("linesToMarkdown escapes Markdown metacharacters in text and tables", () => {
   const markdown = linesToMarkdown([
     { text: "literal *star* and [label] uses \\ slash", fontSize: 12, x: 10, y: 40 },
