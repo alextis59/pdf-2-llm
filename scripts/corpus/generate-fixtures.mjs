@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { deflateSync } from "node:zlib";
 
 const repoRoot = process.cwd();
 const generatedAt = "2026-07-02";
@@ -23,8 +24,9 @@ function rect(x, y, width, height) {
   return `${x} ${y} ${width} ${height} re S`;
 }
 
-function streamObject(content) {
-  return `<< /Length ${Buffer.byteLength(content, "binary")} >>\nstream\n${content}\nendstream`;
+function streamObject(content, extraDictionary = "") {
+  const bytes = typeof content === "string" ? Buffer.from(content, "binary") : Buffer.from(content);
+  return `<< /Length ${bytes.byteLength}${extraDictionary ? ` ${extraDictionary}` : ""} >>\nstream\n${bytes.toString("binary")}\nendstream`;
 }
 
 function createPdf({ pages }) {
@@ -84,6 +86,157 @@ function createPdf({ pages }) {
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
 
   return Buffer.from(body, "binary");
+}
+
+function createXrefStreamPdf({ pages }) {
+  const objects = new Map();
+  const catalogId = 1;
+  const pagesId = 2;
+  const fontId = 3;
+  const pageIds = [];
+
+  objects.set(
+    fontId,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+  );
+
+  pages.forEach((page, index) => {
+    const pageId = 4 + index * 2;
+    const contentId = pageId + 1;
+    pageIds.push(pageId);
+    const content = `${page.operations.join("\n")}\n`;
+    objects.set(contentId, streamObject(content));
+
+    const mediaBox = page.mediaBox ?? [0, 0, 612, 792];
+    const cropBox = page.cropBox ? `/CropBox [${page.cropBox.join(" ")}] ` : "";
+    const rotate = page.rotate ? `/Rotate ${page.rotate} ` : "";
+    objects.set(
+      pageId,
+      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [${mediaBox.join(" ")}] ${cropBox}${rotate}/Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`
+    );
+  });
+
+  objects.set(
+    pagesId,
+    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`
+  );
+  objects.set(catalogId, `<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+
+  const maxObjectId = Math.max(...objects.keys());
+  let body = "%PDF-1.5\n% pdf-2-llm generated fixture\n";
+  const offsets = Array(maxObjectId + 2).fill(0);
+
+  for (let objectId = 1; objectId <= maxObjectId; objectId += 1) {
+    const objectBody = objects.get(objectId);
+    if (!objectBody) {
+      continue;
+    }
+    offsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${objectBody}\nendobj\n`;
+  }
+
+  const xrefObjectId = maxObjectId + 1;
+  offsets[xrefObjectId] = Buffer.byteLength(body, "binary");
+  const xrefStream = createXrefStreamBytes(offsets);
+  body += `${xrefObjectId} 0 obj\n`;
+  body += `<< /Type /XRef /Size ${xrefObjectId + 1} /Root ${catalogId} 0 R /W [1 4 2] /Length ${xrefStream.byteLength} >>\n`;
+  body += `stream\n${xrefStream.toString("binary")}endstream\nendobj\n`;
+  body += `startxref\n${offsets[xrefObjectId]}\n%%EOF\n`;
+
+  return Buffer.from(body, "binary");
+}
+
+function createObjectStreamPdf({ pages }) {
+  if (pages.length !== 1) {
+    throw new Error("Object-stream generated fixture currently supports exactly one page.");
+  }
+
+  const [page] = pages;
+  const content = `${page.operations.join("\n")}\n`;
+  const mediaBox = page.mediaBox ?? [0, 0, 612, 792];
+  const cropBox = page.cropBox ? `/CropBox [${page.cropBox.join(" ")}] ` : "";
+  const rotate = page.rotate ? `/Rotate ${page.rotate} ` : "";
+  const compressedObjects = [
+    { objectNumber: 4, value: "<< /Type /Catalog /Pages 5 0 R >>" },
+    {
+      objectNumber: 5,
+      value: `<< /Type /Pages /Kids [6 0 R] /Count 1 /Resources << /Font << /F1 1 0 R >> >> /MediaBox [${mediaBox.join(" ")}] >>`
+    },
+    {
+      objectNumber: 6,
+      value: `<< /Type /Page /Parent 5 0 R /MediaBox [${mediaBox.join(" ")}] ${cropBox}${rotate}/Contents 2 0 R >>`
+    }
+  ];
+  const directObjects = [
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject(content),
+    objectStreamObject(compressedObjects)
+  ];
+
+  let body = "%PDF-1.5\n% pdf-2-llm generated fixture\n";
+  const offsets = [0];
+  directObjects.forEach((objectBody, index) => {
+    const objectId = index + 1;
+    offsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${objectBody}\nendobj\n`;
+  });
+
+  const xrefObjectId = 7;
+  offsets[xrefObjectId] = Buffer.byteLength(body, "binary");
+  const xrefStream = createObjectStreamXrefBytes(offsets, xrefObjectId);
+  body += `${xrefObjectId} 0 obj\n`;
+  body += `<< /Type /XRef /Size ${xrefObjectId + 1} /Root 4 0 R /W [1 4 2] /Length ${xrefStream.byteLength} >>\n`;
+  body += `stream\n${xrefStream.toString("binary")}endstream\nendobj\n`;
+  body += `startxref\n${offsets[xrefObjectId]}\n%%EOF\n`;
+
+  return Buffer.from(body, "binary");
+}
+
+function createXrefStreamBytes(offsets) {
+  const bytes = Buffer.alloc(offsets.length * 7);
+  writeXrefStreamEntry(bytes, 0, 0, 0, 65535);
+  for (let objectId = 1; objectId < offsets.length; objectId += 1) {
+    writeXrefStreamEntry(bytes, objectId * 7, 1, offsets[objectId], 0);
+  }
+  return bytes;
+}
+
+function createObjectStreamXrefBytes(offsets, xrefObjectId) {
+  const bytes = Buffer.alloc((xrefObjectId + 1) * 7);
+  writeXrefStreamEntry(bytes, 0, 0, 0, 65535);
+  writeXrefStreamEntry(bytes, 7, 1, offsets[1], 0);
+  writeXrefStreamEntry(bytes, 14, 1, offsets[2], 0);
+  writeXrefStreamEntry(bytes, 21, 1, offsets[3], 0);
+  writeXrefStreamEntry(bytes, 28, 2, 3, 0);
+  writeXrefStreamEntry(bytes, 35, 2, 3, 1);
+  writeXrefStreamEntry(bytes, 42, 2, 3, 2);
+  writeXrefStreamEntry(bytes, 49, 1, offsets[xrefObjectId], 0);
+  return bytes;
+}
+
+function writeXrefStreamEntry(bytes, offset, type, field2, field3) {
+  bytes[offset] = type;
+  bytes.writeUInt32BE(field2, offset + 1);
+  bytes.writeUInt16BE(field3, offset + 5);
+}
+
+function objectStreamObject(objects) {
+  let currentOffset = 0;
+  const offsets = objects.map((object) => {
+    const offset = currentOffset;
+    currentOffset += Buffer.byteLength(object.value, "binary") + 1;
+    return offset;
+  });
+  const header = objects
+    .map((object, index) => `${object.objectNumber} ${offsets[index]}`)
+    .join(" ");
+  const values = objects.map((object) => object.value).join(" ");
+  const objectStream = `${header} ${values}`;
+  const first = Buffer.byteLength(`${header} `, "binary");
+  return streamObject(
+    deflateSync(Buffer.from(objectStream, "binary")),
+    `/Type /ObjStm /N ${objects.length} /First ${first} /Filter /FlateDecode`
+  );
 }
 
 function sha256(bytes) {
@@ -157,7 +310,7 @@ function manifestEntry(fixture, pdfBytes) {
     sha256: sha256(pdfBytes),
     bytes: pdfBytes.length,
     pages: fixture.pages.length,
-    pdfVersion: "1.4",
+    pdfVersion: fixture.pdfVersion ?? "1.4",
     features: fixture.features,
     acceptanceFile: `corpus/accepted/${fixture.id}.yaml`,
     notes: fixture.description
@@ -370,6 +523,62 @@ const fixtures = [
     ]
   },
   {
+    id: "synthetic-xref-stream",
+    kind: "pdf-feature",
+    gate: "robust-parser",
+    pdfVersion: "1.5",
+    createPdf: createXrefStreamPdf,
+    features: ["born-digital", "xref-stream", "pdf-1.5"],
+    description: "PDF 1.5 xref stream fixture with direct page objects.",
+    minTextCoverage: 1,
+    must: ["resolve_xref_stream", "extract_main_text"],
+    mustNot: ["fall_back_to_unstructured_binary_scan"],
+    structures: ["xref_stream", "paragraphs"],
+    snippets: [
+      { page: 1, contains: "XRef Stream Corpus Fixture" },
+      { page: 1, contains: "This fixture validates xref stream parsing." }
+    ],
+    reviewNotes: "The file uses a cross-reference stream instead of a classic xref table.",
+    expectedMarkdown:
+      "# XRef Stream Corpus Fixture\n\nThis fixture validates xref stream parsing.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "XRef Stream Corpus Fixture"),
+          text(72, 680, 12, "This fixture validates xref stream parsing.")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-object-stream",
+    kind: "pdf-feature",
+    gate: "robust-parser",
+    pdfVersion: "1.5",
+    createPdf: createObjectStreamPdf,
+    features: ["born-digital", "xref-stream", "object-stream", "pdf-1.5"],
+    description: "PDF 1.5 object stream fixture with compressed page tree objects.",
+    minTextCoverage: 1,
+    must: ["resolve_object_stream", "extract_main_text"],
+    mustNot: ["drop_compressed_page_objects"],
+    structures: ["object_stream", "xref_stream", "paragraphs"],
+    snippets: [
+      { page: 1, contains: "Object Stream Corpus Fixture" },
+      { page: 1, contains: "This fixture validates object stream parsing." }
+    ],
+    reviewNotes: "The catalog, page tree, and page dictionaries are stored inside an object stream.",
+    expectedMarkdown:
+      "# Object Stream Corpus Fixture\n\nThis fixture validates object stream parsing.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Object Stream Corpus Fixture"),
+          text(72, 680, 12, "This fixture validates object stream parsing.")
+        ]
+      }
+    ]
+  },
+  {
     id: "synthetic-header-footer",
     kind: "long-document",
     gate: "layout-v1",
@@ -463,7 +672,7 @@ const fixtures = [
 ];
 
 async function writeFixtureFiles(fixture) {
-  const pdfBytes = createPdf({ pages: fixture.pages });
+  const pdfBytes = (fixture.createPdf ?? createPdf)({ pages: fixture.pages });
   await writeFile(path.join(repoRoot, "corpus", "generated", `${fixture.id}.pdf`), pdfBytes);
   await writeFile(
     path.join(repoRoot, "corpus", "expected", `${fixture.id}.md`),
@@ -481,9 +690,10 @@ async function updateManifest(entries) {
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   const generatedIds = new Set(entries.map((entry) => entry.id));
   const retainedEntries = manifest.entries.filter((entry) => !generatedIds.has(entry.id));
-  manifest.entries = [...retainedEntries, ...entries].sort((left, right) =>
+  const generatedEntries = [...entries].sort((left, right) =>
     left.id.localeCompare(right.id)
   );
+  manifest.entries = [...retainedEntries, ...generatedEntries];
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 

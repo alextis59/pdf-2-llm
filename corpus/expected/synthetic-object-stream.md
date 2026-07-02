@@ -1,0 +1,3 @@
+# Object Stream Corpus Fixture
+
+This fixture validates object stream parsing.

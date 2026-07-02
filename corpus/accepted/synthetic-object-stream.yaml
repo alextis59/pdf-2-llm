@@ -1,0 +1,33 @@
+id: synthetic-object-stream
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - resolve_object_stream
+  - extract_main_text
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - drop_compressed_page_objects
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Object Stream Corpus Fixture"
+  - page: 1
+    contains: "This fixture validates object stream parsing."
+structure:
+  expected:
+    - object_stream
+    - xref_stream
+    - paragraphs
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "The catalog, page tree, and page dictionaries are stored inside an object stream."

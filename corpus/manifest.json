@@ -332,6 +332,34 @@
       "notes": "Headings and simple list fixture."
     },
     {
+      "id": "synthetic-object-stream",
+      "kind": "pdf-feature",
+      "path": "corpus/generated/synthetic-object-stream.pdf",
+      "source": {
+        "type": "generated",
+        "description": "PDF 1.5 object stream fixture with compressed page tree objects.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "ca0196234091dbe317ce7cf8f5aa9563590624ff24d1f4a026a6809f43a0247b",
+      "bytes": 737,
+      "pages": 1,
+      "pdfVersion": "1.5",
+      "features": [
+        "born-digital",
+        "xref-stream",
+        "object-stream",
+        "pdf-1.5"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-object-stream.yaml",
+      "notes": "PDF 1.5 object stream fixture with compressed page tree objects."
+    },
+    {
       "id": "synthetic-rotated-page",
       "kind": "rotated-cropped",
       "path": "corpus/generated/synthetic-rotated-page.pdf",
@@ -464,6 +492,33 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-visible-table.yaml",
       "notes": "Visible grid table fixture."
+    },
+    {
+      "id": "synthetic-xref-stream",
+      "kind": "pdf-feature",
+      "path": "corpus/generated/synthetic-xref-stream.pdf",
+      "source": {
+        "type": "generated",
+        "description": "PDF 1.5 xref stream fixture with direct page objects.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "2af245c8f2ab3f46029fe48184298d8d7661c57ffd6fe8ec8e62b75e6a16a918",
+      "bytes": 713,
+      "pages": 1,
+      "pdfVersion": "1.5",
+      "features": [
+        "born-digital",
+        "xref-stream",
+        "pdf-1.5"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-xref-stream.yaml",
+      "notes": "PDF 1.5 xref stream fixture with direct page objects."
     }
   ]
 }

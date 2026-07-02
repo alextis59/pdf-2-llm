@@ -1,0 +1,91 @@
+{
+  "id": "synthetic-xref-stream",
+  "analyzedAt": "2026-07-02T00:00:00.000Z",
+  "path": "corpus/generated/synthetic-xref-stream.pdf",
+  "bytes": 713,
+  "sha256": "2af245c8f2ab3f46029fe48184298d8d7661c57ffd6fe8ec8e62b75e6a16a918",
+  "manifest": {
+    "kind": "pdf-feature",
+    "pages": 1,
+    "features": [
+      "born-digital",
+      "xref-stream",
+      "pdf-1.5"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/synthetic-xref-stream.yaml"
+  },
+  "pdfVersion": "1.5",
+  "pages": {
+    "staticPageObjectCount": 1,
+    "manifest": 1,
+    "pdfinfo": null
+  },
+  "header": {
+    "pdfVersion": "1.5",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 1,
+    "pageBoxes": [
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [],
+    "classicXrefCount": 0,
+    "xrefStreamCount": 1,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": false,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": false
+  },
+  "contentSignals": {
+    "beginTextOps": 2,
+    "endTextOps": 2,
+    "textShowOps": 2,
+    "imageXObjects": 0,
+    "pathOperators": 0,
+    "fontObjects": 2,
+    "cidFonts": 0,
+    "cidSystemInfo": 0,
+    "toUnicodeMaps": 0,
+    "encodings": 1,
+    "missingToUnicodeLikely": true,
+    "estimatedTextShowOpsPerPage": 2,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "ocrOverlaySignals": {
+    "toolBacked": false,
+    "hiddenOcrOverlayLikely": false,
+    "candidatePages": [],
+    "notes": [
+      "Hidden OCR overlay detection requires successful pdfimages -list and pdftotext -bbox outputs."
+    ]
+  },
+  "externalTools": {},
+  "toolOutputs": {},
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

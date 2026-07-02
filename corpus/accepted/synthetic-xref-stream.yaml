@@ -1,0 +1,32 @@
+id: synthetic-xref-stream
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - resolve_xref_stream
+  - extract_main_text
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - fall_back_to_unstructured_binary_scan
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "XRef Stream Corpus Fixture"
+  - page: 1
+    contains: "This fixture validates xref stream parsing."
+structure:
+  expected:
+    - xref_stream
+    - paragraphs
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "The file uses a cross-reference stream instead of a classic xref table."

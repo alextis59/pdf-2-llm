@@ -439,7 +439,7 @@ Goal: expand PDF compatibility before adding more semantic features.
 - [x] Implement incremental update resolution.
 - [x] Prefer newest object revisions.
 - [ ] Add tests for generated qpdf variants.
-- [ ] Add corpus fixtures for xref stream and object stream PDFs.
+- [x] Add corpus fixtures for xref stream and object stream PDFs.
 
 ### 3.2 More Filters And Encodings
 
