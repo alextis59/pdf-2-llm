@@ -338,7 +338,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [x] Add rendered HTML diff helper.
 - [x] Add oracle comparison helper.
 - [x] Add corpus runner with `--gate`, `--id`, and `--update-snapshots`.
-- [ ] Add performance benchmark harness.
+- [x] Add performance benchmark harness.
 - [ ] Add memory-limit and timeout tests.
 - [ ] Add fuzz target skeletons.
 
