@@ -39,6 +39,10 @@ function documentTextLines(document) {
 }
 
 export function linesToMarkdown(lines, options = {}) {
+  return linesToMarkdownWithSourceMap(lines, options).markdown;
+}
+
+export function linesToMarkdownWithSourceMap(lines, options = {}) {
   lines = removeRepeatedRunningContent(lines);
   const blocks = [];
   let previousWasList = false;
@@ -49,7 +53,7 @@ export function linesToMarkdown(lines, options = {}) {
     if (table) {
       previousWasList = false;
       appendPageAnchor(blocks, table.rows[0][0]?.pageIndex, options, anchoredPages);
-      blocks.push(formatTable(table.rows));
+      blocks.push(createMarkdownBlock(formatTable(table.rows), "table", table.rows.flat()));
       index = table.endIndex - 1;
       continue;
     }
@@ -64,13 +68,13 @@ export function linesToMarkdown(lines, options = {}) {
 
     if (line.fontSize >= 20) {
       previousWasList = false;
-      blocks.push(`# ${escapeMarkdownInline(text)}`);
+      blocks.push(createMarkdownBlock(`# ${escapeMarkdownInline(text)}`, "heading", [line]));
       continue;
     }
 
     if (line.fontSize >= 15) {
       previousWasList = false;
-      blocks.push(`## ${escapeMarkdownInline(text)}`);
+      blocks.push(createMarkdownBlock(`## ${escapeMarkdownInline(text)}`, "heading", [line]));
       continue;
     }
 
@@ -81,9 +85,11 @@ export function linesToMarkdown(lines, options = {}) {
           ? `${listItem.index}. ${escapeMarkdownInline(listItem.text)}`
           : `- ${escapeMarkdownInline(listItem.text)}`;
       if (previousWasList) {
-        blocks[blocks.length - 1] = `${blocks[blocks.length - 1]}\n${item}`;
+        const listBlock = blocks[blocks.length - 1];
+        listBlock.text = `${listBlock.text}\n${item}`;
+        listBlock.sourceLines.push(line);
       } else {
-        blocks.push(item);
+        blocks.push(createMarkdownBlock(item, "list", [line]));
       }
       previousWasList = true;
       continue;
@@ -91,11 +97,13 @@ export function linesToMarkdown(lines, options = {}) {
 
     previousWasList = false;
     const paragraph = readParagraphAt(lines, index, text);
-    blocks.push(escapeMarkdownParagraph(paragraph.text));
+    blocks.push(
+      createMarkdownBlock(escapeMarkdownParagraph(paragraph.text), "paragraph", paragraph.sourceLines)
+    );
     index = paragraph.endIndex - 1;
   }
 
-  return blocks.length > 0 ? `${blocks.join("\n\n")}\n` : "";
+  return serializeMarkdownBlocks(blocks);
 }
 
 function appendPageAnchor(blocks, pageIndex, options, anchoredPages) {
@@ -103,7 +111,11 @@ function appendPageAnchor(blocks, pageIndex, options, anchoredPages) {
     return;
   }
   anchoredPages.add(pageIndex);
-  blocks.push(`<a id="page-${pageIndex + 1}"></a>`);
+  blocks.push(
+    createMarkdownBlock(`<a id="page-${pageIndex + 1}"></a>`, "page_anchor", [
+      { pageIndex }
+    ])
+  );
 }
 
 function parseListItem(text) {
@@ -185,8 +197,72 @@ function readParagraphAt(lines, startIndex, firstText) {
 
   return {
     text: parts.join(" "),
+    sourceLines: lines.slice(startIndex, index),
     endIndex: index
   };
+}
+
+function createMarkdownBlock(text, kind, sourceLines = []) {
+  return {
+    text,
+    kind,
+    sourceLines
+  };
+}
+
+function serializeMarkdownBlocks(blocks) {
+  if (blocks.length === 0) {
+    return {
+      markdown: "",
+      sourceMap: {
+        entries: []
+      }
+    };
+  }
+
+  let markdown = "";
+  const entries = [];
+  for (let index = 0; index < blocks.length; index += 1) {
+    if (index > 0) {
+      markdown += "\n\n";
+    }
+    const block = blocks[index];
+    const markdownStart = markdown.length;
+    markdown += block.text;
+    const markdownEnd = markdown.length;
+    entries.push({
+      markdownStart,
+      markdownEnd,
+      kind: block.kind,
+      regions: block.sourceLines.map(lineToSourceRegion).filter(Boolean)
+    });
+  }
+  markdown += "\n";
+
+  return {
+    markdown,
+    sourceMap: {
+      entries
+    }
+  };
+}
+
+function lineToSourceRegion(line) {
+  if (!line || !Number.isInteger(line.pageIndex)) {
+    return null;
+  }
+  return {
+    pageIndex: line.pageIndex,
+    x: numberOrNull(line.x),
+    y: numberOrNull(line.y),
+    width: numberOrNull(line.width),
+    height: numberOrNull(line.height),
+    source: line.source ?? "pdf-text"
+  };
+}
+
+function numberOrNull(value) {
+  return Number.isFinite(value) ? value : null;
 }
 
 function startsWithMarkdownBlockMarker(text) {

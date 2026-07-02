@@ -311,7 +311,7 @@ Goal: create stable contracts so agents can implement modules independently.
   direction, confidence, and source.
 - [x] Define table cell, row, column, span, and sidecar models.
 - [x] Define warnings and diagnostics taxonomy.
-- [ ] Define source maps from Markdown back to page regions.
+- [x] Define source maps from Markdown back to page regions.
 - [x] Add schema versioning.
 - [ ] Add JSON schema tests for serialized IR.
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { linesToMarkdown } from "../src/text-extract.mjs";
+import { linesToMarkdown, linesToMarkdownWithSourceMap } from "../src/text-extract.mjs";
 
 test("linesToMarkdown normalizes common ligatures and whitespace", () => {
   const markdown = linesToMarkdown([
@@ -85,4 +85,37 @@ test("linesToMarkdown removes high-confidence page numbers", () => {
   ]);
 
   assert.equal(markdown, "# Page Number Fixture\n\nBody text.\n");
+});
+
+test("linesToMarkdownWithSourceMap maps Markdown blocks back to page regions", () => {
+  const result = linesToMarkdownWithSourceMap(
+    [
+      { text: "Mapped Title", fontSize: 22, x: 72, y: 720, width: 120, height: 22, pageIndex: 0 },
+      { text: "A mapped paragraph continues", fontSize: 12, x: 72, y: 680, width: 160, height: 12, pageIndex: 0 },
+      { text: "on another line.", fontSize: 12, x: 72, y: 666, width: 96, height: 12, pageIndex: 0 }
+    ],
+    { pageAnchors: true }
+  );
+
+  assert.equal(
+    result.markdown,
+    '<a id="page-1"></a>\n\n# Mapped Title\n\nA mapped paragraph continues on another line.\n'
+  );
+  assert.equal(result.sourceMap.entries.length, 3);
+  assert.deepEqual(
+    result.sourceMap.entries.map((entry) => entry.kind),
+    ["page_anchor", "heading", "paragraph"]
+  );
+  for (const entry of result.sourceMap.entries) {
+    assert.equal(result.markdown.slice(entry.markdownStart, entry.markdownEnd).length > 0, true);
+  }
+  assert.deepEqual(result.sourceMap.entries[1].regions[0], {
+    pageIndex: 0,
+    x: 72,
+    y: 720,
+    width: 120,
+    height: 22,
+    source: "pdf-text"
+  });
+  assert.equal(result.sourceMap.entries[2].regions.length, 2);
 });

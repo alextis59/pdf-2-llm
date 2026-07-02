@@ -27,6 +27,17 @@ test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", asyn
   assert.equal(result.ir.pages.length, 1);
   assert.equal(result.ir.pages[0].widthPt, 612);
   assert.equal(result.ir.pages[0].heightPt, 792);
+  assert.equal(result.sourceMap.schemaVersion, "0.1.0");
+  assert.equal(result.sourceMap.target, "markdown");
+  assert.equal(result.sourceMap.entries[0].kind, "heading");
+  assert.match(
+    result.markdown.slice(
+      result.sourceMap.entries[0].markdownStart,
+      result.sourceMap.entries[0].markdownEnd
+    ),
+    /^# Synthetic Simple Text/
+  );
+  assert.equal(result.sourceMap.entries[0].regions[0].pageIndex, 0);
   assert.equal(result.diagnostics.input.bytes, bytes.byteLength);
   assert.equal(result.diagnostics.input.pdfVersion, "1.4");
   assert.equal(result.diagnostics.input.sha256, createHash("sha256").update(bytes).digest("hex"));

@@ -3,13 +3,14 @@ import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import {
   createDocumentIr,
+  createMarkdownSourceMap,
   createPageIr,
   createWarning,
   schemaVersion,
   warningCodes
 } from "./schema.mjs";
 import { isTrustedSimpleEncoding } from "./font-encoding.mjs";
-import { extractTextLines, linesToMarkdown } from "./text-extract.mjs";
+import { extractTextLines, linesToMarkdownWithSourceMap } from "./text-extract.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 
 const defaultSecurityLimits = Object.freeze({
@@ -85,9 +86,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
   }
 
   const textLines = pdfVersion ? extractTextLines(normalized.bytes, { document: pdfDocument }) : [];
-  const markdown = linesToMarkdown(textLines, {
+  const markdownResult = linesToMarkdownWithSourceMap(textLines, {
     pageAnchors: options.markdown?.pageAnchors === true
   });
+  const markdown = markdownResult.markdown;
+  const sourceMap = createMarkdownSourceMap(markdownResult.sourceMap);
   warnings.push(...unicodeMappingWarnings(textLines));
   warnings.push(...textOrderingWarnings(textLines));
 
@@ -127,6 +130,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   const elapsedMs = performance.now() - startedAt;
   const result = {
     markdown,
+    sourceMap,
     assets: [],
     ir,
     warnings,

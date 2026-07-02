@@ -49,3 +49,11 @@ export function createPageIr({
     elements
   };
 }
+
+export function createMarkdownSourceMap({ entries = [] } = {}) {
+  return {
+    schemaVersion,
+    target: "markdown",
+    entries
+  };
+}
