@@ -122,6 +122,44 @@ test("parsePdfDocument resolves outlines and uses them as structure signals", as
   );
 });
 
+test("parsePdfDocument resolves tagged structure and uses consistent tags", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 6 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R /StructParents 0 >>",
+    streamObject(
+      "/H2 << /MCID 0 >> BDC\nBT /F1 12 Tf 20 200 Td (Tagged Heading) Tj ET\nEMC\n/P << /MCID 1 >> BDC\nBT /F1 12 Tf 20 180 Td (Body text.) Tj ET\nEMC\n"
+    ),
+    "<< /Type /StructTreeRoot /K 7 0 R /RoleMap << /HeadingTwo /H2 >> >>",
+    "<< /Type /StructElem /S /Document /K [8 0 R 9 0 R] >>",
+    "<< /Type /StructElem /S /HeadingTwo /P 7 0 R /K << /Type /MCR /Pg 4 0 R /MCID 0 >> >>",
+    "<< /Type /StructElem /S /P /P 7 0 R /K << /Type /MCR /Pg 4 0 R /MCID 1 >> >>"
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.structure.tagged, true);
+  assert.deepEqual(document.structure.roleMap, { HeadingTwo: "H2" });
+  assert.deepEqual(
+    document.structure.markedContent.map(({ mcid, pageIndex, role, rawRole, path }) => ({
+      mcid,
+      pageIndex,
+      role,
+      rawRole,
+      path
+    })),
+    [
+      { mcid: 0, pageIndex: 0, role: "H2", rawRole: "HeadingTwo", path: ["Document", "H2"] },
+      { mcid: 1, pageIndex: 0, role: "P", rawRole: "P", path: ["Document", "P"] }
+    ]
+  );
+  assert.equal(result.markdown, "## Tagged Heading\n\nBody text.\n");
+  assert.equal(result.diagnostics.extraction.structure.tagged, true);
+  assert.equal(result.diagnostics.extraction.structure.markedContent, 2);
+  assert.equal(result.diagnostics.extraction.structure.roles.H2, 1);
+});
+
 test("parsePdfDocument decodes Flate content streams for text extraction", async () => {
   const content = "BT /F1 22 Tf 20 200 Td (Compressed Fixture) Tj ET\n";
   const bytes = createTestPdf([

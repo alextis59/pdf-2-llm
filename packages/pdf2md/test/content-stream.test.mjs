@@ -32,7 +32,7 @@ const resources = {
 };
 
 test("tokenizeContentStream decodes strings, names, arrays, numbers, and comments", () => {
-  const tokens = tokenizeContentStream("/F#31 12 Tf % comment\n[(A\\050) -20 <42>] TJ");
+  const tokens = tokenizeContentStream("/F#31 12 Tf % comment\n[(A\\050) -20 <42>] TJ /H2 << /MCID 3 >> BDC");
   assert.deepEqual(tokens.slice(0, 3), [
     { type: "name", value: "F1" },
     { type: "number", value: 12 },
@@ -45,6 +45,13 @@ test("tokenizeContentStream decodes strings, names, arrays, numbers, and comment
     { type: "string", value: "B", bytes: [66] }
   ]);
   assert.deepEqual(tokens[4], { type: "word", value: "TJ" });
+  assert.deepEqual(tokens[6], {
+    type: "dict",
+    entries: {
+      MCID: { type: "number", value: 3 }
+    }
+  });
+  assert.deepEqual(tokens[7], { type: "word", value: "BDC" });
 });
 
 test("extractContentStreamTextLines interprets text showing operators", () => {
@@ -98,6 +105,58 @@ test("extractContentStreamTextLines applies ToUnicode font maps to string bytes"
 
   assert.equal(lines[0].text, "AB");
   assert.equal(lines[0].confidence, 0.95);
+});
+
+test("extractContentStreamTextLines attaches tagged structure from marked content", () => {
+  const lines = extractContentStreamTextLines(
+    [
+      "/H2 << /MCID 0 >> BDC",
+      "BT /F1 12 Tf 10 20 Td (Tagged heading) Tj ET",
+      "EMC"
+    ].join("\n"),
+    {
+      resources,
+      structureByMcid: new Map([
+        [
+          0,
+          {
+            mcid: 0,
+            role: "H2",
+            rawRole: "HeadingTwo",
+            path: ["Document", "H2"]
+          }
+        ]
+      ])
+    }
+  );
+
+  assert.equal(lines[0].markedContentId, 0);
+  assert.equal(lines[0].markedContentTag, "H2");
+  assert.equal(lines[0].structureRole, "H2");
+  assert.deepEqual(lines[0].structurePath, ["Document", "H2"]);
+  assert.equal(lines[0].spans[0].source, "tagged-pdf");
+});
+
+test("extractContentStreamTextLines keeps marked content across graphics state restore", () => {
+  const lines = extractContentStreamTextLines(
+    [
+      "/H2 << /MCID 0 >> BDC",
+      "q",
+      "BT /F1 12 Tf 10 20 Td (Tagged heading) Tj ET",
+      "Q",
+      "BT /F1 12 Tf 10 5 Td (Still tagged) Tj ET",
+      "EMC"
+    ].join("\n"),
+    {
+      resources,
+      structureByMcid: new Map([[0, { mcid: 0, role: "H2", path: ["Document", "H2"] }]])
+    }
+  );
+
+  assert.deepEqual(
+    lines.map((line) => line.structureRole),
+    ["H2", "H2"]
+  );
 });
 
 test("extractContentStreamTextLines tracks text matrices and CTM graphics state", () => {

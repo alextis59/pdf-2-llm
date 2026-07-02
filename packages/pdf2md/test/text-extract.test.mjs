@@ -120,6 +120,15 @@ test("linesToMarkdown uses outlines as heading signals", () => {
   assert.equal(markdown, "## Outlined Section\n\nBody text starts here.\n");
 });
 
+test("linesToMarkdown uses consistent tagged PDF roles as heading signals", () => {
+  const markdown = linesToMarkdown([
+    { text: "Tagged Section", fontSize: 12, x: 72, y: 720, pageIndex: 0, structureRole: "H3" },
+    { text: "Body text starts here.", fontSize: 12, x: 72, y: 690, pageIndex: 0 }
+  ]);
+
+  assert.equal(markdown, "### Tagged Section\n\nBody text starts here.\n");
+});
+
 test("linesToMarkdown escapes Markdown metacharacters in text and tables", () => {
   const markdown = linesToMarkdown([
     { text: "literal *star* and [label] uses \\ slash", fontSize: 12, x: 10, y: 40 },

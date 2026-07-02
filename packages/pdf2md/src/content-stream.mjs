@@ -67,6 +67,12 @@ export function tokenizeContentStream(streamText) {
       offset = token.offset;
       continue;
     }
+    if (char === "<" && source[offset + 1] === "<") {
+      const token = readDictionary(source, offset);
+      tokens.push(token.value);
+      offset = token.offset;
+      continue;
+    }
     if (char === "[") {
       const token = readArray(source, offset);
       tokens.push(token.value);
@@ -103,8 +109,18 @@ function executeOperator(operator, context) {
   if (operator === "Q") {
     const restored = context.stack.pop();
     if (restored) {
+      const markedContent = state.markedContent;
       Object.assign(state, restored);
+      state.markedContent = markedContent;
     }
+    return;
+  }
+  if (operator === "BMC" || operator === "BDC") {
+    state.markedContent.push(readMarkedContent(operands, operator, context.options));
+    return;
+  }
+  if (operator === "EMC") {
+    state.markedContent.pop();
     return;
   }
   if (operator === "cm") {
@@ -221,14 +237,16 @@ function emitText(text, context) {
   const position = currentTextPosition(context.state);
   const metrics = measureText(context.state, text, position);
   const confidence = textConfidence(context.state.font);
+  const structure = currentStructureSignal(context.state);
   const mergeKey = `${context.options.pageIndex ?? ""}:${context.options.streamIndex ?? ""}:${context.textObjectId}:${context.lineSerial}`;
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
     lastLine.text += text;
     lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
     lastLine.height = Math.max(lastLine.height, metrics.height);
-    lastLine.spans.push(createSpan(text, context.state, position, metrics, confidence));
+    lastLine.spans.push(createSpan(text, context.state, position, metrics, confidence, structure));
     lastLine.glyphs.push(...metrics.glyphs);
+    mergeLineStructure(lastLine, structure);
     advanceTextPosition(context.state, text);
     return;
   }
@@ -242,15 +260,54 @@ function emitText(text, context) {
     y: position.y,
     width: metrics.width,
     height: metrics.height,
-    spans: [createSpan(text, context.state, position, metrics, confidence)],
+    spans: [createSpan(text, context.state, position, metrics, confidence, structure)],
     glyphs: metrics.glyphs,
     pageIndex: context.options.pageIndex ?? null,
     streamIndex: context.options.streamIndex ?? null,
     source: "content-stream",
     confidence,
+    markedContentId: structure?.mcid ?? null,
+    markedContentTag: structure?.tag ?? null,
+    structureRole: structure?.role ?? null,
+    structurePath: structure?.path ?? [],
     mergeKey
   });
   advanceTextPosition(context.state, text);
+}
+
+function readMarkedContent(operands, operator, options) {
+  const tag = tokenName(operands.at(operator === "BDC" ? -2 : -1));
+  const properties = operator === "BDC" ? operands.at(-1) : null;
+  const mcid = dictionaryNumber(properties, "MCID");
+  const structure = Number.isInteger(mcid)
+    ? options.structureByMcid?.get(mcid) ?? null
+    : null;
+  return {
+    tag,
+    mcid,
+    role: structure?.role ?? null,
+    path: structure?.path ?? []
+  };
+}
+
+function currentStructureSignal(state) {
+  for (let index = state.markedContent.length - 1; index >= 0; index -= 1) {
+    const item = state.markedContent[index];
+    if (item?.role) {
+      return item;
+    }
+  }
+  return state.markedContent.at(-1) ?? null;
+}
+
+function mergeLineStructure(line, structure) {
+  if (!structure || line.structureRole) {
+    return;
+  }
+  line.markedContentId = structure.mcid ?? null;
+  line.markedContentTag = structure.tag ?? null;
+  line.structureRole = structure.role ?? null;
+  line.structurePath = structure.path ?? [];
 }
 
 function createInitialState(resources = null) {
@@ -267,6 +324,7 @@ function createInitialState(resources = null) {
     horizontalScaling: 100,
     leading: 0,
     textRise: 0,
+    markedContent: [],
     resources
   };
 }
@@ -323,7 +381,7 @@ function measureText(state, text, position) {
   };
 }
 
-function createSpan(text, state, position, metrics, confidence) {
+function createSpan(text, state, position, metrics, confidence, structure = null) {
   return {
     text,
     fontName: state.fontName,
@@ -333,7 +391,11 @@ function createSpan(text, state, position, metrics, confidence) {
     width: metrics.width,
     height: metrics.height,
     confidence,
-    source: "pdf-text"
+    source: structure?.role ? "tagged-pdf" : "pdf-text",
+    markedContentId: structure?.mcid ?? null,
+    markedContentTag: structure?.tag ?? null,
+    structureRole: structure?.role ?? null,
+    structurePath: structure?.path ?? []
   };
 }
 
@@ -391,6 +453,11 @@ function tokenName(token) {
   return token?.type === "name" ? token.value : null;
 }
 
+function dictionaryNumber(token, key) {
+  const value = token?.type === "dict" ? token.entries[key] : null;
+  return tokenNumber(value);
+}
+
 function decodeStringToken(token, font) {
   return decodePdfStringWithFont(token, font);
 }
@@ -440,10 +507,53 @@ function readValue(source, offset) {
   if (char === "<" && source[offset + 1] !== "<") {
     return readHexString(source, offset);
   }
+  if (char === "<" && source[offset + 1] === "<") {
+    return readDictionary(source, offset);
+  }
   if (char === "[") {
     return readArray(source, offset);
   }
   return readNumber(source, offset) ?? readWord(source, offset);
+}
+
+function readDictionary(source, startOffset) {
+  const entries = {};
+  let offset = startOffset + 2;
+
+  while (offset < source.length) {
+    offset = skipWhitespaceAndComments(source, offset);
+    if (source[offset] === ">" && source[offset + 1] === ">") {
+      return {
+        value: {
+          type: "dict",
+          entries
+        },
+        offset: offset + 2
+      };
+    }
+
+    const key = readName(source, offset);
+    if (!key || key.offset === offset || key.value.type !== "name") {
+      offset += 1;
+      continue;
+    }
+    offset = skipWhitespaceAndComments(source, key.offset);
+    const value = readValue(source, offset);
+    if (!value || value.offset === offset) {
+      offset += 1;
+      continue;
+    }
+    entries[key.value.value] = value.value;
+    offset = value.offset;
+  }
+
+  return {
+    value: {
+      type: "dict",
+      entries
+    },
+    offset
+  };
 }
 
 function readName(source, startOffset) {

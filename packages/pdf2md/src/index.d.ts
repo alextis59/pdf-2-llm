@@ -89,6 +89,7 @@ export type Diagnostics = {
     textLines: number;
     mode: string;
     outlines: OutlineDiagnostics[];
+    structure: StructureDiagnostics;
     layout: LayoutDiagnostics;
     parser: Record<string, unknown>;
   };
@@ -100,6 +101,14 @@ export type OutlineDiagnostics = {
   depth: number;
   objectNumber?: number | null;
   generationNumber?: number | null;
+};
+
+export type StructureDiagnostics = {
+  tagged: boolean;
+  roleMap: Record<string, string>;
+  elements: number;
+  markedContent: number;
+  roles: Record<string, number>;
 };
 
 export type LayoutDiagnostics = {

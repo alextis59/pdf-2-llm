@@ -510,7 +510,7 @@ Goal: improve reading order and document structure for real-world documents.
 - [x] Infer code blocks from monospace text and indentation.
 - [x] Preserve links.
 - [x] Integrate outlines/bookmarks as optional structure signals.
-- [ ] Prefer tagged PDF structure when tags are consistent with geometry.
+- [x] Prefer tagged PDF structure when tags are consistent with geometry.
 - [ ] Warn when tags conflict with visible layout.
 
 Gate 3 acceptance:

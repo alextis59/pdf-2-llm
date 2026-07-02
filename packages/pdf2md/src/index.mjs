@@ -207,6 +207,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
               : "fallback-uncompressed-stream-scan"
             : "none",
         outlines: pdfDocument?.outlines ?? [],
+        structure: summarizeStructure(pdfDocument?.structure),
         layout: markdownResult.layout,
         parser: pdfDocument
           ? {
@@ -267,6 +268,27 @@ function summarizePageImages(page) {
       rawLength: image.rawLength,
       decodedLength: image.decodedLength
     }));
+}
+
+function summarizeStructure(structure) {
+  return {
+    tagged: structure?.tagged === true,
+    roleMap: structure?.roleMap ?? {},
+    elements: structure?.elements?.length ?? 0,
+    markedContent: structure?.markedContent?.length ?? 0,
+    roles: summarizeStructureRoles(structure?.elements ?? [])
+  };
+}
+
+function summarizeStructureRoles(elements) {
+  const counts = {};
+  for (const element of elements) {
+    if (!element.role) {
+      continue;
+    }
+    counts[element.role] = (counts[element.role] ?? 0) + 1;
+  }
+  return counts;
 }
 
 function unicodeMappingWarnings(textLines) {

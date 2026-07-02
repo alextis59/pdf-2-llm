@@ -24,12 +24,14 @@ function findStreamTextsByScan(bytes) {
 
 function documentTextLines(document) {
   if (document.pages?.length > 0) {
+    const structureByPage = structureSignalsByPage(document.structure);
     return document.pages.flatMap((page) =>
       page.contentStreams.flatMap((stream, streamIndex) =>
         extractContentStreamTextLines(stream.text, {
           pageIndex: page.pageIndex,
           resources: page.resources,
-          streamIndex
+          streamIndex,
+          structureByMcid: structureByPage.get(page.pageIndex) ?? new Map()
         })
       )
     );
@@ -38,6 +40,19 @@ function documentTextLines(document) {
   return document.streams.flatMap((stream, streamIndex) =>
     extractContentStreamTextLines(stream.text, { streamIndex })
   );
+}
+
+function structureSignalsByPage(structure) {
+  const byPage = new Map();
+  for (const item of structure?.markedContent ?? []) {
+    if (!Number.isInteger(item.pageIndex) || !Number.isInteger(item.mcid)) {
+      continue;
+    }
+    const pageSignals = byPage.get(item.pageIndex) ?? new Map();
+    pageSignals.set(item.mcid, item);
+    byPage.set(item.pageIndex, pageSignals);
+  }
+  return byPage;
 }
 
 export function linesToMarkdown(lines, options = {}) {
@@ -383,11 +398,35 @@ function uniqueSortedFontSizes(lines) {
 }
 
 function headingLevelForLine(line, headingModel) {
+  const taggedLevel = taggedHeadingLevelForLine(line, headingModel);
+  if (taggedLevel !== null) {
+    return taggedLevel;
+  }
   const outlineLevel = headingModel.outlineLevelByTitle.get(normalizeText(line.text ?? ""));
   if (outlineLevel) {
     return outlineLevel;
   }
   return headingModel.levelByFontSize.get(roundedFontSize(line.fontSize)) ?? null;
+}
+
+function taggedHeadingLevelForLine(line, headingModel) {
+  const match = String(line.structureRole ?? "").match(/^H([1-6])$/);
+  if (!match) {
+    return null;
+  }
+  if (!taggedHeadingGeometryIsConsistent(line, headingModel)) {
+    return null;
+  }
+  return Number.parseInt(match[1], 10);
+}
+
+function taggedHeadingGeometryIsConsistent(line, headingModel) {
+  const text = normalizeText(line.text ?? "");
+  if (!text || text.length > 160) {
+    return false;
+  }
+  const fontSize = roundedFontSize(line.fontSize);
+  return !Number.isFinite(fontSize) || fontSize >= headingModel.bodyFontSize * 0.85;
 }
 
 function roundedFontSize(fontSize) {

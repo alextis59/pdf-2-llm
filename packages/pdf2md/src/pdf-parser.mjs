@@ -103,6 +103,7 @@ export function parsePdfDocument(bytes, options = {}) {
   const catalog = resolveCatalog(trailer, getObject);
   const outlines = resolveOutlines(catalog.outlinesRef, getObject);
   const pages = resolvePages(catalog, getObject);
+  const structure = resolveStructureTree(catalog.structureTreeRootRef, getObject, pages);
 
   return {
     version,
@@ -117,6 +118,7 @@ export function parsePdfDocument(bytes, options = {}) {
     streams,
     catalog,
     outlines,
+    structure,
     pages,
     getObject
   };
@@ -1026,7 +1028,8 @@ function resolveCatalog(trailer, getObject) {
     generationNumber: rootObject.generationNumber,
     value: rootObject.value,
     pagesRef: rootObject.value.entries.Pages,
-    outlinesRef: rootObject.value.entries.Outlines ?? null
+    outlinesRef: rootObject.value.entries.Outlines ?? null,
+    structureTreeRootRef: rootObject.value.entries.StructTreeRoot ?? null
   };
 }
 
@@ -1124,6 +1127,174 @@ function decodeUtf16Bytes(bytes, startOffset, littleEndian) {
 
 function normalizeOutlineTitle(value) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function resolveStructureTree(structureTreeRootRef, getObject, pages) {
+  const root = resolveStructureObject(structureTreeRootRef, getObject);
+  const empty = {
+    tagged: false,
+    roleMap: {},
+    elements: [],
+    markedContent: []
+  };
+  if (!root || !isDict(root.value)) {
+    return empty;
+  }
+
+  const structure = {
+    tagged: true,
+    roleMap: resolveRoleMap(root.value.entries.RoleMap, getObject),
+    elements: [],
+    markedContent: []
+  };
+  const pageIndexByObjectNumber = new Map(
+    pages
+      .filter((page) => Number.isInteger(page.objectNumber))
+      .map((page) => [page.objectNumber, page.pageIndex])
+  );
+
+  walkStructureItem(root.value.entries.K, {
+    getObject,
+    pageIndexByObjectNumber,
+    roleMap: structure.roleMap,
+    elements: structure.elements,
+    markedContent: structure.markedContent,
+    seen: new Set(),
+    path: [],
+    role: null,
+    rawRole: null,
+    pageRef: null
+  });
+
+  return structure;
+}
+
+function walkStructureItem(value, context) {
+  if (value == null) {
+    return;
+  }
+  if (typeof value === "number") {
+    recordMarkedContent(value, null, context);
+    return;
+  }
+  if (value.type === "array") {
+    for (const item of value.items) {
+      walkStructureItem(item, context);
+    }
+    return;
+  }
+
+  const object = resolveStructureObject(value, context.getObject);
+  const dict = object?.value ?? value;
+  if (!isDict(dict)) {
+    return;
+  }
+
+  const key = structureObjectKey(object, value);
+  if (key && context.seen.has(key)) {
+    return;
+  }
+  if (key) {
+    context.seen.add(key);
+  }
+
+  if (nameValue(dict.entries.Type) === "MCR" || typeof dict.entries.MCID === "number") {
+    recordMarkedContent(dict.entries.MCID, dict.entries.Pg ?? null, context);
+    return;
+  }
+
+  const rawRole = nameValue(dict.entries.S);
+  if (rawRole) {
+    const role = mapStructureRole(rawRole, context.roleMap);
+    const path = [...context.path, role];
+    context.elements.push({
+      role,
+      rawRole,
+      depth: path.length,
+      objectNumber: object?.objectNumber ?? null,
+      generationNumber: object?.generationNumber ?? null
+    });
+    walkStructureItem(dict.entries.K, {
+      ...context,
+      path,
+      role,
+      rawRole,
+      pageRef: dict.entries.Pg ?? context.pageRef
+    });
+    return;
+  }
+
+  walkStructureItem(dict.entries.K, {
+    ...context,
+    pageRef: dict.entries.Pg ?? context.pageRef
+  });
+}
+
+function recordMarkedContent(mcid, pageRef, context) {
+  if (!Number.isInteger(mcid)) {
+    return;
+  }
+  const resolvedPageRef = pageRef ?? context.pageRef;
+  const pageObjectNumber = resolvedPageRef?.type === "ref" ? resolvedPageRef.objectNumber : null;
+  context.markedContent.push({
+    mcid,
+    pageObjectNumber,
+    pageIndex: Number.isInteger(pageObjectNumber)
+      ? context.pageIndexByObjectNumber.get(pageObjectNumber) ?? null
+      : null,
+    role: context.role,
+    rawRole: context.rawRole,
+    path: context.path
+  });
+}
+
+function resolveStructureObject(value, getObject) {
+  if (value?.type === "ref") {
+    return getObject(value) ?? null;
+  }
+  if (isDict(value)) {
+    return {
+      value,
+      objectNumber: null,
+      generationNumber: null
+    };
+  }
+  return null;
+}
+
+function structureObjectKey(object, source) {
+  if (object && Number.isInteger(object.objectNumber)) {
+    return objectKey(object.objectNumber, object.generationNumber ?? 0);
+  }
+  if (source?.type === "ref") {
+    return objectKey(source.objectNumber, source.generationNumber);
+  }
+  return null;
+}
+
+function resolveRoleMap(roleMapValue, getObject) {
+  const roleMap = {};
+  const roleMapDict = resolveValue(roleMapValue, getObject);
+  if (!isDict(roleMapDict)) {
+    return roleMap;
+  }
+  for (const [role, mappedRole] of Object.entries(roleMapDict.entries)) {
+    const value = nameValue(mappedRole);
+    if (value) {
+      roleMap[role] = value;
+    }
+  }
+  return roleMap;
+}
+
+function mapStructureRole(role, roleMap) {
+  let current = role;
+  const seen = new Set();
+  while (roleMap[current] && !seen.has(current)) {
+    seen.add(current);
+    current = roleMap[current];
+  }
+  return current;
 }
 
 function resolvePages(catalog, getObject) {
