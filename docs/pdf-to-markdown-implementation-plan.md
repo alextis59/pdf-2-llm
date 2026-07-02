@@ -191,25 +191,25 @@ Recommended oracle tools for analysis only:
 
 Checklist:
 
-- [ ] Add `scripts/corpus/analyze.ts`.
-- [ ] Extract page count, page boxes, rotation, version, encryption status, and
+- [x] Add `scripts/corpus/analyze.mjs`.
+- [x] Extract page count, page boxes, rotation, version, encryption status, and
   linearization status.
-- [ ] Detect xref table versus xref stream where practical.
-- [ ] Detect object streams and compressed objects.
-- [ ] Detect tagged structure and role maps.
-- [ ] Detect AcroForm, XFA, annotations, outlines, attachments, signatures, and
+- [x] Detect xref table versus xref stream where practical.
+- [x] Detect object streams and compressed objects.
+- [x] Detect tagged structure and role maps.
+- [x] Detect AcroForm, XFA, annotations, outlines, attachments, signatures, and
   embedded files.
-- [ ] Count text operators and estimate glyph density per page.
-- [ ] Detect image-dominant pages and likely scanned pages.
+- [x] Count text operators and estimate glyph density per page.
+- [x] Detect image-dominant pages and likely scanned pages.
 - [ ] Detect hidden OCR overlays by comparing text boxes with image-dominant
   pages.
-- [ ] Detect fonts, encodings, ToUnicode CMaps, CID fonts, and missing maps.
-- [ ] Detect path-heavy pages that likely contain tables, charts, or vector
+- [x] Detect fonts, encodings, ToUnicode CMaps, CID fonts, and missing maps.
+- [x] Detect path-heavy pages that likely contain tables, charts, or vector
   drawings.
-- [ ] Produce per-PDF analysis JSON under `corpus/baselines/<id>/analysis.json`.
+- [x] Produce per-PDF analysis JSON under `corpus/baselines/<id>/analysis.json`.
 - [ ] Produce low-resolution page preview images for human review.
 - [ ] Produce oracle text outputs under `corpus/baselines/<id>/oracles/`.
-- [ ] Add analysis summaries to `corpus/reports/corpus-inventory.md`.
+- [x] Add analysis summaries to `corpus/reports/corpus-inventory.md`.
 
 ### 0.5 Acceptance Criteria Files
 
@@ -828,7 +828,7 @@ Minimum release bars for a serious beta:
 ## Immediate Next Actions
 
 - [x] Create corpus directories and manifest schema.
-- [ ] Add retrieval and analysis script skeletons.
+- [x] Add retrieval and analysis script skeletons.
 - [ ] Generate the first synthetic exact-output PDFs.
 - [ ] Retrieve a small public-domain/public-license external PDF set.
 - [ ] Run static analysis and oracle extraction on the first corpus batch.
