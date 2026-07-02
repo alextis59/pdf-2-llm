@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-rotated-page",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-rotated-page.pdf",
+    "sha256": "20d989f2250ecb24121bb680d9e7c0def36e04697f81649de7503b42a2b84f51",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-rotated-page/previews/page-0001.png"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "nist-sp800-30r1-risk-assessment",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/raw/public/nist-sp800-30r1-risk-assessment.pdf",
+    "sha256": "f214087f0bdb35932a28c16eb93932a33c67a6edfb5e6f1638866bd201c98e04",
+    "pages": 95
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/nist-sp800-30r1-risk-assessment/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/nist-sp800-30r1-risk-assessment/previews/page-0002.png"
+    },
+    {
+      "page": 3,
+      "path": "corpus/baselines/nist-sp800-30r1-risk-assessment/previews/page-0003.png"
+    }
+  ]
+}

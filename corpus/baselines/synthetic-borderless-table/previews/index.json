@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-borderless-table",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-borderless-table.pdf",
+    "sha256": "e5c532de1d67a53ce41a768bb6ea12ae0f68313b7a33c124a0a67c602a03bbef",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-borderless-table/previews/page-0001.png"
+    }
+  ]
+}

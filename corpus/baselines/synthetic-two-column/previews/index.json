@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-two-column",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-two-column.pdf",
+    "sha256": "68c8556b17fffeb8be83141bdc46b36791bdf876d8eba3b0f3c49c85cefe870d",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-two-column/previews/page-0001.png"
+    }
+  ]
+}

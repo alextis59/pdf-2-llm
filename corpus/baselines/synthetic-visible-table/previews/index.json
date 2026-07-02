@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-visible-table",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-visible-table.pdf",
+    "sha256": "2144bf6a6cb817366145a0108b1f6b5ec111d0006dd97024a892659e68ef84f3",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-visible-table/previews/page-0001.png"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-vector-figure",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-vector-figure.pdf",
+    "sha256": "b644d87e0509be0a958a0cf0c39b15f607d977ad41c8b685114cbb7b9aa0c2b5",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-vector-figure/previews/page-0001.png"
+    }
+  ]
+}

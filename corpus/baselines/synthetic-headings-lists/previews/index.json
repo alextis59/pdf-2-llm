@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-headings-lists",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-headings-lists.pdf",
+    "sha256": "5c01e20d156bc474b59f85bb08cb600dfe3bc38315b3e7d0e01176c9eb6c2e02",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-headings-lists/previews/page-0001.png"
+    }
+  ]
+}

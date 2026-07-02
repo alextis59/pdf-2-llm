@@ -1,0 +1,28 @@
+{
+  "id": "nist-sp800-63b-4",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/raw/public/nist-sp800-63b-4.pdf",
+    "sha256": "d9ab89576b5ae2cfb3ba37781110788dea27a85a5079496dbfc1a79834670afd",
+    "pages": 129
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/nist-sp800-63b-4/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/nist-sp800-63b-4/previews/page-0002.png"
+    },
+    {
+      "page": 3,
+      "path": "corpus/baselines/nist-sp800-63b-4/previews/page-0003.png"
+    }
+  ]
+}

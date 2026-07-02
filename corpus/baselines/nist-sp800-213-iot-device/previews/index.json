@@ -1,0 +1,28 @@
+{
+  "id": "nist-sp800-213-iot-device",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/raw/public/nist-sp800-213-iot-device.pdf",
+    "sha256": "8f90d1fc02a3436444dca859b2f66e97942f443c07109798aeaee1315a6c60ae",
+    "pages": 47
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/nist-sp800-213-iot-device/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/nist-sp800-213-iot-device/previews/page-0002.png"
+    },
+    {
+      "page": 3,
+      "path": "corpus/baselines/nist-sp800-213-iot-device/previews/page-0003.png"
+    }
+  ]
+}

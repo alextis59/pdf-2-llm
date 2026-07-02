@@ -32,7 +32,8 @@ corpus/
   cleared source PDFs.
 - `accepted/` contains per-PDF acceptance criteria.
 - `expected/` contains reviewed expected Markdown, IR, or sidecar snapshots.
-- `baselines/` contains analysis and oracle outputs.
+- `baselines/` contains analysis, oracle outputs, and low-resolution page
+  previews for human review.
 - `reports/` contains corpus inventory and benchmark reports.
 
 ## Entry Policy
@@ -100,3 +101,8 @@ Use these storage thresholds unless a later release policy changes them:
 
 Run `npm run corpus:validate` after modifying the manifest or any tracked
 corpus file.
+
+Run `node scripts/corpus/render-previews.mjs --all --update` to refresh the
+first three low-resolution preview pages for each accepted corpus PDF. Use
+`--first-page`, `--last-page`, `--max-pages`, and `--dpi` for targeted review
+passes.

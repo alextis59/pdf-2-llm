@@ -1,0 +1,28 @@
+{
+  "id": "nist-sp800-207-zero-trust",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/raw/public/nist-sp800-207-zero-trust.pdf",
+    "sha256": "0290d6ece24874287316f4bf430fef770aa4ec08a2227c8f2c1e5b2ff975e03d",
+    "pages": 59
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/nist-sp800-207-zero-trust/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/nist-sp800-207-zero-trust/previews/page-0002.png"
+    },
+    {
+      "page": 3,
+      "path": "corpus/baselines/nist-sp800-207-zero-trust/previews/page-0003.png"
+    }
+  ]
+}

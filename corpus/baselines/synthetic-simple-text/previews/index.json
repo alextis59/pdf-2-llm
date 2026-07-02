@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-simple-text",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-simple-text.pdf",
+    "sha256": "3636a7445b31af9a6477573d94f52366db7b08b6a5c5bc3488c3c1064ab280b3",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-simple-text/previews/page-0001.png"
+    }
+  ]
+}

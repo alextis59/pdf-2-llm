@@ -207,7 +207,7 @@ Checklist:
 - [x] Detect path-heavy pages that likely contain tables, charts, or vector
   drawings.
 - [x] Produce per-PDF analysis JSON under `corpus/baselines/<id>/analysis.json`.
-- [ ] Produce low-resolution page preview images for human review.
+- [x] Produce low-resolution page preview images for human review.
 - [x] Produce oracle text outputs under `corpus/baselines/<id>/oracles/`.
 - [x] Add analysis summaries to `corpus/reports/corpus-inventory.md`.
 

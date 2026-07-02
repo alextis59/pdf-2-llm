@@ -1,0 +1,28 @@
+{
+  "id": "nist-sp800-61r2-incident-handling",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/raw/public/nist-sp800-61r2-incident-handling.pdf",
+    "sha256": "b1c5ead0632dcfb979c59d8c462b094ad2465ddaf62d5c246289d6d9b4419df1",
+    "pages": 80
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/nist-sp800-61r2-incident-handling/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/nist-sp800-61r2-incident-handling/previews/page-0002.png"
+    },
+    {
+      "page": 3,
+      "path": "corpus/baselines/nist-sp800-61r2-incident-handling/previews/page-0003.png"
+    }
+  ]
+}

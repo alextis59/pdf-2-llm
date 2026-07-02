@@ -1,0 +1,24 @@
+{
+  "id": "synthetic-header-footer",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-header-footer.pdf",
+    "sha256": "43cdb1a9ac5b8c0572caf10eca409855796b8205399e6239fa1de43b28ad6884",
+    "pages": 2
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-header-footer/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/synthetic-header-footer/previews/page-0002.png"
+    }
+  ]
+}

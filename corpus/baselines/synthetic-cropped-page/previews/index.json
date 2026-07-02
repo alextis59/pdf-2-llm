@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-cropped-page",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-cropped-page.pdf",
+    "sha256": "cf4240dfdf2d34917a6ca5d9e8b5977ca852322c5b1bdf135fb8cfc026ee15af",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-cropped-page/previews/page-0001.png"
+    }
+  ]
+}
