@@ -7,6 +7,7 @@ import {
   schemaVersion,
   warningCodes
 } from "./schema.mjs";
+import { extractTextLines, linesToMarkdown } from "./text-extract.mjs";
 
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
@@ -59,19 +60,31 @@ export async function convertPdfToMarkdown(input, options = {}) {
     );
   }
 
-  warnings.push(
-    createWarning(
-      warningCodes.ConversionNotImplemented,
-      "The scaffold validates input and returns contracts, but PDF conversion is not implemented yet."
-    )
-  );
+  const textLines = pdfVersion ? extractTextLines(normalized.bytes) : [];
+  const markdown = linesToMarkdown(textLines);
+
+  if (textLines.length > 0) {
+    warnings.push(
+      createWarning(
+        warningCodes.HeuristicTextExtraction,
+        "Text was extracted with the scaffold uncompressed-stream heuristic."
+      )
+    );
+  } else {
+    warnings.push(
+      createWarning(
+        warningCodes.ConversionNotImplemented,
+        "The scaffold validates input and returns contracts, but PDF conversion is not implemented yet."
+      )
+    );
+  }
 
   const ir = createDocumentIr({ sourceType: pdfVersion ? "digital" : "unknown" });
   ir.warnings = warnings;
 
   const elapsedMs = performance.now() - startedAt;
   const result = {
-    markdown: "",
+    markdown,
     assets: [],
     ir,
     warnings,
@@ -86,11 +99,15 @@ export async function convertPdfToMarkdown(input, options = {}) {
       options: summarizeOptions(options),
       timing: {
         elapsedMs
+      },
+      extraction: {
+        textLines: textLines.length,
+        mode: textLines.length > 0 ? "heuristic-uncompressed-streams" : "none"
       }
     },
     confidence: {
-      overall: 0,
-      text: 0,
+      overall: textLines.length > 0 ? 0.25 : 0,
+      text: textLines.length > 0 ? 0.4 : 0,
       layout: 0,
       tables: 0
     }

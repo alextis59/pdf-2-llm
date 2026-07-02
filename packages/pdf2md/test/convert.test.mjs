@@ -17,14 +17,14 @@ test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", asyn
     }
   });
 
-  assert.equal(result.markdown, "");
+  assert.match(result.markdown, /^# Synthetic Simple Text/);
   assert.equal(result.ir.schemaVersion, "0.1.0");
   assert.equal(result.ir.sourceType, "digital");
   assert.equal(result.diagnostics.input.bytes, bytes.byteLength);
   assert.equal(result.diagnostics.input.pdfVersion, "1.4");
   assert.equal(result.diagnostics.input.sha256, createHash("sha256").update(bytes).digest("hex"));
   assert.deepEqual(progress, ["start", "complete"]);
-  assert.ok(result.warnings.some((warning) => warning.code === warningCodes.ConversionNotImplemented));
+  assert.ok(result.warnings.some((warning) => warning.code === warningCodes.HeuristicTextExtraction));
   assert.ok(result.warnings.some((warning) => warning.code === warningCodes.OcrDisabled));
 });
 
@@ -43,6 +43,20 @@ test("CLI emits JSON scaffold output", () => {
   const result = JSON.parse(run.stdout);
   assert.equal(result.diagnostics.input.pdfVersion, "1.4");
   assert.ok(
-    result.warnings.some((warning) => warning.code === warningCodes.ConversionNotImplemented)
+    result.warnings.some((warning) => warning.code === warningCodes.HeuristicTextExtraction)
   );
+});
+
+test("text MVP matches expected markdown for simple generated fixtures", async () => {
+  const cases = [
+    "synthetic-simple-text",
+    "synthetic-headings-lists"
+  ];
+
+  for (const id of cases) {
+    const pdf = new URL(`../../../corpus/generated/${id}.pdf`, import.meta.url);
+    const expected = await readFile(new URL(`../../../corpus/expected/${id}.md`, import.meta.url), "utf8");
+    const result = await convertPdfToMarkdown(pdf.pathname);
+    assert.equal(result.markdown, expected);
+  }
 });

@@ -6,7 +6,8 @@ export const warningCodes = Object.freeze({
   InputTooLarge: "security.input_too_large",
   PasswordRequired: "security.password_required",
   OcrDisabled: "ocr.disabled",
-  WebGpuUnavailable: "webgpu.unavailable"
+  WebGpuUnavailable: "webgpu.unavailable",
+  HeuristicTextExtraction: "text.heuristic_uncompressed_stream"
 });
 
 export function createWarning(code, message, details = {}) {

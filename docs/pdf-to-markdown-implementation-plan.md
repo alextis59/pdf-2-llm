@@ -411,7 +411,7 @@ assets.
 - [ ] Infer simple headings from size and spacing.
 - [ ] Infer simple bullet and numbered lists.
 - [ ] Remove obvious page numbers only when confidence is high.
-- [ ] Serialize CommonMark paragraphs, headings, and lists.
+- [x] Serialize CommonMark paragraphs, headings, and lists.
 - [ ] Escape Markdown metacharacters.
 - [ ] Add page anchors.
 - [ ] Preserve uncertain ordering with warnings.
