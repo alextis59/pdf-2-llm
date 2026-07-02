@@ -11,6 +11,7 @@ const manifestPath = path.resolve(
 const listOnly = hasFlag("--list");
 const dryRun = hasFlag("--dry-run");
 const updateSnapshots = hasFlag("--update-snapshots");
+const assertMarkdown = hasFlag("--assert-markdown");
 const selectedGate = readOption("--gate");
 const selectedIds = readOptions("--id");
 
@@ -47,6 +48,7 @@ function usage() {
 Options:
   --manifest <path>          Manifest path. Defaults to corpus/manifest.json.
   --root <path>              Repository root. Defaults to cwd.
+  --assert-markdown          Compare output with corpus/expected/<id>.md.
   --update-snapshots         Reserved for future Markdown/IR snapshot updates.
 `;
 }
@@ -158,11 +160,26 @@ async function runCase(corpusCase) {
     );
   }
 
+  if (assertMarkdown) {
+    const expectedPath = path.join(repoRoot, "corpus", "expected", `${entry.id}.md`);
+    let expected;
+    try {
+      expected = await readFile(expectedPath, "utf8");
+    } catch (error) {
+      throw new Error(`${entry.id}: expected Markdown is not readable at ${expectedPath}: ${error.message}`);
+    }
+    if (result.markdown !== expected) {
+      errors.push(`Markdown snapshot mismatch against ${path.relative(repoRoot, expectedPath)}`);
+    }
+  }
+
   if (errors.length > 0) {
     throw new Error(`${entry.id}: ${errors.join("; ")}`);
   }
 
-  console.log(`PASS ${entry.id} bytes=${entry.bytes} pdfVersion=${entry.pdfVersion}`);
+  console.log(
+    `PASS ${entry.id} bytes=${entry.bytes} pdfVersion=${entry.pdfVersion}${assertMarkdown ? " markdown=match" : ""}`
+  );
 }
 
 async function main() {
