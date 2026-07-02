@@ -282,6 +282,10 @@ export type AssetResult = {
   id: string;
   path: string;
   mediaType: string;
+  kind?: string;
+  content?: string;
+  pageIndex?: number | null;
+  tableIndex?: number;
 };
 
 export declare const schemaVersion: string;

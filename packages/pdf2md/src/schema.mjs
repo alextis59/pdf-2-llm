@@ -81,7 +81,11 @@ export const assetJsonSchema = Object.freeze({
   properties: {
     id: { type: "string" },
     path: { type: "string" },
-    mediaType: { type: "string" }
+    mediaType: { type: "string" },
+    kind: { type: "string" },
+    content: { type: "string" },
+    pageIndex: { type: ["integer", "null"] },
+    tableIndex: { type: "integer" }
   }
 });
 

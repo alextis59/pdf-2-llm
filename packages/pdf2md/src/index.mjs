@@ -148,6 +148,9 @@ export async function convertPdfToMarkdown(input, options = {}) {
     assignTextLinesToGridCells(rulingGrids, textLines),
     rulingLines
   );
+  const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
+    enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
+  });
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
@@ -195,6 +198,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       })
     );
   }
+  ir.assets = tableCsvSidecars.assets;
   ir.warnings = warnings;
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
@@ -203,7 +207,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   const result = {
     markdown,
     sourceMap,
-    assets: [],
+    assets: tableCsvSidecars.assets,
     ir,
     warnings,
     diagnostics: {
@@ -232,7 +236,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         layout: markdownResult.layout,
         rulingLines: summarizeRulingLines(rulingLines),
         rulingGrids: summarizeRulingGrids(rulingGrids),
-        rulingTables: summarizeRulingTables(rulingTables),
+        rulingTables: summarizeRulingTables(rulingTables, tableCsvSidecars.byTable),
         parser: pdfDocument
           ? {
               mode: pdfDocument.xrefMode,
@@ -372,9 +376,74 @@ function summarizeRulingGrids(rulingGrids) {
   };
 }
 
-function summarizeRulingTables(rulingTables) {
+function createTableCsvSidecars(rulingTables, options = {}) {
+  const assets = [];
+  const byTable = new Map();
+  if (options.enabled === false) {
+    return { assets, byTable };
+  }
+
+  const tableCountsByPage = new Map();
+  for (const table of rulingTables) {
+    const pageKey = table.pageIndex ?? "unknown";
+    const tableNumber = (tableCountsByPage.get(pageKey) ?? 0) + 1;
+    tableCountsByPage.set(pageKey, tableNumber);
+    const pageLabel = Number.isInteger(table.pageIndex) ? `page-${table.pageIndex + 1}` : "page-unknown";
+    const id = `table-${pageLabel}-${tableNumber}-csv`;
+    const asset = {
+      id,
+      kind: "table-csv",
+      path: `assets/${id}.csv`,
+      mediaType: "text/csv",
+      content: serializeRulingTableCsv(table),
+      pageIndex: table.pageIndex ?? null,
+      tableIndex: table.gridIndex ?? tableNumber - 1
+    };
+    assets.push(asset);
+    byTable.set(table, asset);
+  }
+
+  return { assets, byTable };
+}
+
+function serializeRulingTableCsv(table) {
+  return rulingTableCsvRows(table)
+    .map((row) => row.map(escapeCsvCell).join(","))
+    .join("\n") + "\n";
+}
+
+function rulingTableCsvRows(table) {
+  const cellsByPosition = new Map(
+    table.cells.map((cell) => [`${cell.rowIndex}:${cell.columnIndex}`, cell])
+  );
+  const rows = [];
+  for (let rowIndex = 0; rowIndex < table.rows; rowIndex += 1) {
+    const row = [];
+    for (let columnIndex = 0; columnIndex < table.columns; columnIndex += 1) {
+      const cell = cellsByPosition.get(`${rowIndex}:${columnIndex}`);
+      row.push(cell && !cell.coveredBy ? normalizeCellText(cell.text) : "");
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? "");
+  if (!/[",\r\n]/.test(text)) {
+    return text;
+  }
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function normalizeCellText(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function summarizeRulingTables(rulingTables, csvSidecarsByTable = new Map()) {
   const pages = new Map();
   for (const table of rulingTables) {
+    const csvSidecar = csvSidecarsByTable.get(table) ?? null;
     const pageIndex = table.pageIndex ?? null;
     const page = pages.get(pageIndex) ?? {
       pageIndex,
@@ -384,6 +453,7 @@ function summarizeRulingTables(rulingTables) {
       rowSpans: 0,
       columnSpans: 0,
       coveredCells: 0,
+      csvSidecars: 0,
       tables: []
     };
     page.total += 1;
@@ -392,6 +462,9 @@ function summarizeRulingTables(rulingTables) {
     page.rowSpans += table.rowSpans;
     page.columnSpans += table.columnSpans;
     page.coveredCells += table.coveredCells;
+    if (csvSidecar) {
+      page.csvSidecars += 1;
+    }
     page.tables.push({
       rows: table.rows,
       columns: table.columns,
@@ -401,6 +474,7 @@ function summarizeRulingTables(rulingTables) {
       columnSpans: table.columnSpans,
       coveredCells: table.coveredCells,
       hasSpans: table.hasSpans,
+      csvSidecarAssetId: csvSidecar?.id ?? null,
       cells: table.cells
         .filter((cell) => !cell.coveredBy && (cell.lineCount > 0 || cell.rowSpan > 1 || cell.columnSpan > 1))
         .map((cell) => ({
@@ -422,6 +496,7 @@ function summarizeRulingTables(rulingTables) {
     rowSpans: rulingTables.reduce((sum, table) => sum + table.rowSpans, 0),
     columnSpans: rulingTables.reduce((sum, table) => sum + table.columnSpans, 0),
     coveredCells: rulingTables.reduce((sum, table) => sum + table.coveredCells, 0),
+    csvSidecars: rulingTables.filter((table) => csvSidecarsByTable.has(table)).length,
     pages: [...pages.values()].sort((left, right) => {
       if (left.pageIndex === null) {
         return 1;
@@ -615,6 +690,8 @@ function summarizeOptions(options) {
     ocrEnabled: options.ocr?.enabled ?? null,
     webgpuRequired: options.webgpu?.required ?? false,
     tablesEnabled: options.tables?.enabled ?? null,
+    tableCsvSidecars:
+      options.tables?.enabled === false ? false : options.tables?.csvSidecars ?? true,
     assetsEnabled: options.assets?.enabled ?? null
   };
 }

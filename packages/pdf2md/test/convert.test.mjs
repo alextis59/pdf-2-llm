@@ -145,6 +145,18 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
   const rulingGrids = result.diagnostics.extraction.rulingGrids;
   const rulingTables = result.diagnostics.extraction.rulingTables;
 
+  assert.deepEqual(result.assets, [
+    {
+      id: "table-page-1-1-csv",
+      kind: "table-csv",
+      path: "assets/table-page-1-1-csv.csv",
+      mediaType: "text/csv",
+      content: "Quarter,Revenue,Cost\nQ1,100,50\nQ2,120,60\n",
+      pageIndex: 0,
+      tableIndex: 0
+    }
+  ]);
+  assert.deepEqual(result.ir.assets, result.assets);
   assert.equal(rulingLines.total, 8);
   assert.equal(rulingLines.horizontal, 4);
   assert.equal(rulingLines.vertical, 4);
@@ -183,6 +195,7 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
   assert.equal(rulingTables.rowSpans, 0);
   assert.equal(rulingTables.columnSpans, 0);
   assert.equal(rulingTables.coveredCells, 0);
+  assert.equal(rulingTables.csvSidecars, 1);
   assert.deepEqual(rulingTables.pages, [
     {
       pageIndex: 0,
@@ -192,6 +205,7 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
       rowSpans: 0,
       columnSpans: 0,
       coveredCells: 0,
+      csvSidecars: 1,
       tables: [
         {
           rows: 3,
@@ -202,6 +216,7 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
           columnSpans: 0,
           coveredCells: 0,
           hasSpans: false,
+          csvSidecarAssetId: "table-page-1-1-csv",
           cells: [
             { rowIndex: 0, columnIndex: 0, text: "Quarter", lineCount: 1, rowSpan: 1, columnSpan: 1 },
             { rowIndex: 0, columnIndex: 1, text: "Revenue", lineCount: 1, rowSpan: 1, columnSpan: 1 },
@@ -217,6 +232,21 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
       ]
     }
   ]);
+});
+
+test("convertPdfToMarkdown can disable table CSV sidecars", async () => {
+  const result = await convertPdfToMarkdown(visibleTableFixturePath.pathname, {
+    tables: { csvSidecars: false }
+  });
+
+  assert.deepEqual(result.assets, []);
+  assert.deepEqual(result.ir.assets, []);
+  assert.equal(result.diagnostics.options.tableCsvSidecars, false);
+  assert.equal(result.diagnostics.extraction.rulingTables.csvSidecars, 0);
+  assert.equal(
+    result.diagnostics.extraction.rulingTables.pages[0].tables[0].csvSidecarAssetId,
+    null
+  );
 });
 
 test("text MVP matches expected markdown for simple generated fixtures", async () => {

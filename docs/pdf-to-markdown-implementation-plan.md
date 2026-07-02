@@ -534,7 +534,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 - [x] Detect row and column spans.
 - [x] Export GFM tables when no spans are present.
 - [x] Export HTML tables when spans are required.
-- [ ] Export CSV sidecars.
+- [x] Export CSV sidecars.
 
 ### 5.2 Borderless Tables
 

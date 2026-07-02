@@ -9,6 +9,10 @@ import {
 } from "../src/schema.mjs";
 
 const fixturePath = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
+const visibleTableFixturePath = new URL(
+  "../../../corpus/generated/synthetic-visible-table.pdf",
+  import.meta.url
+);
 
 test("serialized conversion contracts validate against JSON schemas", async () => {
   const bytes = await readFile(fixturePath);
@@ -34,6 +38,13 @@ test("document IR JSON schema rejects missing required page fields", () => {
 
   const errors = validateJsonSchema(documentIrJsonSchema, invalid);
   assert.ok(errors.some((error) => error.includes("$.pages[0].pageIndex")));
+});
+
+test("document IR JSON schema accepts table CSV sidecar assets", async () => {
+  const result = await convertPdfToMarkdown(visibleTableFixturePath.pathname);
+
+  assert.equal(result.ir.assets.length, 1);
+  assert.deepEqual(validateJsonSchema(documentIrJsonSchema, JSON.parse(JSON.stringify(result.ir))), []);
 });
 
 function validateJsonSchema(schema, value, path = "$") {
