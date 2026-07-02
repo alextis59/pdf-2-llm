@@ -15,6 +15,10 @@ mustNot:
 metrics:
   minTextCoverage: 1
   maxReadingOrderDistance: 0
+  minRenderedHtmlTextChars: 150
+  minRenderedHtmlHeadings: 1
+  minRenderedHtmlParagraphs: 5
+  maxRenderedHtmlParagraphChars: 200
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
@@ -33,4 +37,4 @@ assets:
 review:
   humanReviewedBy: "codex"
   reviewedAt: "2026-07-02"
-  notes: "Expected order is left column top-down, including the figure caption, then right column top-down; maxReadingOrderDistance is zero because the generated fixture has exact reviewed Markdown."
+  notes: "Expected order is left column top-down, including the figure caption, then right column top-down; maxReadingOrderDistance is zero because the generated fixture has exact reviewed Markdown. Rendered HTML thresholds confirm the paper fixture keeps a title and five readable paragraphs without paragraph collapse."

@@ -519,7 +519,7 @@ Gate 3 acceptance:
 - [x] Long manual fixtures run within memory limits.
 - [x] Header/footer removal meets accepted precision and recall targets.
 - [x] Tagged PDFs use tags where reliable and fall back to geometry where not.
-- [ ] Markdown rendered HTML is readable for reports, manuals, and papers.
+- [x] Markdown rendered HTML is readable for reports, manuals, and papers.
 
 ## Phase 5: Gate 4 - Tables V1
 

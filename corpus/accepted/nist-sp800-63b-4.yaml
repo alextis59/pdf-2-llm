@@ -24,6 +24,10 @@ metrics:
   maxHeapUsedDeltaBytes: 16777216
   minTaggedMarkedContent: 1
   maxTaggedStructureConflicts: 0
+  minRenderedHtmlTextChars: 200000
+  minRenderedHtmlHeadings: 50
+  minRenderedHtmlParagraphs: 500
+  maxRenderedHtmlParagraphChars: 1500
   maxUnexpectedWarnings: 3
 snippets:
   - page: 1
@@ -58,4 +62,4 @@ assets:
 review:
   humanReviewedBy: "codex"
   reviewedAt: "2026-07-02"
-  notes: "Accepted from NIST source URL after pdfinfo confirmed tagged, unencrypted PDF 1.7 with 129 pages and AcroForm metadata; snippets were checked with pdftotext. Memory limits allow the current 129-page conversion with GC-normalized headroom while catching runaway retained heap or RSS growth."
+  notes: "Accepted from NIST source URL after pdfinfo confirmed tagged, unencrypted PDF 1.7 with 129 pages and AcroForm metadata; snippets were checked with pdftotext. Memory limits allow the current 129-page conversion with GC-normalized headroom while catching runaway retained heap or RSS growth. Rendered HTML thresholds cover manual-scale text, many headings and paragraphs, and no giant paragraph collapse."

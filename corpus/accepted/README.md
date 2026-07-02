@@ -59,6 +59,10 @@ expected behavior has been written here.
   is present, the tagged-structure comparator enforces that tagged PDFs expose
   usable marked content and that unreliable tag/layout conflicts stay within the
   accepted fallback threshold.
+- If `metrics.minRenderedHtmlTextChars`, `metrics.minRenderedHtmlHeadings`,
+  `metrics.minRenderedHtmlParagraphs`, or `metrics.maxRenderedHtmlParagraphChars`
+  is present, the rendered-HTML checker enforces structural readability after
+  Markdown is rendered.
 - `runningContent.expectedRemoved` is for repeated headers, footers, page
   numbers, and boilerplate that should disappear from Markdown.
 - `runningContent.expectedRetained` is for meaningful title, section, or body
