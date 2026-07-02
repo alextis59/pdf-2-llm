@@ -43,7 +43,7 @@ const allowedKinds = new Set([
   "xfa"
 ]);
 
-const allowedSourceTypes = new Set(["url", "generated", "mutated", "local-only"]);
+const allowedSourceTypes = new Set(["url", "generated", "mutated", "manual-import", "local-only"]);
 const idPattern = /^[a-z0-9][a-z0-9-]*$/;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const sha256Pattern = /^[a-f0-9]{64}$/;

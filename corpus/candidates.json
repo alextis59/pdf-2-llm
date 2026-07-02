@@ -1,0 +1,253 @@
+{
+  "schemaVersion": 1,
+  "groups": [
+    {
+      "id": "synthetic-exact-output",
+      "kind": "synthetic",
+      "minimumCount": 15,
+      "strategy": "Generate locally from HTML, Typst, LaTeX, or ReportLab.",
+      "why": "Provides deterministic expected Markdown.",
+      "candidates": []
+    },
+    {
+      "id": "simple-born-digital-reports",
+      "kind": "born-digital",
+      "minimumCount": 5,
+      "strategy": "Retrieve public reports with normal selectable text.",
+      "why": "Baseline text, paragraphs, headings, and links.",
+      "candidates": []
+    },
+    {
+      "id": "tagged-accessible-pdfs",
+      "kind": "tagged",
+      "minimumCount": 5,
+      "strategy": "Retrieve public tagged PDF and PDF/UA examples.",
+      "why": "Tests tag preference and tag versus geometry validation.",
+      "candidates": []
+    },
+    {
+      "id": "broken-or-unusual-fonts",
+      "kind": "font-edge-case",
+      "minimumCount": 5,
+      "strategy": "Combine public samples with generated custom encodings.",
+      "why": "Tests ToUnicode and fallback confidence.",
+      "candidates": []
+    },
+    {
+      "id": "pdf-version-features",
+      "kind": "pdf-feature",
+      "minimumCount": 10,
+      "strategy": "Combine public samples with generated qpdf variants.",
+      "why": "Covers xref tables, xref streams, and object streams.",
+      "candidates": []
+    },
+    {
+      "id": "linearized-pdfs",
+      "kind": "linearized",
+      "minimumCount": 3,
+      "strategy": "Retrieve public samples or generate with qpdf --linearize.",
+      "why": "Tests hint tables and streamed loading assumptions.",
+      "candidates": []
+    },
+    {
+      "id": "incremental-updates",
+      "kind": "incremental-update",
+      "minimumCount": 3,
+      "strategy": "Generate append-only PDF edits.",
+      "why": "Tests newest object resolution.",
+      "candidates": []
+    },
+    {
+      "id": "encrypted-pdfs",
+      "kind": "encrypted",
+      "minimumCount": 3,
+      "strategy": "Generate encrypted fixtures with known passwords.",
+      "why": "Tests password handling without bypassing encryption.",
+      "candidates": []
+    },
+    {
+      "id": "damaged-pdfs",
+      "kind": "damaged",
+      "minimumCount": 5,
+      "strategy": "Mutate known-good fixtures reproducibly.",
+      "why": "Tests repair mode and structured errors.",
+      "candidates": []
+    },
+    {
+      "id": "scanned-pdfs",
+      "kind": "scanned",
+      "minimumCount": 5,
+      "strategy": "Retrieve public-domain scans or generate page-image PDFs.",
+      "why": "Tests raster path and OCR routing.",
+      "candidates": []
+    },
+    {
+      "id": "searchable-scanned-pdfs",
+      "kind": "searchable-scan",
+      "minimumCount": 5,
+      "strategy": "Retrieve public OCR PDFs or generate OCR overlays.",
+      "why": "Tests hidden text and OCR reconciliation.",
+      "candidates": []
+    },
+    {
+      "id": "bad-ocr-overlays",
+      "kind": "bad-ocr-overlay",
+      "minimumCount": 3,
+      "strategy": "Mutate OCR layer positions or text.",
+      "why": "Tests distrust of bad hidden text.",
+      "candidates": []
+    },
+    {
+      "id": "long-manuals-books",
+      "kind": "long-document",
+      "minimumCount": 3,
+      "strategy": "Retrieve open manuals over 500 pages, with one over 1000 pages if practical.",
+      "why": "Tests streaming, repeated headers, and memory behavior.",
+      "candidates": []
+    },
+    {
+      "id": "scientific-papers",
+      "kind": "scientific-paper",
+      "minimumCount": 5,
+      "strategy": "Retrieve open papers with columns, formulas, and references.",
+      "why": "Tests reading order, equations, and captions.",
+      "candidates": []
+    },
+    {
+      "id": "visible-border-tables",
+      "kind": "visible-table",
+      "minimumCount": 5,
+      "strategy": "Combine generated tables with public financial or government tables.",
+      "why": "Tests ruling-line table extraction.",
+      "candidates": []
+    },
+    {
+      "id": "borderless-tables",
+      "kind": "borderless-table",
+      "minimumCount": 5,
+      "strategy": "Combine generated tables with public reports.",
+      "why": "Tests whitespace and alignment inference.",
+      "candidates": []
+    },
+    {
+      "id": "complex-tables",
+      "kind": "complex-table",
+      "minimumCount": 5,
+      "strategy": "Generate span and nested-header table cases.",
+      "why": "Tests HTML fallback and CSV sidecars.",
+      "candidates": []
+    },
+    {
+      "id": "government-forms",
+      "kind": "form",
+      "minimumCount": 5,
+      "strategy": "Retrieve public forms with fields and check boxes.",
+      "why": "Tests AcroForm and field-value extraction.",
+      "candidates": []
+    },
+    {
+      "id": "invoices-receipts",
+      "kind": "invoice-receipt",
+      "minimumCount": 5,
+      "strategy": "Generate fixtures and retrieve permissive samples.",
+      "why": "Tests dense key-value layout.",
+      "candidates": []
+    },
+    {
+      "id": "slides-brochures",
+      "kind": "slide-brochure",
+      "minimumCount": 5,
+      "strategy": "Retrieve public-domain decks and brochures or generate fixtures.",
+      "why": "Tests arbitrary visual order and warnings.",
+      "candidates": []
+    },
+    {
+      "id": "diagrams-charts-vector-pages",
+      "kind": "vector-heavy",
+      "minimumCount": 5,
+      "strategy": "Combine public-domain vector-heavy samples with generated charts.",
+      "why": "Tests asset preservation and avoids hallucinated semantics.",
+      "candidates": []
+    },
+    {
+      "id": "equations",
+      "kind": "equation",
+      "minimumCount": 5,
+      "strategy": "Generate LaTeX pages and retrieve open papers.",
+      "why": "Tests Unicode and LaTeX equation fallback.",
+      "candidates": []
+    },
+    {
+      "id": "rtl-scripts",
+      "kind": "rtl",
+      "minimumCount": 3,
+      "strategy": "Retrieve or generate Arabic and Hebrew PDFs.",
+      "why": "Tests direction-aware grouping.",
+      "candidates": []
+    },
+    {
+      "id": "cjk-scripts",
+      "kind": "cjk",
+      "minimumCount": 3,
+      "strategy": "Retrieve or generate Chinese, Japanese, and Korean PDFs.",
+      "why": "Tests CID fonts and line grouping.",
+      "candidates": []
+    },
+    {
+      "id": "vertical-writing",
+      "kind": "vertical-writing",
+      "minimumCount": 2,
+      "strategy": "Retrieve or generate Japanese vertical text PDFs.",
+      "why": "Tests writing mode handling.",
+      "candidates": []
+    },
+    {
+      "id": "rotated-cropped-pages",
+      "kind": "rotated-cropped",
+      "minimumCount": 5,
+      "strategy": "Generate rotated and cropped transformations.",
+      "why": "Tests coordinate normalization.",
+      "candidates": []
+    },
+    {
+      "id": "tiny-fonts-huge-images",
+      "kind": "stress",
+      "minimumCount": 4,
+      "strategy": "Generate stress fixtures with tiny fonts and huge images.",
+      "why": "Tests caps, scaling, and OCR behavior.",
+      "candidates": []
+    },
+    {
+      "id": "annotations-links",
+      "kind": "annotation-link",
+      "minimumCount": 5,
+      "strategy": "Combine generated annotations with public annotated PDFs.",
+      "why": "Tests link and comment extraction.",
+      "candidates": []
+    },
+    {
+      "id": "attachments",
+      "kind": "attachment",
+      "minimumCount": 3,
+      "strategy": "Generate embedded-file PDFs.",
+      "why": "Tests sidecar metadata extraction.",
+      "candidates": []
+    },
+    {
+      "id": "signatures",
+      "kind": "signature",
+      "minimumCount": 3,
+      "strategy": "Retrieve public signed samples or generate signed fixtures.",
+      "why": "Tests metadata reporting without validation claims.",
+      "candidates": []
+    },
+    {
+      "id": "xfa-samples",
+      "kind": "xfa",
+      "minimumCount": 2,
+      "strategy": "Retrieve public samples if license permits; otherwise keep local-only.",
+      "why": "Tests explicit unsupported or fallback behavior.",
+      "candidates": []
+    }
+  ]
+}

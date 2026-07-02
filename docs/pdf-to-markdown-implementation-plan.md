@@ -142,7 +142,7 @@ review by hand, then it can expand after the pipeline stabilizes.
 
 Checklist:
 
-- [ ] Create initial candidate list for every corpus group.
+- [x] Create initial candidate list for every corpus group.
 - [ ] Label each candidate as `commit-ok`, `local-only`, or `do-not-use`.
 - [ ] Prefer generated fixtures when exact expected output matters.
 - [ ] Prefer public-domain government or standards-adjacent PDFs for committed
@@ -160,16 +160,16 @@ Checklist:
 
 Implement retrieval as a reproducible script, not a manual browser download.
 
-- [ ] Add `scripts/corpus/retrieve.ts`.
-- [ ] Add support for `--id`, `--group`, `--all`, and `--dry-run`.
-- [ ] Write downloads to a temporary file before moving into `corpus/raw/`.
-- [ ] Verify `Content-Type` and magic bytes.
-- [ ] Compute SHA-256 immediately after download.
-- [ ] Refuse to overwrite an existing PDF unless `--update` is passed.
-- [ ] Record HTTP status, final URL, and retrieval timestamp.
-- [ ] Support local file imports for generated or manually acquired PDFs.
-- [ ] Print license and redistribution status before accepting a candidate.
-- [ ] Make retrieval idempotent when hashes match.
+- [x] Add `scripts/corpus/retrieve.mjs`.
+- [x] Add support for `--id`, `--group`, `--all`, and `--dry-run`.
+- [x] Write downloads to a temporary file before moving into `corpus/raw/`.
+- [x] Verify `Content-Type` and magic bytes.
+- [x] Compute SHA-256 immediately after download.
+- [x] Refuse to overwrite an existing PDF unless `--update` is passed.
+- [x] Record HTTP status, final URL, and retrieval timestamp.
+- [x] Support local file imports for generated or manually acquired PDFs.
+- [x] Print license and redistribution status before accepting a candidate.
+- [x] Make retrieval idempotent when hashes match.
 
 ### 0.4 Static PDF Analysis
 

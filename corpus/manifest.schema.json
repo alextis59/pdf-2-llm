@@ -88,7 +88,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "enum": ["url", "generated", "mutated", "local-only"]
+              "enum": ["url", "generated", "mutated", "manual-import", "local-only"]
             },
             "url": {
               "type": "string"
