@@ -492,7 +492,7 @@ Goal: improve reading order and document structure for real-world documents.
 - [x] Detect captions near figures and tables.
 - [x] Resolve reading order within and across columns.
 - [x] Add reading-order edit-distance metric.
-- [ ] Add visual debug overlays for block order.
+- [x] Add visual debug overlays for block order.
 
 ### 4.2 Headers, Footers, And Repeated Content
 
