@@ -339,7 +339,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [x] Add oracle comparison helper.
 - [x] Add corpus runner with `--gate`, `--id`, and `--update-snapshots`.
 - [x] Add performance benchmark harness.
-- [ ] Add memory-limit and timeout tests.
+- [x] Add memory-limit and timeout tests.
 - [ ] Add fuzz target skeletons.
 
 Definition of done:

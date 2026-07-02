@@ -25,16 +25,18 @@ export { documentIrJsonSchema, markdownSourceMapJsonSchema, schemaVersion, warni
 
 export async function convertPdfToMarkdown(input, options = {}) {
   const startedAt = performance.now();
-  throwIfAborted(options.signal);
-  emitProgress(options, "start", 0);
-
-  const normalized = await normalizeInput(input);
-  throwIfAborted(options.signal);
-
   const security = {
     ...defaultSecurityLimits,
     ...(options.security ?? {})
   };
+  const deadline = createDeadline(security.timeoutMs, startedAt);
+  throwIfAborted(options.signal);
+  throwIfTimedOut(deadline);
+  emitProgress(options, "start", 0);
+
+  const normalized = await normalizeInput(input);
+  throwIfAborted(options.signal);
+  throwIfTimedOut(deadline);
 
   const warnings = [];
   if (normalized.bytes.byteLength > security.maxBytes) {
@@ -73,6 +75,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
       }
     }
   }
+  throwIfAborted(options.signal);
+  throwIfTimedOut(deadline);
 
   if (options.ocr?.enabled === false) {
     warnings.push(createWarning(warningCodes.OcrDisabled, "OCR is disabled by options."));
@@ -88,11 +92,15 @@ export async function convertPdfToMarkdown(input, options = {}) {
   }
 
   const textLines = pdfVersion ? extractTextLines(normalized.bytes, { document: pdfDocument }) : [];
+  throwIfAborted(options.signal);
+  throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
     pageAnchors: options.markdown?.pageAnchors === true
   });
   const markdown = markdownResult.markdown;
   const sourceMap = createMarkdownSourceMap(markdownResult.sourceMap);
+  throwIfAborted(options.signal);
+  throwIfTimedOut(deadline);
   warnings.push(...unicodeMappingWarnings(textLines));
   warnings.push(...textOrderingWarnings(textLines));
 
@@ -128,6 +136,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
     );
   }
   ir.warnings = warnings;
+  throwIfAborted(options.signal);
+  throwIfTimedOut(deadline);
 
   const elapsedMs = performance.now() - startedAt;
   const result = {
@@ -351,5 +361,18 @@ function emitProgress(options, stage, progress) {
 function throwIfAborted(signal) {
   if (signal?.aborted) {
     throw new DOMException("Operation aborted", "AbortError");
+  }
+}
+
+function createDeadline(timeoutMs, startedAt) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
+    throw new RangeError("security.timeoutMs must be a non-negative finite number");
+  }
+  return startedAt + timeoutMs;
+}
+
+function throwIfTimedOut(deadline) {
+  if (performance.now() >= deadline) {
+    throw new DOMException("Operation timed out", "TimeoutError");
   }
 }
