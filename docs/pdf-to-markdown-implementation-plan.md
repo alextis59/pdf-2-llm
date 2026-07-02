@@ -367,7 +367,7 @@ assets.
 - [x] Implement strict and tolerant parse modes.
 - [x] Return structured errors with byte offsets.
 - [x] Add unit tests for all primitive object types.
-- [ ] Add fuzz tests for tokenizer and object parser.
+- [x] Add fuzz tests for tokenizer and object parser.
 
 ### 2.2 Basic Stream Filters
 
