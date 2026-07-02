@@ -448,7 +448,7 @@ Goal: expand PDF compatibility before adding more semantic features.
   raster support.
 - [x] Implement predictor variants needed by image and object streams.
 - [x] Add bounded allocation tests for all filters.
-- [ ] Add corrupt filter-chain tests.
+- [x] Add corrupt filter-chain tests.
 
 ### 3.3 Encryption And Password Handling
 

@@ -30,6 +30,35 @@ test("filter chains decode in declared order", () => {
   assert.equal(text(decode(hex, "[/ASCIIHexDecode /FlateDecode]")), "Chained text");
 });
 
+test("corrupt filter chains report the failing stage", () => {
+  const corruptFlateHex = Buffer.from("not flate", "latin1").toString("hex") + ">";
+  assert.throws(
+    () => decode(corruptFlateHex, "[/ASCIIHexDecode /FlateDecode]"),
+    (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.flate_failed"
+  );
+
+  const corruptRunLengthHex = Buffer.from([2, 97]).toString("hex") + ">";
+  assert.throws(
+    () => decode(corruptRunLengthHex, "[/ASCIIHexDecode /RunLengthDecode]"),
+    (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.runlength_truncated"
+  );
+
+  assert.throws(
+    () =>
+      decode(
+        deflateSync(new Uint8Array([0, 1])),
+        "/FlateDecode /DecodeParms << /Predictor 15 /Columns 3 >>"
+      ),
+    (error) =>
+      error instanceof PdfStreamDecodeError && error.code === "pdf.stream.predictor_row_mismatch"
+  );
+
+  assert.throws(
+    () => decode("00>", "[/ASCIIHexDecode /LZWDecode /FlateDecode]"),
+    (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.filter_unsupported"
+  );
+});
+
 test("FlateDecode applies PNG predictors", () => {
   const predictedRows = new Uint8Array([
     0, 1, 2, 3,
