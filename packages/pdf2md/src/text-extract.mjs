@@ -110,6 +110,8 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const listIndentModel = createListIndentModel(lines);
   const codeModel = createCodeModel(lines);
   const rulingTableExports = createRulingTableExports(lines, options.rulingTables ?? []);
+  const lowConfidenceTables = [];
+  const lowConfidenceTableLines = new Set();
   const blocks = [];
   let previousWasList = false;
   const anchoredPages = new Set();
@@ -138,7 +140,9 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     }
 
     const table = readTableAt(lines, index);
-    if (table) {
+    if (table?.lowConfidence) {
+      recordLowConfidenceTable(table, lowConfidenceTables, lowConfidenceTableLines);
+    } else if (table) {
       previousWasList = false;
       appendPageAnchor(blocks, table.rows[0][0]?.pageIndex, options, anchoredPages);
       blocks.push(
@@ -222,6 +226,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   return {
     ...serializeMarkdownBlocks(blocks),
     tables: tableDiagnosticsFromBlocks(blocks),
+    lowConfidenceTables,
     layout,
     taggedStructureConflicts
   };
@@ -336,7 +341,7 @@ function readCodeBlockAt(lines, startIndex, headingModel, codeModel, rulingTable
       parseListItem(text) ||
       headingLevelForLine(line, headingModel) !== null ||
       readRulingTableAt(index, rulingTableExports) ||
-      readTableAt(lines, index)
+      readConfidentTableAt(lines, index)
     ) {
       break;
     }
@@ -634,7 +639,7 @@ function readParagraphAt(lines, startIndex, firstText, headingModel, rulingTable
       parseListItem(text) ||
       startsWithMarkdownBlockMarker(text) ||
       readRulingTableAt(index, rulingTableExports) ||
-      readTableAt(lines, index) ||
+      readConfidentTableAt(lines, index) ||
       !isParagraphContinuation(previous, line)
     ) {
       break;
@@ -1088,6 +1093,26 @@ function tableDiagnosticsFromBlocks(blocks) {
   return tables;
 }
 
+function recordLowConfidenceTable(table, lowConfidenceTables, seenLines) {
+  const sourceLines = table.rows.flat();
+  if (sourceLines.some((line) => seenLines.has(line))) {
+    return;
+  }
+  for (const line of sourceLines) {
+    seenLines.add(line);
+  }
+  lowConfidenceTables.push({
+    tableIndex: lowConfidenceTables.length,
+    source: "borderless-heuristic",
+    pageIndex: table.rows[0][0]?.pageIndex ?? null,
+    rows: table.rows.length,
+    columns: table.rows[0].length,
+    confidence: table.confidence,
+    reason: table.reason,
+    sourceLines: sourceLines.length
+  });
+}
+
 function serializeMarkdownBlocks(blocks) {
   if (blocks.length === 0) {
     return {
@@ -1358,6 +1383,11 @@ function readRulingTableAt(index, rulingTableExports) {
   return rulingTableExports.get(index) ?? null;
 }
 
+function readConfidentTableAt(lines, startIndex) {
+  const table = readTableAt(lines, startIndex);
+  return table && !table.lowConfidence ? table : null;
+}
+
 function readTableAt(lines, startIndex) {
   const rows = [];
   let index = startIndex;
@@ -1397,6 +1427,16 @@ function readTableAt(lines, startIndex) {
   }
   const numericColumns = numericColumnIndexes(rows);
   if (numericColumns.length === 0) {
+    if (isCompactBorderlessTableCandidate(rows)) {
+      return {
+        rows,
+        numericColumns,
+        confidence: lowConfidenceBorderlessTableConfidence(rows),
+        lowConfidence: true,
+        reason: "no-numeric-body-column",
+        endIndex: index
+      };
+    }
     return null;
   }
 
@@ -1426,6 +1466,25 @@ function borderlessTableConfidence(rows, numericColumns) {
   const numericRatio = numericColumns.length / rows[0].length;
   const rowBonus = rows.length >= 3 ? 0.1 : 0;
   return roundNumber(Math.min(0.85, 0.55 + numericRatio * 0.25 + rowBonus));
+}
+
+function lowConfidenceBorderlessTableConfidence(rows) {
+  const rowBonus = rows.length >= 3 ? 0.05 : 0;
+  return roundNumber(Math.min(0.5, 0.4 + rowBonus));
+}
+
+function isCompactBorderlessTableCandidate(rows) {
+  if (rows.length < 3 || rows[0].length < 2) {
+    return false;
+  }
+
+  const firstRowX = rows[0].map((cell) => cell.x).filter(Number.isFinite);
+  if (firstRowX.length !== rows[0].length) {
+    return false;
+  }
+
+  const columnGaps = firstRowX.slice(1).map((x, index) => x - firstRowX[index]);
+  return columnGaps.every((gap) => gap > 24 && gap <= 180);
 }
 
 function tableCellText(cell) {

@@ -166,6 +166,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   warnings.push(...unicodeMappingWarnings(textLines));
   warnings.push(...textOrderingWarnings(textLines));
   warnings.push(...taggedStructureConflictWarnings(markdownResult.taggedStructureConflicts));
+  warnings.push(...lowConfidenceTableWarnings(markdownResult.lowConfidenceTables));
 
   if (textLines.length > 0) {
     warnings.push(
@@ -235,6 +236,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         taggedStructureConflicts: markdownResult.taggedStructureConflicts.length,
         layout: markdownResult.layout,
         tables: markdownResult.tables,
+        lowConfidenceTables: markdownResult.lowConfidenceTables,
         rulingLines: summarizeRulingLines(rulingLines),
         rulingGrids: summarizeRulingGrids(rulingGrids),
         rulingTables: summarizeRulingTables(rulingTables, tableCsvSidecars.byTable),
@@ -628,6 +630,20 @@ function taggedStructureConflictWarnings(conflicts) {
       }
     )
   ];
+}
+
+function lowConfidenceTableWarnings(tables) {
+  if (!Array.isArray(tables) || tables.length === 0) {
+    return [];
+  }
+
+  return tables.map((table) =>
+    createWarning(
+      warningCodes.TableLowConfidence,
+      "Potential table was preserved as text because table confidence was low.",
+      table
+    )
+  );
 }
 
 function samePage(left, right) {

@@ -543,7 +543,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 - [x] Infer header rows.
 - [x] Infer numeric alignment.
 - [x] Track confidence per table.
-- [ ] Warn or preserve as preformatted text when confidence is low.
+- [x] Warn or preserve as preformatted text when confidence is low.
 
 ### 5.3 Table Quality Tests
 
@@ -559,7 +559,7 @@ Gate 4 acceptance:
 - [x] Visible-border synthetic tables pass exact structure tests.
 - [ ] Simple public tables meet cell text and adjacency thresholds.
 - [ ] Complex tables use HTML or sidecar fallback instead of broken GFM.
-- [ ] Low-confidence tables emit warnings.
+- [x] Low-confidence tables emit warnings.
 
 ## Phase 6: Gate 5 - Raster And OCR Path
 

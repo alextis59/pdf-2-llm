@@ -370,6 +370,7 @@ test("linesToMarkdown keeps same-baseline table cells in row-major order", () =>
     result.markdown,
     "# Table Fixture\n\n| Name | Count |\n| --- | ---: |\n| Alpha | 3 |\n| Beta | 7 |\n"
   );
+  assert.deepEqual(result.lowConfidenceTables, []);
   assert.deepEqual(result.tables, [
     {
       tableIndex: 0,
@@ -400,6 +401,39 @@ test("linesToMarkdown does not treat same-baseline prose columns as a table", ()
     "# Short Prose Columns\n\nAlpha topic\n\nBeta topic\n\nAlpha detail\n\nBeta detail\n"
   );
   assert.deepEqual(result.tables, []);
+  assert.deepEqual(result.lowConfidenceTables, []);
+});
+
+test("linesToMarkdownWithSourceMap reports low-confidence table-shaped text", () => {
+  const result = linesToMarkdownWithSourceMap([
+    { text: "Ambiguous Rows", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: "Name", fontSize: 12, x: 72, y: 670, pageIndex: 0 },
+    { text: "Status", fontSize: 12, x: 220, y: 670, pageIndex: 0 },
+    { text: "Alpha", fontSize: 12, x: 72, y: 650, pageIndex: 0 },
+    { text: "Active", fontSize: 12, x: 220, y: 650, pageIndex: 0 },
+    { text: "Beta", fontSize: 12, x: 72, y: 630, pageIndex: 0 },
+    { text: "Pending", fontSize: 12, x: 220, y: 630, pageIndex: 0 },
+    { text: "Gamma", fontSize: 12, x: 72, y: 610, pageIndex: 0 },
+    { text: "Review", fontSize: 12, x: 220, y: 610, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    result.markdown,
+    "# Ambiguous Rows\n\nName\n\nStatus\n\nAlpha\n\nActive\n\nBeta\n\nPending\n\nGamma\n\nReview\n"
+  );
+  assert.deepEqual(result.tables, []);
+  assert.deepEqual(result.lowConfidenceTables, [
+    {
+      tableIndex: 0,
+      source: "borderless-heuristic",
+      pageIndex: 0,
+      rows: 4,
+      columns: 2,
+      confidence: 0.45,
+      reason: "no-numeric-body-column",
+      sourceLines: 8
+    }
+  ]);
 });
 
 test("linesToMarkdownWithSourceMap reports page layout classifications", () => {

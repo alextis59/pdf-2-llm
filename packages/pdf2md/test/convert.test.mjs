@@ -146,6 +146,8 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
   const rulingTables = result.diagnostics.extraction.rulingTables;
 
   assert.equal(result.confidence.tables, 0.95);
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.TableLowConfidence));
+  assert.deepEqual(result.diagnostics.extraction.lowConfidenceTables, []);
   assert.deepEqual(result.diagnostics.extraction.tables, [
     {
       tableIndex: 0,
@@ -249,6 +251,44 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
   ]);
 });
 
+test("convertPdfToMarkdown warns and preserves low-confidence table candidates as text", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageTextPdf([
+      textOperation(72, 720, 22, "Ambiguous Rows"),
+      textOperation(72, 670, 12, "Name"),
+      textOperation(220, 670, 12, "Status"),
+      textOperation(72, 650, 12, "Alpha"),
+      textOperation(220, 650, 12, "Active"),
+      textOperation(72, 630, 12, "Beta"),
+      textOperation(220, 630, 12, "Pending")
+    ])
+  );
+  const warning = result.warnings.find(
+    (item) => item.code === warningCodes.TableLowConfidence
+  );
+
+  assert.equal(
+    result.markdown,
+    "# Ambiguous Rows\n\nName\n\nStatus\n\nAlpha\n\nActive\n\nBeta\n\nPending\n"
+  );
+  assert.deepEqual(result.diagnostics.extraction.tables, []);
+  assert.deepEqual(result.diagnostics.extraction.lowConfidenceTables, [
+    {
+      tableIndex: 0,
+      source: "borderless-heuristic",
+      pageIndex: 0,
+      rows: 3,
+      columns: 2,
+      confidence: 0.45,
+      reason: "no-numeric-body-column",
+      sourceLines: 6
+    }
+  ]);
+  assert.ok(warning);
+  assert.equal(warning.details.reason, "no-numeric-body-column");
+  assert.equal(warning.details.confidence, 0.45);
+});
+
 test("convertPdfToMarkdown can disable table CSV sidecars", async () => {
   const result = await convertPdfToMarkdown(visibleTableFixturePath.pathname, {
     tables: { csvSidecars: false }
@@ -277,6 +317,47 @@ test("text MVP matches expected markdown for simple generated fixtures", async (
     assert.equal(result.markdown, expected);
   }
 });
+
+function pdfString(value) {
+  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function textOperation(x, y, size, value) {
+  return `BT /F1 ${size} Tf ${x} ${y} Td (${pdfString(value)}) Tj ET`;
+}
+
+function streamObject(content) {
+  const bytes = Buffer.from(content, "binary");
+  return `<< /Length ${bytes.byteLength} >>\nstream\n${bytes.toString("binary")}\nendstream`;
+}
+
+function createSinglePageTextPdf(operations) {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>",
+    streamObject(`${operations.join("\n")}\n`)
+  ];
+  let body = "%PDF-1.4\n% pdf-2-llm test fixture\n";
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    offsets[index + 1] = Buffer.byteLength(body, "binary");
+    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = Buffer.byteLength(body, "binary");
+  body += `xref\n0 ${objects.length + 1}\n`;
+  body += "0000000000 65535 f\n";
+  for (let index = 1; index <= objects.length; index += 1) {
+    body += `${String(offsets[index]).padStart(10, "0")} 00000 n\n`;
+  }
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
+  body += `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  return Buffer.from(body, "binary");
+}
 
 test("table MVP matches expected markdown for generated table fixtures", async () => {
   const cases = [
