@@ -477,7 +477,7 @@ Gate 2 acceptance:
 - [x] Generated xref-stream, object-stream, incremental-update, linearized, and
   encrypted fixtures pass.
 - [x] Malformed corpus run has zero panics.
-- [ ] Fuzz targets run in CI smoke mode.
+- [x] Fuzz targets run in CI smoke mode.
 
 ## Phase 4: Gate 3 - Layout And Document Structure
 
