@@ -129,6 +129,7 @@ test("linesToMarkdownWithSourceMap reports page layout classifications", () => {
     multi.layout.pages[0].columns.map((column) => column.index),
     [0, 1]
   );
+  assert.equal(multi.layout.pages[0].sidebars.length, 0);
 
   const mixed = linesToMarkdownWithSourceMap([
     { text: "Mixed", fontSize: 22, x: 72, y: 720, width: 80, pageIndex: 0 },
@@ -140,6 +141,29 @@ test("linesToMarkdownWithSourceMap reports page layout classifications", () => {
   ]);
   assert.equal(mixed.layout.pages[0].kind, "mixed");
   assert.equal(mixed.layout.pages[0].columns.length, 2);
+});
+
+test("linesToMarkdownWithSourceMap reports sidebar and callout regions", () => {
+  const result = linesToMarkdownWithSourceMap([
+    { text: "Sidebar Fixture", fontSize: 22, x: 72, y: 720, width: 150, pageIndex: 0 },
+    { text: "Main body starts.", fontSize: 12, x: 72, y: 680, width: 120, pageIndex: 0 },
+    { text: "Aside fact", fontSize: 10, x: 420, y: 670, width: 80, pageIndex: 0 },
+    { text: "Main body continues.", fontSize: 12, x: 72, y: 660, width: 140, pageIndex: 0 },
+    { text: "Aside detail", fontSize: 10, x: 420, y: 650, width: 90, pageIndex: 0 },
+    { text: "Main body adds detail.", fontSize: 12, x: 72, y: 640, width: 150, pageIndex: 0 },
+    { text: "Main body keeps going.", fontSize: 12, x: 72, y: 620, width: 150, pageIndex: 0 },
+    { text: "Main body ends.", fontSize: 12, x: 72, y: 600, width: 110, pageIndex: 0 },
+    { text: "Note: Check exceptions.", fontSize: 12, x: 90, y: 560, width: 170, pageIndex: 0 }
+  ]);
+
+  const page = result.layout.pages[0];
+  assert.equal(page.sidebars.length, 1);
+  assert.equal(page.sidebars[0].kind, "sidebar");
+  assert.equal(page.sidebars[0].columnIndex, 1);
+  assert.equal(page.sidebars[0].rows, 2);
+  assert.equal(page.callouts.length, 1);
+  assert.equal(page.callouts[0].kind, "callout");
+  assert.equal(page.callouts[0].rows, 1);
 });
 
 test("linesToMarkdown removes high-confidence page numbers", () => {

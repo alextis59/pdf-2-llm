@@ -243,7 +243,9 @@ function classifyPageLayout(indexedLines) {
       kind: "unknown",
       rows: 0,
       blocks: 0,
-      columns: []
+      columns: [],
+      sidebars: [],
+      callouts: []
     };
   }
 
@@ -251,6 +253,7 @@ function classifyPageLayout(indexedLines) {
   const columns = detectReadingColumns(rows);
   const blocks = segmentRowsIntoReadingBlocks(rows);
   const spanningRows = columns.length >= 2 ? rows.filter((row) => rowSpansColumns(row, columns)) : [];
+  const regions = detectLayoutRegions(rows, columns);
   return {
     pageIndex,
     kind: layoutKindFor(columns, spanningRows),
@@ -260,7 +263,9 @@ function classifyPageLayout(indexedLines) {
       index,
       x: roundNumber(column.center),
       rows: column.rows.length
-    }))
+    })),
+    sidebars: regions.sidebars,
+    callouts: regions.callouts
   };
 }
 
@@ -280,6 +285,51 @@ function layoutKindFor(columns, spanningRows) {
     return "single-column";
   }
   return spanningRows.length > 0 ? "mixed" : "multi-column";
+}
+
+function detectLayoutRegions(rows, columns) {
+  return {
+    sidebars: detectSidebarRegions(columns),
+    callouts: rows.filter(isCalloutRow).map((row) => createRegion("callout", [row]))
+  };
+}
+
+function detectSidebarRegions(columns) {
+  if (columns.length < 2) {
+    return [];
+  }
+
+  const dominant = columns.reduce((best, column) =>
+    column.rows.length > best.rows.length ? column : best
+  );
+  return columns
+    .map((column, columnIndex) => ({ column, columnIndex }))
+    .filter(({ column }) => column !== dominant && column.rows.length <= dominant.rows.length * 0.45)
+    .map(({ column, columnIndex }) => createRegion("sidebar", column.rows, { columnIndex }));
+}
+
+function isCalloutRow(row) {
+  return /^(?:note|tip|warning|important|caution):\s+/i.test(rowText(row));
+}
+
+function createRegion(kind, rows, extra = {}) {
+  const left = Math.min(...rows.map((row) => row.x));
+  const right = Math.max(...rows.map((row) => row.right));
+  const top = Math.max(...rows.map((row) => row.y));
+  const bottom = Math.min(...rows.map((row) => row.y - Math.max(1, row.fontSize)));
+  return {
+    kind,
+    x: roundNumber(left),
+    y: roundNumber(top),
+    width: roundNumber(right - left),
+    height: roundNumber(top - bottom),
+    rows: rows.length,
+    ...extra
+  };
+}
+
+function rowText(row) {
+  return row.items.map((item) => normalizeText(item.line.text ?? "")).join(" ");
 }
 
 function roundNumber(value) {

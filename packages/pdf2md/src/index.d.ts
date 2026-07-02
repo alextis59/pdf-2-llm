@@ -103,12 +103,24 @@ export type PageLayoutDiagnostics = {
   rows: number;
   blocks: number;
   columns: LayoutColumnDiagnostics[];
+  sidebars: LayoutRegionDiagnostics[];
+  callouts: LayoutRegionDiagnostics[];
 };
 
 export type LayoutColumnDiagnostics = {
   index: number;
   x: number;
   rows: number;
+};
+
+export type LayoutRegionDiagnostics = {
+  kind: "sidebar" | "callout";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rows: number;
+  columnIndex?: number;
 };
 
 export type PageDiagnostics = {
