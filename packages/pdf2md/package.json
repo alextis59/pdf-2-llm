@@ -32,7 +32,7 @@
     }
   },
   "scripts": {
-    "build": "node --check src/index.mjs && node --check src/pdf-parser.mjs && node --check src/stream-filters.mjs && node --check src/content-stream.mjs && node --check src/text-extract.mjs && node --check src/node.mjs && node --check src/browser.mjs && node --check src/worker.mjs && node --check src/cli.mjs && node --check src/schema.mjs",
+    "build": "node --check src/index.mjs && node --check src/pdf-parser.mjs && node --check src/stream-filters.mjs && node --check src/content-stream.mjs && node --check src/font-encoding.mjs && node --check src/text-extract.mjs && node --check src/node.mjs && node --check src/browser.mjs && node --check src/worker.mjs && node --check src/cli.mjs && node --check src/schema.mjs",
     "test": "node --test test/*.test.mjs"
   }
 }

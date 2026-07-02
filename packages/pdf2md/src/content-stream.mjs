@@ -1,3 +1,5 @@
+import { decodePdfStringWithFont } from "./font-encoding.mjs";
+
 const whitespacePattern = /\s/;
 const delimiterChars = new Set(["(", ")", "<", ">", "[", "]", "{", "}", "/", "%"]);
 const identityMatrix = Object.freeze([1, 0, 0, 1, 0, 0]);
@@ -180,20 +182,20 @@ function executeOperator(operator, context) {
     return;
   }
   if (operator === "Tj") {
-    emitText(tokenString(operands.at(-1)), context);
+    emitText(decodeStringToken(operands.at(-1), state.font), context);
     return;
   }
   if (operator === "TJ") {
     const array = operands.at(-1);
     if (array?.type === "array") {
-      emitText(array.items.map((item) => tokenString(item)).join(""), context);
+      emitText(array.items.map((item) => decodeStringToken(item, state.font)).join(""), context);
     }
     return;
   }
   if (operator === "'") {
     moveTextPosition(state, 0, -state.leading);
     context.lineSerial += 1;
-    emitText(tokenString(operands.at(-1)), context);
+    emitText(decodeStringToken(operands.at(-1), state.font), context);
     return;
   }
   if (operator === "\"") {
@@ -207,7 +209,7 @@ function executeOperator(operator, context) {
     }
     moveTextPosition(state, 0, -state.leading);
     context.lineSerial += 1;
-    emitText(tokenString(operands.at(-1)), context);
+    emitText(decodeStringToken(operands.at(-1), state.font), context);
   }
 }
 
@@ -309,7 +311,7 @@ function transformPoint(matrix, x, y) {
 }
 
 function textConfidence(font) {
-  if (font?.hasToUnicode) {
+  if (font?.toUnicode?.entries > 0) {
     return 0.95;
   }
   if (font?.subtype === "Type1" || font?.subtype === "TrueType") {
@@ -330,8 +332,8 @@ function tokenName(token) {
   return token?.type === "name" ? token.value : null;
 }
 
-function tokenString(token) {
-  return token?.type === "string" ? token.value : "";
+function decodeStringToken(token, font) {
+  return decodePdfStringWithFont(token, font);
 }
 
 function readArray(source, startOffset) {
@@ -413,45 +415,51 @@ function readName(source, startOffset) {
 function readLiteralString(source, startOffset) {
   let offset = startOffset + 1;
   let depth = 1;
-  let raw = "";
+  const bytes = [];
 
   while (offset < source.length) {
     const char = source[offset];
     if (char === "\\") {
       const escaped = readEscapedStringCharacter(source, offset);
-      raw += escaped.value;
+      for (const byte of escaped.bytes) {
+        bytes.push(byte);
+      }
       offset = escaped.offset;
       continue;
     }
     if (char === "(") {
       depth += 1;
-      raw += char;
+      bytes.push(char.charCodeAt(0));
       offset += 1;
       continue;
     }
     if (char === ")") {
       depth -= 1;
       if (depth === 0) {
+        const value = bytesToLatin1(bytes);
         return {
           value: {
             type: "string",
-            value: raw
+            value,
+            bytes
           },
           offset: offset + 1
         };
       }
-      raw += char;
+      bytes.push(char.charCodeAt(0));
       offset += 1;
       continue;
     }
-    raw += char;
+    bytes.push(char.charCodeAt(0) & 0xff);
     offset += 1;
   }
 
+  const value = bytesToLatin1(bytes);
   return {
     value: {
       type: "string",
-      value: raw
+      value,
+      bytes
     },
     offset
   };
@@ -461,7 +469,7 @@ function readEscapedStringCharacter(source, startOffset) {
   const next = source[startOffset + 1];
   if (next === undefined) {
     return {
-      value: "",
+      bytes: [],
       offset: startOffset + 1
     };
   }
@@ -471,14 +479,14 @@ function readEscapedStringCharacter(source, startOffset) {
       offset += 1;
     }
     return {
-      value: "",
+      bytes: [],
       offset
     };
   }
   if (/[0-7]/.test(next)) {
     const octal = source.slice(startOffset + 1).match(/^[0-7]{1,3}/)?.[0] ?? "";
     return {
-      value: String.fromCharCode(Number.parseInt(octal, 8)),
+      bytes: [Number.parseInt(octal, 8) & 0xff],
       offset: startOffset + 1 + octal.length
     };
   }
@@ -493,8 +501,9 @@ function readEscapedStringCharacter(source, startOffset) {
     ")": ")",
     "\\": "\\"
   };
+  const value = escapes[next] ?? next;
   return {
-    value: escapes[next] ?? next,
+    bytes: [value.charCodeAt(0) & 0xff],
     offset: startOffset + 2
   };
 }
@@ -517,17 +526,22 @@ function readHexString(source, startOffset) {
     hex += "0";
   }
 
-  let value = "";
+  const bytes = [];
   for (let index = 0; index < hex.length; index += 2) {
-    value += String.fromCharCode(Number.parseInt(hex.slice(index, index + 2), 16));
+    bytes.push(Number.parseInt(hex.slice(index, index + 2), 16));
   }
   return {
     value: {
       type: "string",
-      value
+      value: bytesToLatin1(bytes),
+      bytes
     },
     offset
   };
+}
+
+function bytesToLatin1(bytes) {
+  return String.fromCharCode(...bytes);
 }
 
 function readNumber(source, offset) {

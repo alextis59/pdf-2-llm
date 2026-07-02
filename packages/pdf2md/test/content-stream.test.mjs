@@ -11,27 +11,40 @@ const resources = {
       subtype: "Type1",
       baseFont: "Helvetica",
       encoding: "WinAnsiEncoding",
-      hasToUnicode: false
+      hasToUnicode: false,
+      toUnicode: null
+    },
+    F2: {
+      subtype: "Type1",
+      baseFont: "Custom",
+      encoding: "CustomEncoding",
+      hasToUnicode: true,
+      toUnicode: {
+        entries: 2,
+        codespaces: [{ start: "00", end: "FF", length: 1 }],
+        map: new Map([
+          ["01", "A"],
+          ["02", "B"]
+        ])
+      }
     }
   }
 };
 
 test("tokenizeContentStream decodes strings, names, arrays, numbers, and comments", () => {
   const tokens = tokenizeContentStream("/F#31 12 Tf % comment\n[(A\\050) -20 <42>] TJ");
-  assert.deepEqual(tokens, [
+  assert.deepEqual(tokens.slice(0, 3), [
     { type: "name", value: "F1" },
     { type: "number", value: 12 },
-    { type: "word", value: "Tf" },
-    {
-      type: "array",
-      items: [
-        { type: "string", value: "A(" },
-        { type: "number", value: -20 },
-        { type: "string", value: "B" }
-      ]
-    },
-    { type: "word", value: "TJ" }
+    { type: "word", value: "Tf" }
   ]);
+  assert.equal(tokens[3].type, "array");
+  assert.deepEqual(tokens[3].items, [
+    { type: "string", value: "A(", bytes: [65, 40] },
+    { type: "number", value: -20 },
+    { type: "string", value: "B", bytes: [66] }
+  ]);
+  assert.deepEqual(tokens[4], { type: "word", value: "TJ" });
 });
 
 test("extractContentStreamTextLines interprets text showing operators", () => {
@@ -63,6 +76,15 @@ test("extractContentStreamTextLines interprets text showing operators", () => {
   assert.equal(lines[1].y, 6);
   assert.equal(lines[2].text, "quoted");
   assert.equal(lines[2].y, -8);
+});
+
+test("extractContentStreamTextLines applies ToUnicode font maps to string bytes", () => {
+  const lines = extractContentStreamTextLines("BT /F2 12 Tf 10 20 Td <0102> Tj ET", {
+    resources
+  });
+
+  assert.equal(lines[0].text, "AB");
+  assert.equal(lines[0].confidence, 0.95);
 });
 
 test("extractContentStreamTextLines tracks text matrices and CTM graphics state", () => {

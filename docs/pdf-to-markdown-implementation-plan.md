@@ -398,11 +398,11 @@ assets.
 - [x] Interpret text positioning operators.
 - [x] Handle text matrices and current transformation matrix.
 - [x] Parse simple fonts.
-- [ ] Parse ToUnicode CMaps.
-- [ ] Map glyphs to Unicode with confidence.
+- [x] Parse ToUnicode CMaps.
+- [x] Map glyphs to Unicode with confidence.
 - [ ] Preserve geometry for glyphs, spans, and lines.
 - [ ] Normalize common ligatures and whitespace.
-- [ ] Emit warnings for missing or suspicious Unicode maps.
+- [x] Emit warnings for missing or suspicious Unicode maps.
 
 ### 2.5 Line, Paragraph, And Markdown MVP
 

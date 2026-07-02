@@ -89,6 +89,56 @@ test("parsePdfDocument decodes Flate content streams for text extraction", async
   assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
 });
 
+test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {
+  const toUnicode = [
+    "/CIDInit /ProcSet findresource begin",
+    "12 dict begin",
+    "begincmap",
+    "1 begincodespacerange",
+    "<00> <FF>",
+    "endcodespacerange",
+    "1 beginbfchar",
+    "<01> <0041>",
+    "endbfchar",
+    "endcmap",
+    "CMapName currentdict /CMap defineresource pop",
+    "end",
+    "end"
+  ].join("\n");
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [5 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Custom /Encoding /CustomEncoding /ToUnicode 4 0 R >>",
+    streamObject(toUnicode),
+    "<< /Type /Page /Parent 2 0 R /Contents 6 0 R >>",
+    streamObject("BT /F1 22 Tf 20 200 Td <01> Tj ET\n")
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.pages[0].resources.fonts.F1.toUnicodeEntries, 1);
+  assert.equal(result.markdown, "# A\n");
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.TextUnicodeMappingSuspect));
+});
+
+test("convertPdfToMarkdown warns for suspicious font mappings without ToUnicode", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Custom /Encoding /CustomEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject("BT /F1 12 Tf 20 200 Td (A) Tj ET\n")
+  ]);
+  const result = await convertPdfToMarkdown(bytes);
+  const warning = result.warnings.find(
+    (item) => item.code === warningCodes.TextUnicodeMappingSuspect
+  );
+
+  assert.ok(warning);
+  assert.equal(warning.details.fontName, "F1");
+  assert.equal(warning.details.encoding, "CustomEncoding");
+});
+
 test("parsePdfDocument reports corrupt stream filters with structured syntax errors", () => {
   const bytes = createTestPdf([
     "<< /Type /Catalog /Pages 2 0 R >>",

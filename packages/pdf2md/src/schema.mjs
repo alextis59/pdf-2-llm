@@ -8,6 +8,7 @@ export const warningCodes = Object.freeze({
   OcrDisabled: "ocr.disabled",
   WebGpuUnavailable: "webgpu.unavailable",
   HeuristicTextExtraction: "text.heuristic_content_stream",
+  TextUnicodeMappingSuspect: "text.unicode_mapping_suspect",
   PdfParseFailed: "pdf.parse_failed"
 });
 

@@ -8,6 +8,7 @@ import {
   schemaVersion,
   warningCodes
 } from "./schema.mjs";
+import { isTrustedSimpleEncoding } from "./font-encoding.mjs";
 import { extractTextLines, linesToMarkdown } from "./text-extract.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 
@@ -84,6 +85,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
 
   const textLines = pdfVersion ? extractTextLines(normalized.bytes, { document: pdfDocument }) : [];
   const markdown = linesToMarkdown(textLines);
+  warnings.push(...unicodeMappingWarnings(textLines));
 
   if (textLines.length > 0) {
     warnings.push(
@@ -182,6 +184,36 @@ export async function convertPdfToMarkdown(input, options = {}) {
 
   emitProgress(options, "complete", 1);
   return result;
+}
+
+function unicodeMappingWarnings(textLines) {
+  const warnings = [];
+  const seen = new Set();
+  for (const line of textLines) {
+    const font = line.font;
+    if (!font || font.hasToUnicode || isTrustedSimpleEncoding(font)) {
+      continue;
+    }
+
+    const key = `${line.pageIndex ?? ""}:${line.fontName ?? ""}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    warnings.push(
+      createWarning(
+        warningCodes.TextUnicodeMappingSuspect,
+        "Text was extracted from a font without a trusted Unicode map.",
+        {
+          pageIndex: line.pageIndex,
+          fontName: line.fontName,
+          baseFont: font.baseFont,
+          encoding: font.encoding
+        }
+      )
+    );
+  }
+  return warnings;
 }
 
 async function normalizeInput(input) {

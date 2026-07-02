@@ -1,3 +1,4 @@
+import { parseToUnicodeCMap } from "./font-encoding.mjs";
 import { PdfStreamDecodeError, decodeStreamBytes } from "./stream-filters.mjs";
 
 export class PdfSyntaxError extends Error {
@@ -438,13 +439,19 @@ function resolveResources(resourcesValue, getObject) {
     for (const [name, fontValue] of Object.entries(fontDictionary.entries)) {
       const fontObject = getObject(fontValue);
       const fontDict = resolveValue(fontValue, getObject);
+      const toUnicodeObject = getObject(fontDict?.entries?.ToUnicode);
+      const toUnicode = toUnicodeObject?.stream
+        ? parseToUnicodeCMap(toUnicodeObject.stream.text)
+        : null;
       fonts[name] = {
         objectNumber: fontObject?.objectNumber ?? null,
         generationNumber: fontObject?.generationNumber ?? null,
         subtype: nameValue(fontDict?.entries?.Subtype),
         baseFont: nameValue(fontDict?.entries?.BaseFont),
         encoding: nameValue(fontDict?.entries?.Encoding),
-        hasToUnicode: Boolean(fontDict?.entries?.ToUnicode)
+        hasToUnicode: Boolean(toUnicodeObject?.stream),
+        toUnicode,
+        toUnicodeEntries: toUnicode?.entries ?? 0
       };
     }
   }
