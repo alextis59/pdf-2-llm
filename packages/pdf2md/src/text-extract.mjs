@@ -44,6 +44,7 @@ export function linesToMarkdown(lines, options = {}) {
 
 export function linesToMarkdownWithSourceMap(lines, options = {}) {
   lines = removeRepeatedRunningContent(lines);
+  lines = orderLinesForReading(lines);
   const blocks = [];
   let previousWasList = false;
   const anchoredPages = new Set();
@@ -200,6 +201,213 @@ function readParagraphAt(lines, startIndex, firstText) {
     sourceLines: lines.slice(startIndex, index),
     endIndex: index
   };
+}
+
+function orderLinesForReading(lines) {
+  const pageGroups = [];
+  const pageIndexes = new Map();
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const key = Number.isInteger(line.pageIndex) ? `page:${line.pageIndex}` : "page:unknown";
+    let pageGroupIndex = pageIndexes.get(key);
+    if (pageGroupIndex === undefined) {
+      pageGroupIndex = pageGroups.length;
+      pageIndexes.set(key, pageGroupIndex);
+      pageGroups.push([]);
+    }
+    pageGroups[pageGroupIndex].push({ line, index });
+  }
+
+  return pageGroups.flatMap(orderPageLinesForReading);
+}
+
+function orderPageLinesForReading(indexedLines) {
+  if (!indexedLines.every((item) => hasLineGeometry(item.line))) {
+    return indexedLines.map((item) => item.line);
+  }
+
+  const rows = groupLinesIntoRows(indexedLines);
+  const blocks = segmentRowsIntoReadingBlocks(rows);
+  return blocks.flatMap((block) => block.rows.flatMap((row) => row.items.map((item) => item.line)));
+}
+
+function hasLineGeometry(line) {
+  return Number.isFinite(line.x) && Number.isFinite(line.y);
+}
+
+function groupLinesIntoRows(indexedLines) {
+  const rows = [];
+  const sorted = [...indexedLines].sort(
+    (left, right) =>
+      right.line.y - left.line.y ||
+      left.line.x - right.line.x ||
+      left.index - right.index
+  );
+
+  for (const item of sorted) {
+    const tolerance = lineRowTolerance(item.line);
+    const current = rows[rows.length - 1];
+    if (current && Math.abs(current.y - item.line.y) <= Math.max(current.tolerance, tolerance)) {
+      current.items.push(item);
+      current.y = average(current.items.map((rowItem) => rowItem.line.y));
+      current.tolerance = Math.max(current.tolerance, tolerance);
+      continue;
+    }
+
+    rows.push({
+      items: [item],
+      y: item.line.y,
+      tolerance
+    });
+  }
+
+  return rows.flatMap(createReadingRows);
+}
+
+function createReadingRows(row) {
+  const items = sortRowItems(row.items);
+  if (items.length <= 1 || isLikelyTabularRowItems(items)) {
+    return [createReadingRow(items)];
+  }
+
+  return items.map((item) => createReadingRow([item]));
+}
+
+function createReadingRow(items) {
+  items = sortRowItems(items);
+  const left = Math.min(...items.map((item) => item.line.x));
+  const right = Math.max(...items.map((item) => lineRightEdge(item.line)));
+  return {
+    items,
+    x: left,
+    y: average(items.map((item) => item.line.y)),
+    right,
+    width: right - left,
+    fontSize: Math.max(...items.map((item) => item.line.fontSize ?? 0))
+  };
+}
+
+function sortRowItems(items) {
+  return [...items].sort(
+    (left, right) =>
+      left.line.x - right.line.x ||
+      left.line.y - right.line.y ||
+      left.index - right.index
+  );
+}
+
+function isLikelyTabularRowItems(items) {
+  if (items.length < 2) {
+    return false;
+  }
+
+  const texts = items.map((item) => normalizeText(item.line.text ?? ""));
+  if (texts.some(isNumericCell)) {
+    return true;
+  }
+
+  return texts.every((text) => text.length <= 24 && !/[.!?:;]$/.test(text));
+}
+
+function lineRightEdge(line) {
+  if (Number.isFinite(line.width) && line.width > 0) {
+    return line.x + line.width;
+  }
+  const estimatedGlyphWidth = Math.max(4, line.fontSize ?? 10) * 0.5;
+  return line.x + Math.max(1, normalizeText(line.text ?? "").length * estimatedGlyphWidth);
+}
+
+function lineRowTolerance(line) {
+  return Math.max(2, (line.fontSize ?? 10) * 0.25);
+}
+
+function segmentRowsIntoReadingBlocks(rows) {
+  const columns = detectReadingColumns(rows);
+  if (columns.length < 2) {
+    return [
+      {
+        columnIndex: 0,
+        rows
+      }
+    ];
+  }
+
+  return columns
+    .map((_, columnIndex) => ({
+      columnIndex,
+      rows: rows
+        .filter((row) => nearestColumnIndex(row, columns) === columnIndex)
+        .sort(compareRowsTopDown)
+    }))
+    .filter((block) => block.rows.length > 0);
+}
+
+function detectReadingColumns(rows) {
+  const candidates = rows.filter((row) => Number.isFinite(row.x));
+  if (candidates.length < 4) {
+    return [];
+  }
+
+  const clusterTolerance = Math.max(36, median(candidates.map((row) => row.fontSize || 12)) * 3);
+  const clusters = [];
+  for (const row of [...candidates].sort((left, right) => left.x - right.x)) {
+    const cluster = clusters.find((item) => Math.abs(item.center - row.x) <= clusterTolerance);
+    if (cluster) {
+      cluster.rows.push(row);
+      cluster.center = average(cluster.rows.map((item) => item.x));
+      continue;
+    }
+    clusters.push({
+      center: row.x,
+      rows: [row]
+    });
+  }
+
+  const substantialClusters = clusters.filter((cluster) => cluster.rows.length >= 2);
+  if (substantialClusters.length < 2) {
+    return [];
+  }
+
+  const separatedClusters = substantialClusters
+    .sort((left, right) => left.center - right.center)
+    .filter((cluster, index, all) => {
+      if (index === 0) {
+        return true;
+      }
+      return cluster.center - all[index - 1].center >= 96;
+    });
+
+  return separatedClusters.length >= 2 ? separatedClusters : [];
+}
+
+function nearestColumnIndex(row, columns) {
+  let bestIndex = 0;
+  let bestDistance = Infinity;
+  for (let index = 0; index < columns.length; index += 1) {
+    const distance = Math.abs(row.x - columns[index].center);
+    if (distance < bestDistance) {
+      bestIndex = index;
+      bestDistance = distance;
+    }
+  }
+  return bestIndex;
+}
+
+function compareRowsTopDown(left, right) {
+  return right.y - left.y || left.x - right.x;
+}
+
+function average(values) {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function median(values) {
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) {
+    return sorted[middle];
+  }
+  return (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
 function createMarkdownBlock(text, kind, sourceLines = []) {

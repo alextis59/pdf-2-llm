@@ -76,6 +76,38 @@ test("linesToMarkdown groups wrapped lines into paragraphs", () => {
   );
 });
 
+test("linesToMarkdown orders interleaved two-column lines by geometry", () => {
+  const markdown = linesToMarkdown([
+    { text: "Layout Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: "Left column starts here.", fontSize: 12, x: 72, y: 670, pageIndex: 0 },
+    { text: "Right column starts here.", fontSize: 12, x: 330, y: 670, pageIndex: 0 },
+    { text: "Left column continues here.", fontSize: 12, x: 72, y: 650, pageIndex: 0 },
+    { text: "Right column continues here.", fontSize: 12, x: 330, y: 650, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "# Layout Fixture\n\nLeft column starts here.\n\nLeft column continues here.\n\nRight column starts here.\n\nRight column continues here.\n"
+  );
+});
+
+test("linesToMarkdown keeps same-baseline table cells in row-major order", () => {
+  const markdown = linesToMarkdown([
+    { text: "Table Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: "Name", fontSize: 12, x: 72, y: 670, pageIndex: 0 },
+    { text: "Count", fontSize: 12, x: 220, y: 670, pageIndex: 0 },
+    { text: "Alpha", fontSize: 12, x: 72, y: 650, pageIndex: 0 },
+    { text: "3", fontSize: 12, x: 220, y: 650, pageIndex: 0 },
+    { text: "Beta", fontSize: 12, x: 72, y: 630, pageIndex: 0 },
+    { text: "7", fontSize: 12, x: 220, y: 630, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "# Table Fixture\n\n| Name | Count |\n| --- | ---: |\n| Alpha | 3 |\n| Beta | 7 |\n"
+  );
+});
+
 test("linesToMarkdown removes high-confidence page numbers", () => {
   const markdown = linesToMarkdown([
     { text: "Page Number Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },

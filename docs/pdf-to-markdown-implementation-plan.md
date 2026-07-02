@@ -485,7 +485,7 @@ Goal: improve reading order and document structure for real-world documents.
 
 ### 4.1 Reading Order
 
-- [ ] Implement block segmentation from line geometry.
+- [x] Implement block segmentation from line geometry.
 - [ ] Detect single-column, multi-column, and mixed layouts.
 - [ ] Detect sidebars and callouts.
 - [ ] Detect footnotes.
