@@ -515,7 +515,7 @@ Goal: improve reading order and document structure for real-world documents.
 
 Gate 3 acceptance:
 
-- [ ] Multi-column scientific papers meet reading-order thresholds.
+- [x] Multi-column scientific papers meet reading-order thresholds.
 - [ ] Long manual fixtures run within memory limits.
 - [x] Header/footer removal meets accepted precision and recall targets.
 - [ ] Tagged PDFs use tags where reliable and fall back to geometry where not.

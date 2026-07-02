@@ -1,4 +1,4 @@
-id: synthetic-two-column
+id: synthetic-scientific-two-column
 gate: layout-v1
 sourceType: digital
 expectedMode: pdf-text
@@ -6,23 +6,26 @@ gating: true
 must:
   - detect_columns
   - preserve_left_then_right_reading_order
+  - preserve_caption
 mustNot:
   - invent_missing_values
   - emit_binary_garbage
   - interleave_columns_line_by_line
+  - move_caption_before_body
 metrics:
   minTextCoverage: 1
   maxReadingOrderDistance: 0
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
-    contains: "Left column starts here."
+    contains: "Abstract result starts here."
   - page: 1
-    contains: "Right column starts here."
+    contains: "Conclusion follows the discussion."
 structure:
   expected:
     - two_columns
     - reading_order
+    - caption
 warnings:
   allowed: []
 assets:
@@ -30,4 +33,4 @@ assets:
 review:
   humanReviewedBy: "codex"
   reviewedAt: "2026-07-02"
-  notes: "Expected order is left column top-down, then right column top-down."
+  notes: "Expected order is left column top-down, including the figure caption, then right column top-down; maxReadingOrderDistance is zero because the generated fixture has exact reviewed Markdown."

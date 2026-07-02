@@ -107,6 +107,7 @@ function usage() {
   node scripts/qa/compare-oracles.mjs --all [--dry-run] [--report <path>]
   node scripts/qa/compare-oracles.mjs --gate <gate> [--dry-run] [--report <path>]
   node scripts/qa/compare-oracles.mjs --id <manifest-id> [--dry-run] [--report <path>]
+  node scripts/qa/compare-oracles.mjs --reading-order-gated [--dry-run] [--report <path>]
 
 Options:
   --manifest <path>          Manifest path. Defaults to corpus/manifest.json.
@@ -175,7 +176,8 @@ async function loadAcceptance(repoRoot, entry) {
     expectedMode: scalars.get("expectedMode"),
     gating: scalars.get("gating") === "true",
     skipReason: scalars.get("skipReason") ?? "",
-    minTextCoverage: readNumber(metrics.get("minTextCoverage"), 1)
+    minTextCoverage: readNumber(metrics.get("minTextCoverage"), 1),
+    maxReadingOrderDistance: readNumber(metrics.get("maxReadingOrderDistance"), null)
   };
 }
 
@@ -191,7 +193,7 @@ async function loadCases(repoRoot, manifestPath) {
   return cases;
 }
 
-function selectCases(cases, { selectedIds, selectedGate }) {
+function selectCases(cases, { selectedIds, selectedGate, readingOrderGated = false }) {
   const idSet = new Set(selectedIds);
   const selected = [];
   const skipped = [];
@@ -213,6 +215,13 @@ function selectCases(cases, { selectedIds, selectedGate }) {
     if (!reason && selectedGate && corpusCase.acceptance.gate !== selectedGate) {
       reason =
         `gate-filter: acceptance gate ${corpusCase.acceptance.gate} does not match selected gate ${selectedGate}`;
+    }
+    if (
+      !reason &&
+      readingOrderGated &&
+      !Number.isFinite(corpusCase.acceptance.maxReadingOrderDistance)
+    ) {
+      reason = "reading-order-filter: no metrics.maxReadingOrderDistance threshold";
     }
 
     if (reason) {
@@ -246,22 +255,59 @@ function formatAcceptanceSkip(corpusCase, code) {
 
 async function compareCase(repoRoot, corpusCase, thresholdOverride) {
   const { entry, acceptance } = corpusCase;
-  const oraclePath = path.join(repoRoot, "corpus", "baselines", entry.id, "oracles", "pdftotext.txt");
-  const oracleText = await readFile(oraclePath, "utf8");
+  const textOracle = await readTextOracle(repoRoot, entry);
+  const readingOrderOracle = await readReadingOrderOracle(repoRoot, entry, textOracle);
   const result = await convertPdfToMarkdown(path.join(repoRoot, entry.path), {
     ocr: { enabled: false }
   });
-  const comparison = compareTextCoverage(oracleText, result.markdown);
-  const readingOrder = compareReadingOrder(oracleText, result.markdown);
+  const comparison = compareTextCoverage(textOracle.text, result.markdown);
+  const readingOrder = compareReadingOrder(readingOrderOracle.text, result.markdown);
   const minTextCoverage = thresholdOverride ?? acceptance.minTextCoverage;
+  const maxReadingOrderDistance = acceptance.maxReadingOrderDistance;
+  const passedTextCoverage = comparison.coverage + Number.EPSILON >= minTextCoverage;
+  const passedReadingOrder =
+    !Number.isFinite(maxReadingOrderDistance) ||
+    readingOrder.readingOrderDistance <= maxReadingOrderDistance + Number.EPSILON;
   return {
     id: entry.id,
     gate: acceptance.gate,
-    oraclePath: path.relative(repoRoot, oraclePath),
+    oraclePath: path.relative(repoRoot, textOracle.path),
+    readingOrderOraclePath: path.relative(repoRoot, readingOrderOracle.path),
     minTextCoverage,
+    maxReadingOrderDistance,
     ...comparison,
     ...readingOrder,
-    passed: comparison.coverage + Number.EPSILON >= minTextCoverage
+    passedTextCoverage,
+    passedReadingOrder,
+    passed: passedTextCoverage && passedReadingOrder
+  };
+}
+
+async function readTextOracle(repoRoot, entry) {
+  const pdftotextPath = path.join(repoRoot, "corpus", "baselines", entry.id, "oracles", "pdftotext.txt");
+  try {
+    return {
+      path: pdftotextPath,
+      text: await readFile(pdftotextPath, "utf8")
+    };
+  } catch {
+    return readExpectedMarkdownOracle(repoRoot, entry);
+  }
+}
+
+async function readReadingOrderOracle(repoRoot, entry, textOracle) {
+  try {
+    return await readExpectedMarkdownOracle(repoRoot, entry);
+  } catch {
+    return textOracle;
+  }
+}
+
+async function readExpectedMarkdownOracle(repoRoot, entry) {
+  const expectedPath = path.join(repoRoot, "corpus", "expected", `${entry.id}.md`);
+  return {
+    path: expectedPath,
+    text: await readFile(expectedPath, "utf8")
   };
 }
 
@@ -276,12 +322,15 @@ function printCase(prefix, corpusCase) {
 
 function printResult(result) {
   const prefix = result.passed ? "PASS" : "FAIL";
+  const readingOrderLimit = Number.isFinite(result.maxReadingOrderDistance)
+    ? ` maxReadingOrderDistance=${formatNumber(result.maxReadingOrderDistance)}`
+    : "";
   console.log(
     `${prefix} ${result.id} textCoverage=${formatNumber(result.coverage)} min=${formatNumber(
       result.minTextCoverage
     )} matched=${result.matchedTokens}/${result.oracleTokens} actualTokens=${
       result.actualTokens
-    } readingOrderDistance=${formatNumber(result.readingOrderDistance)}`
+    } readingOrderDistance=${formatNumber(result.readingOrderDistance)}${readingOrderLimit}`
   );
 }
 
@@ -296,9 +345,10 @@ async function main() {
   }
 
   const selectAll = hasFlag("--all");
+  const readingOrderGated = hasFlag("--reading-order-gated");
   const selectedIds = readOptions("--id");
   const selectedGate = readOption("--gate");
-  if (!selectAll && !selectedGate && selectedIds.length === 0) {
+  if (!selectAll && !selectedGate && selectedIds.length === 0 && !readingOrderGated) {
     console.error(usage());
     process.exit(1);
   }
@@ -315,7 +365,11 @@ async function main() {
   }
 
   const cases = await loadCases(repoRoot, manifestPath);
-  const { selected, skipped } = selectCases(cases, { selectedIds, selectedGate });
+  const { selected, skipped } = selectCases(cases, {
+    selectedIds,
+    selectedGate,
+    readingOrderGated
+  });
 
   if (hasFlag("--dry-run")) {
     for (const corpusCase of selected) {

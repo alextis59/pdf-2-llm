@@ -346,6 +346,13 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
     }
   }
 
+  if (metrics.has("maxReadingOrderDistance")) {
+    const value = readNumber(metrics.get("maxReadingOrderDistance"));
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
+      errors.push(`${relativePath}: metrics.maxReadingOrderDistance must be a number from 0 to 1`);
+    }
+  }
+
   return errors;
 }
 

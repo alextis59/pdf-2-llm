@@ -1,0 +1,11 @@
+# Scientific Two Column Fixture
+
+Abstract result starts here.
+
+Method detail continues here.
+
+Figure 1. Measured response.
+
+Discussion starts on the right.
+
+Conclusion follows the discussion.

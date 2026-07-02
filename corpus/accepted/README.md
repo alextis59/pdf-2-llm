@@ -47,6 +47,10 @@ expected behavior has been written here.
 - The converter must not invent values that are not present in the PDF.
 - If `runningContent` labels are present, `metrics` must define
   `minRunningContentPrecision` and `minRunningContentRecall` from 0 to 1.
+- If `metrics.maxReadingOrderDistance` is present, the QA comparator enforces
+  normalized reading-order edit distance from 0 to 1. Reviewed expected
+  Markdown is preferred as the reading-order oracle when available because
+  external text tools can interleave multi-column pages.
 - `runningContent.expectedRemoved` is for repeated headers, footers, page
   numbers, and boilerplate that should disappear from Markdown.
 - `runningContent.expectedRetained` is for meaningful title, section, or body

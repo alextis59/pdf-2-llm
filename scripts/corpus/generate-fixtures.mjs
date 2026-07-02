@@ -258,6 +258,10 @@ function acceptanceYaml(fixture) {
   const structures = fixture.structures
     .map((item) => `    - ${item}`)
     .join("\n");
+  const readingOrderMetric =
+    fixture.maxReadingOrderDistance == null
+      ? ""
+      : `  maxReadingOrderDistance: ${fixture.maxReadingOrderDistance}\n`;
 
   return `id: ${fixture.id}
 gate: ${fixture.gate}
@@ -274,6 +278,7 @@ ${yamlList([
 ])}
 metrics:
   minTextCoverage: ${fixture.minTextCoverage}
+${readingOrderMetric}\
   maxUnexpectedWarnings: 0
 snippets:
 ${snippets}
@@ -381,6 +386,7 @@ const fixtures = [
     features: ["born-digital", "two-column", "reading-order"],
     description: "Two-column reading-order fixture.",
     minTextCoverage: 1,
+    maxReadingOrderDistance: 0,
     must: ["detect_columns", "preserve_left_then_right_reading_order"],
     mustNot: ["interleave_columns_line_by_line"],
     structures: ["two_columns", "reading_order"],
@@ -399,6 +405,38 @@ const fixtures = [
           text(72, 650, 12, "Left column continues here."),
           text(330, 670, 12, "Right column starts here."),
           text(330, 650, 12, "Right column continues here.")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-scientific-two-column",
+    kind: "scientific-paper",
+    gate: "layout-v1",
+    features: ["born-digital", "two-column", "scientific-layout", "reading-order", "caption"],
+    description: "Two-column scientific reading-order fixture.",
+    minTextCoverage: 1,
+    maxReadingOrderDistance: 0,
+    must: ["detect_columns", "preserve_left_then_right_reading_order", "preserve_caption"],
+    mustNot: ["interleave_columns_line_by_line", "move_caption_before_body"],
+    structures: ["two_columns", "reading_order", "caption"],
+    snippets: [
+      { page: 1, contains: "Abstract result starts here." },
+      { page: 1, contains: "Conclusion follows the discussion." }
+    ],
+    reviewNotes:
+      "Expected order is left column top-down, including the figure caption, then right column top-down; maxReadingOrderDistance is zero because the generated fixture has exact reviewed Markdown.",
+    expectedMarkdown:
+      "# Scientific Two Column Fixture\n\nAbstract result starts here.\n\nMethod detail continues here.\n\nFigure 1. Measured response.\n\nDiscussion starts on the right.\n\nConclusion follows the discussion.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Scientific Two Column Fixture"),
+          text(72, 670, 12, "Abstract result starts here."),
+          text(72, 650, 12, "Method detail continues here."),
+          text(72, 610, 11, "Figure 1. Measured response."),
+          text(330, 670, 12, "Discussion starts on the right."),
+          text(330, 650, 12, "Conclusion follows the discussion.")
         ]
       }
     ]
@@ -688,12 +726,21 @@ async function writeFixtureFiles(fixture) {
 async function updateManifest(entries) {
   const manifestPath = path.join(repoRoot, "corpus", "manifest.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  const generatedIds = new Set(entries.map((entry) => entry.id));
-  const retainedEntries = manifest.entries.filter((entry) => !generatedIds.has(entry.id));
-  const generatedEntries = [...entries].sort((left, right) =>
-    left.id.localeCompare(right.id)
-  );
-  manifest.entries = [...retainedEntries, ...generatedEntries];
+  const generatedById = new Map(entries.map((entry) => [entry.id, entry]));
+  const seen = new Set();
+  manifest.entries = manifest.entries.map((entry) => {
+    const generated = generatedById.get(entry.id);
+    if (generated) {
+      seen.add(entry.id);
+      return generated;
+    }
+    return entry;
+  });
+  for (const entry of entries) {
+    if (!seen.has(entry.id)) {
+      manifest.entries.push(entry);
+    }
+  }
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 

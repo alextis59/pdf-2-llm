@@ -656,6 +656,35 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-xref-stream.yaml",
       "notes": "PDF 1.5 xref stream fixture with direct page objects."
+    },
+    {
+      "id": "synthetic-scientific-two-column",
+      "kind": "scientific-paper",
+      "path": "corpus/generated/synthetic-scientific-two-column.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Two-column scientific reading-order fixture.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "76bdca4e4130083a5123b04dd93744a0f8779917074a99e35ade207a58950424",
+      "bytes": 969,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "two-column",
+        "scientific-layout",
+        "reading-order",
+        "caption"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-scientific-two-column.yaml",
+      "notes": "Two-column scientific reading-order fixture."
     }
   ]
 }
