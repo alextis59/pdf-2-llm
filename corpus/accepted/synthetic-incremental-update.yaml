@@ -1,0 +1,32 @@
+id: synthetic-incremental-update
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - follow_prev_xref_chain
+  - prefer_newest_object_revision
+  - extract_updated_revision_text
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - use_stale_page_tree
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Updated Incremental Fixture"
+structure:
+  expected:
+    - incremental_update
+    - xref_prev_chain
+    - newest_revision
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Generated with an initial revision and an incremental update that replaces the catalog and page tree."

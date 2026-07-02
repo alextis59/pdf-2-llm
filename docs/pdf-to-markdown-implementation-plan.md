@@ -472,9 +472,9 @@ Goal: expand PDF compatibility before adding more semantic features.
 
 Gate 2 acceptance:
 
-- [ ] All robust-parser accepted PDFs either convert or fail with expected
+- [x] All robust-parser accepted PDFs either convert or fail with expected
   structured errors.
-- [ ] Generated xref-stream, object-stream, incremental-update, linearized, and
+- [x] Generated xref-stream, object-stream, incremental-update, linearized, and
   encrypted fixtures pass.
 - [ ] Malformed corpus run has zero panics.
 - [ ] Fuzz targets run in CI smoke mode.
