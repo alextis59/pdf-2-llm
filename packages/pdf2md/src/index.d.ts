@@ -7,6 +7,10 @@ export type PdfInput =
       sourceType?: string;
     };
 
+export type PasswordRequest = {
+  reason: "encrypted-pdf";
+};
+
 export type ConvertOptions = {
   signal?: AbortSignal;
   onProgress?: (event: ProgressEvent) => void;
@@ -21,7 +25,7 @@ export type ConvertOptions = {
   parser?: {
     mode?: "strict" | "tolerant";
   };
-  password?: string | (() => string | Promise<string>);
+  password?: string | ((request: PasswordRequest) => string | Promise<string>);
   security?: {
     maxBytes?: number;
     maxPages?: number;

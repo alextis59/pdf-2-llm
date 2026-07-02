@@ -297,17 +297,7 @@ test("parser reports bounded byte-reader and syntax errors with codes and offset
 });
 
 test("parser and converter reject encrypted PDFs without a password", async () => {
-  const bytes = createTestPdf(
-    [
-      "<< /Type /Catalog /Pages 2 0 R >>",
-      "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
-      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
-      "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
-      streamObject("BT /F1 22 Tf 20 200 Td (Encrypted Fixture) Tj ET\n"),
-      "<< /Filter /Standard /V 1 /R 2 /Length 40 >>"
-    ],
-    { trailerEntries: " /Encrypt 6 0 R" }
-  );
+  const bytes = createEncryptedTestPdf("Encrypted Fixture");
 
   assert.throws(
     () => parsePdfDocument(bytes),
@@ -326,6 +316,44 @@ test("parser and converter reject encrypted PDFs without a password", async () =
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
   assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
   assert.equal(result.diagnostics.extraction.textLines, 0);
+});
+
+test("converter invokes password callback and reports unsupported encrypted PDFs", async () => {
+  const bytes = createEncryptedTestPdf("Encrypted Password Fixture");
+  const secret = "top-secret-password-please-do-not-leak";
+  let calls = 0;
+  let request = null;
+
+  assert.throws(
+    () => parsePdfDocument(bytes, { passwordProvided: true }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.encryption.unsupported"
+  );
+
+  const result = await convertPdfToMarkdown(bytes, {
+    password: async (callbackRequest) => {
+      calls += 1;
+      request = callbackRequest;
+      return secret;
+    }
+  });
+  const unsupportedWarning = result.warnings.find(
+    (warning) => warning.code === warningCodes.UnsupportedEncryption
+  );
+
+  assert.equal(calls, 1);
+  assert.deepEqual(request, { reason: "encrypted-pdf" });
+  assert.ok(unsupportedWarning);
+  assert.equal(unsupportedWarning.details.code, "pdf.encryption.unsupported");
+  assert.equal(unsupportedWarning.details.passwordProvided, true);
+  assert.equal(unsupportedWarning.details.passwordSource, "callback");
+  assert.equal(result.markdown, "");
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PasswordRequired));
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
+  assert.equal(result.diagnostics.options.passwordProvided, true);
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.diagnostics.extraction.parser.warning.code, "pdf.encryption.unsupported");
+  assert.equal(result.diagnostics.extraction.textLines, 0);
+  assert.equal(JSON.stringify(result).includes(secret), false);
 });
 
 test("public converter uses parsed content streams for generated PDFs", async () => {
@@ -375,6 +403,20 @@ function createTestPdf(objects, { trailerEntries = "" } = {}) {
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${trailerEntries} >>\n`;
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
   return Buffer.from(body, "binary");
+}
+
+function createEncryptedTestPdf(label) {
+  return createTestPdf(
+    [
+      "<< /Type /Catalog /Pages 2 0 R >>",
+      "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+      "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+      streamObject(`BT /F1 22 Tf 20 200 Td (${label}) Tj ET\n`),
+      "<< /Filter /Standard /V 1 /R 2 /Length 40 >>"
+    ],
+    { trailerEntries: " /Encrypt 6 0 R" }
+  );
 }
 
 function createXrefStreamTestPdf(objects) {

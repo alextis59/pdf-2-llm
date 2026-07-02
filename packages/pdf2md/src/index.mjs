@@ -58,24 +58,45 @@ export async function convertPdfToMarkdown(input, options = {}) {
   let pdfDocument = null;
   let parseWarning = null;
   if (pdfVersion) {
+    const parserOptions = {
+      maxBytes: security.maxBytes,
+      mode: options.parser?.mode ?? "strict"
+    };
     try {
-      pdfDocument = parsePdfDocument(normalized.bytes, {
-        maxBytes: security.maxBytes,
-        mode: options.parser?.mode ?? "strict"
-      });
+      pdfDocument = parsePdfDocument(normalized.bytes, parserOptions);
     } catch (error) {
       if (error instanceof PdfSyntaxError) {
-        parseWarning =
-          error.code === "pdf.encryption.password_required"
-            ? createWarning(warningCodes.PasswordRequired, error.message, {
-                code: error.code,
-                offset: error.offset
-              })
-            : createWarning(warningCodes.PdfParseFailed, error.message, {
-                code: error.code,
-                offset: error.offset
+        if (error.code === "pdf.encryption.password_required" && options.password != null) {
+          const password = await resolvePasswordOption(options.password);
+          throwIfAborted(options.signal);
+          throwIfTimedOut(deadline);
+          if (password.provided) {
+            try {
+              pdfDocument = parsePdfDocument(normalized.bytes, {
+                ...parserOptions,
+                passwordProvided: true
               });
-        warnings.push(parseWarning);
+            } catch (retryError) {
+              if (!(retryError instanceof PdfSyntaxError)) {
+                throw retryError;
+              }
+              parseWarning = createParseWarning(retryError, {
+                passwordProvided: true,
+                passwordSource: password.source
+              });
+            }
+          } else {
+            parseWarning = createParseWarning(error, {
+              passwordProvided: false,
+              passwordSource: password.source
+            });
+          }
+        } else {
+          parseWarning = createParseWarning(error);
+        }
+        if (parseWarning) {
+          warnings.push(parseWarning);
+        }
       } else {
         throw error;
       }
@@ -97,9 +118,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
     );
   }
 
-  const passwordRequired = parseWarning?.code === warningCodes.PasswordRequired;
+  const encryptedWithoutText =
+    parseWarning?.code === warningCodes.PasswordRequired ||
+    parseWarning?.code === warningCodes.UnsupportedEncryption;
   const textLines =
-    pdfVersion && !passwordRequired
+    pdfVersion && !encryptedWithoutText
       ? extractTextLines(normalized.bytes, { document: pdfDocument })
       : [];
   throwIfAborted(options.signal);
@@ -374,11 +397,55 @@ function summarizeOptions(options) {
     output: options.output ?? "markdown",
     pageAnchors: options.markdown?.pageAnchors === true,
     parserMode: options.parser?.mode ?? "strict",
+    passwordProvided: options.password != null,
     ocrEnabled: options.ocr?.enabled ?? null,
     webgpuRequired: options.webgpu?.required ?? false,
     tablesEnabled: options.tables?.enabled ?? null,
     assetsEnabled: options.assets?.enabled ?? null
   };
+}
+
+function createParseWarning(error, extraDetails = {}) {
+  if (error.code === "pdf.encryption.password_required") {
+    return createWarning(warningCodes.PasswordRequired, error.message, {
+      code: error.code,
+      offset: error.offset,
+      ...extraDetails
+    });
+  }
+
+  if (error.code === "pdf.encryption.unsupported") {
+    return createWarning(warningCodes.UnsupportedEncryption, error.message, {
+      code: error.code,
+      offset: error.offset,
+      ...extraDetails
+    });
+  }
+
+  return createWarning(warningCodes.PdfParseFailed, error.message, {
+    code: error.code,
+    offset: error.offset,
+    ...extraDetails
+  });
+}
+
+async function resolvePasswordOption(passwordOption) {
+  if (typeof passwordOption === "string") {
+    return {
+      provided: true,
+      source: "string"
+    };
+  }
+
+  if (typeof passwordOption === "function") {
+    const value = await passwordOption({ reason: "encrypted-pdf" });
+    return {
+      provided: typeof value === "string",
+      source: "callback"
+    };
+  }
+
+  throw new TypeError("options.password must be a string or function");
 }
 
 function emitProgress(options, stage, progress) {

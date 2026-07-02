@@ -56,6 +56,14 @@ export function parsePdfDocument(bytes, options = {}) {
     mode
   });
   if (isEncryptedTrailer(trailer)) {
+    if (options.passwordProvided === true) {
+      throw new PdfSyntaxError(
+        "Encrypted PDF decryption is not implemented for this security handler.",
+        {
+          code: "pdf.encryption.unsupported"
+        }
+      );
+    }
     throw new PdfSyntaxError("Encrypted PDFs require a password before parsing.", {
       code: "pdf.encryption.password_required"
     });

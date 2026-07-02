@@ -454,12 +454,12 @@ Goal: expand PDF compatibility before adding more semantic features.
 
 - [x] Detect encrypted PDFs.
 - [x] Reject encrypted PDFs without a password.
-- [ ] Implement password callback path.
+- [x] Implement password callback path.
 - [ ] Implement supported standard security handlers as a scoped task.
 - [ ] Do not attempt bypasses.
 - [ ] Add known-password generated fixtures.
 - [ ] Add wrong-password tests.
-- [ ] Emit structured diagnostics for unsupported encryption.
+- [x] Emit structured diagnostics for unsupported encryption.
 
 ### 3.4 Repair Mode
 

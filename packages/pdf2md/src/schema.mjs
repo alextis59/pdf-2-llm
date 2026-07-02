@@ -7,6 +7,7 @@ export const warningCodes = Object.freeze({
   InvalidPdfHeader: "pdf.invalid_header",
   InputTooLarge: "security.input_too_large",
   PasswordRequired: "security.password_required",
+  UnsupportedEncryption: "security.unsupported_encryption",
   OcrDisabled: "ocr.disabled",
   WebGpuUnavailable: "webgpu.unavailable",
   HeuristicTextExtraction: "text.heuristic_content_stream",
