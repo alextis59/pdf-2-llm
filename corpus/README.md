@@ -81,6 +81,11 @@ review status.
 Unsupported content is acceptable only when the expected warning, sidecar, or
 asset fallback is documented.
 
+Acceptance files must include `skipReason` when `gating: false`, when
+`expectedMode: unsupported`, or when the manifest entry points at a local-only
+PDF. The corpus runner prints that reason instead of silently omitting or
+attempting to convert the file.
+
 ## Storage Rules
 
 Prefer generated fixtures for exact-output tests. Prefer small public-domain or

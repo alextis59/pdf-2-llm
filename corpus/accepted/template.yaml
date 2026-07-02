@@ -3,6 +3,7 @@ gate: text-mvp
 sourceType: digital
 expectedMode: pdf-text
 gating: false
+skipReason: "Explain why this PDF is skipped."
 must:
   - extract_main_text
   - preserve_page_anchors

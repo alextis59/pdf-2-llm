@@ -86,7 +86,8 @@ async function loadAcceptance(entry) {
     gate: scalars.get("gate"),
     sourceType: scalars.get("sourceType"),
     expectedMode: scalars.get("expectedMode"),
-    gating: scalars.get("gating") === "true"
+    gating: scalars.get("gating") === "true",
+    skipReason: scalars.get("skipReason") ?? ""
   };
 }
 
@@ -110,10 +111,20 @@ function selectCases(cases) {
   for (const corpusCase of cases) {
     let reason = null;
     if (idSet.size > 0 && !idSet.has(corpusCase.entry.id)) {
-      reason = "id-filter";
+      reason = "id-filter: not requested by --id";
+    }
+    if (!reason && isLocalOnlyEntry(corpusCase.entry)) {
+      reason = formatAcceptanceSkip(corpusCase, "local-only");
+    }
+    if (!reason && !corpusCase.acceptance.gating) {
+      reason = formatAcceptanceSkip(corpusCase, "non-gating");
+    }
+    if (!reason && corpusCase.acceptance.expectedMode === "unsupported") {
+      reason = formatAcceptanceSkip(corpusCase, "unsupported");
     }
     if (!reason && selectedGate && corpusCase.acceptance.gate !== selectedGate) {
-      reason = `gate:${corpusCase.acceptance.gate}`;
+      reason =
+        `gate-filter: acceptance gate ${corpusCase.acceptance.gate} does not match selected gate ${selectedGate}`;
     }
 
     if (reason) {
@@ -130,6 +141,19 @@ function selectCases(cases) {
   }
 
   return { selected, skipped };
+}
+
+function isLocalOnlyEntry(entry) {
+  return (
+    entry.redistributable === false ||
+    entry.source?.type === "local-only" ||
+    /(^|\/)local-only(\/|$)/.test(entry.path)
+  );
+}
+
+function formatAcceptanceSkip(corpusCase, code) {
+  const detail = corpusCase.acceptance.skipReason || "missing acceptance skipReason";
+  return `${code}: ${detail}`;
 }
 
 function printCase(prefix, corpusCase) {

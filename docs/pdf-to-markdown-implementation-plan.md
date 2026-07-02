@@ -262,7 +262,7 @@ Checklist:
   fields, assets, links, and page anchors.
 - [x] Add metric thresholds only when the oracle is reliable enough.
 - [x] Add expected warnings for unsupported features.
-- [ ] Add explicit skip reasons for local-only or future-gate PDFs.
+- [x] Add explicit skip reasons for local-only or future-gate PDFs.
 - [x] Require human review for every acceptance file before it becomes gating.
 
 ### 0.6 Initial Acceptance Review Workflow

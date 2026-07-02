@@ -7,6 +7,9 @@ const repoRoot = path.resolve(readOption("--root") ?? process.cwd());
 const acceptanceDir = path.resolve(
   readOption("--dir") ?? path.join(repoRoot, "corpus", "accepted")
 );
+const manifestPath = path.resolve(
+  readOption("--manifest") ?? path.join(repoRoot, "corpus", "manifest.json")
+);
 const selectedFiles = readOptions("--file");
 const validateAll = hasFlag("--all");
 const allowEmpty = hasFlag("--allow-empty");
@@ -79,6 +82,7 @@ function usage() {
 Options:
   --root <path>        Repository root. Defaults to cwd.
   --dir <path>         Acceptance directory. Defaults to corpus/accepted.
+  --manifest <path>    Manifest path. Defaults to corpus/manifest.json.
   --allow-empty        Do not fail when --all finds no acceptance files.
 `;
 }
@@ -165,7 +169,31 @@ function sectionHasListItem(text, section) {
   return false;
 }
 
-function validateAcceptanceText(text, filePath) {
+async function loadManifestEntriesByAcceptancePath() {
+  let manifest;
+  try {
+    manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  } catch {
+    return new Map();
+  }
+
+  const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
+  return new Map(
+    entries
+      .filter((entry) => typeof entry.acceptanceFile === "string")
+      .map((entry) => [path.resolve(repoRoot, entry.acceptanceFile), entry])
+  );
+}
+
+function isLocalOnlyEntry(entry) {
+  return (
+    entry?.redistributable === false ||
+    entry?.source?.type === "local-only" ||
+    /(^|\/)local-only(\/|$)/.test(entry?.path ?? "")
+  );
+}
+
+function validateAcceptanceText(text, filePath, manifestEntry) {
   const errors = [];
   const topLevelKeys = readTopLevelKeys(text);
   const scalars = readTopLevelScalars(text);
@@ -207,6 +235,15 @@ function validateAcceptanceText(text, filePath) {
     errors.push(`${relativePath}: gating must be true or false`);
   }
 
+  const skipReason = normalizeScalar(scalars.get("skipReason") ?? "");
+  const requiresSkipReason =
+    gatingValue === "false" || expectedMode === "unsupported" || isLocalOnlyEntry(manifestEntry);
+  if (requiresSkipReason && !skipReason) {
+    errors.push(
+      `${relativePath}: non-gating, unsupported, and local-only entries require skipReason`
+    );
+  }
+
   if (!sectionHasListItem(text, "must")) {
     errors.push(`${relativePath}: must must contain at least one list item`);
   }
@@ -235,8 +272,11 @@ async function validateFile(filePath) {
     return [`${filePath}: not a file`];
   }
   const text = await readFile(filePath, "utf8");
-  return validateAcceptanceText(text, filePath);
+  const manifestEntry = manifestEntriesByAcceptancePath.get(path.resolve(filePath));
+  return validateAcceptanceText(text, filePath, manifestEntry);
 }
+
+const manifestEntriesByAcceptancePath = await loadManifestEntriesByAcceptancePath();
 
 async function main() {
   if (hasFlag("--help") || hasFlag("-h")) {
