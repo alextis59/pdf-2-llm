@@ -74,7 +74,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
             try {
               pdfDocument = parsePdfDocument(normalized.bytes, {
                 ...parserOptions,
-                passwordProvided: true
+                passwordProvided: true,
+                password: password.value
               });
             } catch (retryError) {
               if (!(retryError instanceof PdfSyntaxError)) {
@@ -120,6 +121,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
 
   const encryptedWithoutText =
     parseWarning?.code === warningCodes.PasswordRequired ||
+    parseWarning?.code === warningCodes.PasswordIncorrect ||
     parseWarning?.code === warningCodes.UnsupportedEncryption;
   const textLines =
     pdfVersion && !encryptedWithoutText
@@ -414,6 +416,14 @@ function createParseWarning(error, extraDetails = {}) {
     });
   }
 
+  if (error.code === "pdf.encryption.password_incorrect") {
+    return createWarning(warningCodes.PasswordIncorrect, error.message, {
+      code: error.code,
+      offset: error.offset,
+      ...extraDetails
+    });
+  }
+
   if (error.code === "pdf.encryption.unsupported") {
     return createWarning(warningCodes.UnsupportedEncryption, error.message, {
       code: error.code,
@@ -433,7 +443,8 @@ async function resolvePasswordOption(passwordOption) {
   if (typeof passwordOption === "string") {
     return {
       provided: true,
-      source: "string"
+      source: "string",
+      value: passwordOption
     };
   }
 
@@ -441,7 +452,8 @@ async function resolvePasswordOption(passwordOption) {
     const value = await passwordOption({ reason: "encrypted-pdf" });
     return {
       provided: typeof value === "string",
-      source: "callback"
+      source: "callback",
+      value: typeof value === "string" ? value : null
     };
   }
 

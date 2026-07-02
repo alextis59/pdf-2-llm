@@ -1,0 +1,37 @@
+id: synthetic-encrypted-rc4-40
+gate: robust-parser
+sourceType: digital
+expectedMode: pdf-text
+gating: false
+skipReason: "Requires explicit test password; covered by targeted API tests."
+must:
+  - require_password_before_extraction
+  - decrypt_with_known_user_password
+  - preserve_decrypted_text_order
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - bypass_encryption_without_password
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Synthetic Simple Text"
+  - page: 1
+    contains: "This fixture validates basic paragraph extraction."
+structure:
+  expected:
+    - standard-security-handler-r2
+    - rc4-40
+    - paragraphs
+warnings:
+  allowed:
+    - security.password_required
+    - security.password_incorrect
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Generated from synthetic-simple-text with pdftk encrypt_40bit. Known user password: userpass; owner password: ownerpass."

@@ -1,5 +1,13 @@
+import { createHash } from "node:crypto";
 import { parseToUnicodeCMap } from "./font-encoding.mjs";
 import { PdfStreamDecodeError, decodeStreamBytes } from "./stream-filters.mjs";
+
+const standardPasswordPadding = Uint8Array.from([
+  0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41,
+  0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08,
+  0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80,
+  0x2f, 0x0c, 0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a
+]);
 
 export class PdfSyntaxError extends Error {
   constructor(message, { offset = null, code = "pdf.syntax" } = {}) {
@@ -55,19 +63,11 @@ export function parsePdfDocument(bytes, options = {}) {
     maxDecodedStreamBytes,
     mode
   });
-  if (isEncryptedTrailer(trailer)) {
-    if (options.passwordProvided === true) {
-      throw new PdfSyntaxError(
-        "Encrypted PDF decryption is not implemented for this security handler.",
-        {
-          code: "pdf.encryption.unsupported"
-        }
-      );
-    }
-    throw new PdfSyntaxError("Encrypted PDFs require a password before parsing.", {
-      code: "pdf.encryption.password_required"
-    });
-  }
+  const encryption = createEncryptionContext(trailer, entries, source, reader.bytes, {
+    maxDecodedStreamBytes,
+    mode,
+    password: options.password
+  });
   const objects = new Map();
   const streams = [];
 
@@ -77,7 +77,8 @@ export function parsePdfDocument(bytes, options = {}) {
     }
     const object = parseIndirectObjectAt(source, reader.bytes, entry.offset, {
       maxDecodedStreamBytes,
-      mode
+      mode,
+      encryption
     });
     objects.set(objectKey(object.objectNumber, object.generationNumber), object);
     if (object.stream) {
@@ -113,6 +114,219 @@ export function parsePdfDocument(bytes, options = {}) {
 
 function isEncryptedTrailer(trailer) {
   return isDict(trailer) && trailer.entries.Encrypt != null;
+}
+
+function createEncryptionContext(trailer, entries, source, bytes, options) {
+  if (!isEncryptedTrailer(trailer)) {
+    return null;
+  }
+
+  if (typeof options.password !== "string") {
+    throw new PdfSyntaxError("Encrypted PDFs require a password before parsing.", {
+      code: "pdf.encryption.password_required"
+    });
+  }
+
+  const { dictionary } = resolveEncryptionDictionary(
+    trailer.entries.Encrypt,
+    entries,
+    source,
+    bytes,
+    options
+  );
+  const fileKey = computeStandardRevision2FileKey(dictionary, trailer, options.password);
+
+  return {
+    decryptStreamBytes(objectNumber, generationNumber, streamBytes) {
+      const key = computeObjectRc4Key(fileKey, objectNumber, generationNumber);
+      return rc4(key, streamBytes);
+    }
+  };
+}
+
+function resolveEncryptionDictionary(encryptValue, entries, source, bytes, options) {
+  if (isDict(encryptValue)) {
+    return {
+      dictionary: encryptValue,
+      objectNumber: null,
+      generationNumber: null
+    };
+  }
+
+  if (encryptValue?.type !== "ref") {
+    throwUnsupportedEncryption();
+  }
+
+  const entry = entries.find(
+    (item) =>
+      item.inUse &&
+      item.objectNumber === encryptValue.objectNumber &&
+      item.generationNumber === encryptValue.generationNumber &&
+      item.offset > 0 &&
+      !item.compressed
+  );
+  if (!entry) {
+    throwUnsupportedEncryption();
+  }
+
+  const object = parseIndirectObjectAt(source, bytes, entry.offset, {
+    maxDecodedStreamBytes: options.maxDecodedStreamBytes,
+    mode: options.mode
+  });
+  if (!isDict(object.value)) {
+    throwUnsupportedEncryption();
+  }
+
+  return {
+    dictionary: object.value,
+    objectNumber: object.objectNumber,
+    generationNumber: object.generationNumber
+  };
+}
+
+function computeStandardRevision2FileKey(dictionary, trailer, password) {
+  if (nameValue(dictionary.entries.Filter) !== "Standard") {
+    throwUnsupportedEncryption();
+  }
+
+  const revision = dictionary.entries.R;
+  const version = dictionary.entries.V;
+  const lengthBits = version === 1 ? 40 : dictionary.entries.Length ?? 40;
+  if (revision !== 2 || ![1, 2].includes(version) || lengthBits !== 40) {
+    throwUnsupportedEncryption();
+  }
+
+  const ownerKey = bytesFromPdfString(dictionary.entries.O);
+  const userKey = bytesFromPdfString(dictionary.entries.U);
+  const permission = dictionary.entries.P;
+  const fileId = firstTrailerFileId(trailer);
+  if (
+    !ownerKey ||
+    ownerKey.byteLength < 32 ||
+    !userKey ||
+    userKey.byteLength < 32 ||
+    !Number.isInteger(permission) ||
+    !fileId
+  ) {
+    throwUnsupportedEncryption();
+  }
+
+  const hash = createHash("md5");
+  hash.update(padPassword(password));
+  hash.update(ownerKey.subarray(0, 32));
+  hash.update(permissionBytes(permission));
+  hash.update(fileId);
+  const fileKey = hash.digest().subarray(0, lengthBits / 8);
+  const expectedUserKey = rc4(fileKey, standardPasswordPadding);
+  if (!constantTimePrefixEquals(userKey, expectedUserKey, 32)) {
+    throw new PdfSyntaxError("Encrypted PDF password is incorrect.", {
+      code: "pdf.encryption.password_incorrect"
+    });
+  }
+
+  return fileKey;
+}
+
+function throwUnsupportedEncryption() {
+  throw new PdfSyntaxError(
+    "Encrypted PDF decryption is not implemented for this security handler.",
+    {
+      code: "pdf.encryption.unsupported"
+    }
+  );
+}
+
+function padPassword(password) {
+  const passwordBytes = Buffer.from(password, "latin1").subarray(0, 32);
+  const padded = Buffer.alloc(32);
+  passwordBytes.copy(padded, 0);
+  Buffer.from(standardPasswordPadding)
+    .subarray(0, 32 - passwordBytes.byteLength)
+    .copy(padded, passwordBytes.byteLength);
+  return padded;
+}
+
+function permissionBytes(permission) {
+  const bytes = Buffer.alloc(4);
+  bytes.writeInt32LE(permission, 0);
+  return bytes;
+}
+
+function firstTrailerFileId(trailer) {
+  const id = trailer.entries.ID;
+  if (id?.type !== "array" || id.items.length === 0) {
+    return null;
+  }
+  return bytesFromPdfString(id.items[0]);
+}
+
+function bytesFromPdfString(value) {
+  if (typeof value === "string") {
+    return Buffer.from(value, "latin1");
+  }
+
+  if (value?.type === "hex-string") {
+    const hex = value.value.length % 2 === 0 ? value.value : `${value.value}0`;
+    if (!/^[0-9a-fA-F]*$/.test(hex)) {
+      return null;
+    }
+    return Buffer.from(hex, "hex");
+  }
+
+  return null;
+}
+
+function computeObjectRc4Key(fileKey, objectNumber, generationNumber) {
+  const seed = Buffer.alloc(fileKey.byteLength + 5);
+  Buffer.from(fileKey).copy(seed, 0);
+  seed[fileKey.byteLength] = objectNumber & 0xff;
+  seed[fileKey.byteLength + 1] = (objectNumber >> 8) & 0xff;
+  seed[fileKey.byteLength + 2] = (objectNumber >> 16) & 0xff;
+  seed[fileKey.byteLength + 3] = generationNumber & 0xff;
+  seed[fileKey.byteLength + 4] = (generationNumber >> 8) & 0xff;
+  return createHash("md5")
+    .update(seed)
+    .digest()
+    .subarray(0, Math.min(fileKey.byteLength + 5, 16));
+}
+
+function rc4(key, input) {
+  const state = Uint8Array.from({ length: 256 }, (_, index) => index);
+  let j = 0;
+  for (let index = 0; index < 256; index += 1) {
+    j = (j + state[index] + key[index % key.byteLength]) & 0xff;
+    swap(state, index, j);
+  }
+
+  const output = Buffer.alloc(input.byteLength);
+  let i = 0;
+  j = 0;
+  for (let index = 0; index < input.byteLength; index += 1) {
+    i = (i + 1) & 0xff;
+    j = (j + state[i]) & 0xff;
+    swap(state, i, j);
+    const keyByte = state[(state[i] + state[j]) & 0xff];
+    output[index] = input[index] ^ keyByte;
+  }
+  return output;
+}
+
+function swap(bytes, left, right) {
+  const value = bytes[left];
+  bytes[left] = bytes[right];
+  bytes[right] = value;
+}
+
+function constantTimePrefixEquals(left, right, length) {
+  if (left.byteLength < length || right.byteLength < length) {
+    return false;
+  }
+
+  let diff = 0;
+  for (let index = 0; index < length; index += 1) {
+    diff |= left[index] ^ right[index];
+  }
+  return diff === 0;
 }
 
 function loadCompressedObjectStreams(objects, entries) {
@@ -467,9 +681,13 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
     const streamEnd = resolveStreamEnd(source, bytes, streamStart, parsed.value, options.mode);
 
     const streamBytes = bytes.subarray(streamStart, streamEnd);
+    const decodedInputBytes =
+      options.encryption && shouldDecryptStream(parsed.value)
+        ? options.encryption.decryptStreamBytes(objectNumber, generationNumber, streamBytes)
+        : streamBytes;
     let decoded;
     try {
-      decoded = decodeStreamBytes(streamBytes, parsed.value, {
+      decoded = decodeStreamBytes(decodedInputBytes, parsed.value, {
         maxBytes: options.maxDecodedStreamBytes ?? 50 * 1024 * 1024
       });
     } catch (error) {
@@ -644,6 +862,10 @@ function readDirectStreamLength(value) {
   }
   const length = value.entries.Length;
   return typeof length === "number" ? length : null;
+}
+
+function shouldDecryptStream(dictionary) {
+  return nameValue(dictionary?.entries?.Type) !== "XRef";
 }
 
 function resolveCatalog(trailer, getObject) {

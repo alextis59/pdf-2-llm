@@ -250,6 +250,34 @@
       "notes": "CropBox fixture."
     },
     {
+      "id": "synthetic-encrypted-rc4-40",
+      "kind": "encrypted",
+      "path": "corpus/generated/synthetic-encrypted-rc4-40.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Password-protected Standard security handler revision 2 RC4-40 fixture.",
+        "command": "pdftk corpus/generated/synthetic-simple-text.pdf output corpus/generated/synthetic-encrypted-rc4-40.pdf user_pw userpass owner_pw ownerpass encrypt_40bit"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code and encrypted with pdftk for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "2f15952d77c8ecc8e8a8347975e95121f432f4a05a311842f94068f6fb521ee2",
+      "bytes": 1040,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "encrypted",
+        "standard-security-handler-r2",
+        "rc4-40"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-encrypted-rc4-40.yaml",
+      "notes": "Password-protected Standard security handler revision 2 RC4-40 fixture. User password: userpass."
+    },
+    {
       "id": "synthetic-footnote",
       "kind": "scientific-paper",
       "path": "corpus/generated/synthetic-footnote.pdf",

@@ -11,6 +11,10 @@ import {
 import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
 
 const fixturePath = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
+const encryptedRc4FixturePath = new URL(
+  "../../../corpus/generated/synthetic-encrypted-rc4-40.pdf",
+  import.meta.url
+);
 
 test("parsePdfValue parses primitive object types", () => {
   const parsed = parsePdfValue(
@@ -325,7 +329,7 @@ test("converter invokes password callback and reports unsupported encrypted PDFs
   let request = null;
 
   assert.throws(
-    () => parsePdfDocument(bytes, { passwordProvided: true }),
+    () => parsePdfDocument(bytes, { password: secret }),
     (error) => error instanceof PdfSyntaxError && error.code === "pdf.encryption.unsupported"
   );
 
@@ -354,6 +358,57 @@ test("converter invokes password callback and reports unsupported encrypted PDFs
   assert.equal(result.diagnostics.extraction.parser.warning.code, "pdf.encryption.unsupported");
   assert.equal(result.diagnostics.extraction.textLines, 0);
   assert.equal(JSON.stringify(result).includes(secret), false);
+});
+
+test("parser and converter decrypt Standard revision 2 RC4-40 PDFs with the user password", async () => {
+  const bytes = await readFile(encryptedRc4FixturePath);
+  const secret = "userpass";
+
+  assert.throws(
+    () => parsePdfDocument(bytes),
+    (error) =>
+      error instanceof PdfSyntaxError && error.code === "pdf.encryption.password_required"
+  );
+
+  const document = parsePdfDocument(bytes, { password: secret });
+  const result = await convertPdfToMarkdown(bytes, { password: secret });
+
+  assert.equal(document.pages.length, 1);
+  assert.match(document.pages[0].contentStreams[0].text, /Synthetic Simple Text/);
+  assert.equal(
+    result.markdown,
+    "# Synthetic Simple Text\n\nThis fixture validates basic paragraph extraction.\n\nThe expected output is deterministic.\n"
+  );
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PasswordRequired));
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PasswordIncorrect));
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.UnsupportedEncryption));
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
+  assert.equal(result.diagnostics.extraction.parser.mode, "classic-xref");
+  assert.equal(result.diagnostics.extraction.textLines, 3);
+  assert.equal(JSON.stringify(result).includes(secret), false);
+});
+
+test("converter reports wrong passwords for Standard revision 2 RC4-40 PDFs", async () => {
+  const bytes = await readFile(encryptedRc4FixturePath);
+  const result = await convertPdfToMarkdown(bytes, { password: "wrongpass" });
+  const warning = result.warnings.find(
+    (item) => item.code === warningCodes.PasswordIncorrect
+  );
+
+  assert.throws(
+    () => parsePdfDocument(bytes, { password: "wrongpass" }),
+    (error) =>
+      error instanceof PdfSyntaxError && error.code === "pdf.encryption.password_incorrect"
+  );
+  assert.ok(warning);
+  assert.equal(warning.details.code, "pdf.encryption.password_incorrect");
+  assert.equal(warning.details.passwordProvided, true);
+  assert.equal(warning.details.passwordSource, "string");
+  assert.equal(result.markdown, "");
+  assert.ok(!result.warnings.some((item) => item.code === warningCodes.PdfParseFailed));
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.diagnostics.extraction.parser.warning.code, "pdf.encryption.password_incorrect");
+  assert.equal(result.diagnostics.extraction.textLines, 0);
 });
 
 test("public converter uses parsed content streams for generated PDFs", async () => {
