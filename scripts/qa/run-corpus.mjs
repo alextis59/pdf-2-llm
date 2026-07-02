@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { convertPdfToMarkdown } from "../../packages/pdf2md/src/index.mjs";
+import { compareTableCellAdjacency } from "./table-adjacency.mjs";
 
 const args = process.argv.slice(2);
 const repoRoot = path.resolve(readOption("--root") ?? process.cwd());
@@ -78,15 +79,42 @@ function normalizeScalar(value) {
   return trimmed;
 }
 
+function readNamedBlockScalars(text, blockName) {
+  const values = new Map();
+  const lines = text.split(/\r?\n/);
+  let inBlock = false;
+  for (const line of lines) {
+    if (!inBlock) {
+      inBlock = line.trim() === `${blockName}:`;
+      continue;
+    }
+    if (/^\S/.test(line)) {
+      break;
+    }
+    const match = line.match(/^\s{2}([A-Za-z][A-Za-z0-9]*):(?:\s*(.*))?$/);
+    if (match) {
+      values.set(match[1], normalizeScalar(match[2] ?? ""));
+    }
+  }
+  return values;
+}
+
+function readNumber(value, fallback = null) {
+  const parsed = Number.parseFloat(value ?? "");
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 async function loadAcceptance(entry) {
   const text = await readFile(path.join(repoRoot, entry.acceptanceFile), "utf8");
   const scalars = readTopLevelScalars(text);
+  const metrics = readNamedBlockScalars(text, "metrics");
   return {
     id: scalars.get("id"),
     gate: scalars.get("gate"),
     sourceType: scalars.get("sourceType"),
     expectedMode: scalars.get("expectedMode"),
     gating: scalars.get("gating") === "true",
+    minTableCellAdjacency: readNumber(metrics.get("minTableCellAdjacency")),
     skipReason: scalars.get("skipReason") ?? ""
   };
 }
@@ -164,11 +192,13 @@ function printCase(prefix, corpusCase) {
 }
 
 async function runCase(corpusCase) {
-  const { entry } = corpusCase;
+  const { entry, acceptance } = corpusCase;
   const result = await convertPdfToMarkdown(path.join(repoRoot, entry.path), {
     ocr: { enabled: false }
   });
   const errors = [];
+  const details = [];
+  let expected = null;
 
   if (result.diagnostics.input.sha256 !== entry.sha256) {
     errors.push(`sha256 mismatch: expected ${entry.sha256}, got ${result.diagnostics.input.sha256}`);
@@ -184,17 +214,32 @@ async function runCase(corpusCase) {
     );
   }
 
+  if (assertMarkdown || acceptance.minTableCellAdjacency !== null) {
+    expected = await readExpectedMarkdown(entry);
+  }
+
   if (assertMarkdown) {
-    const expectedPath = path.join(repoRoot, "corpus", "expected", `${entry.id}.md`);
-    let expected;
-    try {
-      expected = await readFile(expectedPath, "utf8");
-    } catch (error) {
-      throw new Error(`${entry.id}: expected Markdown is not readable at ${expectedPath}: ${error.message}`);
-    }
     if (result.markdown !== expected) {
-      errors.push(`Markdown snapshot mismatch against ${path.relative(repoRoot, expectedPath)}`);
+      errors.push(`Markdown snapshot mismatch against corpus/expected/${entry.id}.md`);
+    } else {
+      details.push("markdown=match");
     }
+  }
+
+  if (acceptance.minTableCellAdjacency !== null) {
+    const adjacency = compareTableCellAdjacency(expected, result.markdown);
+    if (adjacency.score + Number.EPSILON < acceptance.minTableCellAdjacency) {
+      errors.push(
+        `table cell adjacency ${formatNumber(adjacency.score)} below ${formatNumber(
+          acceptance.minTableCellAdjacency
+        )} (${adjacency.matchedPairs}/${adjacency.expectedPairs} expected pairs matched)`
+      );
+    }
+    details.push(
+      `tableCellAdjacency=${formatNumber(adjacency.score)} min=${formatNumber(
+        acceptance.minTableCellAdjacency
+      )} matched=${adjacency.matchedPairs}/${adjacency.expectedPairs}`
+    );
   }
 
   if (errors.length > 0) {
@@ -202,8 +247,23 @@ async function runCase(corpusCase) {
   }
 
   console.log(
-    `PASS ${entry.id} bytes=${entry.bytes} pdfVersion=${entry.pdfVersion}${assertMarkdown ? " markdown=match" : ""}`
+    `PASS ${entry.id} bytes=${entry.bytes} pdfVersion=${entry.pdfVersion}${
+      details.length > 0 ? ` ${details.join(" ")}` : ""
+    }`
   );
+}
+
+async function readExpectedMarkdown(entry) {
+  const expectedPath = path.join(repoRoot, "corpus", "expected", `${entry.id}.md`);
+  try {
+    return await readFile(expectedPath, "utf8");
+  } catch (error) {
+    throw new Error(`${entry.id}: expected Markdown is not readable at ${expectedPath}: ${error.message}`);
+  }
+}
+
+function formatNumber(value) {
+  return Number.isFinite(value) ? Number(value.toFixed(3)).toString() : "n/a";
 }
 
 async function main() {

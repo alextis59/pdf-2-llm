@@ -262,6 +262,10 @@ function acceptanceYaml(fixture) {
     fixture.maxReadingOrderDistance == null
       ? ""
       : `  maxReadingOrderDistance: ${fixture.maxReadingOrderDistance}\n`;
+  const tableAdjacencyMetric =
+    fixture.minTableCellAdjacency == null
+      ? ""
+      : `  minTableCellAdjacency: ${fixture.minTableCellAdjacency}\n`;
 
   return `id: ${fixture.id}
 gate: ${fixture.gate}
@@ -279,6 +283,7 @@ ${yamlList([
 metrics:
   minTextCoverage: ${fixture.minTextCoverage}
 ${readingOrderMetric}\
+${tableAdjacencyMetric}\
   maxUnexpectedWarnings: 0
 snippets:
 ${snippets}
@@ -448,6 +453,7 @@ const fixtures = [
     features: ["born-digital", "visible-table", "ruling-lines"],
     description: "Visible grid table fixture.",
     minTextCoverage: 1,
+    minTableCellAdjacency: 1,
     must: ["detect_visible_table", "preserve_table_cells", "emit_gfm_table"],
     mustNot: ["flatten_table_to_unstructured_paragraph"],
     structures: ["gfm_table", "three_columns", "three_rows"],
@@ -487,6 +493,7 @@ const fixtures = [
     features: ["born-digital", "borderless-table", "aligned-columns"],
     description: "Whitespace-aligned borderless table fixture.",
     minTextCoverage: 1,
+    minTableCellAdjacency: 1,
     must: ["detect_borderless_table", "preserve_column_alignment"],
     mustNot: ["merge_adjacent_columns"],
     structures: ["borderless_table", "aligned_numeric_columns"],

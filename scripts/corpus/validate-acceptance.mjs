@@ -346,10 +346,13 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
     }
   }
 
-  if (metrics.has("maxReadingOrderDistance")) {
-    const value = readNumber(metrics.get("maxReadingOrderDistance"));
+  for (const metricName of ["maxReadingOrderDistance", "minTableCellAdjacency"]) {
+    if (!metrics.has(metricName)) {
+      continue;
+    }
+    const value = readNumber(metrics.get(metricName));
     if (!Number.isFinite(value) || value < 0 || value > 1) {
-      errors.push(`${relativePath}: metrics.maxReadingOrderDistance must be a number from 0 to 1`);
+      errors.push(`${relativePath}: metrics.${metricName} must be a number from 0 to 1`);
     }
   }
 

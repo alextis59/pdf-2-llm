@@ -12,6 +12,7 @@ mustNot:
   - merge_adjacent_columns
 metrics:
   minTextCoverage: 1
+  minTableCellAdjacency: 1
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
