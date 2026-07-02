@@ -51,6 +51,10 @@ expected behavior has been written here.
   normalized reading-order edit distance from 0 to 1. Reviewed expected
   Markdown is preferred as the reading-order oracle when available because
   external text tools can interleave multi-column pages.
+- If `metrics.maxRssDeltaBytes` or `metrics.maxHeapUsedDeltaBytes` is present,
+  the benchmark harness enforces conversion memory deltas in bytes. Run these
+  gates with `node --expose-gc` so before/after snapshots measure retained
+  memory consistently.
 - `runningContent.expectedRemoved` is for repeated headers, footers, page
   numbers, and boilerplate that should disappear from Markdown.
 - `runningContent.expectedRetained` is for meaningful title, section, or body

@@ -20,6 +20,8 @@ metrics:
   minTextCoverage: 0.95
   minRunningContentPrecision: 1
   minRunningContentRecall: 1
+  maxRssDeltaBytes: 268435456
+  maxHeapUsedDeltaBytes: 16777216
   maxUnexpectedWarnings: 3
 snippets:
   - page: 1
@@ -54,4 +56,4 @@ assets:
 review:
   humanReviewedBy: "codex"
   reviewedAt: "2026-07-02"
-  notes: "Accepted from NIST source URL after pdfinfo confirmed tagged, unencrypted PDF 1.7 with 129 pages and AcroForm metadata; snippets were checked with pdftotext."
+  notes: "Accepted from NIST source URL after pdfinfo confirmed tagged, unencrypted PDF 1.7 with 129 pages and AcroForm metadata; snippets were checked with pdftotext. Memory limits allow the current 129-page conversion with GC-normalized headroom while catching runaway retained heap or RSS growth."

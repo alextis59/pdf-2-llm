@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { summarizeDurations, summarizeMemory } from "../../../scripts/qa/benchmark.mjs";
+import {
+  evaluateMemoryLimits,
+  summarizeDurations,
+  summarizeMemory
+} from "../../../scripts/qa/benchmark.mjs";
 
 test("benchmark duration summary reports min max mean and median", () => {
   assert.deepEqual(summarizeDurations([9, 1, 5, 3]), {
@@ -23,5 +27,32 @@ test("benchmark memory summary reports deltas", () => {
       externalDeltaBytes: 3,
       arrayBuffersDeltaBytes: 8
     }
+  );
+});
+
+test("benchmark memory limit evaluator reports exceeded thresholds", () => {
+  assert.deepEqual(
+    evaluateMemoryLimits(
+      { rssDeltaBytes: 120, heapUsedDeltaBytes: 40 },
+      { maxRssDeltaBytes: 100, maxHeapUsedDeltaBytes: 50 }
+    ),
+    [
+      {
+        metric: "maxRssDeltaBytes",
+        actualMetric: "rssDeltaBytes",
+        actual: 120,
+        limit: 100
+      }
+    ]
+  );
+});
+
+test("benchmark memory limit evaluator ignores absent thresholds", () => {
+  assert.deepEqual(
+    evaluateMemoryLimits(
+      { rssDeltaBytes: 120, heapUsedDeltaBytes: 40 },
+      { maxRssDeltaBytes: null, maxHeapUsedDeltaBytes: null }
+    ),
+    []
   );
 });

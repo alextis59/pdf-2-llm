@@ -37,6 +37,26 @@ export function summarizeMemory(before, after) {
   };
 }
 
+export function evaluateMemoryLimits(memory, acceptance) {
+  const limits = [
+    {
+      metric: "maxRssDeltaBytes",
+      actualMetric: "rssDeltaBytes",
+      actual: memory.rssDeltaBytes,
+      limit: acceptance.maxRssDeltaBytes
+    },
+    {
+      metric: "maxHeapUsedDeltaBytes",
+      actualMetric: "heapUsedDeltaBytes",
+      actual: memory.heapUsedDeltaBytes,
+      limit: acceptance.maxHeapUsedDeltaBytes
+    }
+  ];
+  return limits
+    .filter((limit) => Number.isFinite(limit.limit))
+    .filter((limit) => limit.actual > limit.limit + Number.EPSILON);
+}
+
 function hasFlag(name) {
   return args.includes(name);
 }
@@ -65,6 +85,7 @@ function usage() {
   node scripts/qa/benchmark.mjs --all [--iterations <n>] [--warmup <n>] [--report <path>]
   node scripts/qa/benchmark.mjs --gate <gate> [--iterations <n>] [--warmup <n>] [--report <path>]
   node scripts/qa/benchmark.mjs --id <manifest-id> [--iterations <n>] [--warmup <n>] [--report <path>]
+  node scripts/qa/benchmark.mjs --memory-limit-gated [--iterations <n>] [--warmup <n>] [--report <path>]
 
 Options:
   --manifest <path>          Manifest path. Defaults to corpus/manifest.json.
@@ -80,6 +101,26 @@ function readTopLevelScalars(text) {
       continue;
     }
     const match = line.match(/^([A-Za-z][A-Za-z0-9]*):(?:\s*(.*))?$/);
+    if (match) {
+      values.set(match[1], normalizeScalar(match[2] ?? ""));
+    }
+  }
+  return values;
+}
+
+function readNamedBlockScalars(text, blockName) {
+  const values = new Map();
+  const lines = text.split(/\r?\n/);
+  let inBlock = false;
+  for (const line of lines) {
+    if (!inBlock) {
+      inBlock = line.trim() === `${blockName}:`;
+      continue;
+    }
+    if (/^\S/.test(line)) {
+      break;
+    }
+    const match = line.match(/^\s{2}([A-Za-z][A-Za-z0-9]*):(?:\s*(.*))?$/);
     if (match) {
       values.set(match[1], normalizeScalar(match[2] ?? ""));
     }
@@ -110,15 +151,23 @@ function readIntegerOption(name, fallback) {
   return parsed;
 }
 
+function readNumber(value, fallback) {
+  const parsed = Number.parseFloat(value ?? "");
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 async function loadAcceptance(repoRoot, entry) {
   const text = await readFile(path.join(repoRoot, entry.acceptanceFile), "utf8");
   const scalars = readTopLevelScalars(text);
+  const metrics = readNamedBlockScalars(text, "metrics");
   return {
     id: scalars.get("id"),
     gate: scalars.get("gate"),
     expectedMode: scalars.get("expectedMode"),
     gating: scalars.get("gating") === "true",
-    skipReason: scalars.get("skipReason") ?? ""
+    skipReason: scalars.get("skipReason") ?? "",
+    maxRssDeltaBytes: readNumber(metrics.get("maxRssDeltaBytes"), null),
+    maxHeapUsedDeltaBytes: readNumber(metrics.get("maxHeapUsedDeltaBytes"), null)
   };
 }
 
@@ -134,7 +183,7 @@ async function loadCases(repoRoot, manifestPath) {
   return cases;
 }
 
-function selectCases(cases, { selectedIds, selectedGate }) {
+function selectCases(cases, { selectedIds, selectedGate, memoryLimitGated = false }) {
   const idSet = new Set(selectedIds);
   const selected = [];
   const skipped = [];
@@ -157,6 +206,9 @@ function selectCases(cases, { selectedIds, selectedGate }) {
       reason =
         `gate-filter: acceptance gate ${corpusCase.acceptance.gate} does not match selected gate ${selectedGate}`;
     }
+    if (!reason && memoryLimitGated && !hasMemoryLimits(corpusCase.acceptance)) {
+      reason = "memory-limit-filter: no memory delta threshold";
+    }
 
     if (reason) {
       skipped.push({ ...corpusCase, reason });
@@ -172,6 +224,13 @@ function selectCases(cases, { selectedIds, selectedGate }) {
   }
 
   return { selected, skipped };
+}
+
+function hasMemoryLimits(acceptance) {
+  return (
+    Number.isFinite(acceptance.maxRssDeltaBytes) ||
+    Number.isFinite(acceptance.maxHeapUsedDeltaBytes)
+  );
 }
 
 function isLocalOnlyEntry(entry) {
@@ -195,7 +254,7 @@ async function runBenchmarkCase(repoRoot, corpusCase, { iterations, warmup }) {
     await convertPdfToMarkdown(pdfPath, { ocr: { enabled: false } });
   }
 
-  const memoryBefore = process.memoryUsage();
+  const memoryBefore = collectMemorySnapshot();
   const durationsMs = [];
   let lastResult = null;
   for (let index = 0; index < iterations; index += 1) {
@@ -203,7 +262,9 @@ async function runBenchmarkCase(repoRoot, corpusCase, { iterations, warmup }) {
     lastResult = await convertPdfToMarkdown(pdfPath, { ocr: { enabled: false } });
     durationsMs.push(performance.now() - startedAt);
   }
-  const memoryAfter = process.memoryUsage();
+  const memoryAfter = collectMemorySnapshot();
+  const memory = summarizeMemory(memoryBefore, memoryAfter);
+  const memoryLimitViolations = evaluateMemoryLimits(memory, acceptance);
 
   const pages = Math.max(1, lastResult?.diagnostics.pages.length ?? 0);
   const duration = summarizeDurations(durationsMs);
@@ -222,8 +283,21 @@ async function runBenchmarkCase(repoRoot, corpusCase, { iterations, warmup }) {
     warnings: lastResult?.warnings.map((warning) => warning.code) ?? [],
     ...duration,
     pagesPerSecond: totalSeconds > 0 ? totalPages / totalSeconds : 0,
-    memory: summarizeMemory(memoryBefore, memoryAfter)
+    memory,
+    memoryLimits: {
+      maxRssDeltaBytes: acceptance.maxRssDeltaBytes,
+      maxHeapUsedDeltaBytes: acceptance.maxHeapUsedDeltaBytes
+    },
+    memoryLimitViolations,
+    passed: memoryLimitViolations.length === 0
   };
+}
+
+function collectMemorySnapshot() {
+  if (typeof globalThis.gc === "function") {
+    globalThis.gc();
+  }
+  return process.memoryUsage();
 }
 
 function printCase(prefix, corpusCase) {
@@ -232,12 +306,21 @@ function printCase(prefix, corpusCase) {
 }
 
 function printResult(result) {
+  const prefix = result.passed ? "BENCH" : "FAIL";
+  const rssLimit = Number.isFinite(result.memoryLimits.maxRssDeltaBytes)
+    ? ` maxRssDeltaKiB=${formatNumber(result.memoryLimits.maxRssDeltaBytes / 1024)}`
+    : "";
+  const heapLimit = Number.isFinite(result.memoryLimits.maxHeapUsedDeltaBytes)
+    ? ` maxHeapDeltaKiB=${formatNumber(result.memoryLimits.maxHeapUsedDeltaBytes / 1024)}`
+    : "";
   console.log(
-    `BENCH ${result.id} meanMs=${formatNumber(result.meanMs)} medianMs=${formatNumber(
+    `${prefix} ${result.id} meanMs=${formatNumber(result.meanMs)} medianMs=${formatNumber(
       result.medianMs
-    )} pagesPerSecond=${formatNumber(result.pagesPerSecond)} textLines=${result.textLines} heapDeltaKiB=${formatNumber(
+    )} pagesPerSecond=${formatNumber(result.pagesPerSecond)} textLines=${result.textLines} rssDeltaKiB=${formatNumber(
+      result.memory.rssDeltaBytes / 1024
+    )}${rssLimit} heapDeltaKiB=${formatNumber(
       result.memory.heapUsedDeltaBytes / 1024
-    )}`
+    )}${heapLimit}`
   );
 }
 
@@ -252,9 +335,10 @@ async function main() {
   }
 
   const selectAll = hasFlag("--all");
+  const memoryLimitGated = hasFlag("--memory-limit-gated");
   const selectedIds = readOptions("--id");
   const selectedGate = readOption("--gate");
-  if (!selectAll && !selectedGate && selectedIds.length === 0) {
+  if (!selectAll && !selectedGate && selectedIds.length === 0 && !memoryLimitGated) {
     console.error(usage());
     process.exit(1);
   }
@@ -270,7 +354,11 @@ async function main() {
   }
 
   const cases = await loadCases(repoRoot, manifestPath);
-  const { selected, skipped } = selectCases(cases, { selectedIds, selectedGate });
+  const { selected, skipped } = selectCases(cases, {
+    selectedIds,
+    selectedGate,
+    memoryLimitGated
+  });
 
   if (hasFlag("--dry-run")) {
     for (const corpusCase of selected) {
@@ -299,6 +387,18 @@ async function main() {
   const reportPath = readOption("--report");
   if (reportPath) {
     await writeFile(path.resolve(reportPath), `${JSON.stringify(report, null, 2)}\n`);
+  }
+
+  const failed = results.filter((result) => !result.passed);
+  if (failed.length > 0) {
+    for (const result of failed) {
+      for (const violation of result.memoryLimitViolations) {
+        console.error(
+          `${result.id}: ${violation.actualMetric} ${violation.actual} exceeds ${violation.metric} ${violation.limit}`
+        );
+      }
+    }
+    process.exit(1);
   }
 
   console.log(`Benchmark completed: ${results.length}; skipped ${skipped.length}.`);
