@@ -43,7 +43,17 @@ export function extractMarkdownTableCells(markdown) {
   const gfmCells = extractGfmTables(markdownWithoutHtmlTables).flatMap((rows, index) =>
     gfmTableCells(rows, htmlTables.length + index)
   );
-  return [...htmlCells, ...gfmCells].map((cell) => ({
+  return addCellKeys([...htmlCells, ...gfmCells]);
+}
+
+export function extractHtmlTableCells(html) {
+  return addCellKeys(
+    extractHtmlTables(String(html ?? "")).flatMap((table, index) => parseHtmlTableCells(table, index))
+  );
+}
+
+function addCellKeys(cells) {
+  return cells.map((cell) => ({
     ...cell,
     key: cellKey(cell)
   }));
