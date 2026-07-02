@@ -110,6 +110,22 @@ test("parsePdfDocument resolves xref stream entries", async () => {
   assert.equal(result.diagnostics.extraction.parser.mode, "xref-stream");
 });
 
+test("parsePdfDocument resolves compressed object streams", async () => {
+  const bytes = createObjectStreamTestPdf();
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.xrefMode, "xref-stream");
+  assert.equal(document.objects.size, 7);
+  assert.equal(document.getObject(4).compressed, true);
+  assert.equal(document.getObject(6).objectStreamNumber, 3);
+  assert.equal(document.pages.length, 1);
+  assert.equal(document.pages[0].objectNumber, 6);
+  assert.equal(document.pages[0].contentStreams.length, 1);
+  assert.equal(result.markdown, "# Object Stream Fixture\n");
+  assert.equal(result.diagnostics.extraction.parser.objects, 7);
+});
+
 test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {
   const toUnicode = [
     "/CIDInit /ProcSet findresource begin",
@@ -286,6 +302,38 @@ function createXrefStreamTestPdf(objects) {
   return Buffer.from(body, "binary");
 }
 
+function createObjectStreamTestPdf() {
+  let body = "%PDF-1.5\n";
+  const offsets = [0];
+  const directObjects = [
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject("BT /F1 22 Tf 20 200 Td (Object Stream Fixture) Tj ET\n"),
+    objectStreamObject([
+      { objectNumber: 4, value: "<< /Type /Catalog /Pages 5 0 R >>" },
+      {
+        objectNumber: 5,
+        value: "<< /Type /Pages /Kids [6 0 R] /Count 1 /Resources << /Font << /F1 1 0 R >> >> /MediaBox [0 0 300 400] >>"
+      },
+      { objectNumber: 6, value: "<< /Type /Page /Parent 5 0 R /Contents 2 0 R >>" }
+    ])
+  ];
+
+  directObjects.forEach((object, index) => {
+    const objectId = index + 1;
+    offsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefObjectId = 7;
+  offsets[xrefObjectId] = Buffer.byteLength(body, "binary");
+  const xrefStream = createObjectStreamXrefBytes(offsets, xrefObjectId);
+  body += `${xrefObjectId} 0 obj\n`;
+  body += `<< /Type /XRef /Size ${xrefObjectId + 1} /Root 4 0 R /W [1 4 2] /Length ${xrefStream.byteLength} >>\n`;
+  body += `stream\n${xrefStream.toString("binary")}endstream\nendobj\n`;
+  body += `startxref\n${offsets[xrefObjectId]}\n%%EOF\n`;
+  return Buffer.from(body, "binary");
+}
+
 function createXrefStreamBytes(offsets) {
   const bytes = Buffer.alloc(offsets.length * 7);
   writeXrefStreamEntry(bytes, 0, 0, 0, 65535);
@@ -295,10 +343,39 @@ function createXrefStreamBytes(offsets) {
   return bytes;
 }
 
+function createObjectStreamXrefBytes(offsets, xrefObjectId) {
+  const bytes = Buffer.alloc((xrefObjectId + 1) * 7);
+  writeXrefStreamEntry(bytes, 0, 0, 0, 65535);
+  writeXrefStreamEntry(bytes, 7, 1, offsets[1], 0);
+  writeXrefStreamEntry(bytes, 14, 1, offsets[2], 0);
+  writeXrefStreamEntry(bytes, 21, 1, offsets[3], 0);
+  writeXrefStreamEntry(bytes, 28, 2, 3, 0);
+  writeXrefStreamEntry(bytes, 35, 2, 3, 1);
+  writeXrefStreamEntry(bytes, 42, 2, 3, 2);
+  writeXrefStreamEntry(bytes, 49, 1, offsets[xrefObjectId], 0);
+  return bytes;
+}
+
 function writeXrefStreamEntry(bytes, offset, type, field2, field3) {
   bytes[offset] = type;
   bytes.writeUInt32BE(field2, offset + 1);
   bytes.writeUInt16BE(field3, offset + 5);
+}
+
+function objectStreamObject(objects) {
+  let currentOffset = 0;
+  const offsets = objects.map((object) => {
+    const offset = currentOffset;
+    currentOffset += Buffer.byteLength(object.value, "binary") + 1;
+    return offset;
+  });
+  const header = objects
+    .map((object, index) => `${object.objectNumber} ${offsets[index]}`)
+    .join(" ");
+  const values = objects.map((object) => object.value).join(" ");
+  const objectStream = `${header} ${values}`;
+  const first = Buffer.byteLength(`${header} `, "binary");
+  return streamObject(deflateSync(Buffer.from(objectStream, "binary")), `/Type /ObjStm /N ${objects.length} /First ${first} /Filter /FlateDecode`);
 }
 
 function streamObject(contents, extraDictionary = "") {

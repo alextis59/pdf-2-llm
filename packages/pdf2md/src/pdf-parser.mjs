@@ -71,6 +71,7 @@ export function parsePdfDocument(bytes, options = {}) {
       streams.push(object.stream);
     }
   }
+  loadCompressedObjectStreams(objects, entries);
 
   function getObject(referenceOrNumber, generationNumber = 0) {
     if (typeof referenceOrNumber === "object" && referenceOrNumber?.type === "ref") {
@@ -94,6 +95,33 @@ export function parsePdfDocument(bytes, options = {}) {
     pages,
     getObject
   };
+}
+
+function loadCompressedObjectStreams(objects, entries) {
+  const compressedEntries = entries.filter((entry) => entry.compressed);
+  if (compressedEntries.length === 0) {
+    return;
+  }
+
+  const entriesByStream = new Map();
+  for (const entry of compressedEntries) {
+    const group = entriesByStream.get(entry.objectStreamNumber) ?? [];
+    group.push(entry);
+    entriesByStream.set(entry.objectStreamNumber, group);
+  }
+
+  for (const [objectStreamNumber, group] of entriesByStream) {
+    const objectStream = objects.get(objectKey(objectStreamNumber, 0));
+    if (!objectStream) {
+      throw new PdfSyntaxError("XRef stream references a missing object stream.", {
+        code: "pdf.object_stream.missing"
+      });
+    }
+    const compressedObjects = parseObjectStream(objectStream, group);
+    for (const object of compressedObjects) {
+      objects.set(objectKey(object.objectNumber, object.generationNumber), object);
+    }
+  }
 }
 
 export function parsePdfValue(input, offset = 0) {
@@ -399,6 +427,94 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
     offset,
     endOffset: endObjectOffset + "endobj".length
   };
+}
+
+function parseObjectStream(objectStream, requestedEntries) {
+  if (!isDict(objectStream.value) || nameValue(objectStream.value.entries.Type) !== "ObjStm" || !objectStream.stream) {
+    throw new PdfSyntaxError("XRef stream entry references an invalid object stream.", {
+      offset: objectStream.offset,
+      code: "pdf.object_stream.invalid"
+    });
+  }
+
+  const count = objectStream.value.entries.N;
+  const first = objectStream.value.entries.First;
+  if (!Number.isInteger(count) || count < 0 || !Number.isInteger(first) || first < 0) {
+    throw new PdfSyntaxError("Object stream is missing valid N or First entries.", {
+      offset: objectStream.offset,
+      code: "pdf.object_stream.header_malformed"
+    });
+  }
+
+  const text = objectStream.stream.text;
+  const offsets = readObjectStreamOffsets(text, count, objectStream.offset);
+  const requestedByIndex = new Map(requestedEntries.map((entry) => [entry.objectStreamIndex, entry]));
+  const objects = [];
+
+  for (const entry of requestedEntries) {
+    if (!offsets[entry.objectStreamIndex]) {
+      throw new PdfSyntaxError("XRef stream references an object-stream index outside the stream.", {
+        offset: objectStream.offset,
+        code: "pdf.object_stream.index_out_of_bounds"
+      });
+    }
+  }
+
+  for (let index = 0; index < offsets.length; index += 1) {
+    const requested = requestedByIndex.get(index);
+    if (!requested) {
+      continue;
+    }
+    if (requested.objectNumber !== offsets[index].objectNumber) {
+      throw new PdfSyntaxError("Object stream header does not match xref stream entry.", {
+        offset: objectStream.offset,
+        code: "pdf.object_stream.object_number_mismatch"
+      });
+    }
+    const objectOffset = first + offsets[index].offset;
+    if (objectOffset < first || objectOffset >= text.length) {
+      throw new PdfSyntaxError("Object stream entry offset is outside the stream.", {
+        offset: objectStream.offset,
+        code: "pdf.object_stream.entry_offset_malformed"
+      });
+    }
+    const parsed = parsePdfValue(text, objectOffset);
+    objects.push({
+      objectNumber: requested.objectNumber,
+      generationNumber: 0,
+      value: parsed.value,
+      stream: null,
+      offset: objectStream.offset + objectOffset,
+      endOffset: objectStream.offset + parsed.offset,
+      compressed: true,
+      objectStreamNumber: objectStream.objectNumber,
+      objectStreamIndex: index
+    });
+  }
+
+  return objects;
+}
+
+function readObjectStreamOffsets(text, count, offset) {
+  let cursor = 0;
+  const offsets = [];
+  for (let index = 0; index < count; index += 1) {
+    const objectNumber = readInteger(text, cursor, "object stream object number");
+    cursor = objectNumber.offset;
+    const objectOffset = readInteger(text, cursor, "object stream object offset");
+    cursor = objectOffset.offset;
+    offsets.push({
+      objectNumber: objectNumber.value,
+      offset: objectOffset.value
+    });
+  }
+  if (offsets.length !== count) {
+    throw new PdfSyntaxError("Object stream header ended early.", {
+      offset,
+      code: "pdf.object_stream.header_malformed"
+    });
+  }
+  return offsets;
 }
 
 function resolveStreamEnd(source, bytes, streamStart, dictionary, mode = "strict") {
