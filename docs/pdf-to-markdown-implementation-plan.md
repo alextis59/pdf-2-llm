@@ -371,14 +371,14 @@ assets.
 
 ### 2.2 Basic Stream Filters
 
-- [ ] Implement or integrate Flate decode.
-- [ ] Implement ASCIIHex decode.
-- [ ] Implement ASCII85 decode.
-- [ ] Implement RunLength decode.
-- [ ] Implement PNG predictor handling for Flate streams.
-- [ ] Implement filter chains.
-- [ ] Enforce decoded-size limits.
-- [ ] Test corrupt stream behavior.
+- [x] Implement or integrate Flate decode.
+- [x] Implement ASCIIHex decode.
+- [x] Implement ASCII85 decode.
+- [x] Implement RunLength decode.
+- [x] Implement PNG predictor handling for Flate streams.
+- [x] Implement filter chains.
+- [x] Enforce decoded-size limits.
+- [x] Test corrupt stream behavior.
 
 ### 2.3 Page Tree And Resources
 

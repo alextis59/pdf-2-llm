@@ -7,7 +7,7 @@ export const warningCodes = Object.freeze({
   PasswordRequired: "security.password_required",
   OcrDisabled: "ocr.disabled",
   WebGpuUnavailable: "webgpu.unavailable",
-  HeuristicTextExtraction: "text.heuristic_uncompressed_stream",
+  HeuristicTextExtraction: "text.heuristic_content_stream",
   PdfParseFailed: "pdf.parse_failed"
 });
 

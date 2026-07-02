@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { deflateSync } from "node:zlib";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -70,6 +71,39 @@ test("parsePdfDocument resolves nested page trees and inherited resources", () =
   assert.equal(page.resources.fonts.F1.encoding, "WinAnsiEncoding");
 });
 
+test("parsePdfDocument decodes Flate content streams for text extraction", async () => {
+  const content = "BT /F1 22 Tf 20 200 Td (Compressed Fixture) Tj ET\n";
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject(deflateSync(Buffer.from(content, "latin1")), "/Filter /FlateDecode")
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.pages[0].contentStreams[0].filters[0], "FlateDecode");
+  assert.match(document.pages[0].contentStreams[0].text, /Compressed Fixture/);
+  assert.equal(result.markdown, "# Compressed Fixture\n");
+  assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
+});
+
+test("parsePdfDocument reports corrupt stream filters with structured syntax errors", () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject(Buffer.from("not flate", "latin1"), "/Filter /FlateDecode")
+  ]);
+
+  assert.throws(
+    () => parsePdfDocument(bytes),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.stream.flate_failed"
+  );
+});
+
 test("parser reports bounded byte-reader and syntax errors with codes and offsets", async () => {
   const bytes = await readFile(fixturePath);
 
@@ -93,7 +127,7 @@ test("parser reports bounded byte-reader and syntax errors with codes and offset
 test("public converter uses parsed content streams for generated PDFs", async () => {
   const result = await convertPdfToMarkdown(fixturePath.pathname);
 
-  assert.equal(result.diagnostics.extraction.mode, "parsed-uncompressed-streams");
+  assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
   assert.equal(result.diagnostics.extraction.parser.mode, "classic-xref");
   assert.equal(result.diagnostics.extraction.parser.objects, 5);
   assert.equal(result.diagnostics.extraction.parser.streams, 1);
@@ -139,6 +173,7 @@ function createTestPdf(objects) {
   return Buffer.from(body, "binary");
 }
 
-function streamObject(contents) {
-  return `<< /Length ${Buffer.byteLength(contents, "binary")} >>\nstream\n${contents}endstream`;
+function streamObject(contents, extraDictionary = "") {
+  const bytes = typeof contents === "string" ? Buffer.from(contents, "binary") : Buffer.from(contents);
+  return `<< /Length ${bytes.byteLength}${extraDictionary ? ` ${extraDictionary}` : ""} >>\nstream\n${bytes.toString("binary")}endstream`;
 }

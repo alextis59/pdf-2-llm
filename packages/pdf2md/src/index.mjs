@@ -90,7 +90,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       createWarning(
         warningCodes.HeuristicTextExtraction,
         pdfDocument
-          ? "Text was extracted from parsed uncompressed content streams."
+          ? "Text was extracted from parsed content streams."
           : "Text was extracted with the fallback uncompressed-stream scanner."
       )
     );
@@ -141,7 +141,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         mode:
           textLines.length > 0
             ? pdfDocument
-              ? "parsed-uncompressed-streams"
+              ? "parsed-content-streams"
               : "fallback-uncompressed-stream-scan"
             : "none",
         parser: pdfDocument

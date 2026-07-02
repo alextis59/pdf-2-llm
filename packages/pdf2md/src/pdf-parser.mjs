@@ -1,3 +1,5 @@
+import { PdfStreamDecodeError, decodeStreamBytes } from "./stream-filters.mjs";
+
 export class PdfSyntaxError extends Error {
   constructor(message, { offset = null, code = "pdf.syntax" } = {}) {
     super(message);
@@ -43,6 +45,7 @@ export class ByteReader {
 
 export function parsePdfDocument(bytes, options = {}) {
   const reader = new ByteReader(bytes, options);
+  const maxDecodedStreamBytes = options.maxDecodedStreamBytes ?? options.maxBytes ?? 50 * 1024 * 1024;
   const source = Buffer.from(reader.bytes).toString("latin1");
   const version = readPdfVersion(source);
   const startXref = readStartXref(source);
@@ -54,7 +57,9 @@ export function parsePdfDocument(bytes, options = {}) {
     if (!entry.inUse || entry.offset <= 0) {
       continue;
     }
-    const object = parseIndirectObjectAt(source, reader.bytes, entry.offset);
+    const object = parseIndirectObjectAt(source, reader.bytes, entry.offset, {
+      maxDecodedStreamBytes
+    });
     objects.set(objectKey(object.objectNumber, object.generationNumber), object);
     if (object.stream) {
       streams.push(object.stream);
@@ -173,7 +178,7 @@ function parseClassicXref(source, offset) {
   });
 }
 
-function parseIndirectObjectAt(source, bytes, offset) {
+function parseIndirectObjectAt(source, bytes, offset, options = {}) {
   const header = source.slice(offset).match(/^(\d+)\s+(\d+)\s+obj\b/);
   if (!header) {
     throw new PdfSyntaxError("Expected indirect object.", {
@@ -227,13 +232,33 @@ function parseIndirectObjectAt(source, bytes, offset) {
     }
 
     const streamBytes = bytes.subarray(streamStart, streamEnd);
+    let decoded;
+    try {
+      decoded = decodeStreamBytes(streamBytes, parsed.value, {
+        maxBytes: options.maxDecodedStreamBytes ?? 50 * 1024 * 1024
+      });
+    } catch (error) {
+      if (error instanceof PdfStreamDecodeError) {
+        throw new PdfSyntaxError(error.message, {
+          offset: error.offset ?? streamStart,
+          code: error.code
+        });
+      }
+      throw error;
+    }
     stream = {
       objectNumber,
       generationNumber,
       offset: streamStart,
       length: streamBytes.byteLength,
-      bytes: streamBytes,
-      text: Buffer.from(streamBytes).toString("latin1")
+      rawBytes: streamBytes,
+      rawLength: streamBytes.byteLength,
+      bytes: decoded.bytes,
+      decodedBytes: decoded.bytes,
+      decodedLength: decoded.bytes.byteLength,
+      filters: decoded.filters,
+      decodeParms: decoded.decodeParms,
+      text: Buffer.from(decoded.bytes).toString("latin1")
     };
 
     const endstreamOffset = source.indexOf("endstream", streamEnd);
