@@ -85,20 +85,20 @@ the extraction pipeline.
 
 ### 0.1 Corpus Policy
 
-- [ ] Create `corpus/README.md` explaining how PDFs enter the corpus.
-- [ ] Create `corpus/manifest.json` with schema validation.
-- [ ] Add fields for `id`, `kind`, `source`, `retrievedAt`, `license`,
+- [x] Create `corpus/README.md` explaining how PDFs enter the corpus.
+- [x] Create `corpus/manifest.json` with schema validation.
+- [x] Add fields for `id`, `kind`, `source`, `retrievedAt`, `license`,
   `redistributable`, `sha256`, `bytes`, `pages`, `pdfVersion`, `features`,
   `acceptanceFile`, and `notes`.
-- [ ] Add a `redistributable: false` path for PDFs that can be used locally but
+- [x] Add a `redistributable: false` path for PDFs that can be used locally but
   must not be committed.
-- [ ] Add `.gitignore` rules for non-redistributable raw PDFs.
-- [ ] Add a rule that committed PDFs must be public domain, permissively
+- [x] Add `.gitignore` rules for non-redistributable raw PDFs.
+- [x] Add a rule that committed PDFs must be public domain, permissively
   licensed, self-generated, or otherwise cleared for redistribution.
-- [ ] Add a rule that external oracle outputs are not treated as ground truth
+- [x] Add a rule that external oracle outputs are not treated as ground truth
   until they have been reviewed.
-- [ ] Add a scriptable SHA-256 check so corpus drift is caught in CI.
-- [ ] Add a storage policy for large fixtures, including a size threshold for
+- [x] Add a scriptable SHA-256 check so corpus drift is caught in CI.
+- [x] Add a storage policy for large fixtures, including a size threshold for
   Git LFS or external artifact storage.
 
 ### 0.2 PDF Retrieval Matrix
@@ -827,7 +827,7 @@ Minimum release bars for a serious beta:
 
 ## Immediate Next Actions
 
-- [ ] Create corpus directories and manifest schema.
+- [x] Create corpus directories and manifest schema.
 - [ ] Add retrieval and analysis script skeletons.
 - [ ] Generate the first synthetic exact-output PDFs.
 - [ ] Retrieve a small public-domain/public-license external PDF set.

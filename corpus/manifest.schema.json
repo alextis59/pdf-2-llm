@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/pdf-2-llm/corpus-manifest.schema.json",
+  "title": "PDF-to-Markdown Corpus Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "entries"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entry"
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "path",
+        "source",
+        "retrievedAt",
+        "license",
+        "redistributable",
+        "sha256",
+        "bytes",
+        "pages",
+        "pdfVersion",
+        "features",
+        "acceptanceFile",
+        "notes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "synthetic",
+            "born-digital",
+            "tagged",
+            "font-edge-case",
+            "pdf-feature",
+            "linearized",
+            "incremental-update",
+            "encrypted",
+            "damaged",
+            "scanned",
+            "searchable-scan",
+            "bad-ocr-overlay",
+            "long-document",
+            "scientific-paper",
+            "visible-table",
+            "borderless-table",
+            "complex-table",
+            "form",
+            "invoice-receipt",
+            "slide-brochure",
+            "vector-heavy",
+            "equation",
+            "rtl",
+            "cjk",
+            "vertical-writing",
+            "rotated-cropped",
+            "stress",
+            "annotation-link",
+            "attachment",
+            "signature",
+            "xfa"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "description"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["url", "generated", "mutated", "local-only"]
+            },
+            "url": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            }
+          }
+        },
+        "retrievedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "license": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "notes"],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        },
+        "redistributable": {
+          "type": "boolean"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pdfVersion": {
+          "type": "string"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "acceptanceFile": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

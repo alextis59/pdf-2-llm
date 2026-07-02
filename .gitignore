@@ -141,3 +141,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# PDF corpus quarantine and local-only files
+corpus/raw/_incoming/*
+!corpus/raw/_incoming/.gitkeep
+corpus/raw/local-only/*
+!corpus/raw/local-only/.gitkeep

@@ -1,0 +1,10 @@
+{
+  "name": "pdf-2-llm",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "npm run corpus:validate",
+    "corpus:validate": "node scripts/corpus/validate-manifest.mjs"
+  }
+}
