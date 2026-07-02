@@ -55,6 +55,11 @@ export function parsePdfDocument(bytes, options = {}) {
     maxDecodedStreamBytes,
     mode
   });
+  if (isEncryptedTrailer(trailer)) {
+    throw new PdfSyntaxError("Encrypted PDFs require a password before parsing.", {
+      code: "pdf.encryption.password_required"
+    });
+  }
   const objects = new Map();
   const streams = [];
 
@@ -96,6 +101,10 @@ export function parsePdfDocument(bytes, options = {}) {
     pages,
     getObject
   };
+}
+
+function isEncryptedTrailer(trailer) {
+  return isDict(trailer) && trailer.entries.Encrypt != null;
 }
 
 function loadCompressedObjectStreams(objects, entries) {

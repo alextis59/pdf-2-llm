@@ -296,6 +296,38 @@ test("parser reports bounded byte-reader and syntax errors with codes and offset
   );
 });
 
+test("parser and converter reject encrypted PDFs without a password", async () => {
+  const bytes = createTestPdf(
+    [
+      "<< /Type /Catalog /Pages 2 0 R >>",
+      "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+      "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+      streamObject("BT /F1 22 Tf 20 200 Td (Encrypted Fixture) Tj ET\n"),
+      "<< /Filter /Standard /V 1 /R 2 /Length 40 >>"
+    ],
+    { trailerEntries: " /Encrypt 6 0 R" }
+  );
+
+  assert.throws(
+    () => parsePdfDocument(bytes),
+    (error) =>
+      error instanceof PdfSyntaxError && error.code === "pdf.encryption.password_required"
+  );
+
+  const result = await convertPdfToMarkdown(bytes);
+  const passwordWarning = result.warnings.find(
+    (warning) => warning.code === warningCodes.PasswordRequired
+  );
+
+  assert.ok(passwordWarning);
+  assert.equal(passwordWarning.details.code, "pdf.encryption.password_required");
+  assert.equal(result.markdown, "");
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.diagnostics.extraction.textLines, 0);
+});
+
 test("public converter uses parsed content streams for generated PDFs", async () => {
   const result = await convertPdfToMarkdown(fixturePath.pathname);
 
@@ -324,7 +356,7 @@ test("public converter reports malformed xref streams as warnings", async () => 
   assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
 });
 
-function createTestPdf(objects) {
+function createTestPdf(objects, { trailerEntries = "" } = {}) {
   let body = "%PDF-1.4\n";
   const offsets = [0];
 
@@ -340,7 +372,7 @@ function createTestPdf(objects) {
   for (let objectId = 1; objectId <= objects.length; objectId += 1) {
     body += `${String(offsets[objectId]).padStart(10, "0")} 00000 n\n`;
   }
-  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${trailerEntries} >>\n`;
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
   return Buffer.from(body, "binary");
 }

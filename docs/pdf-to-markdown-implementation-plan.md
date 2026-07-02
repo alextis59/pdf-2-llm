@@ -452,8 +452,8 @@ Goal: expand PDF compatibility before adding more semantic features.
 
 ### 3.3 Encryption And Password Handling
 
-- [ ] Detect encrypted PDFs.
-- [ ] Reject encrypted PDFs without a password.
+- [x] Detect encrypted PDFs.
+- [x] Reject encrypted PDFs without a password.
 - [ ] Implement password callback path.
 - [ ] Implement supported standard security handlers as a scoped task.
 - [ ] Do not attempt bypasses.

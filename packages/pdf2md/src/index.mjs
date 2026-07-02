@@ -65,10 +65,16 @@ export async function convertPdfToMarkdown(input, options = {}) {
       });
     } catch (error) {
       if (error instanceof PdfSyntaxError) {
-        parseWarning = createWarning(warningCodes.PdfParseFailed, error.message, {
-          code: error.code,
-          offset: error.offset
-        });
+        parseWarning =
+          error.code === "pdf.encryption.password_required"
+            ? createWarning(warningCodes.PasswordRequired, error.message, {
+                code: error.code,
+                offset: error.offset
+              })
+            : createWarning(warningCodes.PdfParseFailed, error.message, {
+                code: error.code,
+                offset: error.offset
+              });
         warnings.push(parseWarning);
       } else {
         throw error;
@@ -91,7 +97,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
     );
   }
 
-  const textLines = pdfVersion ? extractTextLines(normalized.bytes, { document: pdfDocument }) : [];
+  const passwordRequired = parseWarning?.code === warningCodes.PasswordRequired;
+  const textLines =
+    pdfVersion && !passwordRequired
+      ? extractTextLines(normalized.bytes, { document: pdfDocument })
+      : [];
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
