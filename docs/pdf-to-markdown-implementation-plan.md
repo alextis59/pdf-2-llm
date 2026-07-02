@@ -344,7 +344,7 @@ Goal: create stable contracts so agents can implement modules independently.
 
 Definition of done:
 
-- [ ] `npm run build` succeeds.
+- [x] `npm run build` succeeds.
 - [ ] `cargo test --workspace` succeeds.
 - [x] A synthetic single-page PDF can pass through a stub pipeline and return
   structured diagnostics.
