@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   extractContentStreamRulingLines,
   extractContentStreamTextLines,
+  mergeRulingLines,
   tokenizeContentStream
 } from "../src/content-stream.mjs";
 
@@ -131,6 +132,108 @@ test("extractContentStreamRulingLines detects stroked axis-aligned paths", () =>
   assert.deepEqual([...new Set(lines.map((line) => line.pageIndex))], [3]);
   assert.deepEqual([...new Set(lines.map((line) => line.streamIndex))], [2]);
   assert.deepEqual([...new Set(lines.map((line) => line.source))], ["path-operator"]);
+});
+
+test("extractContentStreamRulingLines merges near-collinear path fragments", () => {
+  const lines = extractContentStreamRulingLines(
+    [
+      "0 10 m 20 10 l S",
+      "20.4 10.2 m 40 10.2 l S",
+      "45 10 m 50 10 l S",
+      "5 0 m 5 10 l S",
+      "5.2 10.4 m 5.2 20 l S",
+      "8 0 m 8 10 l S"
+    ].join("\n"),
+    { pageIndex: 0, streamIndex: 0 }
+  );
+
+  assert.equal(lines.length, 4);
+  assert.deepEqual(
+    lines.map((line) => [line.orientation, line.x1, line.y1, line.x2, line.y2, line.segmentCount]),
+    [
+      ["horizontal", 0, 10.1, 40, 10.1, 2],
+      ["horizontal", 45, 10, 50, 10, 1],
+      ["vertical", 5.1, 0, 5.1, 20, 2],
+      ["vertical", 8, 0, 8, 10, 1]
+    ]
+  );
+});
+
+test("mergeRulingLines merges parsed page streams without crossing unknown pages", () => {
+  const parsedPageLines = mergeRulingLines([
+    {
+      type: "ruling-line",
+      orientation: "horizontal",
+      x1: 0,
+      y1: 10,
+      x2: 20,
+      y2: 10,
+      width: 1,
+      segmentCount: 1,
+      pageIndex: 0,
+      streamIndex: 0,
+      source: "path-operator"
+    },
+    {
+      type: "ruling-line",
+      orientation: "horizontal",
+      x1: 20.2,
+      y1: 10,
+      x2: 40,
+      y2: 10,
+      width: 2,
+      segmentCount: 1,
+      pageIndex: 0,
+      streamIndex: 1,
+      source: "path-operator"
+    }
+  ]);
+
+  assert.equal(parsedPageLines.length, 1);
+  assert.deepEqual(parsedPageLines[0], {
+    type: "ruling-line",
+    orientation: "horizontal",
+    x1: 0,
+    y1: 10,
+    x2: 40,
+    y2: 10,
+    width: 2,
+    segmentCount: 2,
+    pageIndex: 0,
+    streamIndex: null,
+    source: "path-operator"
+  });
+
+  const unknownPageLines = mergeRulingLines([
+    {
+      type: "ruling-line",
+      orientation: "horizontal",
+      x1: 0,
+      y1: 10,
+      x2: 20,
+      y2: 10,
+      width: 1,
+      segmentCount: 1,
+      pageIndex: null,
+      streamIndex: 0,
+      source: "path-operator"
+    },
+    {
+      type: "ruling-line",
+      orientation: "horizontal",
+      x1: 20.2,
+      y1: 10,
+      x2: 40,
+      y2: 10,
+      width: 1,
+      segmentCount: 1,
+      pageIndex: null,
+      streamIndex: 1,
+      source: "path-operator"
+    }
+  ]);
+
+  assert.equal(unknownPageLines.length, 2);
 });
 
 test("extractContentStreamTextLines applies ToUnicode font maps to string bytes", () => {

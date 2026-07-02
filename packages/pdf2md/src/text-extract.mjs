@@ -1,6 +1,7 @@
 import {
   extractContentStreamRulingLines,
-  extractContentStreamTextLines
+  extractContentStreamTextLines,
+  mergeRulingLines
 } from "./content-stream.mjs";
 
 const linkPattern = /(https?:\/\/[^\s<>()\[\]{}]+|www\.[^\s<>()\[\]{}]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
@@ -20,8 +21,10 @@ export function extractRulingLines(bytes, { document = null } = {}) {
     return documentRulingLines(document);
   }
 
-  return findStreamTextsByScan(bytes).flatMap((stream, streamIndex) =>
-    extractContentStreamRulingLines(stream, { streamIndex })
+  return mergeRulingLines(
+    findStreamTextsByScan(bytes).flatMap((stream, streamIndex) =>
+      extractContentStreamRulingLines(stream, { streamIndex })
+    )
   );
 }
 
@@ -57,18 +60,22 @@ function documentTextLines(document) {
 
 function documentRulingLines(document) {
   if (document.pages?.length > 0) {
-    return document.pages.flatMap((page) =>
-      page.contentStreams.flatMap((stream, streamIndex) =>
-        extractContentStreamRulingLines(stream.text, {
-          pageIndex: page.pageIndex,
-          streamIndex
-        })
+    return mergeRulingLines(
+      document.pages.flatMap((page) =>
+        page.contentStreams.flatMap((stream, streamIndex) =>
+          extractContentStreamRulingLines(stream.text, {
+            pageIndex: page.pageIndex,
+            streamIndex
+          })
+        )
       )
     );
   }
 
-  return document.streams.flatMap((stream, streamIndex) =>
-    extractContentStreamRulingLines(stream.text, { streamIndex })
+  return mergeRulingLines(
+    document.streams.flatMap((stream, streamIndex) =>
+      extractContentStreamRulingLines(stream.text, { streamIndex })
+    )
   );
 }
 

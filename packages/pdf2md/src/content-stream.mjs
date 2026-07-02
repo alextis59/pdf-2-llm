@@ -60,7 +60,49 @@ export function extractContentStreamRulingLines(streamText, options = {}) {
     operands.length = 0;
   }
 
-  return lines;
+  return options.mergeRulingLines === false ? lines : mergeRulingLines(lines, options);
+}
+
+export function mergeRulingLines(rulingLines, options = {}) {
+  const coordinateTolerance = options.mergeCoordinateTolerance ?? 0.5;
+  const gapTolerance = options.mergeGapTolerance ?? 1;
+  const clusters = [];
+
+  for (const line of rulingLines) {
+    const cluster = clusters.find((item) =>
+      canMergeRulingLines(item, line, { coordinateTolerance, gapTolerance })
+    );
+    if (cluster) {
+      mergeRulingLineInto(cluster, line);
+      continue;
+    }
+    clusters.push(cloneRulingLine(line));
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let leftIndex = 0; leftIndex < clusters.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < clusters.length; rightIndex += 1) {
+        if (
+          canMergeRulingLines(clusters[leftIndex], clusters[rightIndex], {
+            coordinateTolerance,
+            gapTolerance
+          })
+        ) {
+          mergeRulingLineInto(clusters[leftIndex], clusters[rightIndex]);
+          clusters.splice(rightIndex, 1);
+          changed = true;
+          break;
+        }
+      }
+      if (changed) {
+        break;
+      }
+    }
+  }
+
+  return clusters.map(finalizeMergedRulingLine);
 }
 
 export function tokenizeContentStream(streamText) {
@@ -244,10 +286,103 @@ function createRulingLine(orientation, x1, y1, x2, y2, segment, options) {
     x2: normalizeCoordinate(x2),
     y2: normalizeCoordinate(y2),
     width: normalizeCoordinate(segment.width),
+    segmentCount: 1,
     pageIndex: options.pageIndex ?? null,
     streamIndex: options.streamIndex ?? null,
     source: "path-operator"
   };
+}
+
+function canMergeRulingLines(left, right, tolerances) {
+  if (!sameRulingLineScope(left, right) || left.orientation !== right.orientation) {
+    return false;
+  }
+
+  const coordinateDelta = Math.abs(lineAxisCoordinate(left) - lineAxisCoordinate(right));
+  if (coordinateDelta > tolerances.coordinateTolerance) {
+    return false;
+  }
+
+  return (
+    lineStart(left) <= lineEnd(right) + tolerances.gapTolerance &&
+    lineEnd(left) >= lineStart(right) - tolerances.gapTolerance
+  );
+}
+
+function sameRulingLineScope(left, right) {
+  if ((left.pageIndex ?? null) !== (right.pageIndex ?? null)) {
+    return false;
+  }
+  if ((left.source ?? null) !== (right.source ?? null)) {
+    return false;
+  }
+  if (left.pageIndex == null && (left.streamIndex ?? null) !== (right.streamIndex ?? null)) {
+    return false;
+  }
+  return true;
+}
+
+function mergeRulingLineInto(target, line) {
+  const targetCount = target.segmentCount ?? 1;
+  const lineCount = line.segmentCount ?? 1;
+  const totalCount = targetCount + lineCount;
+  const coordinate =
+    (lineAxisCoordinate(target) * targetCount + lineAxisCoordinate(line) * lineCount) /
+    totalCount;
+  const start = Math.min(lineStart(target), lineStart(line));
+  const end = Math.max(lineEnd(target), lineEnd(line));
+
+  if (target.orientation === "horizontal") {
+    target.x1 = normalizeCoordinate(start);
+    target.y1 = normalizeCoordinate(coordinate);
+    target.x2 = normalizeCoordinate(end);
+    target.y2 = normalizeCoordinate(coordinate);
+  } else {
+    target.x1 = normalizeCoordinate(coordinate);
+    target.y1 = normalizeCoordinate(start);
+    target.x2 = normalizeCoordinate(coordinate);
+    target.y2 = normalizeCoordinate(end);
+  }
+
+  target.width = normalizeCoordinate(Math.max(target.width ?? 0, line.width ?? 0));
+  target.segmentCount = totalCount;
+  if ((target.streamIndex ?? null) !== (line.streamIndex ?? null)) {
+    target.streamIndex = null;
+  }
+}
+
+function cloneRulingLine(line) {
+  return {
+    ...line,
+    segmentCount: line.segmentCount ?? 1
+  };
+}
+
+function finalizeMergedRulingLine(line) {
+  return {
+    ...line,
+    x1: normalizeCoordinate(line.x1),
+    y1: normalizeCoordinate(line.y1),
+    x2: normalizeCoordinate(line.x2),
+    y2: normalizeCoordinate(line.y2),
+    width: normalizeCoordinate(line.width ?? 0)
+  };
+}
+
+function lineAxisCoordinate(line) {
+  return line.orientation === "horizontal" ? (line.y1 + line.y2) / 2 : (line.x1 + line.x2) / 2;
+}
+
+function lineStart(line) {
+  return line.orientation === "horizontal"
+    ? Math.min(line.x1, line.x2)
+    : Math.min(line.y1, line.y2);
+}
+
+function lineEnd(line) {
+  return line.orientation === "horizontal"
+    ? Math.max(line.x1, line.x2)
+    : Math.max(line.y1, line.y2);
 }
 
 function appendRectanglePath(state, x, y, width, height) {

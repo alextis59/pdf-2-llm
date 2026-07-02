@@ -528,7 +528,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 ### 5.1 Visible-Border Tables
 
 - [x] Detect ruling lines from path operators.
-- [ ] Merge near-collinear segments.
+- [x] Merge near-collinear segments.
 - [ ] Infer grid rows and columns.
 - [ ] Assign text boxes to cells.
 - [ ] Detect row and column spans.
