@@ -48,6 +48,37 @@ export function compareTextCoverage(oracleText, actualMarkdown) {
   };
 }
 
+export function compareReadingOrder(oracleText, actualMarkdown) {
+  const oracleTokens = tokenizeComparableText(oracleText);
+  const actualTokens = tokenizeComparableText(markdownToComparableText(actualMarkdown));
+  const edits = tokenEditDistance(oracleTokens, actualTokens);
+  const denominator = Math.max(oracleTokens.length, actualTokens.length, 1);
+  const distance = edits / denominator;
+  return {
+    readingOrderEdits: edits,
+    readingOrderDistance: distance,
+    readingOrderSimilarity: 1 - distance
+  };
+}
+
+export function tokenEditDistance(leftTokens, rightTokens) {
+  let previous = Array.from({ length: rightTokens.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= leftTokens.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= rightTokens.length; rightIndex += 1) {
+      const substitutionCost =
+        leftTokens[leftIndex - 1] === rightTokens[rightIndex - 1] ? 0 : 1;
+      current[rightIndex] = Math.min(
+        previous[rightIndex] + 1,
+        current[rightIndex - 1] + 1,
+        previous[rightIndex - 1] + substitutionCost
+      );
+    }
+    previous = current;
+  }
+  return previous[rightTokens.length];
+}
+
 function hasFlag(name) {
   return args.includes(name);
 }
@@ -221,6 +252,7 @@ async function compareCase(repoRoot, corpusCase, thresholdOverride) {
     ocr: { enabled: false }
   });
   const comparison = compareTextCoverage(oracleText, result.markdown);
+  const readingOrder = compareReadingOrder(oracleText, result.markdown);
   const minTextCoverage = thresholdOverride ?? acceptance.minTextCoverage;
   return {
     id: entry.id,
@@ -228,6 +260,7 @@ async function compareCase(repoRoot, corpusCase, thresholdOverride) {
     oraclePath: path.relative(repoRoot, oraclePath),
     minTextCoverage,
     ...comparison,
+    ...readingOrder,
     passed: comparison.coverage + Number.EPSILON >= minTextCoverage
   };
 }
@@ -246,7 +279,9 @@ function printResult(result) {
   console.log(
     `${prefix} ${result.id} textCoverage=${formatNumber(result.coverage)} min=${formatNumber(
       result.minTextCoverage
-    )} matched=${result.matchedTokens}/${result.oracleTokens} actualTokens=${result.actualTokens}`
+    )} matched=${result.matchedTokens}/${result.oracleTokens} actualTokens=${
+      result.actualTokens
+    } readingOrderDistance=${formatNumber(result.readingOrderDistance)}`
   );
 }
 
