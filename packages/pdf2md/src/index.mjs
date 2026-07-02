@@ -88,6 +88,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     pageAnchors: options.markdown?.pageAnchors === true
   });
   warnings.push(...unicodeMappingWarnings(textLines));
+  warnings.push(...textOrderingWarnings(textLines));
 
   if (textLines.length > 0) {
     warnings.push(
@@ -216,6 +217,55 @@ function unicodeMappingWarnings(textLines) {
     );
   }
   return warnings;
+}
+
+function textOrderingWarnings(textLines) {
+  const warnings = [];
+  const seenPages = new Set();
+  for (let index = 1; index < textLines.length; index += 1) {
+    const previous = textLines[index - 1];
+    const current = textLines[index];
+    if (
+      !samePage(previous, current) ||
+      seenPages.has(current.pageIndex) ||
+      !Number.isFinite(previous.x) ||
+      !Number.isFinite(previous.y) ||
+      !Number.isFinite(current.x) ||
+      !Number.isFinite(current.y)
+    ) {
+      continue;
+    }
+
+    const upwardJump = current.y - previous.y;
+    const horizontalShift = Math.abs(current.x - previous.x);
+    if (upwardJump > Math.max(6, current.fontSize * 0.5) && horizontalShift > 96) {
+      seenPages.add(current.pageIndex);
+      warnings.push(
+        createWarning(
+          warningCodes.TextOrderingUncertain,
+          "Text order may require layout analysis beyond content stream order.",
+          {
+            pageIndex: current.pageIndex,
+            previous: {
+              text: previous.text,
+              x: previous.x,
+              y: previous.y
+            },
+            current: {
+              text: current.text,
+              x: current.x,
+              y: current.y
+            }
+          }
+        )
+      );
+    }
+  }
+  return warnings;
+}
+
+function samePage(left, right) {
+  return (left.pageIndex ?? null) === (right.pageIndex ?? null);
 }
 
 async function normalizeInput(input) {

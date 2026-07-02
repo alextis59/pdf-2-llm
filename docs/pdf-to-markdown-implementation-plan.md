@@ -415,7 +415,7 @@ assets.
 - [x] Serialize CommonMark paragraphs, headings, and lists.
 - [x] Escape Markdown metacharacters.
 - [x] Add page anchors.
-- [ ] Preserve uncertain ordering with warnings.
+- [x] Preserve uncertain ordering with warnings.
 
 Gate 1 acceptance:
 

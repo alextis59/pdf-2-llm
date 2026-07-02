@@ -6,6 +6,10 @@ import test from "node:test";
 import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
 
 const fixturePath = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
+const twoColumnFixturePath = new URL(
+  "../../../corpus/generated/synthetic-two-column.pdf",
+  import.meta.url
+);
 
 test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", async () => {
   const bytes = await readFile(fixturePath);
@@ -57,6 +61,18 @@ test("CLI emits JSON scaffold output", () => {
   assert.ok(
     result.warnings.some((warning) => warning.code === warningCodes.HeuristicTextExtraction)
   );
+});
+
+test("convertPdfToMarkdown warns when content stream order may be uncertain", async () => {
+  const result = await convertPdfToMarkdown(twoColumnFixturePath.pathname);
+  const warning = result.warnings.find(
+    (item) => item.code === warningCodes.TextOrderingUncertain
+  );
+
+  assert.ok(warning);
+  assert.equal(warning.details.pageIndex, 0);
+  assert.match(warning.details.previous.text, /Left column continues/);
+  assert.match(warning.details.current.text, /Right column starts/);
 });
 
 test("text MVP matches expected markdown for simple generated fixtures", async () => {

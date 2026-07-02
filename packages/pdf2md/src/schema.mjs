@@ -9,6 +9,7 @@ export const warningCodes = Object.freeze({
   WebGpuUnavailable: "webgpu.unavailable",
   HeuristicTextExtraction: "text.heuristic_content_stream",
   TextUnicodeMappingSuspect: "text.unicode_mapping_suspect",
+  TextOrderingUncertain: "text.ordering_uncertain",
   PdfParseFailed: "pdf.parse_failed"
 });
 
