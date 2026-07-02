@@ -87,9 +87,28 @@ export type Diagnostics = {
   extraction: {
     textLines: number;
     mode: string;
+    layout: LayoutDiagnostics;
     parser: Record<string, unknown>;
   };
   pages: PageDiagnostics[];
+};
+
+export type LayoutDiagnostics = {
+  pages: PageLayoutDiagnostics[];
+};
+
+export type PageLayoutDiagnostics = {
+  pageIndex: number | null;
+  kind: "single-column" | "multi-column" | "mixed" | "unknown";
+  rows: number;
+  blocks: number;
+  columns: LayoutColumnDiagnostics[];
+};
+
+export type LayoutColumnDiagnostics = {
+  index: number;
+  x: number;
+  rows: number;
 };
 
 export type PageDiagnostics = {

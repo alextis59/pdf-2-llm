@@ -108,6 +108,40 @@ test("linesToMarkdown keeps same-baseline table cells in row-major order", () =>
   );
 });
 
+test("linesToMarkdownWithSourceMap reports page layout classifications", () => {
+  const single = linesToMarkdownWithSourceMap([
+    { text: "Single", fontSize: 22, x: 72, y: 720, width: 80, pageIndex: 0 },
+    { text: "One column body starts here.", fontSize: 12, x: 72, y: 680, width: 160, pageIndex: 0 },
+    { text: "It continues here.", fontSize: 12, x: 72, y: 660, width: 100, pageIndex: 0 }
+  ]);
+  assert.equal(single.layout.pages[0].kind, "single-column");
+  assert.equal(single.layout.pages[0].columns.length, 0);
+
+  const multi = linesToMarkdownWithSourceMap([
+    { text: "Multi", fontSize: 22, x: 72, y: 720, width: 80, pageIndex: 0 },
+    { text: "Left top.", fontSize: 12, x: 72, y: 680, width: 80, pageIndex: 0 },
+    { text: "Right top.", fontSize: 12, x: 330, y: 680, width: 90, pageIndex: 0 },
+    { text: "Left lower.", fontSize: 12, x: 72, y: 660, width: 90, pageIndex: 0 },
+    { text: "Right lower.", fontSize: 12, x: 330, y: 660, width: 100, pageIndex: 0 }
+  ]);
+  assert.equal(multi.layout.pages[0].kind, "multi-column");
+  assert.deepEqual(
+    multi.layout.pages[0].columns.map((column) => column.index),
+    [0, 1]
+  );
+
+  const mixed = linesToMarkdownWithSourceMap([
+    { text: "Mixed", fontSize: 22, x: 72, y: 720, width: 80, pageIndex: 0 },
+    { text: "Left top.", fontSize: 12, x: 72, y: 680, width: 80, pageIndex: 0 },
+    { text: "Right top.", fontSize: 12, x: 330, y: 680, width: 90, pageIndex: 0 },
+    { text: "Left lower.", fontSize: 12, x: 72, y: 660, width: 90, pageIndex: 0 },
+    { text: "Right lower.", fontSize: 12, x: 330, y: 660, width: 100, pageIndex: 0 },
+    { text: "Full width summary.", fontSize: 12, x: 72, y: 620, width: 430, pageIndex: 0 }
+  ]);
+  assert.equal(mixed.layout.pages[0].kind, "mixed");
+  assert.equal(mixed.layout.pages[0].columns.length, 2);
+});
+
 test("linesToMarkdown removes high-confidence page numbers", () => {
   const markdown = linesToMarkdown([
     { text: "Page Number Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },

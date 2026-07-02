@@ -41,6 +41,8 @@ test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", asyn
   assert.equal(result.diagnostics.input.bytes, bytes.byteLength);
   assert.equal(result.diagnostics.input.pdfVersion, "1.4");
   assert.equal(result.diagnostics.input.sha256, createHash("sha256").update(bytes).digest("hex"));
+  assert.equal(result.diagnostics.extraction.layout.pages[0].kind, "single-column");
+  assert.equal(result.confidence.layout, 0.35);
   assert.deepEqual(progress, ["start", "complete"]);
   assert.ok(result.warnings.some((warning) => warning.code === warningCodes.HeuristicTextExtraction));
   assert.ok(result.warnings.some((warning) => warning.code === warningCodes.OcrDisabled));
@@ -84,6 +86,11 @@ test("convertPdfToMarkdown warns when content stream order may be uncertain", as
   assert.equal(warning.details.pageIndex, 0);
   assert.match(warning.details.previous.text, /Left column continues/);
   assert.match(warning.details.current.text, /Right column starts/);
+  assert.equal(result.diagnostics.extraction.layout.pages[0].kind, "multi-column");
+  assert.deepEqual(
+    result.diagnostics.extraction.layout.pages[0].columns.map((column) => column.index),
+    [0, 1]
+  );
 });
 
 test("text MVP matches expected markdown for simple generated fixtures", async () => {

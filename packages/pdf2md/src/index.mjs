@@ -204,6 +204,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
               ? "parsed-content-streams"
               : "fallback-uncompressed-stream-scan"
             : "none",
+        layout: markdownResult.layout,
         parser: pdfDocument
           ? {
               mode: pdfDocument.xrefMode,
@@ -238,7 +239,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     confidence: {
       overall: textLines.length > 0 ? 0.25 : 0,
       text: textLines.length > 0 ? 0.4 : 0,
-      layout: 0,
+      layout: markdownResult.layout.pages.length > 0 ? 0.35 : 0,
       tables: 0
     }
   };

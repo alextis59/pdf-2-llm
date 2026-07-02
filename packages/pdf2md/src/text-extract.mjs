@@ -44,6 +44,7 @@ export function linesToMarkdown(lines, options = {}) {
 
 export function linesToMarkdownWithSourceMap(lines, options = {}) {
   lines = removeRepeatedRunningContent(lines);
+  const layout = analyzeLineLayout(lines);
   lines = orderLinesForReading(lines);
   const blocks = [];
   let previousWasList = false;
@@ -104,7 +105,10 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     index = paragraph.endIndex - 1;
   }
 
-  return serializeMarkdownBlocks(blocks);
+  return {
+    ...serializeMarkdownBlocks(blocks),
+    layout
+  };
 }
 
 function appendPageAnchor(blocks, pageIndex, options, anchoredPages) {
@@ -204,6 +208,16 @@ function readParagraphAt(lines, startIndex, firstText) {
 }
 
 function orderLinesForReading(lines) {
+  return groupLinesByPage(lines).flatMap(orderPageLinesForReading);
+}
+
+function analyzeLineLayout(lines) {
+  return {
+    pages: groupLinesByPage(lines).map(classifyPageLayout)
+  };
+}
+
+function groupLinesByPage(lines) {
   const pageGroups = [];
   const pageIndexes = new Map();
   for (let index = 0; index < lines.length; index += 1) {
@@ -218,7 +232,58 @@ function orderLinesForReading(lines) {
     pageGroups[pageGroupIndex].push({ line, index });
   }
 
-  return pageGroups.flatMap(orderPageLinesForReading);
+  return pageGroups;
+}
+
+function classifyPageLayout(indexedLines) {
+  const pageIndex = pageIndexForGroup(indexedLines);
+  if (indexedLines.length === 0 || !indexedLines.every((item) => hasLineGeometry(item.line))) {
+    return {
+      pageIndex,
+      kind: "unknown",
+      rows: 0,
+      blocks: 0,
+      columns: []
+    };
+  }
+
+  const rows = groupLinesIntoRows(indexedLines);
+  const columns = detectReadingColumns(rows);
+  const blocks = segmentRowsIntoReadingBlocks(rows);
+  const spanningRows = columns.length >= 2 ? rows.filter((row) => rowSpansColumns(row, columns)) : [];
+  return {
+    pageIndex,
+    kind: layoutKindFor(columns, spanningRows),
+    rows: rows.length,
+    blocks: blocks.length,
+    columns: columns.map((column, index) => ({
+      index,
+      x: roundNumber(column.center),
+      rows: column.rows.length
+    }))
+  };
+}
+
+function pageIndexForGroup(indexedLines) {
+  const line = indexedLines.find((item) => Number.isInteger(item.line.pageIndex))?.line;
+  return Number.isInteger(line?.pageIndex) ? line.pageIndex : null;
+}
+
+function rowSpansColumns(row, columns) {
+  const firstColumn = columns[0];
+  const lastColumn = columns[columns.length - 1];
+  return row.x <= firstColumn.center + 24 && row.right >= lastColumn.center - 24;
+}
+
+function layoutKindFor(columns, spanningRows) {
+  if (columns.length < 2) {
+    return "single-column";
+  }
+  return spanningRows.length > 0 ? "mixed" : "multi-column";
+}
+
+function roundNumber(value) {
+  return Math.round(value * 1000) / 1000;
 }
 
 function orderPageLinesForReading(indexedLines) {
