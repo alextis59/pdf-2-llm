@@ -382,14 +382,14 @@ assets.
 
 ### 2.3 Page Tree And Resources
 
-- [ ] Resolve catalog.
-- [ ] Resolve pages tree.
-- [ ] Resolve inherited resources.
-- [ ] Resolve media box, crop box, rotation, and user unit.
-- [ ] Resolve content streams in order.
-- [ ] Resolve font dictionaries needed by text extraction.
-- [ ] Expose page metadata in IR.
-- [ ] Add tests for nested page trees and inherited resources.
+- [x] Resolve catalog.
+- [x] Resolve pages tree.
+- [x] Resolve inherited resources.
+- [x] Resolve media box, crop box, rotation, and user unit.
+- [x] Resolve content streams in order.
+- [x] Resolve font dictionaries needed by text extraction.
+- [x] Expose page metadata in IR.
+- [x] Add tests for nested page trees and inherited resources.
 
 ### 2.4 Text Operators And Fonts
 

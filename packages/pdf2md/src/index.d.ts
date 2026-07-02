@@ -72,6 +72,25 @@ export type Diagnostics = {
   timing: {
     elapsedMs: number;
   };
+  extraction: {
+    textLines: number;
+    mode: string;
+    parser: Record<string, unknown>;
+  };
+  pages: PageDiagnostics[];
+};
+
+export type PageDiagnostics = {
+  pageIndex: number;
+  objectNumber: number;
+  widthPt: number | null;
+  heightPt: number | null;
+  rotation: number;
+  userUnit: number;
+  mediaBox: number[] | null;
+  cropBox: number[] | null;
+  contentStreams: number;
+  fonts: string[];
 };
 
 export type Confidence = {

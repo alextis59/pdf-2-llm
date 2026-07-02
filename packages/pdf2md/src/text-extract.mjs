@@ -1,7 +1,5 @@
 export function extractTextLines(bytes, { document = null } = {}) {
-  const streamTexts = document
-    ? document.streams.map((stream) => stream.text)
-    : findStreamTextsByScan(bytes);
+  const streamTexts = document ? documentStreamTexts(document) : findStreamTextsByScan(bytes);
   const lines = [];
 
   for (const stream of streamTexts) {
@@ -22,6 +20,13 @@ export function extractTextLines(bytes, { document = null } = {}) {
   }
 
   return lines;
+}
+
+function documentStreamTexts(document) {
+  if (document.pages?.length > 0) {
+    return document.pages.flatMap((page) => page.contentStreams.map((stream) => stream.text));
+  }
+  return document.streams.map((stream) => stream.text);
 }
 
 function findStreamTextsByScan(bytes) {

@@ -37,7 +37,37 @@ test("parsePdfDocument resolves classic xref entries, trailer, objects, and stre
   assert.equal(document.xrefEntries.length, 6);
   assert.equal(document.objects.size, 5);
   assert.equal(document.streams.length, 1);
+  assert.equal(document.pages.length, 1);
+  assert.equal(document.pages[0].widthPt, 612);
+  assert.equal(document.pages[0].heightPt, 792);
+  assert.equal(document.pages[0].rotation, 0);
+  assert.equal(document.pages[0].contentStreams.length, 1);
+  assert.equal(document.pages[0].resources.fonts.F1.baseFont, "Helvetica");
   assert.match(document.getObject(5).stream.text, /Synthetic Simple Text/);
+});
+
+test("parsePdfDocument resolves nested page trees and inherited resources", () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] /Rotate 90 >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Pages /Kids [5 0 R] /Count 1 /CropBox [10 20 210 220] >>",
+    "<< /Type /Page /Parent 4 0 R /Contents 6 0 R /UserUnit 2 >>",
+    streamObject("BT /F1 12 Tf 20 200 Td (Nested Page) Tj ET\n")
+  ]);
+  const document = parsePdfDocument(bytes);
+  const page = document.pages[0];
+
+  assert.equal(document.pages.length, 1);
+  assert.deepEqual(page.mediaBox, [0, 0, 300, 400]);
+  assert.deepEqual(page.cropBox, [10, 20, 210, 220]);
+  assert.equal(page.widthPt, 400);
+  assert.equal(page.heightPt, 400);
+  assert.equal(page.rotation, 90);
+  assert.equal(page.userUnit, 2);
+  assert.equal(page.contentStreams.length, 1);
+  assert.equal(page.resources.fonts.F1.objectNumber, 3);
+  assert.equal(page.resources.fonts.F1.encoding, "WinAnsiEncoding");
 });
 
 test("parser reports bounded byte-reader and syntax errors with codes and offsets", async () => {
@@ -67,6 +97,11 @@ test("public converter uses parsed content streams for generated PDFs", async ()
   assert.equal(result.diagnostics.extraction.parser.mode, "classic-xref");
   assert.equal(result.diagnostics.extraction.parser.objects, 5);
   assert.equal(result.diagnostics.extraction.parser.streams, 1);
+  assert.equal(result.diagnostics.extraction.parser.pages, 1);
+  assert.equal(result.ir.pages.length, 1);
+  assert.equal(result.ir.pages[0].widthPt, 612);
+  assert.equal(result.ir.pages[0].heightPt, 792);
+  assert.deepEqual(result.diagnostics.pages[0].fonts, ["F1"]);
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
 });
 
@@ -82,3 +117,28 @@ test("public converter reports unsupported parser structures as warnings", async
   assert.equal(parseWarning.details.code, "pdf.xref.unsupported");
   assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
 });
+
+function createTestPdf(objects) {
+  let body = "%PDF-1.4\n";
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    const objectId = index + 1;
+    offsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = Buffer.byteLength(body, "binary");
+  body += `xref\n0 ${objects.length + 1}\n`;
+  body += "0000000000 65535 f\n";
+  for (let objectId = 1; objectId <= objects.length; objectId += 1) {
+    body += `${String(offsets[objectId]).padStart(10, "0")} 00000 n\n`;
+  }
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
+  body += `startxref\n${xrefOffset}\n%%EOF\n`;
+  return Buffer.from(body, "binary");
+}
+
+function streamObject(contents) {
+  return `<< /Length ${Buffer.byteLength(contents, "binary")} >>\nstream\n${contents}endstream`;
+}

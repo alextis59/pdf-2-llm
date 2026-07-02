@@ -61,6 +61,16 @@ export function parsePdfDocument(bytes, options = {}) {
     }
   }
 
+  function getObject(referenceOrNumber, generationNumber = 0) {
+    if (typeof referenceOrNumber === "object" && referenceOrNumber?.type === "ref") {
+      return objects.get(objectKey(referenceOrNumber.objectNumber, referenceOrNumber.generationNumber));
+    }
+    return objects.get(objectKey(referenceOrNumber, generationNumber));
+  }
+
+  const catalog = resolveCatalog(trailer, getObject);
+  const pages = resolvePages(catalog, getObject);
+
   return {
     version,
     startXref,
@@ -68,12 +78,9 @@ export function parsePdfDocument(bytes, options = {}) {
     xrefEntries: entries,
     objects,
     streams,
-    getObject(referenceOrNumber, generationNumber = 0) {
-      if (typeof referenceOrNumber === "object" && referenceOrNumber?.type === "ref") {
-        return objects.get(objectKey(referenceOrNumber.objectNumber, referenceOrNumber.generationNumber));
-      }
-      return objects.get(objectKey(referenceOrNumber, generationNumber));
-    }
+    catalog,
+    pages,
+    getObject
   };
 }
 
@@ -263,6 +270,193 @@ function readDirectStreamLength(value) {
   }
   const length = value.entries.Length;
   return typeof length === "number" ? length : null;
+}
+
+function resolveCatalog(trailer, getObject) {
+  if (!isDict(trailer)) {
+    throw new PdfSyntaxError("Trailer is not a dictionary.", {
+      code: "pdf.trailer.not_dict"
+    });
+  }
+
+  const rootObject = getObject(trailer.entries.Root);
+  if (!rootObject || !isDict(rootObject.value)) {
+    throw new PdfSyntaxError("Catalog object is missing or invalid.", {
+      code: "pdf.catalog.missing"
+    });
+  }
+
+  return {
+    objectNumber: rootObject.objectNumber,
+    generationNumber: rootObject.generationNumber,
+    value: rootObject.value,
+    pagesRef: rootObject.value.entries.Pages
+  };
+}
+
+function resolvePages(catalog, getObject) {
+  const rootPages = getObject(catalog.pagesRef);
+  if (!rootPages || !isDict(rootPages.value)) {
+    throw new PdfSyntaxError("Pages tree root is missing or invalid.", {
+      code: "pdf.pages.missing"
+    });
+  }
+
+  const pages = [];
+  walkPageNode(rootPages, {}, getObject, pages);
+  return pages.map((page, index) => ({
+    ...page,
+    pageIndex: index
+  }));
+}
+
+function walkPageNode(object, inherited, getObject, pages) {
+  if (!isDict(object.value)) {
+    throw new PdfSyntaxError("Page tree node is not a dictionary.", {
+      offset: object.offset,
+      code: "pdf.pages.node_not_dict"
+    });
+  }
+
+  const dict = object.value;
+  const type = nameValue(dict.entries.Type);
+  const nextInherited = mergeInherited(inherited, dict, getObject);
+
+  if (type === "Pages") {
+    const kids = dict.entries.Kids;
+    if (!kids || kids.type !== "array") {
+      throw new PdfSyntaxError("Pages node is missing Kids array.", {
+        offset: object.offset,
+        code: "pdf.pages.kids_missing"
+      });
+    }
+    for (const kidRef of kids.items) {
+      const kid = getObject(kidRef);
+      if (!kid) {
+        throw new PdfSyntaxError("Pages tree references a missing child.", {
+          offset: object.offset,
+          code: "pdf.pages.kid_missing"
+        });
+      }
+      walkPageNode(kid, nextInherited, getObject, pages);
+    }
+    return;
+  }
+
+  if (type !== "Page") {
+    throw new PdfSyntaxError(`Unexpected page tree node type "${type ?? "unknown"}".`, {
+      offset: object.offset,
+      code: "pdf.pages.type_unexpected"
+    });
+  }
+
+  const mediaBox = numberArray(nextInherited.mediaBox);
+  const cropBox = numberArray(nextInherited.cropBox);
+  const visibleBox = cropBox ?? mediaBox;
+  const rotation = typeof nextInherited.rotate === "number" ? nextInherited.rotate : 0;
+  const userUnit = typeof nextInherited.userUnit === "number" ? nextInherited.userUnit : 1;
+  const contentStreams = resolveContentStreams(dict.entries.Contents, getObject);
+  const resources = resolveResources(nextInherited.resources, getObject);
+
+  pages.push({
+    objectNumber: object.objectNumber,
+    generationNumber: object.generationNumber,
+    mediaBox,
+    cropBox,
+    widthPt: visibleBox ? Math.abs(visibleBox[2] - visibleBox[0]) * userUnit : null,
+    heightPt: visibleBox ? Math.abs(visibleBox[3] - visibleBox[1]) * userUnit : null,
+    rotation,
+    userUnit,
+    resources,
+    contentStreams
+  });
+}
+
+function mergeInherited(inherited, dict, getObject) {
+  return {
+    resources: dict.entries.Resources ?? inherited.resources ?? null,
+    mediaBox: dict.entries.MediaBox ?? inherited.mediaBox ?? null,
+    cropBox: dict.entries.CropBox ?? inherited.cropBox ?? null,
+    rotate: resolveScalar(dict.entries.Rotate ?? inherited.rotate ?? 0, getObject),
+    userUnit: resolveScalar(dict.entries.UserUnit ?? inherited.userUnit ?? 1, getObject)
+  };
+}
+
+function resolveContentStreams(contents, getObject) {
+  if (!contents) {
+    return [];
+  }
+
+  const values = contents.type === "array" ? contents.items : [contents];
+  const streams = [];
+  for (const value of values) {
+    const object = getObject(value);
+    if (object?.stream) {
+      streams.push(object.stream);
+    }
+  }
+  return streams;
+}
+
+function resolveResources(resourcesValue, getObject) {
+  const resources = resolveValue(resourcesValue, getObject);
+  const fonts = {};
+
+  if (!isDict(resources)) {
+    return {
+      fonts
+    };
+  }
+
+  const fontDictionary = resolveValue(resources.entries.Font, getObject);
+  if (isDict(fontDictionary)) {
+    for (const [name, fontValue] of Object.entries(fontDictionary.entries)) {
+      const fontObject = getObject(fontValue);
+      const fontDict = resolveValue(fontValue, getObject);
+      fonts[name] = {
+        objectNumber: fontObject?.objectNumber ?? null,
+        generationNumber: fontObject?.generationNumber ?? null,
+        subtype: nameValue(fontDict?.entries?.Subtype),
+        baseFont: nameValue(fontDict?.entries?.BaseFont),
+        encoding: nameValue(fontDict?.entries?.Encoding),
+        hasToUnicode: Boolean(fontDict?.entries?.ToUnicode)
+      };
+    }
+  }
+
+  return {
+    fonts
+  };
+}
+
+function resolveValue(value, getObject) {
+  if (value?.type === "ref") {
+    return getObject(value)?.value ?? null;
+  }
+  return value ?? null;
+}
+
+function resolveScalar(value, getObject) {
+  const resolved = resolveValue(value, getObject);
+  return typeof resolved === "number" ? resolved : value;
+}
+
+function numberArray(value) {
+  if (!value || value.type !== "array") {
+    return null;
+  }
+  if (!value.items.every((item) => typeof item === "number")) {
+    return null;
+  }
+  return value.items;
+}
+
+function isDict(value) {
+  return value?.type === "dict" && value.entries && typeof value.entries === "object";
+}
+
+function nameValue(value) {
+  return value?.type === "name" ? value.value : null;
 }
 
 function trimTrailingLineEnding(source, offset) {

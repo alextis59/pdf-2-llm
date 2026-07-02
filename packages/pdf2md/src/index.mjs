@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import {
   createDocumentIr,
+  createPageIr,
   createWarning,
   schemaVersion,
   warningCodes
@@ -103,6 +104,18 @@ export async function convertPdfToMarkdown(input, options = {}) {
   }
 
   const ir = createDocumentIr({ sourceType: pdfVersion ? "digital" : "unknown" });
+  if (pdfDocument?.pages) {
+    ir.pages = pdfDocument.pages.map((page) =>
+      createPageIr({
+        pageIndex: page.pageIndex,
+        widthPt: page.widthPt,
+        heightPt: page.heightPt,
+        rotation: page.rotation,
+        sourceType: "digital",
+        elements: []
+      })
+    );
+  }
   ir.warnings = warnings;
 
   const elapsedMs = performance.now() - startedAt;
@@ -136,13 +149,28 @@ export async function convertPdfToMarkdown(input, options = {}) {
               mode: "classic-xref",
               objects: pdfDocument.objects.size,
               streams: pdfDocument.streams.length,
+              pages: pdfDocument.pages.length,
               startXref: pdfDocument.startXref
             }
           : {
               mode: parseWarning ? "unavailable" : "not-run",
               warning: parseWarning?.details ?? null
             }
-      }
+      },
+      pages: pdfDocument
+        ? pdfDocument.pages.map((page) => ({
+            pageIndex: page.pageIndex,
+            objectNumber: page.objectNumber,
+            widthPt: page.widthPt,
+            heightPt: page.heightPt,
+            rotation: page.rotation,
+            userUnit: page.userUnit,
+            mediaBox: page.mediaBox,
+            cropBox: page.cropBox,
+            contentStreams: page.contentStreams.length,
+            fonts: Object.keys(page.resources.fonts)
+          }))
+        : []
     },
     confidence: {
       overall: textLines.length > 0 ? 0.25 : 0,
