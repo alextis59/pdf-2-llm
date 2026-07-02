@@ -400,8 +400,8 @@ assets.
 - [x] Parse simple fonts.
 - [x] Parse ToUnicode CMaps.
 - [x] Map glyphs to Unicode with confidence.
-- [ ] Preserve geometry for glyphs, spans, and lines.
-- [ ] Normalize common ligatures and whitespace.
+- [x] Preserve geometry for glyphs, spans, and lines.
+- [x] Normalize common ligatures and whitespace.
 - [x] Emit warnings for missing or suspicious Unicode maps.
 
 ### 2.5 Line, Paragraph, And Markdown MVP

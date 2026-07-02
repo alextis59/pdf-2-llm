@@ -53,7 +53,7 @@ export function linesToMarkdown(lines) {
     }
 
     const line = lines[index];
-    const text = normalizeWhitespace(line.text);
+    const text = normalizeText(line.text);
     if (text.length === 0) {
       continue;
     }
@@ -90,6 +90,19 @@ export function linesToMarkdown(lines) {
 
 function normalizeWhitespace(value) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeText(value) {
+  return normalizeWhitespace(
+    value
+      .replace(/\uFB00/g, "ff")
+      .replace(/\uFB01/g, "fi")
+      .replace(/\uFB02/g, "fl")
+      .replace(/\uFB03/g, "ffi")
+      .replace(/\uFB04/g, "ffl")
+      .replace(/\uFB05/g, "st")
+      .replace(/\uFB06/g, "st")
+  );
 }
 
 function readTableAt(lines, startIndex) {

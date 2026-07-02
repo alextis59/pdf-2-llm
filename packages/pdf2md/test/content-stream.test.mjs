@@ -70,6 +70,19 @@ test("extractContentStreamTextLines interprets text showing operators", () => {
   assert.equal(lines[0].fontSize, 12);
   assert.equal(lines[0].x, 10);
   assert.equal(lines[0].y, 20);
+  assert.equal(lines[0].width, 72);
+  assert.equal(lines[0].height, 12);
+  assert.equal(lines[0].spans.length, 2);
+  assert.equal(lines[0].spans[0].text, "Hello");
+  assert.equal(lines[0].spans[1].text, ", world");
+  assert.equal(lines[0].glyphs.length, 12);
+  assert.deepEqual(
+    lines[0].glyphs.slice(0, 2).map((glyph) => [glyph.text, glyph.x, glyph.width]),
+    [
+      ["H", 10, 6],
+      ["e", 16, 6]
+    ]
+  );
   assert.equal(lines[0].pageIndex, 2);
   assert.equal(lines[0].streamIndex, 1);
   assert.equal(lines[1].text, "next");

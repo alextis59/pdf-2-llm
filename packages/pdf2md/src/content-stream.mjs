@@ -219,10 +219,16 @@ function emitText(text, context) {
   }
 
   const position = currentTextPosition(context.state);
+  const metrics = measureText(context.state, text, position);
+  const confidence = textConfidence(context.state.font);
   const mergeKey = `${context.options.pageIndex ?? ""}:${context.options.streamIndex ?? ""}:${context.textObjectId}:${context.lineSerial}`;
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
     lastLine.text += text;
+    lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
+    lastLine.height = Math.max(lastLine.height, metrics.height);
+    lastLine.spans.push(createSpan(text, context.state, position, metrics, confidence));
+    lastLine.glyphs.push(...metrics.glyphs);
     advanceTextPosition(context.state, text);
     return;
   }
@@ -234,10 +240,14 @@ function emitText(text, context) {
     font: context.state.font,
     x: position.x,
     y: position.y,
+    width: metrics.width,
+    height: metrics.height,
+    spans: [createSpan(text, context.state, position, metrics, confidence)],
+    glyphs: metrics.glyphs,
     pageIndex: context.options.pageIndex ?? null,
     streamIndex: context.options.streamIndex ?? null,
     source: "content-stream",
-    confidence: textConfidence(context.state.font),
+    confidence,
     mergeKey
   });
   advanceTextPosition(context.state, text);
@@ -281,15 +291,64 @@ function currentTextPosition(state) {
 }
 
 function advanceTextPosition(state, text) {
-  const scale = (state.horizontalScaling || 100) / 100;
+  const width = measureTextWidth(state, text);
+  state.textMatrix = multiplyMatrices(state.textMatrix, [1, 0, 0, 1, width, 0]);
+}
+
+function measureText(state, text, position) {
+  const glyphs = [];
+  const confidence = textConfidence(state.font);
+  let cursor = position.x;
+  for (const char of text) {
+    const width = measureGlyphWidth(state, char);
+    glyphs.push({
+      text: char,
+      codePoint: char.codePointAt(0),
+      x: cursor,
+      y: position.y,
+      width,
+      height: state.fontSize,
+      fontName: state.fontName,
+      fontSize: state.fontSize,
+      confidence
+    });
+    cursor += width;
+  }
+
+  return {
+    width: cursor - position.x,
+    height: state.fontSize,
+    xEnd: cursor,
+    glyphs
+  };
+}
+
+function createSpan(text, state, position, metrics, confidence) {
+  return {
+    text,
+    fontName: state.fontName,
+    fontSize: state.fontSize,
+    x: position.x,
+    y: position.y,
+    width: metrics.width,
+    height: metrics.height,
+    confidence,
+    source: "pdf-text"
+  };
+}
+
+function measureTextWidth(state, text) {
   let width = 0;
   for (const char of text) {
-    width += state.fontSize * 0.5 + state.charSpacing;
-    if (char === " ") {
-      width += state.wordSpacing;
-    }
+    width += measureGlyphWidth(state, char);
   }
-  state.textMatrix = multiplyMatrices(state.textMatrix, [1, 0, 0, 1, width * scale, 0]);
+  return width;
+}
+
+function measureGlyphWidth(state, char) {
+  const scale = (state.horizontalScaling || 100) / 100;
+  const wordSpacing = char === " " ? state.wordSpacing : 0;
+  return (state.fontSize * 0.5 + state.charSpacing + wordSpacing) * scale;
 }
 
 function multiplyMatrices(left, right) {
