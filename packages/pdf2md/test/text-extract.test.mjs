@@ -166,6 +166,19 @@ test("linesToMarkdownWithSourceMap reports sidebar and callout regions", () => {
   assert.equal(page.callouts[0].rows, 1);
 });
 
+test("linesToMarkdownWithSourceMap reports footnote regions", () => {
+  const result = linesToMarkdownWithSourceMap([
+    { text: "Footnote Fixture", fontSize: 22, x: 72, y: 720, width: 160, pageIndex: 0 },
+    { text: "A measured result refers to note 1.", fontSize: 12, x: 72, y: 680, width: 220, pageIndex: 0 },
+    { text: "1. Footnote text belongs after the paragraph.", fontSize: 9, x: 72, y: 96, width: 230, pageIndex: 0 }
+  ]);
+
+  const page = result.layout.pages[0];
+  assert.equal(page.footnotes.length, 1);
+  assert.equal(page.footnotes[0].kind, "footnote");
+  assert.equal(page.footnotes[0].rows, 1);
+});
+
 test("linesToMarkdown removes high-confidence page numbers", () => {
   const markdown = linesToMarkdown([
     { text: "Page Number Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },

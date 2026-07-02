@@ -10,6 +10,10 @@ const twoColumnFixturePath = new URL(
   "../../../corpus/generated/synthetic-two-column.pdf",
   import.meta.url
 );
+const footnoteFixturePath = new URL(
+  "../../../corpus/generated/synthetic-footnote.pdf",
+  import.meta.url
+);
 
 test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", async () => {
   const bytes = await readFile(fixturePath);
@@ -91,6 +95,15 @@ test("convertPdfToMarkdown warns when content stream order may be uncertain", as
     result.diagnostics.extraction.layout.pages[0].columns.map((column) => column.index),
     [0, 1]
   );
+});
+
+test("convertPdfToMarkdown reports footnote layout regions", async () => {
+  const result = await convertPdfToMarkdown(footnoteFixturePath.pathname);
+  const page = result.diagnostics.extraction.layout.pages[0];
+
+  assert.equal(page.footnotes.length, 1);
+  assert.equal(page.footnotes[0].kind, "footnote");
+  assert.match(result.markdown, /1\. Footnote text belongs after the paragraph\./);
 });
 
 test("text MVP matches expected markdown for simple generated fixtures", async () => {

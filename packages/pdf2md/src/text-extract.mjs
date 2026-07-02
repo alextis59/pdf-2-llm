@@ -245,7 +245,8 @@ function classifyPageLayout(indexedLines) {
       blocks: 0,
       columns: [],
       sidebars: [],
-      callouts: []
+      callouts: [],
+      footnotes: []
     };
   }
 
@@ -265,7 +266,8 @@ function classifyPageLayout(indexedLines) {
       rows: column.rows.length
     })),
     sidebars: regions.sidebars,
-    callouts: regions.callouts
+    callouts: regions.callouts,
+    footnotes: regions.footnotes
   };
 }
 
@@ -290,7 +292,8 @@ function layoutKindFor(columns, spanningRows) {
 function detectLayoutRegions(rows, columns) {
   return {
     sidebars: detectSidebarRegions(columns),
-    callouts: rows.filter(isCalloutRow).map((row) => createRegion("callout", [row]))
+    callouts: rows.filter(isCalloutRow).map((row) => createRegion("callout", [row])),
+    footnotes: rows.filter(isFootnoteRow).map((row) => createRegion("footnote", [row]))
   };
 }
 
@@ -310,6 +313,10 @@ function detectSidebarRegions(columns) {
 
 function isCalloutRow(row) {
   return /^(?:note|tip|warning|important|caution):\s+/i.test(rowText(row));
+}
+
+function isFootnoteRow(row) {
+  return row.y <= 160 && row.fontSize <= 10 && /^(?:\d+|[a-z])[\.)]\s+/.test(rowText(row));
 }
 
 function createRegion(kind, rows, extra = {}) {
