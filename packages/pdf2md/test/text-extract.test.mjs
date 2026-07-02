@@ -219,6 +219,20 @@ test("linesToMarkdownWithSourceMap exports no-span ruling tables as GFM", () => 
   assert.equal(result.sourceMap.entries.length, 2);
   assert.equal(result.sourceMap.entries[1].kind, "table");
   assert.equal(result.sourceMap.entries[1].regions.length, 6);
+  assert.deepEqual(result.tables, [
+    {
+      tableIndex: 0,
+      source: "ruling-grid",
+      pageIndex: 0,
+      rows: 2,
+      columns: 3,
+      output: "gfm",
+      confidence: 0.95,
+      hasSpans: false,
+      numericColumns: [1, 2],
+      sourceLines: 6
+    }
+  ]);
 });
 
 test("linesToMarkdownWithSourceMap exports span-bearing ruling tables as HTML", () => {
@@ -342,7 +356,7 @@ test("linesToMarkdown keeps mixed-layout spanning rows in vertical order", () =>
 });
 
 test("linesToMarkdown keeps same-baseline table cells in row-major order", () => {
-  const markdown = linesToMarkdown([
+  const result = linesToMarkdownWithSourceMap([
     { text: "Table Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
     { text: "Name", fontSize: 12, x: 72, y: 670, pageIndex: 0 },
     { text: "Count", fontSize: 12, x: 220, y: 670, pageIndex: 0 },
@@ -353,13 +367,27 @@ test("linesToMarkdown keeps same-baseline table cells in row-major order", () =>
   ]);
 
   assert.equal(
-    markdown,
+    result.markdown,
     "# Table Fixture\n\n| Name | Count |\n| --- | ---: |\n| Alpha | 3 |\n| Beta | 7 |\n"
   );
+  assert.deepEqual(result.tables, [
+    {
+      tableIndex: 0,
+      source: "borderless-heuristic",
+      pageIndex: 0,
+      rows: 3,
+      columns: 2,
+      output: "gfm",
+      confidence: 0.775,
+      hasSpans: false,
+      numericColumns: [1],
+      sourceLines: 6
+    }
+  ]);
 });
 
 test("linesToMarkdown does not treat same-baseline prose columns as a table", () => {
-  const markdown = linesToMarkdown([
+  const result = linesToMarkdownWithSourceMap([
     { text: "Short Prose Columns", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
     { text: "Alpha topic", fontSize: 12, x: 72, y: 670, pageIndex: 0 },
     { text: "Beta topic", fontSize: 12, x: 330, y: 670, pageIndex: 0 },
@@ -368,9 +396,10 @@ test("linesToMarkdown does not treat same-baseline prose columns as a table", ()
   ]);
 
   assert.equal(
-    markdown,
+    result.markdown,
     "# Short Prose Columns\n\nAlpha topic\n\nBeta topic\n\nAlpha detail\n\nBeta detail\n"
   );
+  assert.deepEqual(result.tables, []);
 });
 
 test("linesToMarkdownWithSourceMap reports page layout classifications", () => {

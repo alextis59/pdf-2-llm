@@ -145,6 +145,21 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
   const rulingGrids = result.diagnostics.extraction.rulingGrids;
   const rulingTables = result.diagnostics.extraction.rulingTables;
 
+  assert.equal(result.confidence.tables, 0.95);
+  assert.deepEqual(result.diagnostics.extraction.tables, [
+    {
+      tableIndex: 0,
+      source: "ruling-grid",
+      pageIndex: 0,
+      rows: 3,
+      columns: 3,
+      output: "gfm",
+      confidence: 0.95,
+      hasSpans: false,
+      numericColumns: [1, 2],
+      sourceLines: 9
+    }
+  ]);
   assert.deepEqual(result.assets, [
     {
       id: "table-page-1-1-csv",

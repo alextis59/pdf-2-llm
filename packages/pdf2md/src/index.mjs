@@ -234,6 +234,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         structure: summarizeStructure(pdfDocument?.structure),
         taggedStructureConflicts: markdownResult.taggedStructureConflicts.length,
         layout: markdownResult.layout,
+        tables: markdownResult.tables,
         rulingLines: summarizeRulingLines(rulingLines),
         rulingGrids: summarizeRulingGrids(rulingGrids),
         rulingTables: summarizeRulingTables(rulingTables, tableCsvSidecars.byTable),
@@ -272,7 +273,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       overall: textLines.length > 0 ? 0.25 : 0,
       text: textLines.length > 0 ? 0.4 : 0,
       layout: markdownResult.layout.pages.length > 0 ? 0.35 : 0,
-      tables: 0
+      tables: tableConfidence(markdownResult.tables)
     }
   };
 
@@ -438,6 +439,14 @@ function escapeCsvCell(value) {
 
 function normalizeCellText(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function tableConfidence(tables) {
+  if (!Array.isArray(tables) || tables.length === 0) {
+    return 0;
+  }
+  const total = tables.reduce((sum, table) => sum + (table.confidence ?? 0), 0);
+  return Number((total / tables.length).toFixed(3));
 }
 
 function summarizeRulingTables(rulingTables, csvSidecarsByTable = new Map()) {

@@ -120,7 +120,18 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       previousWasList = false;
       appendPageAnchor(blocks, rulingTable.pageIndex, options, anchoredPages);
       blocks.push(
-        createMarkdownBlock(rulingTable.markdown, "table", rulingTable.sourceLines)
+        createMarkdownBlock(rulingTable.markdown, "table", rulingTable.sourceLines, {
+          table: {
+            source: "ruling-grid",
+            pageIndex: rulingTable.pageIndex,
+            rows: rulingTable.rows,
+            columns: rulingTable.columns,
+            output: rulingTable.output,
+            confidence: rulingTable.confidence,
+            hasSpans: rulingTable.hasSpans,
+            numericColumns: rulingTable.numericColumns
+          }
+        })
       );
       index = rulingTable.endIndex - 1;
       continue;
@@ -130,7 +141,20 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     if (table) {
       previousWasList = false;
       appendPageAnchor(blocks, table.rows[0][0]?.pageIndex, options, anchoredPages);
-      blocks.push(createMarkdownBlock(formatTable(table.rows), "table", table.rows.flat()));
+      blocks.push(
+        createMarkdownBlock(formatTable(table.rows), "table", table.rows.flat(), {
+          table: {
+            source: "borderless-heuristic",
+            pageIndex: table.rows[0][0]?.pageIndex ?? null,
+            rows: table.rows.length,
+            columns: table.rows[0].length,
+            output: "gfm",
+            confidence: table.confidence,
+            hasSpans: false,
+            numericColumns: table.numericColumns
+          }
+        })
+      );
       index = table.endIndex - 1;
       continue;
     }
@@ -197,6 +221,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
 
   return {
     ...serializeMarkdownBlocks(blocks),
+    tables: tableDiagnosticsFromBlocks(blocks),
     layout,
     taggedStructureConflicts
   };
@@ -1039,12 +1064,28 @@ function median(values) {
   return (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
-function createMarkdownBlock(text, kind, sourceLines = []) {
+function createMarkdownBlock(text, kind, sourceLines = [], metadata = {}) {
   return {
     text,
     kind,
-    sourceLines
+    sourceLines,
+    metadata
   };
+}
+
+function tableDiagnosticsFromBlocks(blocks) {
+  const tables = [];
+  for (const block of blocks) {
+    if (block.kind !== "table" || !block.metadata?.table) {
+      continue;
+    }
+    tables.push({
+      tableIndex: tables.length,
+      ...block.metadata.table,
+      sourceLines: block.sourceLines.length
+    });
+  }
+  return tables;
 }
 
 function serializeMarkdownBlocks(blocks) {
@@ -1187,11 +1228,21 @@ function createRulingTableExport(table, lines, lineIndexes) {
     startIndex,
     endIndex,
     pageIndex: table.pageIndex ?? sourceLines[0]?.pageIndex,
+    rows: table.rows,
+    columns: table.columns,
+    output: hasSpans ? "html" : "gfm",
+    confidence: rulingTableConfidence(hasSpans),
+    hasSpans,
+    numericColumns: numericColumnIndexes(rows),
     markdown: hasSpans ? formatHtmlRulingTable(table) : formatMarkdownTableCells(rows),
     sourceLines: [...sourceLines].sort(
       (left, right) => lineIndexes.get(left) - lineIndexes.get(right)
     )
   };
+}
+
+function rulingTableConfidence(hasSpans) {
+  return hasSpans ? 0.9 : 0.95;
 }
 
 function isRulingTableExportable(table) {
@@ -1344,26 +1395,41 @@ function readTableAt(lines, startIndex) {
   if (!rows.every((row) => row.length === columnCount)) {
     return null;
   }
-  if (!isPlausibleBorderlessTable(rows)) {
+  const numericColumns = numericColumnIndexes(rows);
+  if (numericColumns.length === 0) {
     return null;
   }
 
   return {
     rows,
+    numericColumns,
+    confidence: borderlessTableConfidence(rows, numericColumns),
     endIndex: index
   };
 }
 
-function isPlausibleBorderlessTable(rows) {
+function numericColumnIndexes(rows) {
   const body = rows.slice(1);
   if (body.length === 0) {
-    return false;
+    return [];
   }
 
-  return rows[0].some((_, columnIndex) => {
-    const values = body.map((row) => normalizeText(row[columnIndex].text));
-    return values.length > 0 && values.every(isNumericCell);
-  });
+  return rows[0]
+    .map((_, columnIndex) => columnIndex)
+    .filter((columnIndex) => {
+      const values = body.map((row) => tableCellText(row[columnIndex]));
+      return values.length > 0 && values.every(isNumericCell);
+    });
+}
+
+function borderlessTableConfidence(rows, numericColumns) {
+  const numericRatio = numericColumns.length / rows[0].length;
+  const rowBonus = rows.length >= 3 ? 0.1 : 0;
+  return roundNumber(Math.min(0.85, 0.55 + numericRatio * 0.25 + rowBonus));
+}
+
+function tableCellText(cell) {
+  return typeof cell === "string" ? normalizeText(cell) : normalizeText(cell?.text);
 }
 
 function isTableCellCandidate(line) {

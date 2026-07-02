@@ -542,7 +542,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 - [x] Distinguish tables from multi-column prose.
 - [x] Infer header rows.
 - [x] Infer numeric alignment.
-- [ ] Track confidence per table.
+- [x] Track confidence per table.
 - [ ] Warn or preserve as preformatted text when confidence is low.
 
 ### 5.3 Table Quality Tests
