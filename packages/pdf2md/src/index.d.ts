@@ -90,6 +90,7 @@ export type Diagnostics = {
     mode: string;
     outlines: OutlineDiagnostics[];
     structure: StructureDiagnostics;
+    taggedStructureConflicts: number;
     layout: LayoutDiagnostics;
     parser: Record<string, unknown>;
   };

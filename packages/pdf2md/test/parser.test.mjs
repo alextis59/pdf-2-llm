@@ -160,6 +160,35 @@ test("parsePdfDocument resolves tagged structure and uses consistent tags", asyn
   assert.equal(result.diagnostics.extraction.structure.roles.H2, 1);
 });
 
+test("convertPdfToMarkdown warns when tagged structure conflicts with layout", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 6 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R /StructParents 0 >>",
+    streamObject(
+      "BT /F1 12 Tf 20 220 Td (Body paragraph.) Tj ET\nBT /F1 12 Tf 20 200 Td (Another body paragraph.) Tj ET\n/H1 << /MCID 0 >> BDC\nBT /F1 6 Tf 20 160 Td (Tiny tagged heading) Tj ET\nEMC\n"
+    ),
+    "<< /Type /StructTreeRoot /K 7 0 R >>",
+    "<< /Type /StructElem /S /Document /K 8 0 R >>",
+    "<< /Type /StructElem /S /H1 /P 7 0 R /K << /Type /MCR /Pg 4 0 R /MCID 0 >> >>"
+  ]);
+  const result = await convertPdfToMarkdown(bytes);
+  const warning = result.warnings.find(
+    (item) => item.code === warningCodes.TaggedStructureConflict
+  );
+
+  assert.equal(
+    result.markdown,
+    "Body paragraph.\n\nAnother body paragraph.\n\nTiny tagged heading\n"
+  );
+  assert.ok(warning);
+  assert.equal(warning.details.conflicts, 1);
+  assert.equal(warning.details.samples[0].reason, "font-size-below-body");
+  assert.equal(warning.details.samples[0].role, "H1");
+  assert.equal(result.diagnostics.extraction.taggedStructureConflicts, 1);
+});
+
 test("parsePdfDocument decodes Flate content streams for text extraction", async () => {
   const content = "BT /F1 22 Tf 20 200 Td (Compressed Fixture) Tj ET\n";
   const bytes = createTestPdf([

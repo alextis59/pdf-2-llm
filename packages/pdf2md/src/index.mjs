@@ -143,6 +143,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   throwIfTimedOut(deadline);
   warnings.push(...unicodeMappingWarnings(textLines));
   warnings.push(...textOrderingWarnings(textLines));
+  warnings.push(...taggedStructureConflictWarnings(markdownResult.taggedStructureConflicts));
 
   if (textLines.length > 0) {
     warnings.push(
@@ -208,6 +209,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
             : "none",
         outlines: pdfDocument?.outlines ?? [],
         structure: summarizeStructure(pdfDocument?.structure),
+        taggedStructureConflicts: markdownResult.taggedStructureConflicts.length,
         layout: markdownResult.layout,
         parser: pdfDocument
           ? {
@@ -364,6 +366,22 @@ function textOrderingWarnings(textLines) {
     }
   }
   return warnings;
+}
+
+function taggedStructureConflictWarnings(conflicts) {
+  if (!Array.isArray(conflicts) || conflicts.length === 0) {
+    return [];
+  }
+  return [
+    createWarning(
+      warningCodes.TaggedStructureConflict,
+      "Tagged PDF structure conflicts with visible layout; affected tag signals were ignored.",
+      {
+        conflicts: conflicts.length,
+        samples: conflicts.slice(0, 5)
+      }
+    )
+  ];
 }
 
 function samePage(left, right) {

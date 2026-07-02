@@ -69,6 +69,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const headingModel = createHeadingModel(lines, {
     outlines: options.outlines ?? []
   });
+  const taggedStructureConflicts = taggedStructureConflictsForLines(lines, headingModel);
   const listIndentModel = createListIndentModel(lines);
   const codeModel = createCodeModel(lines);
   const blocks = [];
@@ -141,7 +142,8 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
 
   return {
     ...serializeMarkdownBlocks(blocks),
-    layout
+    layout,
+    taggedStructureConflicts
   };
 }
 
@@ -414,19 +416,54 @@ function taggedHeadingLevelForLine(line, headingModel) {
   if (!match) {
     return null;
   }
-  if (!taggedHeadingGeometryIsConsistent(line, headingModel)) {
+  if (taggedHeadingConflictReason(line, headingModel) !== null) {
     return null;
   }
   return Number.parseInt(match[1], 10);
 }
 
-function taggedHeadingGeometryIsConsistent(line, headingModel) {
+function taggedStructureConflictsForLines(lines, headingModel) {
+  return lines
+    .map((line) => taggedStructureConflictForLine(line, headingModel))
+    .filter(Boolean);
+}
+
+function taggedStructureConflictForLine(line, headingModel) {
+  const role = String(line.structureRole ?? "");
+  if (!/^H[1-6]$/.test(role)) {
+    return null;
+  }
+  const reason = taggedHeadingConflictReason(line, headingModel);
+  if (reason === null || reason === "empty-text") {
+    return null;
+  }
+  return {
+    reason,
+    role,
+    text: truncateDiagnosticText(normalizeText(line.text ?? "")),
+    pageIndex: Number.isInteger(line.pageIndex) ? line.pageIndex : null,
+    markedContentId: Number.isInteger(line.markedContentId) ? line.markedContentId : null,
+    fontSize: numberOrNull(roundedFontSize(line.fontSize)),
+    bodyFontSize: numberOrNull(headingModel.bodyFontSize),
+    x: numberOrNull(line.x),
+    y: numberOrNull(line.y)
+  };
+}
+
+function taggedHeadingConflictReason(line, headingModel) {
   const text = normalizeText(line.text ?? "");
   if (!text || text.length > 160) {
-    return false;
+    return text ? "heading-text-too-long" : "empty-text";
   }
   const fontSize = roundedFontSize(line.fontSize);
-  return !Number.isFinite(fontSize) || fontSize >= headingModel.bodyFontSize * 0.85;
+  if (Number.isFinite(fontSize) && fontSize < headingModel.bodyFontSize * 0.85) {
+    return "font-size-below-body";
+  }
+  return null;
+}
+
+function truncateDiagnosticText(value) {
+  return value.length > 80 ? `${value.slice(0, 77)}...` : value;
 }
 
 function roundedFontSize(fontSize) {

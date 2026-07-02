@@ -511,7 +511,7 @@ Goal: improve reading order and document structure for real-world documents.
 - [x] Preserve links.
 - [x] Integrate outlines/bookmarks as optional structure signals.
 - [x] Prefer tagged PDF structure when tags are consistent with geometry.
-- [ ] Warn when tags conflict with visible layout.
+- [x] Warn when tags conflict with visible layout.
 
 Gate 3 acceptance:
 

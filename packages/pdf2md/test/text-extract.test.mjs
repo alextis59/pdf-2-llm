@@ -129,6 +129,40 @@ test("linesToMarkdown uses consistent tagged PDF roles as heading signals", () =
   assert.equal(markdown, "### Tagged Section\n\nBody text starts here.\n");
 });
 
+test("linesToMarkdownWithSourceMap reports tagged heading layout conflicts", () => {
+  const result = linesToMarkdownWithSourceMap([
+    { text: "Body paragraph.", fontSize: 12, x: 72, y: 720, pageIndex: 0 },
+    { text: "Another body paragraph.", fontSize: 12, x: 72, y: 700, pageIndex: 0 },
+    {
+      text: "Tiny tagged heading",
+      fontSize: 6,
+      x: 72,
+      y: 660,
+      pageIndex: 0,
+      structureRole: "H1",
+      markedContentId: 4
+    }
+  ]);
+
+  assert.equal(
+    result.markdown,
+    "Body paragraph.\n\nAnother body paragraph.\n\nTiny tagged heading\n"
+  );
+  assert.deepEqual(result.taggedStructureConflicts, [
+    {
+      reason: "font-size-below-body",
+      role: "H1",
+      text: "Tiny tagged heading",
+      pageIndex: 0,
+      markedContentId: 4,
+      fontSize: 6,
+      bodyFontSize: 12,
+      x: 72,
+      y: 660
+    }
+  ]);
+});
+
 test("linesToMarkdown escapes Markdown metacharacters in text and tables", () => {
   const markdown = linesToMarkdown([
     { text: "literal *star* and [label] uses \\ slash", fontSize: 12, x: 10, y: 40 },
