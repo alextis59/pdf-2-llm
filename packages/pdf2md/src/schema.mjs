@@ -7,7 +7,8 @@ export const warningCodes = Object.freeze({
   PasswordRequired: "security.password_required",
   OcrDisabled: "ocr.disabled",
   WebGpuUnavailable: "webgpu.unavailable",
-  HeuristicTextExtraction: "text.heuristic_uncompressed_stream"
+  HeuristicTextExtraction: "text.heuristic_uncompressed_stream",
+  PdfParseFailed: "pdf.parse_failed"
 });
 
 export function createWarning(code, message, details = {}) {

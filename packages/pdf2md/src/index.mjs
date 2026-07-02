@@ -8,6 +8,7 @@ import {
   warningCodes
 } from "./schema.mjs";
 import { extractTextLines, linesToMarkdown } from "./text-extract.mjs";
+import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
@@ -47,6 +48,26 @@ export async function convertPdfToMarkdown(input, options = {}) {
     );
   }
 
+  let pdfDocument = null;
+  let parseWarning = null;
+  if (pdfVersion) {
+    try {
+      pdfDocument = parsePdfDocument(normalized.bytes, {
+        maxBytes: security.maxBytes
+      });
+    } catch (error) {
+      if (error instanceof PdfSyntaxError) {
+        parseWarning = createWarning(warningCodes.PdfParseFailed, error.message, {
+          code: error.code,
+          offset: error.offset
+        });
+        warnings.push(parseWarning);
+      } else {
+        throw error;
+      }
+    }
+  }
+
   if (options.ocr?.enabled === false) {
     warnings.push(createWarning(warningCodes.OcrDisabled, "OCR is disabled by options."));
   }
@@ -60,14 +81,16 @@ export async function convertPdfToMarkdown(input, options = {}) {
     );
   }
 
-  const textLines = pdfVersion ? extractTextLines(normalized.bytes) : [];
+  const textLines = pdfVersion ? extractTextLines(normalized.bytes, { document: pdfDocument }) : [];
   const markdown = linesToMarkdown(textLines);
 
   if (textLines.length > 0) {
     warnings.push(
       createWarning(
         warningCodes.HeuristicTextExtraction,
-        "Text was extracted with the scaffold uncompressed-stream heuristic."
+        pdfDocument
+          ? "Text was extracted from parsed uncompressed content streams."
+          : "Text was extracted with the fallback uncompressed-stream scanner."
       )
     );
   } else {
@@ -102,7 +125,23 @@ export async function convertPdfToMarkdown(input, options = {}) {
       },
       extraction: {
         textLines: textLines.length,
-        mode: textLines.length > 0 ? "heuristic-uncompressed-streams" : "none"
+        mode:
+          textLines.length > 0
+            ? pdfDocument
+              ? "parsed-uncompressed-streams"
+              : "fallback-uncompressed-stream-scan"
+            : "none",
+        parser: pdfDocument
+          ? {
+              mode: "classic-xref",
+              objects: pdfDocument.objects.size,
+              streams: pdfDocument.streams.length,
+              startXref: pdfDocument.startXref
+            }
+          : {
+              mode: parseWarning ? "unavailable" : "not-run",
+              warning: parseWarning?.details ?? null
+            }
       }
     },
     confidence: {

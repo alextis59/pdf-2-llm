@@ -357,16 +357,16 @@ assets.
 
 ### 2.1 PDF Syntax Core
 
-- [ ] Implement byte reader with bounded allocation.
-- [ ] Implement tokenizer for names, strings, hex strings, arrays,
+- [x] Implement byte reader with bounded allocation.
+- [x] Implement tokenizer for names, strings, hex strings, arrays,
   dictionaries, numbers, booleans, nulls, streams, and comments.
-- [ ] Implement indirect object parsing.
-- [ ] Implement xref table parsing.
-- [ ] Implement trailer parsing.
-- [ ] Implement object lookup.
+- [x] Implement indirect object parsing.
+- [x] Implement xref table parsing.
+- [x] Implement trailer parsing.
+- [x] Implement object lookup.
 - [ ] Implement strict and tolerant parse modes.
-- [ ] Return structured errors with byte offsets.
-- [ ] Add unit tests for all primitive object types.
+- [x] Return structured errors with byte offsets.
+- [x] Add unit tests for all primitive object types.
 - [ ] Add fuzz tests for tokenizer and object parser.
 
 ### 2.2 Basic Stream Filters
@@ -419,12 +419,12 @@ assets.
 
 Gate 1 acceptance:
 
-- [ ] All `text-mvp` synthetic PDFs pass exact or near-exact snapshots.
+- [x] All `text-mvp` synthetic PDFs pass exact or near-exact snapshots.
 - [ ] At least five simple public born-digital PDFs meet text coverage
   thresholds.
-- [ ] No parser panics on the full initial corpus.
-- [ ] Unsupported PDFs produce structured warnings or future-gate skips.
-- [ ] CLI can convert a local PDF to Markdown.
+- [x] No parser panics on the full initial corpus.
+- [x] Unsupported PDFs produce structured warnings or future-gate skips.
+- [x] CLI can convert a local PDF to Markdown.
 - [ ] Browser example can convert a small PDF through WASM.
 
 ## Phase 3: Gate 2 - Robust PDF Parsing

@@ -1,10 +1,10 @@
-export function extractTextLines(bytes) {
-  const source = Buffer.from(bytes).toString("latin1");
+export function extractTextLines(bytes, { document = null } = {}) {
+  const streamTexts = document
+    ? document.streams.map((stream) => stream.text)
+    : findStreamTextsByScan(bytes);
   const lines = [];
-  const streamPattern = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
 
-  for (const streamMatch of source.matchAll(streamPattern)) {
-    const stream = streamMatch[1];
+  for (const stream of streamTexts) {
     for (const textBlockMatch of stream.matchAll(/BT([\s\S]*?)ET/g)) {
       const block = textBlockMatch[1];
       const fontSize = readFontSize(block);
@@ -22,6 +22,16 @@ export function extractTextLines(bytes) {
   }
 
   return lines;
+}
+
+function findStreamTextsByScan(bytes) {
+  const source = Buffer.from(bytes).toString("latin1");
+  const streamTexts = [];
+  const streamPattern = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  for (const streamMatch of source.matchAll(streamPattern)) {
+    streamTexts.push(streamMatch[1]);
+  }
+  return streamTexts;
 }
 
 export function linesToMarkdown(lines) {

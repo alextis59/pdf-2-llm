@@ -1,0 +1,627 @@
+export class PdfSyntaxError extends Error {
+  constructor(message, { offset = null, code = "pdf.syntax" } = {}) {
+    super(message);
+    this.name = "PdfSyntaxError";
+    this.offset = offset;
+    this.code = code;
+  }
+}
+
+export class ByteReader {
+  constructor(bytes, { maxBytes = 100 * 1024 * 1024 } = {}) {
+    if (bytes.byteLength > maxBytes) {
+      throw new PdfSyntaxError("PDF input exceeds parser byte limit.", {
+        offset: maxBytes,
+        code: "pdf.input_too_large"
+      });
+    }
+    this.bytes = bytes;
+    this.offset = 0;
+  }
+
+  get length() {
+    return this.bytes.byteLength;
+  }
+
+  eof() {
+    return this.offset >= this.length;
+  }
+
+  peek() {
+    return this.eof() ? null : this.bytes[this.offset];
+  }
+
+  read() {
+    if (this.eof()) {
+      return null;
+    }
+    const value = this.bytes[this.offset];
+    this.offset += 1;
+    return value;
+  }
+}
+
+export function parsePdfDocument(bytes, options = {}) {
+  const reader = new ByteReader(bytes, options);
+  const source = Buffer.from(reader.bytes).toString("latin1");
+  const version = readPdfVersion(source);
+  const startXref = readStartXref(source);
+  const { entries, trailer } = parseClassicXref(source, startXref);
+  const objects = new Map();
+  const streams = [];
+
+  for (const entry of entries) {
+    if (!entry.inUse || entry.offset <= 0) {
+      continue;
+    }
+    const object = parseIndirectObjectAt(source, reader.bytes, entry.offset);
+    objects.set(objectKey(object.objectNumber, object.generationNumber), object);
+    if (object.stream) {
+      streams.push(object.stream);
+    }
+  }
+
+  return {
+    version,
+    startXref,
+    trailer,
+    xrefEntries: entries,
+    objects,
+    streams,
+    getObject(referenceOrNumber, generationNumber = 0) {
+      if (typeof referenceOrNumber === "object" && referenceOrNumber?.type === "ref") {
+        return objects.get(objectKey(referenceOrNumber.objectNumber, referenceOrNumber.generationNumber));
+      }
+      return objects.get(objectKey(referenceOrNumber, generationNumber));
+    }
+  };
+}
+
+export function parsePdfValue(input, offset = 0) {
+  const source = typeof input === "string" ? input : Buffer.from(input).toString("latin1");
+  return new ObjectParser(source, offset).parseValue();
+}
+
+function readPdfVersion(source) {
+  const match = source.slice(0, 32).match(/^%PDF-(\d\.\d)/);
+  if (!match) {
+    throw new PdfSyntaxError("Missing PDF header.", {
+      offset: 0,
+      code: "pdf.header.missing"
+    });
+  }
+  return match[1];
+}
+
+function readStartXref(source) {
+  const markerOffset = source.lastIndexOf("startxref");
+  if (markerOffset === -1) {
+    throw new PdfSyntaxError("Missing startxref marker.", {
+      offset: source.length,
+      code: "pdf.startxref.missing"
+    });
+  }
+
+  const match = source.slice(markerOffset).match(/^startxref\s+(\d+)/);
+  if (!match) {
+    throw new PdfSyntaxError("Malformed startxref marker.", {
+      offset: markerOffset,
+      code: "pdf.startxref.malformed"
+    });
+  }
+
+  return Number.parseInt(match[1], 10);
+}
+
+function parseClassicXref(source, offset) {
+  let cursor = offset;
+  if (!source.startsWith("xref", cursor)) {
+    throw new PdfSyntaxError("Only classic xref tables are supported by this parser slice.", {
+      offset,
+      code: "pdf.xref.unsupported"
+    });
+  }
+
+  cursor += "xref".length;
+  const entries = [];
+
+  while (cursor < source.length) {
+    cursor = skipWhitespaceAndComments(source, cursor);
+    if (source.startsWith("trailer", cursor)) {
+      cursor += "trailer".length;
+      const parsed = parsePdfValue(source, cursor);
+      return {
+        entries,
+        trailer: parsed.value
+      };
+    }
+
+    const firstObject = readInteger(source, cursor, "xref subsection first object");
+    cursor = skipWhitespaceAndComments(source, firstObject.offset);
+    const count = readInteger(source, cursor, "xref subsection count");
+    cursor = count.offset;
+
+    for (let index = 0; index < count.value; index += 1) {
+      cursor = skipWhitespaceAndComments(source, cursor);
+      const line = source.slice(cursor).match(/^(\d{10})\s+(\d{5})\s+([nf])/);
+      if (!line) {
+        throw new PdfSyntaxError("Malformed xref entry.", {
+          offset: cursor,
+          code: "pdf.xref.entry_malformed"
+        });
+      }
+      entries.push({
+        objectNumber: firstObject.value + index,
+        generationNumber: Number.parseInt(line[2], 10),
+        offset: Number.parseInt(line[1], 10),
+        inUse: line[3] === "n"
+      });
+      cursor += line[0].length;
+    }
+  }
+
+  throw new PdfSyntaxError("Missing xref trailer.", {
+    offset: cursor,
+    code: "pdf.xref.trailer_missing"
+  });
+}
+
+function parseIndirectObjectAt(source, bytes, offset) {
+  const header = source.slice(offset).match(/^(\d+)\s+(\d+)\s+obj\b/);
+  if (!header) {
+    throw new PdfSyntaxError("Expected indirect object.", {
+      offset,
+      code: "pdf.object.expected"
+    });
+  }
+
+  const objectNumber = Number.parseInt(header[1], 10);
+  const generationNumber = Number.parseInt(header[2], 10);
+  let cursor = offset + header[0].length;
+  const parsed = parsePdfValue(source, cursor);
+  cursor = skipWhitespaceAndComments(source, parsed.offset);
+
+  let stream = null;
+  if (source.startsWith("stream", cursor)) {
+    const streamMarkerOffset = cursor;
+    cursor += "stream".length;
+    if (source[cursor] === "\r" && source[cursor + 1] === "\n") {
+      cursor += 2;
+    } else if (source[cursor] === "\n" || source[cursor] === "\r") {
+      cursor += 1;
+    } else {
+      throw new PdfSyntaxError("Malformed stream line ending.", {
+        offset: streamMarkerOffset,
+        code: "pdf.stream.line_ending"
+      });
+    }
+
+    const streamStart = cursor;
+    const streamLength = readDirectStreamLength(parsed.value);
+    let streamEnd;
+    if (Number.isInteger(streamLength) && streamLength >= 0) {
+      streamEnd = streamStart + streamLength;
+    } else {
+      const endstreamOffset = source.indexOf("endstream", streamStart);
+      if (endstreamOffset === -1) {
+        throw new PdfSyntaxError("Missing endstream marker.", {
+          offset: streamStart,
+          code: "pdf.stream.end_missing"
+        });
+      }
+      streamEnd = trimTrailingLineEnding(source, endstreamOffset);
+    }
+
+    if (streamEnd > bytes.byteLength) {
+      throw new PdfSyntaxError("Stream length exceeds file bounds.", {
+        offset: streamStart,
+        code: "pdf.stream.length_out_of_bounds"
+      });
+    }
+
+    const streamBytes = bytes.subarray(streamStart, streamEnd);
+    stream = {
+      objectNumber,
+      generationNumber,
+      offset: streamStart,
+      length: streamBytes.byteLength,
+      bytes: streamBytes,
+      text: Buffer.from(streamBytes).toString("latin1")
+    };
+
+    const endstreamOffset = source.indexOf("endstream", streamEnd);
+    if (endstreamOffset === -1) {
+      throw new PdfSyntaxError("Missing endstream marker.", {
+        offset: streamEnd,
+        code: "pdf.stream.end_missing"
+      });
+    }
+    cursor = endstreamOffset + "endstream".length;
+  }
+
+  const endObjectOffset = source.indexOf("endobj", cursor);
+  if (endObjectOffset === -1) {
+    throw new PdfSyntaxError("Missing endobj marker.", {
+      offset: cursor,
+      code: "pdf.object.end_missing"
+    });
+  }
+
+  return {
+    objectNumber,
+    generationNumber,
+    value: parsed.value,
+    stream,
+    offset,
+    endOffset: endObjectOffset + "endobj".length
+  };
+}
+
+function readDirectStreamLength(value) {
+  if (!value || value.type !== "dict") {
+    return null;
+  }
+  const length = value.entries.Length;
+  return typeof length === "number" ? length : null;
+}
+
+function trimTrailingLineEnding(source, offset) {
+  if (source[offset - 2] === "\r" && source[offset - 1] === "\n") {
+    return offset - 2;
+  }
+  if (source[offset - 1] === "\n" || source[offset - 1] === "\r") {
+    return offset - 1;
+  }
+  return offset;
+}
+
+class ObjectParser {
+  constructor(source, offset = 0) {
+    this.source = source;
+    this.offset = offset;
+  }
+
+  parseValue() {
+    this.offset = skipWhitespaceAndComments(this.source, this.offset);
+    const start = this.offset;
+    const char = this.source[this.offset];
+
+    if (char === undefined) {
+      throw new PdfSyntaxError("Unexpected end of input.", {
+        offset: this.offset,
+        code: "pdf.value.eof"
+      });
+    }
+
+    if (char === "[" ) {
+      return this.parseArray();
+    }
+    if (char === "<" && this.source[this.offset + 1] === "<") {
+      return this.parseDictionary();
+    }
+    if (char === "<") {
+      return this.parseHexString();
+    }
+    if (char === "(") {
+      return this.parseLiteralString();
+    }
+    if (char === "/") {
+      return this.parseName();
+    }
+    if (isNumberStart(char)) {
+      return this.parseNumberOrReference();
+    }
+
+    const word = this.readWord();
+    if (word === "true") {
+      return { value: true, offset: this.offset };
+    }
+    if (word === "false") {
+      return { value: false, offset: this.offset };
+    }
+    if (word === "null") {
+      return { value: null, offset: this.offset };
+    }
+
+    throw new PdfSyntaxError(`Unexpected token "${word}".`, {
+      offset: start,
+      code: "pdf.value.unexpected"
+    });
+  }
+
+  parseArray() {
+    const items = [];
+    this.offset += 1;
+    while (this.offset < this.source.length) {
+      this.offset = skipWhitespaceAndComments(this.source, this.offset);
+      if (this.source[this.offset] === "]") {
+        this.offset += 1;
+        return {
+          value: {
+            type: "array",
+            items
+          },
+          offset: this.offset
+        };
+      }
+      const parsed = this.parseValue();
+      items.push(parsed.value);
+      this.offset = parsed.offset;
+    }
+    throw new PdfSyntaxError("Unterminated array.", {
+      offset: this.offset,
+      code: "pdf.array.unterminated"
+    });
+  }
+
+  parseDictionary() {
+    const entries = {};
+    this.offset += 2;
+    while (this.offset < this.source.length) {
+      this.offset = skipWhitespaceAndComments(this.source, this.offset);
+      if (this.source.startsWith(">>", this.offset)) {
+        this.offset += 2;
+        return {
+          value: {
+            type: "dict",
+            entries
+          },
+          offset: this.offset
+        };
+      }
+
+      const key = this.parseName().value.value;
+      const parsed = this.parseValue();
+      entries[key] = parsed.value;
+      this.offset = parsed.offset;
+    }
+
+    throw new PdfSyntaxError("Unterminated dictionary.", {
+      offset: this.offset,
+      code: "pdf.dict.unterminated"
+    });
+  }
+
+  parseLiteralString() {
+    this.offset += 1;
+    let depth = 1;
+    let value = "";
+
+    while (this.offset < this.source.length) {
+      const char = this.source[this.offset];
+      if (char === "\\") {
+        const next = this.source[this.offset + 1];
+        if (next === undefined) {
+          this.offset += 1;
+          continue;
+        }
+        value += char + next;
+        this.offset += 2;
+        continue;
+      }
+      if (char === "(") {
+        depth += 1;
+      }
+      if (char === ")") {
+        depth -= 1;
+        if (depth === 0) {
+          this.offset += 1;
+          return {
+            value: decodePdfString(value),
+            offset: this.offset
+          };
+        }
+      }
+      value += char;
+      this.offset += 1;
+    }
+
+    throw new PdfSyntaxError("Unterminated literal string.", {
+      offset: this.offset,
+      code: "pdf.string.unterminated"
+    });
+  }
+
+  parseHexString() {
+    const start = this.offset;
+    this.offset += 1;
+    const end = this.source.indexOf(">", this.offset);
+    if (end === -1) {
+      throw new PdfSyntaxError("Unterminated hex string.", {
+        offset: start,
+        code: "pdf.hex_string.unterminated"
+      });
+    }
+    const value = this.source.slice(this.offset, end).replace(/\s+/g, "");
+    this.offset = end + 1;
+    return {
+      value: {
+        type: "hex-string",
+        value
+      },
+      offset: this.offset
+    };
+  }
+
+  parseName() {
+    const start = this.offset;
+    if (this.source[this.offset] !== "/") {
+      throw new PdfSyntaxError("Expected name.", {
+        offset: this.offset,
+        code: "pdf.name.expected"
+      });
+    }
+    this.offset += 1;
+    while (
+      this.offset < this.source.length &&
+      !isWhitespace(this.source[this.offset]) &&
+      !isDelimiter(this.source[this.offset])
+    ) {
+      this.offset += 1;
+    }
+    return {
+      value: {
+        type: "name",
+        value: decodeName(this.source.slice(start + 1, this.offset))
+      },
+      offset: this.offset
+    };
+  }
+
+  parseNumberOrReference() {
+    const first = this.readNumber();
+    const afterFirst = this.offset;
+    const refOffset = skipWhitespaceAndComments(this.source, this.offset);
+
+    if (Number.isInteger(first.value)) {
+      try {
+        const secondParser = new ObjectParser(this.source, refOffset);
+        const second = secondParser.readNumber();
+        const afterSecond = skipWhitespaceAndComments(this.source, secondParser.offset);
+        if (
+          Number.isInteger(second.value) &&
+          this.source[afterSecond] === "R" &&
+          isTokenBoundary(this.source[afterSecond + 1])
+        ) {
+          this.offset = afterSecond + 1;
+          return {
+            value: {
+              type: "ref",
+              objectNumber: first.value,
+              generationNumber: second.value
+            },
+            offset: this.offset
+          };
+        }
+      } catch (error) {
+        if (!(error instanceof PdfSyntaxError)) {
+          throw error;
+        }
+      }
+    }
+
+    this.offset = afterFirst;
+    return first;
+  }
+
+  readNumber() {
+    const match = this.source.slice(this.offset).match(/^[-+]?(?:\d+\.\d+|\d+|\.\d+)/);
+    if (!match) {
+      throw new PdfSyntaxError("Expected number.", {
+        offset: this.offset,
+        code: "pdf.number.expected"
+      });
+    }
+    this.offset += match[0].length;
+    return {
+      value: Number(match[0]),
+      offset: this.offset
+    };
+  }
+
+  readWord() {
+    const start = this.offset;
+    while (
+      this.offset < this.source.length &&
+      !isWhitespace(this.source[this.offset]) &&
+      !isDelimiter(this.source[this.offset])
+    ) {
+      this.offset += 1;
+    }
+    return this.source.slice(start, this.offset);
+  }
+}
+
+function readInteger(source, offset, label) {
+  const cursor = skipWhitespaceAndComments(source, offset);
+  const match = source.slice(cursor).match(/^\d+/);
+  if (!match) {
+    throw new PdfSyntaxError(`Expected ${label}.`, {
+      offset: cursor,
+      code: "pdf.integer.expected"
+    });
+  }
+  return {
+    value: Number.parseInt(match[0], 10),
+    offset: cursor + match[0].length
+  };
+}
+
+function skipWhitespaceAndComments(source, offset) {
+  while (offset < source.length) {
+    const char = source[offset];
+    if (isWhitespace(char)) {
+      offset += 1;
+      continue;
+    }
+    if (char === "%") {
+      while (offset < source.length && source[offset] !== "\n" && source[offset] !== "\r") {
+        offset += 1;
+      }
+      continue;
+    }
+    break;
+  }
+  return offset;
+}
+
+function isWhitespace(char) {
+  return char === "\0" || char === "\t" || char === "\n" || char === "\f" || char === "\r" || char === " ";
+}
+
+function isDelimiter(char) {
+  return char === "(" || char === ")" || char === "<" || char === ">" || char === "[" || char === "]" || char === "{" || char === "}" || char === "/" || char === "%";
+}
+
+function isTokenBoundary(char) {
+  return char === undefined || isWhitespace(char) || isDelimiter(char);
+}
+
+function isNumberStart(char) {
+  return char === "+" || char === "-" || char === "." || /\d/.test(char);
+}
+
+function decodeName(value) {
+  return value.replace(/#([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
+}
+
+function decodePdfString(value) {
+  let output = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character !== "\\") {
+      output += character;
+      continue;
+    }
+
+    const next = value[index + 1];
+    if (next === undefined) {
+      continue;
+    }
+
+    if (/[0-7]/.test(next)) {
+      const octal = value.slice(index + 1).match(/^[0-7]{1,3}/)?.[0] ?? "";
+      output += String.fromCharCode(Number.parseInt(octal, 8));
+      index += octal.length;
+      continue;
+    }
+
+    const escapes = {
+      n: "\n",
+      r: "\r",
+      t: "\t",
+      b: "\b",
+      f: "\f",
+      "(": "(",
+      ")": ")",
+      "\\": "\\"
+    };
+    output += escapes[next] ?? next;
+    index += 1;
+  }
+  return output;
+}
+
+function objectKey(objectNumber, generationNumber) {
+  return `${objectNumber}:${generationNumber}`;
+}
