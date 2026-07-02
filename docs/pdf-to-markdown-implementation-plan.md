@@ -393,11 +393,11 @@ assets.
 
 ### 2.4 Text Operators And Fonts
 
-- [ ] Implement graphics and text state stack needed for text extraction.
-- [ ] Interpret text showing operators.
-- [ ] Interpret text positioning operators.
-- [ ] Handle text matrices and current transformation matrix.
-- [ ] Parse simple fonts.
+- [x] Implement graphics and text state stack needed for text extraction.
+- [x] Interpret text showing operators.
+- [x] Interpret text positioning operators.
+- [x] Handle text matrices and current transformation matrix.
+- [x] Parse simple fonts.
 - [ ] Parse ToUnicode CMaps.
 - [ ] Map glyphs to Unicode with confidence.
 - [ ] Preserve geometry for glyphs, spans, and lines.
