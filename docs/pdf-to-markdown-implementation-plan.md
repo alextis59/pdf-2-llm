@@ -549,7 +549,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 
 - [x] Add cell adjacency metric.
 - [x] Add span accuracy metric.
-- [ ] Add CSV cell text accuracy metric.
+- [x] Add CSV cell text accuracy metric.
 - [ ] Add rendered HTML table diff helper.
 - [ ] Add fixtures for split-across-page tables.
 - [ ] Add fixtures for notes below tables.

@@ -270,6 +270,10 @@ function acceptanceYaml(fixture) {
     fixture.minTableSpanAccuracy == null
       ? ""
       : `  minTableSpanAccuracy: ${fixture.minTableSpanAccuracy}\n`;
+  const tableCsvCellTextMetric =
+    fixture.minTableCsvCellTextAccuracy == null
+      ? ""
+      : `  minTableCsvCellTextAccuracy: ${fixture.minTableCsvCellTextAccuracy}\n`;
 
   return `id: ${fixture.id}
 gate: ${fixture.gate}
@@ -288,6 +292,7 @@ metrics:
   minTextCoverage: ${fixture.minTextCoverage}
 ${readingOrderMetric}\
 ${tableAdjacencyMetric}\
+${tableCsvCellTextMetric}\
 ${tableSpanMetric}\
   maxUnexpectedWarnings: 0
 snippets:
@@ -459,6 +464,7 @@ const fixtures = [
     description: "Visible grid table fixture.",
     minTextCoverage: 1,
     minTableCellAdjacency: 1,
+    minTableCsvCellTextAccuracy: 1,
     minTableSpanAccuracy: 1,
     must: ["detect_visible_table", "preserve_table_cells", "emit_gfm_table"],
     mustNot: ["flatten_table_to_unstructured_paragraph"],

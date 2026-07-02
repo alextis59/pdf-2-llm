@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { convertPdfToMarkdown } from "../../packages/pdf2md/src/index.mjs";
 import { compareTableCellAdjacency } from "./table-adjacency.mjs";
+import { compareTableCsvCellTextAccuracy } from "./table-csv-accuracy.mjs";
 import { compareTableSpanAccuracy } from "./table-span-accuracy.mjs";
 
 const args = process.argv.slice(2);
@@ -116,6 +117,7 @@ async function loadAcceptance(entry) {
     expectedMode: scalars.get("expectedMode"),
     gating: scalars.get("gating") === "true",
     minTableCellAdjacency: readNumber(metrics.get("minTableCellAdjacency")),
+    minTableCsvCellTextAccuracy: readNumber(metrics.get("minTableCsvCellTextAccuracy")),
     minTableSpanAccuracy: readNumber(metrics.get("minTableSpanAccuracy")),
     skipReason: scalars.get("skipReason") ?? ""
   };
@@ -219,6 +221,7 @@ async function runCase(corpusCase) {
   if (
     assertMarkdown ||
     acceptance.minTableCellAdjacency !== null ||
+    acceptance.minTableCsvCellTextAccuracy !== null ||
     acceptance.minTableSpanAccuracy !== null
   ) {
     expected = await readExpectedMarkdown(entry);
@@ -261,6 +264,22 @@ async function runCase(corpusCase) {
       `tableSpanAccuracy=${formatNumber(spanAccuracy.score)} min=${formatNumber(
         acceptance.minTableSpanAccuracy
       )} matched=${spanAccuracy.matchedCells}/${spanAccuracy.expectedCells}`
+    );
+  }
+
+  if (acceptance.minTableCsvCellTextAccuracy !== null) {
+    const csvAccuracy = compareTableCsvCellTextAccuracy(expected, result.assets);
+    if (csvAccuracy.score + Number.EPSILON < acceptance.minTableCsvCellTextAccuracy) {
+      errors.push(
+        `table CSV cell text accuracy ${formatNumber(csvAccuracy.score)} below ${formatNumber(
+          acceptance.minTableCsvCellTextAccuracy
+        )} (${csvAccuracy.matchedCells}/${csvAccuracy.expectedCells} expected cells matched)`
+      );
+    }
+    details.push(
+      `tableCsvCellTextAccuracy=${formatNumber(csvAccuracy.score)} min=${formatNumber(
+        acceptance.minTableCsvCellTextAccuracy
+      )} matched=${csvAccuracy.matchedCells}/${csvAccuracy.expectedCells}`
     );
   }
 
