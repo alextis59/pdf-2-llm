@@ -60,18 +60,22 @@ export function linesToMarkdown(lines) {
 
     if (line.fontSize >= 20) {
       previousWasList = false;
-      blocks.push(`# ${text}`);
+      blocks.push(`# ${escapeMarkdownInline(text)}`);
       continue;
     }
 
     if (line.fontSize >= 15) {
       previousWasList = false;
-      blocks.push(`## ${text}`);
+      blocks.push(`## ${escapeMarkdownInline(text)}`);
       continue;
     }
 
-    if (/^[-*]\s+/.test(text)) {
-      const item = text.replace(/^[-*]\s+/, "- ");
+    const listItem = parseListItem(text);
+    if (listItem) {
+      const item =
+        listItem.type === "ordered"
+          ? `${listItem.index}. ${escapeMarkdownInline(listItem.text)}`
+          : `- ${escapeMarkdownInline(listItem.text)}`;
       if (previousWasList) {
         blocks[blocks.length - 1] = `${blocks[blocks.length - 1]}\n${item}`;
       } else {
@@ -82,10 +86,31 @@ export function linesToMarkdown(lines) {
     }
 
     previousWasList = false;
-    blocks.push(text);
+    blocks.push(escapeMarkdownParagraph(text));
   }
 
   return blocks.length > 0 ? `${blocks.join("\n\n")}\n` : "";
+}
+
+function parseListItem(text) {
+  const unordered = text.match(/^[-*]\s+(.+)$/);
+  if (unordered) {
+    return {
+      type: "unordered",
+      text: unordered[1]
+    };
+  }
+
+  const ordered = text.match(/^(\d+)[.)]\s+(.+)$/);
+  if (ordered) {
+    return {
+      type: "ordered",
+      index: Number.parseInt(ordered[1], 10),
+      text: ordered[2]
+    };
+  }
+
+  return null;
 }
 
 function normalizeWhitespace(value) {
@@ -103,6 +128,21 @@ function normalizeText(value) {
       .replace(/\uFB05/g, "st")
       .replace(/\uFB06/g, "st")
   );
+}
+
+function escapeMarkdownParagraph(value) {
+  return escapeMarkdownInline(value)
+    .replace(/^([#>])/, "\\$1")
+    .replace(/^([-+])(\s)/, "\\$1$2")
+    .replace(/^(\d+)\. /, "$1\\. ");
+}
+
+function escapeMarkdownInline(value) {
+  return value.replace(/\\/g, "\\\\").replace(/([`*_[\]])/g, "\\$1");
+}
+
+function escapeMarkdownTableCell(value) {
+  return escapeMarkdownInline(value).replace(/\|/g, "\\|");
 }
 
 function readTableAt(lines, startIndex) {
@@ -154,12 +194,12 @@ function isTableCellCandidate(line) {
     line.fontSize < 15 &&
     Number.isFinite(line.x) &&
     Number.isFinite(line.y) &&
-    !/^[-*]\s+/.test(normalizeWhitespace(line.text))
+    !parseListItem(normalizeText(line.text))
   );
 }
 
 function formatTable(rows) {
-  const cells = rows.map((row) => row.map((cell) => normalizeWhitespace(cell.text)));
+  const cells = rows.map((row) => row.map((cell) => normalizeText(cell.text)));
   const header = cells[0];
   const body = cells.slice(1);
   const alignments = header.map((_, columnIndex) => {
@@ -167,9 +207,9 @@ function formatTable(rows) {
     return values.length > 0 && values.every(isNumericCell) ? "---:" : "---";
   });
   return [
-    `| ${header.join(" | ")} |`,
+    `| ${header.map(escapeMarkdownTableCell).join(" | ")} |`,
     `| ${alignments.join(" | ")} |`,
-    ...body.map((row) => `| ${row.join(" | ")} |`)
+    ...body.map((row) => `| ${row.map(escapeMarkdownTableCell).join(" | ")} |`)
   ].join("\n");
 }
 

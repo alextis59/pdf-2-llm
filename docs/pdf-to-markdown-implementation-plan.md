@@ -409,11 +409,11 @@ assets.
 - [ ] Group glyphs into spans.
 - [ ] Group spans into lines.
 - [ ] Group lines into paragraphs.
-- [ ] Infer simple headings from size and spacing.
-- [ ] Infer simple bullet and numbered lists.
+- [x] Infer simple headings from size and spacing.
+- [x] Infer simple bullet and numbered lists.
 - [ ] Remove obvious page numbers only when confidence is high.
 - [x] Serialize CommonMark paragraphs, headings, and lists.
-- [ ] Escape Markdown metacharacters.
+- [x] Escape Markdown metacharacters.
 - [ ] Add page anchors.
 - [ ] Preserve uncertain ordering with warnings.
 

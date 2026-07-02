@@ -20,3 +20,30 @@ test("linesToMarkdown normalizes common ligatures and whitespace", () => {
 
   assert.equal(markdown, "# file flow\n\nplain text\n");
 });
+
+test("linesToMarkdown infers headings and ordered lists", () => {
+  const markdown = linesToMarkdown([
+    { text: "Title", fontSize: 22, x: 10, y: 40 },
+    { text: "Section", fontSize: 16, x: 10, y: 30 },
+    { text: "1. First", fontSize: 12, x: 10, y: 20 },
+    { text: "2) Second", fontSize: 12, x: 10, y: 10 }
+  ]);
+
+  assert.equal(markdown, "# Title\n\n## Section\n\n1. First\n2. Second\n");
+});
+
+test("linesToMarkdown escapes Markdown metacharacters in text and tables", () => {
+  const markdown = linesToMarkdown([
+    { text: "literal *star* and [label] uses \\ slash", fontSize: 12, x: 10, y: 40 },
+    { text: "# not heading", fontSize: 12, x: 10, y: 30 },
+    { text: "A|B", fontSize: 12, x: 10, y: 20 },
+    { text: "Value", fontSize: 12, x: 50, y: 20 },
+    { text: "x*y", fontSize: 12, x: 10, y: 10 },
+    { text: "3", fontSize: 12, x: 50, y: 10 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "literal \\*star\\* and \\[label\\] uses \\\\ slash\n\n\\# not heading\n\n| A\\|B | Value |\n| --- | ---: |\n| x\\*y | 3 |\n"
+  );
+});
