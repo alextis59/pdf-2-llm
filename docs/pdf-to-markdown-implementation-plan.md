@@ -253,7 +253,7 @@ review:
 Checklist:
 
 - [ ] Add `corpus/accepted/<id>.yaml` files for the initial corpus.
-- [ ] Define gate labels such as `text-mvp`, `robust-parser`, `layout-v1`,
+- [x] Define gate labels such as `text-mvp`, `robust-parser`, `layout-v1`,
   `tables-v1`, `ocr-v1`, `webgpu-v1`, and `advanced-v1`.
 - [ ] Add `must` assertions for required extraction behavior.
 - [ ] Add `mustNot` assertions for hallucination, unsafe, or misleading output.
@@ -263,7 +263,7 @@ Checklist:
 - [ ] Add metric thresholds only when the oracle is reliable enough.
 - [ ] Add expected warnings for unsupported features.
 - [ ] Add explicit skip reasons for local-only or future-gate PDFs.
-- [ ] Require human review for every acceptance file before it becomes gating.
+- [x] Require human review for every acceptance file before it becomes gating.
 
 ### 0.6 Initial Acceptance Review Workflow
 

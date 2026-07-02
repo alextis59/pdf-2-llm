@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze",
+    "check": "npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze && npm run corpus:acceptance",
+    "corpus:acceptance": "node scripts/corpus/validate-acceptance.mjs --all --allow-empty",
     "corpus:analyze": "node scripts/corpus/analyze.mjs --all --dry-run",
     "corpus:candidates": "node scripts/corpus/retrieve.mjs --all --dry-run",
     "corpus:validate": "node scripts/corpus/validate-manifest.mjs"

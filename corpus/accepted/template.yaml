@@ -1,0 +1,29 @@
+id: sample-id
+gate: text-mvp
+sourceType: digital
+expectedMode: pdf-text
+gating: false
+must:
+  - extract_main_text
+  - preserve_page_anchors
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+metrics:
+  minTextCoverage: 0.98
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Expected text snippet"
+structure:
+  headings: []
+  tables: []
+  forms: []
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: ""
+  reviewedAt: ""
+  notes: "Explain why the thresholds and warnings are appropriate for this PDF."
