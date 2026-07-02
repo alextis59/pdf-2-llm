@@ -179,6 +179,48 @@ test("linesToMarkdown escapes Markdown metacharacters in text and tables", () =>
   );
 });
 
+test("linesToMarkdownWithSourceMap exports no-span ruling tables as GFM", () => {
+  const title = textLine("Ruled Table Fixture", 72, 720, 140, 22);
+  const quarter = textLine("Quarter", 82, 684, 38, 11);
+  const revenue = textLine("Revenue", 202, 680, 40, 11);
+  const cost = textLine("Cost", 322, 676, 22, 11);
+  const q1 = textLine("Q1", 82, 640, 12, 11);
+  const amount = textLine("100", 202, 636, 18, 11);
+  const costAmount = textLine("50", 322, 632, 12, 11);
+  const result = linesToMarkdownWithSourceMap(
+    [title, quarter, revenue, cost, q1, amount, costAmount],
+    {
+      rulingTables: [
+        {
+          pageIndex: 0,
+          rows: 2,
+          columns: 3,
+          hasSpans: false,
+          rowSpans: 0,
+          columnSpans: 0,
+          coveredCells: 0,
+          cells: [
+            tableCell(0, 0, "Quarter", [quarter]),
+            tableCell(0, 1, "Revenue", [revenue]),
+            tableCell(0, 2, "Cost", [cost]),
+            tableCell(1, 0, "Q1", [q1]),
+            tableCell(1, 1, "100", [amount]),
+            tableCell(1, 2, "50", [costAmount])
+          ]
+        }
+      ]
+    }
+  );
+
+  assert.equal(
+    result.markdown,
+    "# Ruled Table Fixture\n\n| Quarter | Revenue | Cost |\n| --- | ---: | ---: |\n| Q1 | 100 | 50 |\n"
+  );
+  assert.equal(result.sourceMap.entries.length, 2);
+  assert.equal(result.sourceMap.entries[1].kind, "table");
+  assert.equal(result.sourceMap.entries[1].regions.length, 6);
+});
+
 test("linesToMarkdown preserves URL and email links", () => {
   const markdown = linesToMarkdown([
     {
@@ -434,3 +476,28 @@ test("linesToMarkdownWithSourceMap maps Markdown blocks back to page regions", (
   });
   assert.equal(result.sourceMap.entries[2].regions.length, 2);
 });
+
+function textLine(text, x, y, width, fontSize) {
+  return {
+    text,
+    fontSize,
+    x,
+    y,
+    width,
+    height: fontSize,
+    pageIndex: 0
+  };
+}
+
+function tableCell(rowIndex, columnIndex, text, lines) {
+  return {
+    rowIndex,
+    columnIndex,
+    text,
+    lines,
+    lineCount: lines.length,
+    rowSpan: 1,
+    columnSpan: 1,
+    coveredBy: null
+  };
+}

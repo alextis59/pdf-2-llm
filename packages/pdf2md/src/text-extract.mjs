@@ -109,11 +109,27 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const taggedStructureConflicts = taggedStructureConflictsForLines(lines, headingModel);
   const listIndentModel = createListIndentModel(lines);
   const codeModel = createCodeModel(lines);
+  const rulingTableExports = createRulingTableExports(lines, options.rulingTables ?? []);
   const blocks = [];
   let previousWasList = false;
   const anchoredPages = new Set();
 
   for (let index = 0; index < lines.length; index += 1) {
+    const rulingTable = readRulingTableAt(index, rulingTableExports);
+    if (rulingTable) {
+      previousWasList = false;
+      appendPageAnchor(blocks, rulingTable.pageIndex, options, anchoredPages);
+      blocks.push(
+        createMarkdownBlock(
+          formatMarkdownTableCells(rulingTable.rows),
+          "table",
+          rulingTable.sourceLines
+        )
+      );
+      index = rulingTable.endIndex - 1;
+      continue;
+    }
+
     const table = readTableAt(lines, index);
     if (table) {
       previousWasList = false;
@@ -131,7 +147,13 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
 
     appendPageAnchor(blocks, line.pageIndex, options, anchoredPages);
 
-    const codeBlock = readCodeBlockAt(lines, index, headingModel, codeModel);
+    const codeBlock = readCodeBlockAt(
+      lines,
+      index,
+      headingModel,
+      codeModel,
+      rulingTableExports
+    );
     if (codeBlock) {
       previousWasList = false;
       blocks.push(createMarkdownBlock(formatCodeBlock(codeBlock.sourceLines), "code", codeBlock.sourceLines));
@@ -170,7 +192,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     }
 
     previousWasList = false;
-    const paragraph = readParagraphAt(lines, index, text, headingModel);
+    const paragraph = readParagraphAt(lines, index, text, headingModel, rulingTableExports);
     blocks.push(
       createMarkdownBlock(escapeMarkdownParagraph(paragraph.text), "paragraph", paragraph.sourceLines)
     );
@@ -280,7 +302,7 @@ function createCodeModel(lines) {
   };
 }
 
-function readCodeBlockAt(lines, startIndex, headingModel, codeModel) {
+function readCodeBlockAt(lines, startIndex, headingModel, codeModel, rulingTableExports = new Map()) {
   const sourceLines = [];
   let hasMonospace = false;
   let index = startIndex;
@@ -292,6 +314,7 @@ function readCodeBlockAt(lines, startIndex, headingModel, codeModel) {
       text.length === 0 ||
       parseListItem(text) ||
       headingLevelForLine(line, headingModel) !== null ||
+      readRulingTableAt(index, rulingTableExports) ||
       readTableAt(lines, index)
     ) {
       break;
@@ -568,7 +591,7 @@ function escapeMarkdownTableCell(value) {
   return escapeMarkdownInline(value).replace(/\|/g, "\\|");
 }
 
-function readParagraphAt(lines, startIndex, firstText, headingModel) {
+function readParagraphAt(lines, startIndex, firstText, headingModel, rulingTableExports = new Map()) {
   const parts = [firstText];
   let previous = lines[startIndex];
   let index = startIndex + 1;
@@ -581,6 +604,7 @@ function readParagraphAt(lines, startIndex, firstText, headingModel) {
       headingLevelForLine(line, headingModel) !== null ||
       parseListItem(text) ||
       startsWithMarkdownBlockMarker(text) ||
+      readRulingTableAt(index, rulingTableExports) ||
       readTableAt(lines, index) ||
       !isParagraphContinuation(previous, line)
     ) {
@@ -1102,6 +1126,126 @@ function isParagraphContinuation(previous, next) {
   return !/[.!?:;)]$/.test(normalizeText(previous.text));
 }
 
+function createRulingTableExports(lines, rulingTables) {
+  const exportsByStart = new Map();
+  if (!Array.isArray(rulingTables) || rulingTables.length === 0) {
+    return exportsByStart;
+  }
+
+  const lineIndexes = new Map(lines.map((line, index) => [line, index]));
+  for (const table of rulingTables) {
+    const tableExport = createRulingTableExport(table, lines, lineIndexes);
+    if (!tableExport) {
+      continue;
+    }
+    const existing = exportsByStart.get(tableExport.startIndex);
+    if (!existing || tableExport.sourceLines.length > existing.sourceLines.length) {
+      exportsByStart.set(tableExport.startIndex, tableExport);
+    }
+  }
+  return exportsByStart;
+}
+
+function createRulingTableExport(table, lines, lineIndexes) {
+  if (!isGfmExportableRulingTable(table)) {
+    return null;
+  }
+
+  const rows = rulingTableRows(table);
+  if (
+    rows.length < 2 ||
+    rows.some((row) => row.length !== table.columns) ||
+    rows.every((row) => row.every((cell) => cell.length === 0))
+  ) {
+    return null;
+  }
+
+  const sourceLines = sourceLinesForRulingTable(table);
+  if (
+    sourceLines.length === 0 ||
+    sourceLines.some((line) => !lineIndexes.has(line))
+  ) {
+    return null;
+  }
+
+  const sourceLineSet = new Set(sourceLines);
+  const lineIndices = sourceLines.map((line) => lineIndexes.get(line)).sort((left, right) => left - right);
+  const startIndex = lineIndices[0];
+  const endIndex = lineIndices.at(-1) + 1;
+  for (let index = startIndex; index < endIndex; index += 1) {
+    if (!sourceLineSet.has(lines[index])) {
+      return null;
+    }
+  }
+
+  return {
+    startIndex,
+    endIndex,
+    pageIndex: table.pageIndex ?? sourceLines[0]?.pageIndex,
+    rows,
+    sourceLines: [...sourceLines].sort(
+      (left, right) => lineIndexes.get(left) - lineIndexes.get(right)
+    )
+  };
+}
+
+function isGfmExportableRulingTable(table) {
+  if (
+    !table ||
+    !Array.isArray(table.cells) ||
+    table.rows < 2 ||
+    table.columns < 2 ||
+    table.hasSpans === true ||
+    table.rowSpans > 0 ||
+    table.columnSpans > 0 ||
+    table.coveredCells > 0
+  ) {
+    return false;
+  }
+
+  return table.cells.every(
+    (cell) =>
+      !cell.coveredBy &&
+      (cell.rowSpan ?? 1) === 1 &&
+      (cell.columnSpan ?? 1) === 1
+  );
+}
+
+function rulingTableRows(table) {
+  const cellsByPosition = new Map(
+    table.cells.map((cell) => [`${cell.rowIndex}:${cell.columnIndex}`, cell])
+  );
+  const rows = [];
+  for (let rowIndex = 0; rowIndex < table.rows; rowIndex += 1) {
+    const row = [];
+    for (let columnIndex = 0; columnIndex < table.columns; columnIndex += 1) {
+      const cell = cellsByPosition.get(`${rowIndex}:${columnIndex}`);
+      row.push(cell && !cell.coveredBy ? normalizeText(cell.text) : "");
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function sourceLinesForRulingTable(table) {
+  const seen = new Set();
+  const sourceLines = [];
+  for (const cell of table.cells) {
+    for (const line of cell.lines ?? []) {
+      if (seen.has(line)) {
+        continue;
+      }
+      seen.add(line);
+      sourceLines.push(line);
+    }
+  }
+  return sourceLines;
+}
+
+function readRulingTableAt(index, rulingTableExports) {
+  return rulingTableExports.get(index) ?? null;
+}
+
 function readTableAt(lines, startIndex) {
   const rows = [];
   let index = startIndex;
@@ -1157,6 +1301,10 @@ function isTableCellCandidate(line) {
 
 function formatTable(rows) {
   const cells = rows.map((row) => row.map((cell) => normalizeText(cell.text)));
+  return formatMarkdownTableCells(cells);
+}
+
+function formatMarkdownTableCells(cells) {
   const header = cells[0];
   const body = cells.slice(1);
   const alignments = header.map((_, columnIndex) => {

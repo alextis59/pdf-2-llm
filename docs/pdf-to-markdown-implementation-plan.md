@@ -532,7 +532,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 - [x] Infer grid rows and columns.
 - [x] Assign text boxes to cells.
 - [x] Detect row and column spans.
-- [ ] Export GFM tables when no spans are present.
+- [x] Export GFM tables when no spans are present.
 - [ ] Export HTML tables when spans are required.
 - [ ] Export CSV sidecars.
 

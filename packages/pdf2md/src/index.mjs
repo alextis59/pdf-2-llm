@@ -153,6 +153,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
     pageAnchors: options.markdown?.pageAnchors === true,
     preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
+    rulingTables,
     outlines: pdfDocument?.outlines ?? []
   });
   const markdown = markdownResult.markdown;
