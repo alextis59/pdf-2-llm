@@ -1344,11 +1344,26 @@ function readTableAt(lines, startIndex) {
   if (!rows.every((row) => row.length === columnCount)) {
     return null;
   }
+  if (!isPlausibleBorderlessTable(rows)) {
+    return null;
+  }
 
   return {
     rows,
     endIndex: index
   };
+}
+
+function isPlausibleBorderlessTable(rows) {
+  const body = rows.slice(1);
+  if (body.length === 0) {
+    return false;
+  }
+
+  return rows[0].some((_, columnIndex) => {
+    const values = body.map((row) => normalizeText(row[columnIndex].text));
+    return values.length > 0 && values.every(isNumericCell);
+  });
 }
 
 function isTableCellCandidate(line) {

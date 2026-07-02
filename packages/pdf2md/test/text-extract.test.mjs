@@ -358,6 +358,21 @@ test("linesToMarkdown keeps same-baseline table cells in row-major order", () =>
   );
 });
 
+test("linesToMarkdown does not treat same-baseline prose columns as a table", () => {
+  const markdown = linesToMarkdown([
+    { text: "Short Prose Columns", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: "Alpha topic", fontSize: 12, x: 72, y: 670, pageIndex: 0 },
+    { text: "Beta topic", fontSize: 12, x: 330, y: 670, pageIndex: 0 },
+    { text: "Alpha detail", fontSize: 12, x: 72, y: 650, pageIndex: 0 },
+    { text: "Beta detail", fontSize: 12, x: 330, y: 650, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "# Short Prose Columns\n\nAlpha topic\n\nBeta topic\n\nAlpha detail\n\nBeta detail\n"
+  );
+});
+
 test("linesToMarkdownWithSourceMap reports page layout classifications", () => {
   const single = linesToMarkdownWithSourceMap([
     { text: "Single", fontSize: 22, x: 72, y: 720, width: 80, pageIndex: 0 },

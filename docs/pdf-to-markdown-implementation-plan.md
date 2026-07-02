@@ -539,7 +539,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 ### 5.2 Borderless Tables
 
 - [x] Detect aligned text columns.
-- [ ] Distinguish tables from multi-column prose.
+- [x] Distinguish tables from multi-column prose.
 - [x] Infer header rows.
 - [x] Infer numeric alignment.
 - [ ] Track confidence per table.
