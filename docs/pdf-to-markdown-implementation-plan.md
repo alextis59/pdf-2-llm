@@ -531,7 +531,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 - [x] Merge near-collinear segments.
 - [x] Infer grid rows and columns.
 - [x] Assign text boxes to cells.
-- [ ] Detect row and column spans.
+- [x] Detect row and column spans.
 - [ ] Export GFM tables when no spans are present.
 - [ ] Export HTML tables when spans are required.
 - [ ] Export CSV sidecars.

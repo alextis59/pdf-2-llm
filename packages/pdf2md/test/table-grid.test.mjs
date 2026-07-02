@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignTextLinesToGridCells, inferRulingGrids } from "../src/table-grid.mjs";
+import {
+  assignTextLinesToGridCells,
+  detectTableCellSpans,
+  inferRulingGrids
+} from "../src/table-grid.mjs";
 
 test("inferRulingGrids infers rows and columns from a complete ruled table", () => {
   const lines = [
@@ -118,6 +122,68 @@ test("assignTextLinesToGridCells assigns text boxes to cells in visual row order
       [2, 2, "60"]
     ]
   );
+});
+
+test("detectTableCellSpans detects column spans from missing vertical boundaries", () => {
+  const lines = [
+    horizontal(0, 0, 100, 0),
+    horizontal(0, 50, 100, 50),
+    horizontal(0, 100, 100, 100),
+    vertical(0, 0, 0, 100),
+    vertical(50, 0, 50, 50),
+    vertical(100, 0, 100, 100)
+  ];
+  const [grid] = inferRulingGrids(lines);
+  const [assignedTable] = assignTextLinesToGridCells(
+    [grid],
+    [
+      textLine("Merged header", 10, 78, 70, 11),
+      textLine("A1", 10, 20, 10, 11),
+      textLine("B1", 60, 20, 10, 11)
+    ]
+  );
+  const [table] = detectTableCellSpans([assignedTable], lines);
+  const headerCell = table.cells.find((cell) => cell.rowIndex === 0 && cell.columnIndex === 0);
+  const coveredCell = table.cells.find((cell) => cell.rowIndex === 0 && cell.columnIndex === 1);
+
+  assert.equal(table.columnSpans, 1);
+  assert.equal(table.rowSpans, 0);
+  assert.equal(table.coveredCells, 1);
+  assert.equal(headerCell.text, "Merged header");
+  assert.equal(headerCell.columnSpan, 2);
+  assert.equal(headerCell.rowSpan, 1);
+  assert.deepEqual(coveredCell.coveredBy, { rowIndex: 0, columnIndex: 0 });
+});
+
+test("detectTableCellSpans detects row spans from missing horizontal boundaries", () => {
+  const lines = [
+    horizontal(0, 0, 100, 0),
+    horizontal(50, 50, 100, 50),
+    horizontal(0, 100, 100, 100),
+    vertical(0, 0, 0, 100),
+    vertical(50, 0, 50, 100),
+    vertical(100, 0, 100, 100)
+  ];
+  const [grid] = inferRulingGrids(lines);
+  const [assignedTable] = assignTextLinesToGridCells(
+    [grid],
+    [
+      textLine("Merged row", 10, 72, 25, 11),
+      textLine("Top right", 60, 72, 30, 11),
+      textLine("Bottom right", 60, 20, 30, 11)
+    ]
+  );
+  const [table] = detectTableCellSpans([assignedTable], lines);
+  const rowSpanCell = table.cells.find((cell) => cell.rowIndex === 0 && cell.columnIndex === 0);
+  const coveredCell = table.cells.find((cell) => cell.rowIndex === 1 && cell.columnIndex === 0);
+
+  assert.equal(table.rowSpans, 1);
+  assert.equal(table.columnSpans, 0);
+  assert.equal(table.coveredCells, 1);
+  assert.equal(rowSpanCell.text, "Merged row");
+  assert.equal(rowSpanCell.rowSpan, 2);
+  assert.equal(rowSpanCell.columnSpan, 1);
+  assert.deepEqual(coveredCell.coveredBy, { rowIndex: 0, columnIndex: 0 });
 });
 
 function horizontal(x1, y1, x2, y2) {

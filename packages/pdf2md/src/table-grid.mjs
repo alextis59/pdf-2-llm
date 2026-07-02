@@ -43,9 +43,7 @@ export function assignTextLinesToGridCells(rulingGrids, textLines, options = {})
     }
 
     for (const cell of cells) {
-      cell.lines.sort(compareTextLinesForCell);
-      cell.text = cell.lines.map((line) => normalizeText(line.text)).filter(Boolean).join(" ");
-      cell.lineCount = cell.lines.length;
+      updateCellText(cell);
     }
 
     const nonEmptyCells = cells.filter((cell) => cell.lineCount > 0);
@@ -62,6 +60,78 @@ export function assignTextLinesToGridCells(rulingGrids, textLines, options = {})
       nonEmptyCells: nonEmptyCells.length,
       cells,
       source: "ruling-grid"
+    };
+  });
+}
+
+export function detectTableCellSpans(rulingTables, rulingLines, options = {}) {
+  const tolerance = options.spanDetectionTolerance ?? 1;
+  return rulingTables.map((table) => {
+    const tableRulingLines = rulingLines.filter((line) => lineBelongsToTable(line, table, tolerance));
+    const cells = table.cells.map((cell) => ({
+      ...cell,
+      lines: [...cell.lines],
+      rowSpan: 1,
+      columnSpan: 1,
+      coveredBy: null
+    }));
+    const byCellKey = new Map(cells.map((cell) => [`${cell.rowIndex}:${cell.columnIndex}`, cell]));
+
+    for (let rowIndex = 0; rowIndex < table.rows; rowIndex += 1) {
+      for (let columnIndex = 0; columnIndex < table.columns; columnIndex += 1) {
+        const cell = byCellKey.get(`${rowIndex}:${columnIndex}`);
+        if (!cell || cell.coveredBy) {
+          continue;
+        }
+
+        let columnSpan = 1;
+        while (
+          columnIndex + columnSpan < table.columns &&
+          !verticalBoundaryPresent(table, tableRulingLines, columnIndex + columnSpan, rowIndex, tolerance)
+        ) {
+          columnSpan += 1;
+        }
+
+        let rowSpan = 1;
+        while (
+          rowIndex + rowSpan < table.rows &&
+          !horizontalBoundaryPresent(
+            table,
+            tableRulingLines,
+            rowIndex + rowSpan,
+            columnIndex,
+            columnIndex + columnSpan,
+            tolerance
+          )
+        ) {
+          rowSpan += 1;
+        }
+
+        cell.rowSpan = rowSpan;
+        cell.columnSpan = columnSpan;
+        mergeCoveredCellsIntoOrigin(cell, byCellKey, rowSpan, columnSpan);
+      }
+    }
+
+    for (const cell of cells) {
+      updateCellText(cell);
+    }
+
+    const rowSpans = cells.filter((cell) => !cell.coveredBy && cell.rowSpan > 1).length;
+    const columnSpans = cells.filter((cell) => !cell.coveredBy && cell.columnSpan > 1).length;
+    const coveredCells = cells.filter((cell) => cell.coveredBy).length;
+    const assignedTextLines = cells.reduce((sum, cell) => sum + cell.lineCount, 0);
+    const nonEmptyCells = cells.filter((cell) => !cell.coveredBy && cell.lineCount > 0).length;
+
+    return {
+      ...table,
+      assignedTextLines,
+      nonEmptyCells,
+      rowSpans,
+      columnSpans,
+      coveredCells,
+      hasSpans: rowSpans > 0 || columnSpans > 0,
+      cells
     };
   });
 }
@@ -165,6 +235,29 @@ function createGridFromComponent(component, options) {
   };
 }
 
+function mergeCoveredCellsIntoOrigin(originCell, byCellKey, rowSpan, columnSpan) {
+  for (let rowOffset = 0; rowOffset < rowSpan; rowOffset += 1) {
+    for (let columnOffset = 0; columnOffset < columnSpan; columnOffset += 1) {
+      if (rowOffset === 0 && columnOffset === 0) {
+        continue;
+      }
+      const coveredCell = byCellKey.get(
+        `${originCell.rowIndex + rowOffset}:${originCell.columnIndex + columnOffset}`
+      );
+      if (!coveredCell || coveredCell.coveredBy) {
+        continue;
+      }
+      coveredCell.coveredBy = {
+        rowIndex: originCell.rowIndex,
+        columnIndex: originCell.columnIndex
+      };
+      originCell.lines.push(...coveredCell.lines);
+      coveredCell.lines = [];
+    }
+  }
+  updateCellText(originCell);
+}
+
 function createGridCells(grid) {
   const cells = [];
   for (let rowIndex = 0; rowIndex < grid.rows; rowIndex += 1) {
@@ -184,6 +277,66 @@ function createGridCells(grid) {
     }
   }
   return cells;
+}
+
+function verticalBoundaryPresent(table, rulingLines, boundaryColumnIndex, rowIndex, tolerance) {
+  const x = table.xEdges[boundaryColumnIndex];
+  const rowBounds = rowBoundsForVisualRow(table, rowIndex);
+  return rulingLines.some(
+    (line) =>
+      line.orientation === "vertical" &&
+      Math.abs(lineAxisCoordinate(line) - x) <= tolerance &&
+      lineStart(line) <= rowBounds.y1 + tolerance &&
+      lineEnd(line) >= rowBounds.y2 - tolerance
+  );
+}
+
+function horizontalBoundaryPresent(
+  table,
+  rulingLines,
+  boundaryRowIndex,
+  startColumnIndex,
+  endColumnIndex,
+  tolerance
+) {
+  const y = table.yEdges[table.rows - boundaryRowIndex];
+  const x1 = table.xEdges[startColumnIndex];
+  const x2 = table.xEdges[endColumnIndex];
+  return rulingLines.some(
+    (line) =>
+      line.orientation === "horizontal" &&
+      Math.abs(lineAxisCoordinate(line) - y) <= tolerance &&
+      lineStart(line) <= x1 + tolerance &&
+      lineEnd(line) >= x2 - tolerance
+  );
+}
+
+function rowBoundsForVisualRow(table, rowIndex) {
+  const bottomRowIndex = table.rows - 1 - rowIndex;
+  return {
+    y1: table.yEdges[bottomRowIndex],
+    y2: table.yEdges[bottomRowIndex + 1]
+  };
+}
+
+function lineBelongsToTable(line, table, tolerance) {
+  if ((line.pageIndex ?? null) !== (table.pageIndex ?? null)) {
+    return false;
+  }
+  return (
+    lineEndOnAxis(line, "x") >= table.xEdges[0] - tolerance &&
+    lineStartOnAxis(line, "x") <= table.xEdges.at(-1) + tolerance &&
+    lineEndOnAxis(line, "y") >= table.yEdges[0] - tolerance &&
+    lineStartOnAxis(line, "y") <= table.yEdges.at(-1) + tolerance
+  );
+}
+
+function lineStartOnAxis(line, axis) {
+  return Math.min(line[`${axis}1`], line[`${axis}2`]);
+}
+
+function lineEndOnAxis(line, axis) {
+  return Math.max(line[`${axis}1`], line[`${axis}2`]);
 }
 
 function countGridIntersections(horizontalLines, verticalLines, tolerance) {
@@ -222,6 +375,12 @@ function compareTextLinesForCell(left, right) {
   const leftCenter = lineCenter(left);
   const rightCenter = lineCenter(right);
   return rightCenter.y - leftCenter.y || leftCenter.x - rightCenter.x;
+}
+
+function updateCellText(cell) {
+  cell.lines.sort(compareTextLinesForCell);
+  cell.text = cell.lines.map((line) => normalizeText(line.text)).filter(Boolean).join(" ");
+  cell.lineCount = cell.lines.length;
 }
 
 function normalizeText(text) {
