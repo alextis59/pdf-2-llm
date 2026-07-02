@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  extractContentStreamRulingLines,
   extractContentStreamTextLines,
   tokenizeContentStream
 } from "../src/content-stream.mjs";
@@ -96,6 +97,40 @@ test("extractContentStreamTextLines interprets text showing operators", () => {
   assert.equal(lines[1].y, 6);
   assert.equal(lines[2].text, "quoted");
   assert.equal(lines[2].y, -8);
+});
+
+test("extractContentStreamRulingLines detects stroked axis-aligned paths", () => {
+  const lines = extractContentStreamRulingLines(
+    [
+      "2 w",
+      "10 20 m 70 20 l S",
+      "30 40 20 10 re S",
+      "0 0 m 10 10 l S",
+      "q 1 0 0 1 5 10 cm 0 0 m 0 20 l S Q"
+    ].join("\n"),
+    { pageIndex: 3, streamIndex: 2 }
+  );
+
+  assert.equal(lines.length, 6);
+  assert.deepEqual(
+    lines.map((line) => line.orientation),
+    ["horizontal", "horizontal", "vertical", "horizontal", "vertical", "vertical"]
+  );
+  assert.deepEqual(
+    lines.map((line) => [line.x1, line.y1, line.x2, line.y2]),
+    [
+      [10, 20, 70, 20],
+      [30, 40, 50, 40],
+      [50, 40, 50, 50],
+      [30, 50, 50, 50],
+      [30, 40, 30, 50],
+      [5, 10, 5, 30]
+    ]
+  );
+  assert.deepEqual([...new Set(lines.map((line) => line.width))], [2]);
+  assert.deepEqual([...new Set(lines.map((line) => line.pageIndex))], [3]);
+  assert.deepEqual([...new Set(lines.map((line) => line.streamIndex))], [2]);
+  assert.deepEqual([...new Set(lines.map((line) => line.source))], ["path-operator"]);
 });
 
 test("extractContentStreamTextLines applies ToUnicode font maps to string bytes", () => {

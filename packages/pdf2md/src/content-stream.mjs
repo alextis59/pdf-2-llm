@@ -37,6 +37,32 @@ export function extractContentStreamTextLines(streamText, options = {}) {
   return lines.map(({ mergeKey, ...line }) => line);
 }
 
+export function extractContentStreamRulingLines(streamText, options = {}) {
+  const tokens = tokenizeContentStream(streamText);
+  const state = createInitialPathState();
+  const stack = [];
+  const operands = [];
+  const lines = [];
+
+  for (const token of tokens) {
+    if (token.type !== "word") {
+      operands.push(token);
+      continue;
+    }
+
+    executePathOperator(token.value, {
+      lines,
+      operands,
+      options,
+      stack,
+      state
+    });
+    operands.length = 0;
+  }
+
+  return lines;
+}
+
 export function tokenizeContentStream(streamText) {
   const source = typeof streamText === "string" ? streamText : Buffer.from(streamText).toString("latin1");
   const tokens = [];
@@ -97,6 +123,189 @@ export function tokenizeContentStream(streamText) {
   }
 
   return tokens;
+}
+
+function executePathOperator(operator, context) {
+  const { operands, state } = context;
+
+  if (operator === "q") {
+    context.stack.push(clonePathGraphicsState(state));
+    return;
+  }
+  if (operator === "Q") {
+    const restored = context.stack.pop();
+    if (restored) {
+      state.ctm = restored.ctm;
+      state.lineWidth = restored.lineWidth;
+    }
+    return;
+  }
+  if (operator === "cm") {
+    const [a, b, c, d, e, f] = lastNumbers(operands, 6);
+    if ([a, b, c, d, e, f].every(Number.isFinite)) {
+      state.ctm = multiplyMatrices(state.ctm, [a, b, c, d, e, f]);
+    }
+    return;
+  }
+  if (operator === "w") {
+    const width = tokenNumber(operands.at(-1));
+    if (Number.isFinite(width)) {
+      state.lineWidth = width;
+    }
+    return;
+  }
+  if (operator === "m") {
+    const [x, y] = lastNumbers(operands, 2);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      const point = transformPoint(state.ctm, x, y);
+      state.currentPoint = point;
+      state.subpathStart = point;
+    }
+    return;
+  }
+  if (operator === "l") {
+    const [x, y] = lastNumbers(operands, 2);
+    if (Number.isFinite(x) && Number.isFinite(y) && state.currentPoint) {
+      const point = transformPoint(state.ctm, x, y);
+      state.segments.push({
+        from: state.currentPoint,
+        to: point,
+        width: state.lineWidth
+      });
+      state.currentPoint = point;
+    }
+    return;
+  }
+  if (operator === "h") {
+    closeCurrentSubpath(state);
+    return;
+  }
+  if (operator === "re") {
+    const [x, y, width, height] = lastNumbers(operands, 4);
+    if ([x, y, width, height].every(Number.isFinite)) {
+      appendRectanglePath(state, x, y, width, height);
+    }
+    return;
+  }
+  if (operator === "S" || operator === "B" || operator === "B*") {
+    emitRulingSegments(context);
+    clearCurrentPath(state);
+    return;
+  }
+  if (operator === "s" || operator === "b" || operator === "b*") {
+    closeCurrentSubpath(state);
+    emitRulingSegments(context);
+    clearCurrentPath(state);
+    return;
+  }
+  if (operator === "n" || operator === "f" || operator === "F" || operator === "f*") {
+    clearCurrentPath(state);
+  }
+}
+
+function emitRulingSegments(context) {
+  for (const segment of context.state.segments) {
+    const rulingLine = normalizeRulingSegment(segment, context.options);
+    if (rulingLine) {
+      context.lines.push(rulingLine);
+    }
+  }
+}
+
+function normalizeRulingSegment(segment, options) {
+  const axisTolerance = options.axisTolerance ?? 0.5;
+  const minLength = options.minLength ?? 2;
+  const dx = Math.abs(segment.to.x - segment.from.x);
+  const dy = Math.abs(segment.to.y - segment.from.y);
+
+  if (dy <= axisTolerance && dx >= minLength) {
+    const x1 = Math.min(segment.from.x, segment.to.x);
+    const x2 = Math.max(segment.from.x, segment.to.x);
+    const y = (segment.from.y + segment.to.y) / 2;
+    return createRulingLine("horizontal", x1, y, x2, y, segment, options);
+  }
+
+  if (dx <= axisTolerance && dy >= minLength) {
+    const x = (segment.from.x + segment.to.x) / 2;
+    const y1 = Math.min(segment.from.y, segment.to.y);
+    const y2 = Math.max(segment.from.y, segment.to.y);
+    return createRulingLine("vertical", x, y1, x, y2, segment, options);
+  }
+
+  return null;
+}
+
+function createRulingLine(orientation, x1, y1, x2, y2, segment, options) {
+  return {
+    type: "ruling-line",
+    orientation,
+    x1: normalizeCoordinate(x1),
+    y1: normalizeCoordinate(y1),
+    x2: normalizeCoordinate(x2),
+    y2: normalizeCoordinate(y2),
+    width: normalizeCoordinate(segment.width),
+    pageIndex: options.pageIndex ?? null,
+    streamIndex: options.streamIndex ?? null,
+    source: "path-operator"
+  };
+}
+
+function appendRectanglePath(state, x, y, width, height) {
+  const bottomLeft = transformPoint(state.ctm, x, y);
+  const bottomRight = transformPoint(state.ctm, x + width, y);
+  const topRight = transformPoint(state.ctm, x + width, y + height);
+  const topLeft = transformPoint(state.ctm, x, y + height);
+  const points = [bottomLeft, bottomRight, topRight, topLeft];
+
+  for (let index = 0; index < points.length; index += 1) {
+    state.segments.push({
+      from: points[index],
+      to: points[(index + 1) % points.length],
+      width: state.lineWidth
+    });
+  }
+  state.currentPoint = bottomLeft;
+  state.subpathStart = bottomLeft;
+}
+
+function closeCurrentSubpath(state) {
+  if (!state.currentPoint || !state.subpathStart) {
+    return;
+  }
+  if (
+    state.currentPoint.x !== state.subpathStart.x ||
+    state.currentPoint.y !== state.subpathStart.y
+  ) {
+    state.segments.push({
+      from: state.currentPoint,
+      to: state.subpathStart,
+      width: state.lineWidth
+    });
+  }
+  state.currentPoint = state.subpathStart;
+}
+
+function clearCurrentPath(state) {
+  state.segments = [];
+  state.currentPoint = null;
+  state.subpathStart = null;
+}
+
+function createInitialPathState() {
+  return {
+    ctm: [...identityMatrix],
+    lineWidth: 1,
+    segments: [],
+    currentPoint: null,
+    subpathStart: null
+  };
+}
+
+function clonePathGraphicsState(state) {
+  return {
+    ctm: [...state.ctm],
+    lineWidth: state.lineWidth
+  };
 }
 
 function executeOperator(operator, context) {
@@ -429,6 +638,11 @@ function transformPoint(matrix, x, y) {
     x: matrix[0] * x + matrix[2] * y + matrix[4],
     y: matrix[1] * x + matrix[3] * y + matrix[5]
   };
+}
+
+function normalizeCoordinate(value) {
+  const rounded = Number(value.toFixed(6));
+  return Object.is(rounded, -0) ? 0 : rounded;
 }
 
 function textConfidence(font) {

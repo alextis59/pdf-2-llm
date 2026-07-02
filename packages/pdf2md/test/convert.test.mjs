@@ -22,6 +22,10 @@ const vectorFigureFixturePath = new URL(
   "../../../corpus/generated/synthetic-vector-figure.pdf",
   import.meta.url
 );
+const visibleTableFixturePath = new URL(
+  "../../../corpus/generated/synthetic-visible-table.pdf",
+  import.meta.url
+);
 
 test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", async () => {
   const bytes = await readFile(fixturePath);
@@ -133,6 +137,23 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
   assert.equal(page.captions[0].kind, "caption");
   assert.equal(page.captions[0].target, "figure");
   assert.match(result.markdown, /Figure 1\. A generated vector box\./);
+});
+
+test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async () => {
+  const result = await convertPdfToMarkdown(visibleTableFixturePath.pathname);
+  const rulingLines = result.diagnostics.extraction.rulingLines;
+
+  assert.equal(rulingLines.total, 8);
+  assert.equal(rulingLines.horizontal, 4);
+  assert.equal(rulingLines.vertical, 4);
+  assert.deepEqual(rulingLines.pages, [
+    {
+      pageIndex: 0,
+      total: 8,
+      horizontal: 4,
+      vertical: 4
+    }
+  ]);
 });
 
 test("text MVP matches expected markdown for simple generated fixtures", async () => {

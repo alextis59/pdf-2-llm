@@ -12,7 +12,11 @@ import {
   warningCodes
 } from "./schema.mjs";
 import { isTrustedSimpleEncoding } from "./font-encoding.mjs";
-import { extractTextLines, linesToMarkdownWithSourceMap } from "./text-extract.mjs";
+import {
+  extractRulingLines,
+  extractTextLines,
+  linesToMarkdownWithSourceMap
+} from "./text-extract.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 
 const defaultSecurityLimits = Object.freeze({
@@ -130,6 +134,10 @@ export async function convertPdfToMarkdown(input, options = {}) {
     pdfVersion && !encryptedWithoutText
       ? extractTextLines(normalized.bytes, { document: pdfDocument })
       : [];
+  const rulingLines =
+    pdfVersion && !encryptedWithoutText
+      ? extractRulingLines(normalized.bytes, { document: pdfDocument })
+      : [];
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
@@ -211,6 +219,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         structure: summarizeStructure(pdfDocument?.structure),
         taggedStructureConflicts: markdownResult.taggedStructureConflicts.length,
         layout: markdownResult.layout,
+        rulingLines: summarizeRulingLines(rulingLines),
         parser: pdfDocument
           ? {
               mode: pdfDocument.xrefMode,
@@ -270,6 +279,42 @@ function summarizePageImages(page) {
       rawLength: image.rawLength,
       decodedLength: image.decodedLength
     }));
+}
+
+function summarizeRulingLines(rulingLines) {
+  const pages = new Map();
+  for (const line of rulingLines) {
+    const pageIndex = line.pageIndex ?? null;
+    const page = pages.get(pageIndex) ?? {
+      pageIndex,
+      total: 0,
+      horizontal: 0,
+      vertical: 0
+    };
+    page.total += 1;
+    if (line.orientation === "horizontal") {
+      page.horizontal += 1;
+    }
+    if (line.orientation === "vertical") {
+      page.vertical += 1;
+    }
+    pages.set(pageIndex, page);
+  }
+
+  return {
+    total: rulingLines.length,
+    horizontal: rulingLines.filter((line) => line.orientation === "horizontal").length,
+    vertical: rulingLines.filter((line) => line.orientation === "vertical").length,
+    pages: [...pages.values()].sort((left, right) => {
+      if (left.pageIndex === null) {
+        return 1;
+      }
+      if (right.pageIndex === null) {
+        return -1;
+      }
+      return left.pageIndex - right.pageIndex;
+    })
+  };
 }
 
 function summarizeStructure(structure) {
