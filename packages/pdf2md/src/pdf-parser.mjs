@@ -58,11 +58,11 @@ export function parsePdfDocument(bytes, options = {}) {
   const mode = options.mode ?? options.parseMode ?? "strict";
   const source = Buffer.from(reader.bytes).toString("latin1");
   const version = readPdfVersion(source);
-  const startXref = readStartXref(source);
-  const { entries, trailer, xrefMode, sections } = parseXrefChain(source, reader.bytes, startXref, {
+  const xref = readXrefData(source, reader.bytes, {
     maxDecodedStreamBytes,
     mode
   });
+  const { startXref, entries, trailer, xrefMode, sections, repaired = false, repairReason = null } = xref;
   const encryption = createEncryptionContext(trailer, entries, source, reader.bytes, {
     maxDecodedStreamBytes,
     mode,
@@ -100,6 +100,8 @@ export function parsePdfDocument(bytes, options = {}) {
   return {
     version,
     startXref,
+    repaired,
+    repairReason,
     xrefMode,
     xrefSections: sections,
     trailer,
@@ -359,6 +361,100 @@ function loadCompressedObjectStreams(objects, entries) {
 export function parsePdfValue(input, offset = 0) {
   const source = typeof input === "string" ? input : Buffer.from(input).toString("latin1");
   return new ObjectParser(source, offset).parseValue();
+}
+
+function readXrefData(source, bytes, options = {}) {
+  try {
+    const startXref = readStartXref(source);
+    return {
+      startXref,
+      ...parseXrefChain(source, bytes, startXref, options),
+      repaired: false,
+      repairReason: null
+    };
+  } catch (error) {
+    if (options.mode !== "tolerant" || !(error instanceof PdfSyntaxError)) {
+      throw error;
+    }
+    return scanObjectsForRepair(source, bytes, options, error);
+  }
+}
+
+function scanObjectsForRepair(source, bytes, options, cause) {
+  const entriesByKey = new Map();
+  const objectHeaderPattern = /(\d+)\s+(\d+)\s+obj\b/g;
+  let match;
+
+  while ((match = objectHeaderPattern.exec(source)) !== null) {
+    const offset = match.index;
+    if (!isObjectHeaderBoundary(source, offset)) {
+      continue;
+    }
+
+    try {
+      const object = parseIndirectObjectAt(source, bytes, offset, {
+        maxDecodedStreamBytes: options.maxDecodedStreamBytes,
+        mode: options.mode
+      });
+      entriesByKey.set(objectKey(object.objectNumber, object.generationNumber), {
+        objectNumber: object.objectNumber,
+        generationNumber: object.generationNumber,
+        offset,
+        inUse: true
+      });
+      objectHeaderPattern.lastIndex = Math.max(objectHeaderPattern.lastIndex, object.endOffset);
+    } catch {
+      objectHeaderPattern.lastIndex = offset + match[0].length;
+    }
+  }
+
+  const entries = [...entriesByKey.values()].sort(
+    (left, right) => left.objectNumber - right.objectNumber || left.generationNumber - right.generationNumber
+  );
+  const trailer = findLastTrailerDictionary(source);
+  if (entries.length === 0 || !trailer) {
+    throw new PdfSyntaxError("Unable to repair PDF object index from scanned objects.", {
+      code: "pdf.repair.failed"
+    });
+  }
+
+  return {
+    startXref: null,
+    entries,
+    trailer,
+    xrefMode: "object-scan-repair",
+    sections: [
+      {
+        offset: null,
+        mode: "object-scan-repair",
+        entries: entries.length,
+        repaired: true,
+        reason: cause.code
+      }
+    ],
+    repaired: true,
+    repairReason: cause.code
+  };
+}
+
+function isObjectHeaderBoundary(source, offset) {
+  return offset === 0 || isWhitespace(source[offset - 1]) || source[offset - 1] === "%";
+}
+
+function findLastTrailerDictionary(source) {
+  let offset = source.lastIndexOf("trailer");
+  while (offset !== -1) {
+    try {
+      const parsed = parsePdfValue(source, offset + "trailer".length);
+      if (isDict(parsed.value)) {
+        return parsed.value;
+      }
+    } catch {
+      // Keep searching older trailer markers.
+    }
+    offset = source.lastIndexOf("trailer", offset - 1);
+  }
+  return null;
 }
 
 function parseXrefChain(source, bytes, startOffset, options = {}) {

@@ -280,6 +280,53 @@ test("parsePdfDocument supports strict and tolerant stream length handling", asy
   assert.equal(result.diagnostics.options.parserMode, "tolerant");
 });
 
+test("tolerant parser repairs damaged xref tables by scanning object headers", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject("BT /F1 22 Tf 20 200 Td (Repaired XRef Fixture) Tj ET\n")
+  ]);
+  const damaged = corruptFirstInUseXrefEntry(bytes);
+
+  assert.throws(
+    () => parsePdfDocument(damaged),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.xref.entry_malformed"
+  );
+
+  const document = parsePdfDocument(damaged, { mode: "tolerant" });
+  const result = await convertPdfToMarkdown(damaged, { parser: { mode: "tolerant" } });
+
+  assert.equal(document.repaired, true);
+  assert.equal(document.repairReason, "pdf.xref.entry_malformed");
+  assert.equal(document.xrefMode, "object-scan-repair");
+  assert.equal(document.startXref, null);
+  assert.equal(document.pages.length, 1);
+  assert.equal(result.markdown, "# Repaired XRef Fixture\n");
+  assert.equal(result.diagnostics.extraction.parser.mode, "object-scan-repair");
+  assert.equal(result.diagnostics.extraction.parser.repaired, true);
+  assert.equal(result.diagnostics.extraction.parser.repairReason, "pdf.xref.entry_malformed");
+});
+
+test("unrecoverable tolerant repair failures report structured parse warnings", async () => {
+  const damaged = Buffer.from("%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n", "binary");
+
+  assert.throws(
+    () => parsePdfDocument(damaged, { mode: "tolerant" }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.repair.failed"
+  );
+
+  const result = await convertPdfToMarkdown(damaged, { parser: { mode: "tolerant" } });
+  const warning = result.warnings.find((item) => item.code === warningCodes.PdfParseFailed);
+
+  assert.ok(warning);
+  assert.equal(warning.details.code, "pdf.repair.failed");
+  assert.equal(result.markdown, "");
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.diagnostics.extraction.parser.warning.code, "pdf.repair.failed");
+});
+
 test("parser reports bounded byte-reader and syntax errors with codes and offsets", async () => {
   const bytes = await readFile(fixturePath);
 
@@ -458,6 +505,19 @@ function createTestPdf(objects, { trailerEntries = "" } = {}) {
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${trailerEntries} >>\n`;
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
   return Buffer.from(body, "binary");
+}
+
+function corruptFirstInUseXrefEntry(bytes) {
+  const source = Buffer.from(bytes).toString("binary");
+  const xrefOffset = source.indexOf("xref");
+  if (xrefOffset === -1) {
+    throw new Error("fixture does not contain a classic xref table");
+  }
+  const beforeXref = source.slice(0, xrefOffset);
+  const damagedXref = source
+    .slice(xrefOffset)
+    .replace(/\d{10} 00000 n/, "xxxxxxxxxx 00000 n");
+  return Buffer.from(`${beforeXref}${damagedXref}`, "binary");
 }
 
 function createEncryptedTestPdf(label) {

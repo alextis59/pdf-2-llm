@@ -463,12 +463,12 @@ Goal: expand PDF compatibility before adding more semantic features.
 
 ### 3.4 Repair Mode
 
-- [ ] Implement object scanning fallback.
-- [ ] Recover from damaged xref tables when possible.
-- [ ] Distinguish repaired output from trusted output in diagnostics.
+- [x] Implement object scanning fallback.
+- [x] Recover from damaged xref tables when possible.
+- [x] Distinguish repaired output from trusted output in diagnostics.
 - [ ] Add mutated damaged corpus fixtures.
 - [ ] Add timeout and max-object limits.
-- [ ] Add tests that unrecoverable files fail gracefully.
+- [x] Add tests that unrecoverable files fail gracefully.
 
 Gate 2 acceptance:
 

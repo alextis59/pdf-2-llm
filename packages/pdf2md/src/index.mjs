@@ -207,7 +207,9 @@ export async function convertPdfToMarkdown(input, options = {}) {
               objects: pdfDocument.objects.size,
               streams: pdfDocument.streams.length,
               pages: pdfDocument.pages.length,
-              startXref: pdfDocument.startXref
+              startXref: pdfDocument.startXref,
+              repaired: pdfDocument.repaired,
+              repairReason: pdfDocument.repairReason
             }
           : {
               mode: parseWarning ? "unavailable" : "not-run",
