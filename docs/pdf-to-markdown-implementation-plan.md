@@ -340,7 +340,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [x] Add corpus runner with `--gate`, `--id`, and `--update-snapshots`.
 - [x] Add performance benchmark harness.
 - [x] Add memory-limit and timeout tests.
-- [ ] Add fuzz target skeletons.
+- [x] Add fuzz target skeletons.
 
 Definition of done:
 
