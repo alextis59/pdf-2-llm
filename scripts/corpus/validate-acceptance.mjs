@@ -151,6 +151,65 @@ function readNestedScalar(text, section, key) {
   return null;
 }
 
+function readNamedBlockScalars(text, blockName) {
+  const values = new Map();
+  const lines = text.split(/\r?\n/);
+  let inBlock = false;
+  for (const line of lines) {
+    if (!inBlock) {
+      inBlock = line.trim() === `${blockName}:`;
+      continue;
+    }
+    if (/^\S/.test(line)) {
+      break;
+    }
+    const match = line.match(/^\s{2}([A-Za-z][A-Za-z0-9]*):(?:\s*(.*))?$/);
+    if (match) {
+      values.set(match[1], normalizeScalar(match[2] ?? ""));
+    }
+  }
+  return values;
+}
+
+function readNamedStringLists(text, blockName) {
+  const values = new Map();
+  const lines = text.split(/\r?\n/);
+  let inBlock = false;
+  let currentList = null;
+
+  for (const line of lines) {
+    if (!inBlock) {
+      inBlock = line.trim() === `${blockName}:`;
+      continue;
+    }
+    if (/^\S/.test(line)) {
+      break;
+    }
+
+    const listMatch = line.match(/^\s{2}([A-Za-z][A-Za-z0-9]*):(?:\s*(\[\])\s*)?$/);
+    if (listMatch) {
+      currentList = listMatch[1];
+      values.set(currentList, []);
+      if (listMatch[2]) {
+        currentList = null;
+      }
+      continue;
+    }
+
+    const itemMatch = line.match(/^\s{4}-\s+(.*)$/);
+    if (itemMatch && currentList) {
+      values.get(currentList).push(normalizeScalar(itemMatch[1]));
+    }
+  }
+
+  return values;
+}
+
+function readNumber(value) {
+  const parsed = Number.parseFloat(value ?? "");
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
 function sectionHasListItem(text, section) {
   const lines = text.split(/\r?\n/);
   let inSection = false;
@@ -197,6 +256,7 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
   const errors = [];
   const topLevelKeys = readTopLevelKeys(text);
   const scalars = readTopLevelScalars(text);
+  const metrics = readNamedBlockScalars(text, "metrics");
   const relativePath = path.relative(repoRoot, filePath);
 
   for (const key of requiredTopLevelKeys) {
@@ -260,6 +320,29 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(reviewedAt ?? "")) {
       errors.push(`${relativePath}: gating files require review.reviewedAt as YYYY-MM-DD`);
+    }
+  }
+
+  if (topLevelKeys.has("runningContent")) {
+    const runningContent = readNamedStringLists(text, "runningContent");
+    const expectedRemoved = runningContent.get("expectedRemoved") ?? [];
+    const expectedRetained = runningContent.get("expectedRetained") ?? [];
+    const labels = [...expectedRemoved, ...expectedRetained];
+    if (labels.length === 0) {
+      errors.push(`${relativePath}: runningContent must define at least one label`);
+    }
+    if (labels.some((label) => label.length === 0)) {
+      errors.push(`${relativePath}: runningContent labels must not be empty`);
+    }
+
+    for (const metricName of [
+      "minRunningContentPrecision",
+      "minRunningContentRecall"
+    ]) {
+      const value = readNumber(metrics.get(metricName));
+      if (!Number.isFinite(value) || value < 0 || value > 1) {
+        errors.push(`${relativePath}: metrics.${metricName} must be a number from 0 to 1`);
+      }
     }
   }
 

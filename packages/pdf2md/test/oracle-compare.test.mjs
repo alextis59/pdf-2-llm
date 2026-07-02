@@ -7,6 +7,10 @@ import {
   tokenEditDistance,
   tokenizeComparableText
 } from "../../../scripts/qa/compare-oracles.mjs";
+import {
+  compareRunningContent,
+  countPhraseOccurrences
+} from "../../../scripts/qa/compare-running-content.mjs";
 
 test("oracle comparison tokenizes Markdown as comparable text", () => {
   const tokens = tokenizeComparableText(
@@ -40,4 +44,23 @@ test("oracle comparison reports normalized reading-order edit distance", () => {
 test("tokenEditDistance handles insertions and deletions", () => {
   assert.equal(tokenEditDistance(["alpha", "beta"], ["alpha", "middle", "beta"]), 1);
   assert.equal(tokenEditDistance(["alpha", "middle", "beta"], ["alpha", "beta"]), 1);
+});
+
+test("running-content comparison reports phrase-level precision and recall", () => {
+  const comparison = compareRunningContent(
+    "Header\nBody phrase\nFooter\nKeep me\n",
+    "Body phrase\n",
+    {
+      expectedRemoved: ["Header", "Footer"],
+      expectedRetained: ["Body phrase", "Keep me"]
+    }
+  );
+
+  assert.equal(countPhraseOccurrences("Header Header", "Header"), 2);
+  assert.equal(comparison.truePositives, 2);
+  assert.equal(comparison.falsePositives, 1);
+  assert.equal(comparison.falseNegatives, 0);
+  assert.equal(comparison.trueNegatives, 1);
+  assert.equal(comparison.precision, 2 / 3);
+  assert.equal(comparison.recall, 1);
 });

@@ -45,6 +45,12 @@ expected behavior has been written here.
 - Unsupported content belongs in `warnings.allowed`, not in vague prose.
 - Every metric threshold needs a reason in `review.notes` or a nearby comment.
 - The converter must not invent values that are not present in the PDF.
+- If `runningContent` labels are present, `metrics` must define
+  `minRunningContentPrecision` and `minRunningContentRecall` from 0 to 1.
+- `runningContent.expectedRemoved` is for repeated headers, footers, page
+  numbers, and boilerplate that should disappear from Markdown.
+- `runningContent.expectedRetained` is for meaningful title, section, or body
+  phrases that must survive running-content removal.
 
 Validate acceptance files with:
 

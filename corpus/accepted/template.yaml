@@ -12,10 +12,17 @@ mustNot:
   - emit_binary_garbage
 metrics:
   minTextCoverage: 0.98
+  minRunningContentPrecision: 1
+  minRunningContentRecall: 1
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
     contains: "Expected text snippet"
+runningContent:
+  expectedRemoved:
+    - "Repeated header or footer phrase"
+  expectedRetained:
+    - "Meaningful title or body phrase"
 structure:
   headings: []
   tables: []

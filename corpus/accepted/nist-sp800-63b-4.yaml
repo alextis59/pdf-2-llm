@@ -18,6 +18,8 @@ mustNot:
   - treat_acroform_metadata_as_user_filled_values
 metrics:
   minTextCoverage: 0.95
+  minRunningContentPrecision: 1
+  minRunningContentRecall: 1
   maxUnexpectedWarnings: 3
 snippets:
   - page: 1
@@ -26,6 +28,13 @@ snippets:
     contains: "Digital Identity Guidelines"
   - page: 4
     contains: "This publication may be used by nongovernmental organizations on a voluntary basis and is not subject to copyright in the United States."
+runningContent:
+  expectedRetained:
+    - "NIST SP 800-63B-4"
+    - "Digital Identity Guidelines"
+    - "Authentication and Authenticator Management"
+    - "Continued on next page"
+    - "Continued from previous page"
 structure:
   expected:
     - tagged_pdf

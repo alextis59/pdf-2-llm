@@ -17,6 +17,8 @@ mustNot:
   - flatten_all_sections_into_one_paragraph
 metrics:
   minTextCoverage: 0.95
+  minRunningContentPrecision: 1
+  minRunningContentRecall: 1
   maxUnexpectedWarnings: 2
 snippets:
   - page: 1
@@ -25,6 +27,13 @@ snippets:
     contains: "Zero Trust Architecture"
   - page: 3
     contains: "This publication may be used by nongovernmental organizations on a voluntary basis and is not subject to copyright in the United States."
+runningContent:
+  expectedRemoved:
+    - "NIST SP 800-207"
+    - "This publication is available free of charge from: https://doi.org/10.6028/NIST.SP.800-207"
+  expectedRetained:
+    - "Tenets of Zero Trust"
+    - "Logical Components of Zero Trust Architecture"
 structure:
   expected:
     - tagged_pdf

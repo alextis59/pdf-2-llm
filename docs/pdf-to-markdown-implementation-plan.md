@@ -501,7 +501,7 @@ Goal: improve reading order and document structure for real-world documents.
 - [x] Detect page numbers.
 - [x] Preserve meaningful running titles when configured.
 - [x] Remove repeated boilerplate only above a confidence threshold.
-- [ ] Add precision/recall tests against accepted manuals and reports.
+- [x] Add precision/recall tests against accepted manuals and reports.
 
 ### 4.3 Semantic Structure
 
@@ -517,7 +517,7 @@ Gate 3 acceptance:
 
 - [ ] Multi-column scientific papers meet reading-order thresholds.
 - [ ] Long manual fixtures run within memory limits.
-- [ ] Header/footer removal meets accepted precision and recall targets.
+- [x] Header/footer removal meets accepted precision and recall targets.
 - [ ] Tagged PDFs use tags where reliable and fall back to geometry where not.
 - [ ] Markdown rendered HTML is readable for reports, manuals, and papers.
 
@@ -788,7 +788,7 @@ Core metrics:
 - [ ] Paragraph grouping F1.
 - [ ] Hyphenation repair accuracy.
 - [ ] Reading-order edit distance.
-- [ ] Header/footer removal precision and recall.
+- [x] Header/footer removal precision and recall.
 - [ ] Table detection precision and recall.
 - [ ] Table cell adjacency accuracy.
 - [ ] Table span accuracy.
