@@ -6,6 +6,8 @@ import {
   createMarkdownSourceMap,
   createPageIr,
   createWarning,
+  documentIrJsonSchema,
+  markdownSourceMapJsonSchema,
   schemaVersion,
   warningCodes
 } from "./schema.mjs";
@@ -19,7 +21,7 @@ const defaultSecurityLimits = Object.freeze({
   timeoutMs: 120000
 });
 
-export { schemaVersion, warningCodes };
+export { documentIrJsonSchema, markdownSourceMapJsonSchema, schemaVersion, warningCodes };
 
 export async function convertPdfToMarkdown(input, options = {}) {
   const startedAt = performance.now();

@@ -313,7 +313,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [x] Define warnings and diagnostics taxonomy.
 - [x] Define source maps from Markdown back to page regions.
 - [x] Add schema versioning.
-- [ ] Add JSON schema tests for serialized IR.
+- [x] Add JSON schema tests for serialized IR.
 
 ### 1.3 Build System
 

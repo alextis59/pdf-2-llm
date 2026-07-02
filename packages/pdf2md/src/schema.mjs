@@ -1,5 +1,7 @@
 export const schemaVersion = "0.1.0";
 
+const sourceTypes = Object.freeze(["digital", "scanned", "hybrid", "unknown"]);
+
 export const warningCodes = Object.freeze({
   ConversionNotImplemented: "conversion.not_implemented",
   InvalidPdfHeader: "pdf.invalid_header",
@@ -57,3 +59,112 @@ export function createMarkdownSourceMap({ entries = [] } = {}) {
     entries
   };
 }
+
+export const warningJsonSchema = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: ["code", "message"],
+  properties: {
+    code: { type: "string" },
+    message: { type: "string" },
+    details: { type: "object" }
+  }
+});
+
+export const assetJsonSchema = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "path", "mediaType"],
+  properties: {
+    id: { type: "string" },
+    path: { type: "string" },
+    mediaType: { type: "string" }
+  }
+});
+
+export const pageIrJsonSchema = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: ["pageIndex", "widthPt", "heightPt", "rotation", "sourceType", "elements"],
+  properties: {
+    pageIndex: { type: "integer" },
+    widthPt: { type: ["number", "null"] },
+    heightPt: { type: ["number", "null"] },
+    rotation: { type: "number" },
+    sourceType: { enum: sourceTypes },
+    elements: {
+      type: "array",
+      items: {
+        type: "object"
+      }
+    }
+  }
+});
+
+export const documentIrJsonSchema = Object.freeze({
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.invalid/pdf-2-llm/document-ir.schema.json",
+  title: "PDF-to-Markdown Document IR",
+  type: "object",
+  additionalProperties: false,
+  required: ["schemaVersion", "sourceType", "pages", "metadata", "assets", "warnings"],
+  properties: {
+    schemaVersion: { const: schemaVersion },
+    sourceType: { enum: sourceTypes },
+    pages: {
+      type: "array",
+      items: pageIrJsonSchema
+    },
+    metadata: { type: "object" },
+    assets: {
+      type: "array",
+      items: assetJsonSchema
+    },
+    warnings: {
+      type: "array",
+      items: warningJsonSchema
+    }
+  }
+});
+
+export const markdownSourceMapJsonSchema = Object.freeze({
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: "https://example.invalid/pdf-2-llm/markdown-source-map.schema.json",
+  title: "PDF-to-Markdown Markdown Source Map",
+  type: "object",
+  additionalProperties: false,
+  required: ["schemaVersion", "target", "entries"],
+  properties: {
+    schemaVersion: { const: schemaVersion },
+    target: { const: "markdown" },
+    entries: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["markdownStart", "markdownEnd", "kind", "regions"],
+        properties: {
+          markdownStart: { type: "integer" },
+          markdownEnd: { type: "integer" },
+          kind: { type: "string" },
+          regions: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["pageIndex", "x", "y", "width", "height", "source"],
+              properties: {
+                pageIndex: { type: "integer" },
+                x: { type: ["number", "null"] },
+                y: { type: ["number", "null"] },
+                width: { type: ["number", "null"] },
+                height: { type: ["number", "null"] },
+                source: { type: "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+});

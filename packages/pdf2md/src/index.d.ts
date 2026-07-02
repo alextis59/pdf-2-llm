@@ -53,6 +53,7 @@ export type ProgressEvent = {
 
 export type ConvertResult = {
   markdown: string;
+  sourceMap: MarkdownSourceMap;
   assets: AssetResult[];
   ir: DocumentIr;
   warnings: Warning[];
@@ -122,6 +123,28 @@ export type PageIr = {
   rotation: number;
   sourceType: "digital" | "scanned" | "hybrid" | "unknown";
   elements: PageElement[];
+};
+
+export type MarkdownSourceMap = {
+  schemaVersion: string;
+  target: "markdown";
+  entries: MarkdownSourceMapEntry[];
+};
+
+export type MarkdownSourceMapEntry = {
+  markdownStart: number;
+  markdownEnd: number;
+  kind: string;
+  regions: SourceRegion[];
+};
+
+export type SourceRegion = {
+  pageIndex: number;
+  x: number | null;
+  y: number | null;
+  width: number | null;
+  height: number | null;
+  source: string;
 };
 
 export type PageElement =
@@ -204,6 +227,8 @@ export type AssetResult = {
 
 export declare const schemaVersion: string;
 export declare const warningCodes: Readonly<Record<string, string>>;
+export declare const documentIrJsonSchema: Record<string, unknown>;
+export declare const markdownSourceMapJsonSchema: Record<string, unknown>;
 export declare function convertPdfToMarkdown(
   input: PdfInput,
   options?: ConvertOptions
