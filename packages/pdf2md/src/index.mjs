@@ -134,7 +134,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
   throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(textLines, {
     pageAnchors: options.markdown?.pageAnchors === true,
-    preserveRunningTitles: options.markdown?.preserveRunningTitles === true
+    preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
+    outlines: pdfDocument?.outlines ?? []
   });
   const markdown = markdownResult.markdown;
   const sourceMap = createMarkdownSourceMap(markdownResult.sourceMap);
@@ -205,6 +206,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
               ? "parsed-content-streams"
               : "fallback-uncompressed-stream-scan"
             : "none",
+        outlines: pdfDocument?.outlines ?? [],
         layout: markdownResult.layout,
         parser: pdfDocument
           ? {

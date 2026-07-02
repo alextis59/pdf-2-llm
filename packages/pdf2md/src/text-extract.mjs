@@ -51,7 +51,9 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   });
   const layout = analyzeLineLayout(lines, { pageNumberRegions });
   lines = orderLinesForReading(lines);
-  const headingModel = createHeadingModel(lines);
+  const headingModel = createHeadingModel(lines, {
+    outlines: options.outlines ?? []
+  });
   const listIndentModel = createListIndentModel(lines);
   const codeModel = createCodeModel(lines);
   const blocks = [];
@@ -322,7 +324,7 @@ function codeIndent(line, left) {
   return " ".repeat(Math.max(0, Math.round((line.x - left) / 12)));
 }
 
-function createHeadingModel(lines) {
+function createHeadingModel(lines, { outlines = [] } = {}) {
   const bodyFontSize = dominantFontSize(lines);
   const fontSizes = uniqueSortedFontSizes(lines);
   const minimumHeadingSize = Math.max(15, bodyFontSize + 2);
@@ -336,8 +338,22 @@ function createHeadingModel(lines) {
   );
   return {
     bodyFontSize,
-    levelByFontSize
+    levelByFontSize,
+    outlineLevelByTitle: outlineLevelByTitle(outlines)
   };
+}
+
+function outlineLevelByTitle(outlines) {
+  const levels = new Map();
+  for (const outline of outlines) {
+    const title = normalizeText(outline?.title ?? "");
+    if (!title || levels.has(title)) {
+      continue;
+    }
+    const depth = Number.isInteger(outline.depth) ? outline.depth : 1;
+    levels.set(title, Math.min(Math.max(depth, 1), 6));
+  }
+  return levels;
 }
 
 function dominantFontSize(lines) {
@@ -367,6 +383,10 @@ function uniqueSortedFontSizes(lines) {
 }
 
 function headingLevelForLine(line, headingModel) {
+  const outlineLevel = headingModel.outlineLevelByTitle.get(normalizeText(line.text ?? ""));
+  if (outlineLevel) {
+    return outlineLevel;
+  }
   return headingModel.levelByFontSize.get(roundedFontSize(line.fontSize)) ?? null;
 }
 

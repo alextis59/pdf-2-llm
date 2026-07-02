@@ -91,6 +91,37 @@ test("parsePdfDocument resolves nested page trees and inherited resources", () =
   assert.equal(page.resources.fonts.F1.encoding, "WinAnsiEncoding");
 });
 
+test("parsePdfDocument resolves outlines and uses them as structure signals", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R /Outlines 6 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject(
+      "BT /F1 12 Tf 20 200 Td (Outlined Section) Tj ET\nBT /F1 12 Tf 20 180 Td (Deep Dive) Tj ET\nBT /F1 12 Tf 20 160 Td (Body text.) Tj ET\n"
+    ),
+    "<< /Type /Outlines /First 7 0 R /Last 7 0 R /Count 2 >>",
+    "<< /Title (Outlined Section) /Parent 6 0 R /First 8 0 R /Last 8 0 R /Count 1 >>",
+    "<< /Title <FEFF004400650065007000200044006900760065> /Parent 7 0 R >>"
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+  const outlineSummary = [
+    { title: "Outlined Section", depth: 1 },
+    { title: "Deep Dive", depth: 2 }
+  ];
+
+  assert.deepEqual(
+    document.outlines.map(({ title, depth }) => ({ title, depth })),
+    outlineSummary
+  );
+  assert.equal(result.markdown, "# Outlined Section\n\n## Deep Dive\n\nBody text.\n");
+  assert.deepEqual(
+    result.diagnostics.extraction.outlines.map(({ title, depth }) => ({ title, depth })),
+    outlineSummary
+  );
+});
+
 test("parsePdfDocument decodes Flate content streams for text extraction", async () => {
   const content = "BT /F1 22 Tf 20 200 Td (Compressed Fixture) Tj ET\n";
   const bytes = createTestPdf([

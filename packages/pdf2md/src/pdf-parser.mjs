@@ -101,6 +101,7 @@ export function parsePdfDocument(bytes, options = {}) {
   }
 
   const catalog = resolveCatalog(trailer, getObject);
+  const outlines = resolveOutlines(catalog.outlinesRef, getObject);
   const pages = resolvePages(catalog, getObject);
 
   return {
@@ -115,6 +116,7 @@ export function parsePdfDocument(bytes, options = {}) {
     objects,
     streams,
     catalog,
+    outlines,
     pages,
     getObject
   };
@@ -1023,8 +1025,105 @@ function resolveCatalog(trailer, getObject) {
     objectNumber: rootObject.objectNumber,
     generationNumber: rootObject.generationNumber,
     value: rootObject.value,
-    pagesRef: rootObject.value.entries.Pages
+    pagesRef: rootObject.value.entries.Pages,
+    outlinesRef: rootObject.value.entries.Outlines ?? null
   };
+}
+
+function resolveOutlines(outlinesRef, getObject) {
+  const root = resolveOutlineObject(outlinesRef, getObject);
+  if (!root || !isDict(root.value)) {
+    return [];
+  }
+
+  const outlines = [];
+  walkOutlineSiblings(root.value.entries.First, 1, getObject, outlines, new Set());
+  return outlines;
+}
+
+function walkOutlineSiblings(itemRef, depth, getObject, outlines, seen) {
+  let currentRef = itemRef;
+  while (currentRef) {
+    const item = resolveOutlineObject(currentRef, getObject);
+    const key = outlineObjectKey(item, currentRef);
+    if (!item || !isDict(item.value) || (key && seen.has(key))) {
+      break;
+    }
+    if (key) {
+      seen.add(key);
+    }
+
+    const title = normalizeOutlineTitle(pdfTextValue(item.value.entries.Title) ?? "");
+    if (title) {
+      outlines.push({
+        title,
+        depth,
+        objectNumber: item.objectNumber ?? null,
+        generationNumber: item.generationNumber ?? null
+      });
+    }
+    if (item.value.entries.First) {
+      walkOutlineSiblings(item.value.entries.First, depth + 1, getObject, outlines, seen);
+    }
+    currentRef = item.value.entries.Next ?? null;
+  }
+}
+
+function resolveOutlineObject(value, getObject) {
+  if (value?.type === "ref") {
+    return getObject(value) ?? null;
+  }
+  if (isDict(value)) {
+    return {
+      value,
+      objectNumber: null,
+      generationNumber: null
+    };
+  }
+  return null;
+}
+
+function outlineObjectKey(item, source) {
+  if (item && Number.isInteger(item.objectNumber)) {
+    return objectKey(item.objectNumber, item.generationNumber ?? 0);
+  }
+  if (source?.type === "ref") {
+    return objectKey(source.objectNumber, source.generationNumber);
+  }
+  return null;
+}
+
+function pdfTextValue(value) {
+  const bytes = bytesFromPdfString(value);
+  if (!bytes) {
+    return null;
+  }
+  return decodePdfTextBytes(bytes);
+}
+
+function decodePdfTextBytes(bytes) {
+  if (bytes.byteLength >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    return decodeUtf16Bytes(bytes, 2, false);
+  }
+  if (bytes.byteLength >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    return decodeUtf16Bytes(bytes, 2, true);
+  }
+  return bytes.toString("latin1");
+}
+
+function decodeUtf16Bytes(bytes, startOffset, littleEndian) {
+  let output = "";
+  for (let offset = startOffset; offset + 1 < bytes.byteLength; offset += 2) {
+    const codeUnit = littleEndian
+      ? bytes[offset] | (bytes[offset + 1] << 8)
+      : (bytes[offset] << 8) | bytes[offset + 1];
+    output += String.fromCharCode(codeUnit);
+  }
+  return output;
+}
+
+function normalizeOutlineTitle(value) {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function resolvePages(catalog, getObject) {

@@ -106,6 +106,20 @@ test("linesToMarkdown infers heading levels across the document", () => {
   );
 });
 
+test("linesToMarkdown uses outlines as heading signals", () => {
+  const markdown = linesToMarkdown(
+    [
+      { text: "Outlined Section", fontSize: 12, x: 72, y: 720, pageIndex: 0 },
+      { text: "Body text starts here.", fontSize: 12, x: 72, y: 690, pageIndex: 0 }
+    ],
+    {
+      outlines: [{ title: "Outlined Section", depth: 2 }]
+    }
+  );
+
+  assert.equal(markdown, "## Outlined Section\n\nBody text starts here.\n");
+});
+
 test("linesToMarkdown escapes Markdown metacharacters in text and tables", () => {
   const markdown = linesToMarkdown([
     { text: "literal *star* and [label] uses \\ slash", fontSize: 12, x: 10, y: 40 },

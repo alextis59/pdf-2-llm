@@ -88,10 +88,18 @@ export type Diagnostics = {
   extraction: {
     textLines: number;
     mode: string;
+    outlines: OutlineDiagnostics[];
     layout: LayoutDiagnostics;
     parser: Record<string, unknown>;
   };
   pages: PageDiagnostics[];
+};
+
+export type OutlineDiagnostics = {
+  title: string;
+  depth: number;
+  objectNumber?: number | null;
+  generationNumber?: number | null;
 };
 
 export type LayoutDiagnostics = {
