@@ -91,6 +91,22 @@ test("linesToMarkdown orders interleaved two-column lines by geometry", () => {
   );
 });
 
+test("linesToMarkdown keeps mixed-layout spanning rows in vertical order", () => {
+  const markdown = linesToMarkdown([
+    { text: "Mixed Layout", fontSize: 22, x: 72, y: 720, width: 120, pageIndex: 0 },
+    { text: "Left top.", fontSize: 12, x: 72, y: 680, width: 80, pageIndex: 0 },
+    { text: "Right top.", fontSize: 12, x: 330, y: 680, width: 90, pageIndex: 0 },
+    { text: "Left lower.", fontSize: 12, x: 72, y: 660, width: 90, pageIndex: 0 },
+    { text: "Right lower.", fontSize: 12, x: 330, y: 660, width: 100, pageIndex: 0 },
+    { text: "Full width summary.", fontSize: 12, x: 72, y: 620, width: 430, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "# Mixed Layout\n\nLeft top.\n\nLeft lower.\n\nRight top.\n\nRight lower.\n\nFull width summary.\n"
+  );
+});
+
 test("linesToMarkdown keeps same-baseline table cells in row-major order", () => {
   const markdown = linesToMarkdown([
     { text: "Table Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },

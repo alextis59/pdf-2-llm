@@ -471,7 +471,30 @@ function segmentRowsIntoReadingBlocks(rows) {
     ];
   }
 
-  return columns
+  const blocks = [];
+  let pendingColumnRows = [];
+  for (const row of [...rows].sort(compareRowsTopDown)) {
+    if (rowSpansColumns(row, columns)) {
+      appendColumnBlocks(blocks, pendingColumnRows, columns);
+      pendingColumnRows = [];
+      blocks.push({
+        columnIndex: null,
+        rows: [row]
+      });
+      continue;
+    }
+    pendingColumnRows.push(row);
+  }
+  appendColumnBlocks(blocks, pendingColumnRows, columns);
+  return blocks;
+}
+
+function appendColumnBlocks(blocks, rows, columns) {
+  if (rows.length === 0) {
+    return;
+  }
+
+  const columnBlocks = columns
     .map((_, columnIndex) => ({
       columnIndex,
       rows: rows
@@ -479,6 +502,9 @@ function segmentRowsIntoReadingBlocks(rows) {
         .sort(compareRowsTopDown)
     }))
     .filter((block) => block.rows.length > 0);
+  for (const block of columnBlocks) {
+    blocks.push(block);
+  }
 }
 
 function detectReadingColumns(rows) {

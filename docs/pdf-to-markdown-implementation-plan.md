@@ -490,7 +490,7 @@ Goal: improve reading order and document structure for real-world documents.
 - [x] Detect sidebars and callouts.
 - [x] Detect footnotes.
 - [x] Detect captions near figures and tables.
-- [ ] Resolve reading order within and across columns.
+- [x] Resolve reading order within and across columns.
 - [ ] Add reading-order edit-distance metric.
 - [ ] Add visual debug overlays for block order.
 
