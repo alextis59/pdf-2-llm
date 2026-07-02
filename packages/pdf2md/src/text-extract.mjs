@@ -50,6 +50,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const layout = analyzeLineLayout(lines, { pageNumberRegions });
   lines = orderLinesForReading(lines);
   const headingModel = createHeadingModel(lines);
+  const listIndentModel = createListIndentModel(lines);
   const blocks = [];
   let previousWasList = false;
   const anchoredPages = new Set();
@@ -87,10 +88,10 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
 
     const listItem = parseListItem(text);
     if (listItem) {
-      const item =
-        listItem.type === "ordered"
-          ? `${listItem.index}. ${escapeMarkdownInline(listItem.text)}`
-          : `- ${escapeMarkdownInline(listItem.text)}`;
+      const item = formatListItem(
+        listItem,
+        listIndentLevelForLine(line, listIndentModel)
+      );
       if (previousWasList) {
         const listBlock = blocks[blocks.length - 1];
         listBlock.text = `${listBlock.text}\n${item}`;
@@ -147,6 +148,59 @@ function parseListItem(text) {
   }
 
   return null;
+}
+
+function formatListItem(listItem, indentLevel) {
+  const indent = "  ".repeat(indentLevel);
+  const marker = listItem.type === "ordered" ? `${listItem.index}.` : "-";
+  return `${indent}${marker} ${escapeMarkdownInline(listItem.text)}`;
+}
+
+function createListIndentModel(lines) {
+  const positions = [];
+  for (const line of lines) {
+    if (Number.isFinite(line.x) && parseListItem(normalizeText(line.text ?? ""))) {
+      positions.push(line.x);
+    }
+  }
+
+  return {
+    stops: clusterPositions(positions, 12)
+  };
+}
+
+function clusterPositions(positions, tolerance) {
+  const clusters = [];
+  for (const position of [...positions].sort((left, right) => left - right)) {
+    const cluster = clusters.find((item) => Math.abs(item.center - position) <= tolerance);
+    if (cluster) {
+      cluster.positions.push(position);
+      cluster.center = average(cluster.positions);
+      continue;
+    }
+    clusters.push({
+      center: position,
+      positions: [position]
+    });
+  }
+  return clusters.map((cluster) => cluster.center);
+}
+
+function listIndentLevelForLine(line, listIndentModel) {
+  if (!Number.isFinite(line.x) || listIndentModel.stops.length === 0) {
+    return 0;
+  }
+
+  let bestIndex = 0;
+  let bestDistance = Infinity;
+  for (let index = 0; index < listIndentModel.stops.length; index += 1) {
+    const distance = Math.abs(line.x - listIndentModel.stops[index]);
+    if (distance < bestDistance) {
+      bestIndex = index;
+      bestDistance = distance;
+    }
+  }
+  return bestIndex;
 }
 
 function createHeadingModel(lines) {

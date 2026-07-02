@@ -32,6 +32,22 @@ test("linesToMarkdown infers headings and ordered lists", () => {
   assert.equal(markdown, "# Title\n\n## Section\n\n1. First\n2. Second\n");
 });
 
+test("linesToMarkdown infers nested lists from indentation", () => {
+  const markdown = linesToMarkdown([
+    { text: "List Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: "- Root item", fontSize: 12, x: 72, y: 680, pageIndex: 0 },
+    { text: "- Child item", fontSize: 12, x: 96, y: 660, pageIndex: 0 },
+    { text: "1) Ordered child", fontSize: 12, x: 120, y: 640, pageIndex: 0 },
+    { text: "- Child sibling", fontSize: 12, x: 96, y: 620, pageIndex: 0 },
+    { text: "- Second root", fontSize: 12, x: 72, y: 600, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "# List Fixture\n\n- Root item\n  - Child item\n    1. Ordered child\n  - Child sibling\n- Second root\n"
+  );
+});
+
 test("linesToMarkdown infers heading levels across the document", () => {
   const markdown = linesToMarkdown([
     { text: "Document Title", fontSize: 24, x: 72, y: 720, pageIndex: 0 },
