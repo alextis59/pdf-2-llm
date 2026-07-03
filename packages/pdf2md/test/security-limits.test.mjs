@@ -16,6 +16,27 @@ test("converter reports maxBytes violations without panicking", async () => {
   const parseFailure = result.warnings.find((warning) => warning.code === warningCodes.PdfParseFailed);
   assert.equal(parseFailure?.details.code, "pdf.input_too_large");
   assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.markdown, "");
+  assert.equal(result.diagnostics.extraction.textLines, 0);
+});
+
+test("converter enforces maxPages before page extraction", async () => {
+  const bytes = await readFile(fixturePath);
+  const result = await convertPdfToMarkdown(bytes, {
+    ocr: { enabled: false },
+    security: { maxPages: 0 }
+  });
+  const warning = result.warnings.find(
+    (item) => item.code === warningCodes.PageCountExceeded
+  );
+
+  assert.equal(warning?.details.pages, 1);
+  assert.equal(warning?.details.maxPages, 0);
+  assert.equal(result.diagnostics.options.maxPages, 0);
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.diagnostics.extraction.parser.warning.code, warningCodes.PageCountExceeded);
+  assert.equal(result.markdown, "");
+  assert.equal(result.ir.pages.length, 0);
 });
 
 test("converter reports maxObjects violations without panicking", async () => {
@@ -28,6 +49,8 @@ test("converter reports maxObjects violations without panicking", async () => {
 
   assert.equal(parseFailure?.details.code, "pdf.object_limit_exceeded");
   assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.markdown, "");
+  assert.equal(result.diagnostics.extraction.textLines, 0);
 });
 
 test("converter enforces maxImagePixels for raster page targets", async () => {

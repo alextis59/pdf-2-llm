@@ -57,6 +57,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     ...defaultSecurityLimits,
     ...(options.security ?? {})
   };
+  validateSecurityLimits(security);
   const deadline = createDeadline(security.timeoutMs, startedAt);
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
@@ -67,7 +68,9 @@ export async function convertPdfToMarkdown(input, options = {}) {
   throwIfTimedOut(deadline);
 
   const warnings = [];
+  let inputTooLarge = false;
   if (normalized.bytes.byteLength > security.maxBytes) {
+    inputTooLarge = true;
     warnings.push(
       createWarning(warningCodes.InputTooLarge, "Input exceeds configured maxBytes.", {
         maxBytes: security.maxBytes,
@@ -85,7 +88,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
 
   let pdfDocument = null;
   let parseWarning = null;
-  if (pdfVersion) {
+  let extractionBlockedBySecurityLimit = inputTooLarge;
+  if (inputTooLarge) {
+    parseWarning = createInputTooLargeParseWarning(normalized.bytes.byteLength, security.maxBytes);
+    warnings.push(parseWarning);
+  } else if (pdfVersion) {
     const parserOptions = {
       maxBytes: security.maxBytes,
       maxObjects: security.maxObjects,
@@ -132,6 +139,14 @@ export async function convertPdfToMarkdown(input, options = {}) {
         throw error;
       }
     }
+    if (pdfDocument && pdfDocument.pages.length > security.maxPages) {
+      parseWarning = createPageCountWarning(pdfDocument.pages.length, security.maxPages);
+      warnings.push(parseWarning);
+      pdfDocument = null;
+      extractionBlockedBySecurityLimit = true;
+    } else if (isSecurityLimitParseWarning(parseWarning)) {
+      extractionBlockedBySecurityLimit = true;
+    }
   }
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
@@ -161,16 +176,17 @@ export async function convertPdfToMarkdown(input, options = {}) {
     parseWarning?.code === warningCodes.PasswordRequired ||
     parseWarning?.code === warningCodes.PasswordIncorrect ||
     parseWarning?.code === warningCodes.UnsupportedEncryption;
+  const canExtractPdfContent = pdfVersion && !encryptedWithoutText && !extractionBlockedBySecurityLimit;
   const textLines =
-    pdfVersion && !encryptedWithoutText
+    canExtractPdfContent
       ? extractTextLines(normalized.bytes, { document: pdfDocument })
       : [];
   const rulingLines =
-    pdfVersion && !encryptedWithoutText
+    canExtractPdfContent
       ? extractRulingLines(normalized.bytes, { document: pdfDocument })
       : [];
   const imageDraws =
-    pdfVersion && !encryptedWithoutText
+    canExtractPdfContent
       ? extractImageDraws(normalized.bytes, { document: pdfDocument })
       : [];
   const rulingGrids = inferRulingGrids(rulingLines);
@@ -338,7 +354,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         source: normalized.source,
         pdfVersion
       },
-      options: summarizeOptions(options, rasterPlan, ocrAdapter),
+      options: summarizeOptions(options, rasterPlan, ocrAdapter, security),
       timing: {
         elapsedMs
       },
@@ -930,7 +946,7 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function summarizeOptions(options, rasterPlan, ocrAdapter) {
+function summarizeOptions(options, rasterPlan, ocrAdapter, security) {
   return {
     pageRange: options.pageRange ?? null,
     output: options.output ?? "markdown",
@@ -951,6 +967,9 @@ function summarizeOptions(options, rasterPlan, ocrAdapter) {
     rasterRenderer: options.raster?.renderer ?? "internal-page-geometry",
     rasterDpi: rasterPlan.dpi,
     rasterThumbnailDpi: rasterPlan.thumbnailDpi,
+    maxBytes: security.maxBytes,
+    maxPages: security.maxPages,
+    maxObjects: security.maxObjects,
     maxImagePixels: rasterPlan.maxPixels,
     ocrDebugSidecars: options.ocr?.debugSidecars === true,
     assetsEnabled: options.assets?.enabled ?? null
@@ -1129,6 +1148,35 @@ function createParseWarning(error, extraDetails = {}) {
   });
 }
 
+function createInputTooLargeParseWarning(bytes, maxBytes) {
+  return createWarning(warningCodes.PdfParseFailed, "PDF input exceeds parser byte limit.", {
+    code: "pdf.input_too_large",
+    offset: maxBytes,
+    bytes,
+    maxBytes
+  });
+}
+
+function createPageCountWarning(pages, maxPages) {
+  return createWarning(
+    warningCodes.PageCountExceeded,
+    "PDF page count exceeds configured maxPages.",
+    {
+      code: warningCodes.PageCountExceeded,
+      pages,
+      maxPages
+    }
+  );
+}
+
+function isSecurityLimitParseWarning(warning) {
+  return (
+    warning?.details?.code === "pdf.input_too_large" ||
+    warning?.details?.code === "pdf.object_limit_exceeded" ||
+    warning?.details?.code === warningCodes.PageCountExceeded
+  );
+}
+
 async function resolvePasswordOption(passwordOption) {
   if (typeof passwordOption === "string") {
     return {
@@ -1159,6 +1207,12 @@ function emitProgress(options, stage, progress) {
 function throwIfAborted(signal) {
   if (signal?.aborted) {
     throw new DOMException("Operation aborted", "AbortError");
+  }
+}
+
+function validateSecurityLimits(security) {
+  if (!Number.isInteger(security.maxPages) || security.maxPages < 0) {
+    throw new RangeError("security.maxPages must be a non-negative integer");
   }
 }
 
