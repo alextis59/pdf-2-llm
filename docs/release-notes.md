@@ -47,6 +47,8 @@ fixtures:
 - Fuzz smoke passed 4 targets with 100 iterations each.
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.
+- CPU and WebGPU-preferred benchmark outputs are compared for accepted-output
+  equivalence, and GPU speedup is gated when a real WebGPU provider is selected.
 - WASM size is budgeted and reported for the packaged preflight module.
 - CI runs explicit `ci:*` commands for Rust tests, lint, build, package tests,
   and corpus smoke tests before the full `npm run check` gate, then uploads
@@ -104,6 +106,8 @@ fixtures:
   does not execute GPU kernels.
 - Node always falls back to CPU with
   `node-stable-gpu-path-unavailable`.
+- WebGPU speedup reports are `not-applicable` in CPU-fallback environments and
+  do not claim acceleration unless `selectedProvider` is `webgpu`.
 - Browser WebGPU unavailability falls back to CPU. When `webgpu.required` is
   true, the user-visible warning is `webgpu.unavailable`.
 

@@ -633,7 +633,7 @@ Goal: accelerate OCR/layout workloads where available without changing results.
 
 Gate 6 acceptance:
 
-- [ ] CPU and WebGPU paths produce equivalent accepted outputs.
+- [x] CPU and WebGPU paths produce equivalent accepted outputs.
 - [ ] WebGPU is measurably faster on selected workloads.
 - [x] Unsupported WebGPU environments pass the same corpus through CPU fallback.
 - [x] Device errors produce structured diagnostics.
@@ -802,7 +802,7 @@ Core metrics:
 - [x] Browser startup time.
 - [x] WASM size.
 - [x] Model download size.
-- [ ] GPU speedup where available.
+- [x] GPU speedup where available.
 - [x] Fuzz stability.
 
 Minimum release bars for a first public alpha:
