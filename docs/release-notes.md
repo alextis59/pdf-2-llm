@@ -34,6 +34,8 @@ fixtures:
   no-warning, heuristic text, ordering, and figure-warning cases.
 - Asset path validity and Markdown asset-link resolution are checked for
   figure, table sidecar, complex table, and OCR-backed generated fixtures.
+- Markdown AST diffs are checked against reviewed expected Markdown for text,
+  list, table, figure, layout, RTL, CJK, and vertical-writing fixtures.
 - Fuzz smoke passed 4 targets with 100 iterations each.
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.

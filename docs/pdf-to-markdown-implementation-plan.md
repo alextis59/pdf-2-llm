@@ -793,7 +793,7 @@ Core metrics:
 - [x] Table cell adjacency accuracy.
 - [x] Table span accuracy.
 - [x] CSV cell text accuracy.
-- [ ] Markdown AST diff.
+- [x] Markdown AST diff.
 - [x] Rendered HTML semantic diff.
 - [x] Asset link validity.
 - [x] Warning-code accuracy.
