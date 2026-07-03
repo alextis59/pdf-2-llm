@@ -1,0 +1,1 @@
+synthetic-encrypted-rc4-40: pdftotext failed with 1: Command Line Error: Incorrect password

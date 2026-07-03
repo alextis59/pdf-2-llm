@@ -30,6 +30,10 @@ fixtures:
 - Full accepted corpus passed with 31 converted entries and 2 documented skips.
 - Extracted text character error rate is gated for exact generated fixtures with
   reviewed Markdown oracles.
+- Acceptance review oracle extraction supports both `pdftotext` and optional
+  `pypdf` text outputs for differential review.
+- Gating acceptance files are audited for preview images, two text oracles,
+  review metadata, snippets, warning expectations, and metric rationale.
 - Warning-code precision and recall are checked for representative generated
   no-warning, heuristic text, ordering, and figure-warning cases.
 - Asset path validity and Markdown asset-link resolution are checked for

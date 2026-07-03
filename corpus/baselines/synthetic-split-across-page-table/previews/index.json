@@ -1,0 +1,24 @@
+{
+  "id": "synthetic-split-across-page-table",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-split-across-page-table.pdf",
+    "sha256": "e8c3a3a122b3a58f61d2f8098894a6f300ff29641b5c7f53e319ab04bdec3911",
+    "pages": 2
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-split-across-page-table/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/synthetic-split-across-page-table/previews/page-0002.png"
+    }
+  ]
+}

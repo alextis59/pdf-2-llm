@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-scientific-two-column",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-scientific-two-column.pdf",
+    "sha256": "76bdca4e4130083a5123b04dd93744a0f8779917074a99e35ade207a58950424",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-scientific-two-column/previews/page-0001.png"
+    }
+  ]
+}

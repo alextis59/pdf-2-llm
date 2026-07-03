@@ -269,20 +269,20 @@ Checklist:
 
 For each accepted PDF:
 
-- [ ] Open rendered page previews.
-- [ ] Review oracle text from at least two tools.
-- [ ] Identify the actual page reading order.
-- [ ] Identify repeated headers, footers, page numbers, footnotes, and captions.
-- [ ] Identify tables and classify them as GFM-safe, HTML-required, CSV sidecar,
+- [x] Open rendered page previews.
+- [x] Review oracle text from at least two tools.
+- [x] Identify the actual page reading order.
+- [x] Identify repeated headers, footers, page numbers, footnotes, and captions.
+- [x] Identify tables and classify them as GFM-safe, HTML-required, CSV sidecar,
   or image-only.
-- [ ] Identify figures and decide whether captions are required.
-- [ ] Identify forms, links, annotations, attachments, and metadata.
-- [ ] Identify scripts and writing directions.
-- [ ] Record expected warnings for content that should not be converted into
+- [x] Identify figures and decide whether captions are required.
+- [x] Identify forms, links, annotations, attachments, and metadata.
+- [x] Identify scripts and writing directions.
+- [x] Record expected warnings for content that should not be converted into
   Markdown semantics.
-- [ ] Write representative expected Markdown snippets.
-- [ ] Write a one-paragraph rationale for each metric threshold.
-- [ ] Mark the PDF as `gating: true` only after review.
+- [x] Write representative expected Markdown snippets.
+- [x] Write a one-paragraph rationale for each metric threshold.
+- [x] Mark the PDF as `gating: true` only after review.
 
 ## Phase 1: Product Contracts And Scaffolding
 

@@ -1,0 +1,6 @@
+synthetic-damaged-xref: pypdf failed with 1: entry 1 in Xref table invalid but object found
+entry 2 in Xref table invalid but object found
+entry 3 in Xref table invalid but object found
+entry 4 in Xref table invalid but object found
+entry 5 in Xref table invalid but object found
+PdfReadError: Invalid Elementary Object starting with b'a' @728: b'000000368 00000 n\ntrailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n623\n%%EOF\n'

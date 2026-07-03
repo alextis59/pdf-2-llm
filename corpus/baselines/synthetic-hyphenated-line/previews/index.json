@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-hyphenated-line",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-hyphenated-line.pdf",
+    "sha256": "f81d3334d967d4ec95836e6732b3a7aded73f49917536d2a1ee84bec59b9e969",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-hyphenated-line/previews/page-0001.png"
+    }
+  ]
+}

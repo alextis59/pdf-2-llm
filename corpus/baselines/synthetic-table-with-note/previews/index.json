@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-table-with-note",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-table-with-note.pdf",
+    "sha256": "08ad79221526d8fbb676abb289b96c287c6b828ddfb0c2ee2e1871cca8175423",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-table-with-note/previews/page-0001.png"
+    }
+  ]
+}

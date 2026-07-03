@@ -11,6 +11,10 @@ const manifestPath = path.resolve(
 const dryRun = hasFlag("--dry-run");
 const selectAll = hasFlag("--all");
 const selectedIds = readOptions("--id");
+const selectedTools = readOptions("--tool");
+const oracleTools = selectedTools.length > 0 ? selectedTools : ["pdftotext"];
+const supportedTools = new Set(["pdftotext", "pypdf"]);
+const allowToolFailures = hasFlag("--allow-tool-failures");
 
 function hasFlag(name) {
   return args.includes(name);
@@ -37,12 +41,14 @@ function readOptions(name) {
 
 function usage() {
   return `Usage:
-  node scripts/corpus/extract-oracles.mjs --all [--dry-run]
-  node scripts/corpus/extract-oracles.mjs --id <manifest-id> [--dry-run]
+  node scripts/corpus/extract-oracles.mjs --all [--dry-run] [--tool pdftotext] [--tool pypdf]
+  node scripts/corpus/extract-oracles.mjs --id <manifest-id> [--dry-run] [--tool pdftotext] [--tool pypdf]
 
 Options:
   --manifest <path>        Manifest path. Defaults to corpus/manifest.json.
   --root <path>            Repository root. Defaults to cwd.
+  --tool <name>            Oracle tool to run. Repeatable. Defaults to pdftotext.
+  --allow-tool-failures    Write <tool>.error.txt and continue when a tool fails.
 `;
 }
 
@@ -97,13 +103,101 @@ async function runPdftotext(entry) {
   });
 }
 
+async function runPypdf(entry) {
+  const pdfPath = path.join(repoRoot, entry.path);
+  const script = [
+    "import sys",
+    "import warnings",
+    "warnings.filterwarnings('ignore')",
+    "from pypdf import PdfReader",
+    "try:",
+    "    reader = PdfReader(sys.argv[1])",
+    "    for index, page in enumerate(reader.pages):",
+    "        if index:",
+    "            print('\\f')",
+    "        print(page.extract_text() or '')",
+    "except Exception as exc:",
+    "    print(f'{exc.__class__.__name__}: {exc}', file=sys.stderr)",
+    "    sys.exit(1)"
+  ].join("\n");
+  return new Promise((resolve, reject) => {
+    const child = spawn("python3", ["-c", script, pdfPath], {
+      cwd: repoRoot,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("error", (error) => {
+      if (error.code === "ENOENT") {
+        reject(new Error("python3 is required for pypdf oracle extraction"));
+      } else {
+        reject(error);
+      }
+    });
+    child.on("close", (status) => {
+      if (status !== 0) {
+        reject(new Error(`${entry.id}: pypdf failed with ${status}: ${stderr}`));
+        return;
+      }
+      resolve(stdout);
+    });
+  });
+}
+
+function oracleRunner(tool) {
+  if (tool === "pdftotext") {
+    return runPdftotext;
+  }
+  if (tool === "pypdf") {
+    return runPypdf;
+  }
+  throw new Error(`unsupported oracle tool "${tool}"`);
+}
+
 async function writeOracle(entry) {
-  const text = await runPdftotext(entry);
   const outputDir = path.join(repoRoot, "corpus", "baselines", entry.id, "oracles");
   await mkdir(outputDir, { recursive: true });
-  const outputPath = path.join(outputDir, "pdftotext.txt");
-  await writeFile(outputPath, text);
-  console.log(`${entry.id}: wrote ${path.relative(repoRoot, outputPath)}`);
+  for (const tool of oracleTools) {
+    try {
+      const text = await oracleRunner(tool)(entry);
+      const outputPath = path.join(outputDir, `${tool}.txt`);
+      await writeFile(outputPath, normalizeTextOutput(text));
+      console.log(`${entry.id}: wrote ${path.relative(repoRoot, outputPath)}`);
+    } catch (error) {
+      if (!allowToolFailures) {
+        throw error;
+      }
+      const outputPath = path.join(outputDir, `${tool}.error.txt`);
+      await writeFile(outputPath, normalizeTextOutput(formatToolError(error)));
+      console.log(`${entry.id}: wrote ${path.relative(repoRoot, outputPath)}`);
+    }
+  }
+}
+
+function normalizeTextOutput(text) {
+  return `${String(text)
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+$/g, ""))
+    .join("\n")
+    .replace(/\n+$/g, "")}\n`;
+}
+
+function formatToolError(error) {
+  return String(error?.message ?? error)
+    .replaceAll(repoRoot, "<repo>")
+    .replace(/file:\/\/<repo>/g, "file://<repo>")
+    .replace(/\/home\/[^\s:)]+/g, "<home>")
+    .replace(/line \d+/g, "line <n>");
 }
 
 async function main() {
@@ -116,6 +210,11 @@ async function main() {
     console.error(usage());
     process.exit(1);
   }
+  for (const tool of oracleTools) {
+    if (!supportedTools.has(tool)) {
+      throw new Error(`unsupported oracle tool "${tool}"`);
+    }
+  }
 
   const targets = await loadTargets();
   if (targets.length === 0) {
@@ -125,7 +224,7 @@ async function main() {
 
   if (dryRun) {
     for (const target of targets) {
-      console.log(`${target.id}: ${target.path}`);
+      console.log(`${target.id}: ${target.path} tools=${oracleTools.join(",")}`);
     }
     console.log(`Dry run selected ${targets.length} PDF(s).`);
     return;

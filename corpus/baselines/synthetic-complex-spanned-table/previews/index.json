@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-complex-spanned-table",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-complex-spanned-table.pdf",
+    "sha256": "59cd704b1489fe78e3c22ad77e19e4d42d5f30ae9932cae57d6d76cdc7e8cc31",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-complex-spanned-table/previews/page-0001.png"
+    }
+  ]
+}

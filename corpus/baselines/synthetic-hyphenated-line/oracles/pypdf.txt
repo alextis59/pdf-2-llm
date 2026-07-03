@@ -1,0 +1,3 @@
+Hyphenation Fixture
+This paragraph validates hyphen-
+ation repair across a wrapped line.

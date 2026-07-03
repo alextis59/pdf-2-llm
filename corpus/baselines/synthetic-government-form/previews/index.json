@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-government-form",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-government-form.pdf",
+    "sha256": "38dc2c41a780c0991cdcac568f7750fc5b0a922d82628fdfa74a0f2c8200cbfa",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-government-form/previews/page-0001.png"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-linearized",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-linearized.pdf",
+    "sha256": "b3fc51a3fa513d82f60fdd3b452682faab6a4219ceebac42212803da49564f3f",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-linearized/previews/page-0001.png"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+Complex Spanned Table
+
+Revenue <Total>
+Q1 & Q2
+
+100 "net"
+
+

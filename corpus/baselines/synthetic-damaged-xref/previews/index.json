@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-damaged-xref",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-damaged-xref.pdf",
+    "sha256": "fa0fbdbfd99feabaac67f8853564d5e9f43e505d200c09a73eb2d2c1bdfaeb8e",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-damaged-xref/previews/page-0001.png"
+    }
+  ]
+}

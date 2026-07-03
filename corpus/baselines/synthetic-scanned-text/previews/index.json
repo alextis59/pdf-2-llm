@@ -1,0 +1,20 @@
+{
+  "id": "synthetic-scanned-text",
+  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/generated/synthetic-scanned-text.pdf",
+    "sha256": "440455e37d18dd2ec8eadbb0be3ba2377cb8b24d3837780f1c8fbbd366ed7967",
+    "pages": 1
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/synthetic-scanned-text/previews/page-0001.png"
+    }
+  ]
+}
