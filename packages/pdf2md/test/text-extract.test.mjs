@@ -536,6 +536,30 @@ test("linesToMarkdown groups wrapped RTL lines by right edge", () => {
   assert.equal(markdown, `# RTL Wrap Fixture\n\n<p dir="rtl">${first} ${second}</p>\n`);
 });
 
+test("linesToMarkdown joins wrapped CJK lines without synthetic spaces", () => {
+  const first = "\u3053\u308c\u306f\u4e00\u884c\u76ee";
+  const second = "\u3067\u3059\u7d9a\u304d";
+  const markdown = linesToMarkdown([
+    { text: "CJK Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: first, fontSize: 12, x: 72, y: 680, pageIndex: 0 },
+    { text: second, fontSize: 12, x: 72, y: 666, pageIndex: 0 }
+  ]);
+
+  assert.equal(markdown, `# CJK Fixture\n\n${first}${second}\n`);
+});
+
+test("linesToMarkdown treats CJK terminal punctuation as a paragraph boundary", () => {
+  const first = "\u6700\u521d\u306e\u6587\u3067\u3059\u3002";
+  const second = "\u6b21\u306e\u6bb5\u843d\u3067\u3059";
+  const markdown = linesToMarkdown([
+    { text: "CJK Boundary Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: first, fontSize: 12, x: 72, y: 680, pageIndex: 0 },
+    { text: second, fontSize: 12, x: 72, y: 666, pageIndex: 0 }
+  ]);
+
+  assert.equal(markdown, `# CJK Boundary Fixture\n\n${first}\n\n${second}\n`);
+});
+
 test("linesToMarkdown orders interleaved two-column lines by geometry", () => {
   const markdown = linesToMarkdown([
     { text: "Layout Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },

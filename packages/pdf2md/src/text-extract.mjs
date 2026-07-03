@@ -1034,10 +1034,46 @@ function readParagraphAt(
   }
 
   return {
-    text: parts.join(" "),
+    text: joinParagraphParts(parts),
     sourceLines: lines.slice(startIndex, index),
     endIndex: index
   };
+}
+
+function joinParagraphParts(parts) {
+  if (parts.length <= 1) {
+    return parts.join("");
+  }
+
+  let text = parts[0];
+  for (const part of parts.slice(1)) {
+    text += paragraphPartSeparator(text, part);
+    text += part;
+  }
+  return text;
+}
+
+function paragraphPartSeparator(previous, next) {
+  const previousChar = lastVisibleCharacter(previous);
+  const nextChar = firstVisibleCharacter(next);
+  if (previousChar && nextChar && isCjkLineBreakBoundary(previousChar, nextChar)) {
+    return "";
+  }
+  return " ";
+}
+
+function firstVisibleCharacter(value) {
+  for (const char of String(value ?? "")) {
+    if (!/\s/.test(char)) {
+      return char;
+    }
+  }
+  return null;
+}
+
+function lastVisibleCharacter(value) {
+  const chars = [...String(value ?? "")].filter((char) => !/\s/.test(char));
+  return chars.at(-1) ?? null;
 }
 
 function orderLinesForReading(lines) {
@@ -1378,6 +1414,37 @@ function isLatinCodePoint(codePoint) {
   );
 }
 
+function isCjkLineBreakBoundary(previousChar, nextChar) {
+  return isCjkJoinCharacter(previousChar) && isCjkJoinCharacter(nextChar);
+}
+
+function isCjkJoinCharacter(char) {
+  if (!char) {
+    return false;
+  }
+  const codePoint = char.codePointAt(0);
+  return isCjkCodePoint(codePoint) || isCjkPunctuationCodePoint(codePoint);
+}
+
+function isCjkCodePoint(codePoint) {
+  return (
+    (codePoint >= 0x1100 && codePoint <= 0x11ff) ||
+    (codePoint >= 0x3040 && codePoint <= 0x30ff) ||
+    (codePoint >= 0x31f0 && codePoint <= 0x31ff) ||
+    (codePoint >= 0x3400 && codePoint <= 0x4dbf) ||
+    (codePoint >= 0x4e00 && codePoint <= 0x9fff) ||
+    (codePoint >= 0xac00 && codePoint <= 0xd7af) ||
+    (codePoint >= 0xf900 && codePoint <= 0xfaff)
+  );
+}
+
+function isCjkPunctuationCodePoint(codePoint) {
+  return (
+    (codePoint >= 0x3000 && codePoint <= 0x303f) ||
+    (codePoint >= 0xff00 && codePoint <= 0xffef)
+  );
+}
+
 function isLikelyTabularRowItems(items) {
   if (items.length < 2) {
     return false;
@@ -1711,7 +1778,11 @@ function isParagraphContinuation(previous, next) {
     return false;
   }
 
-  return !/[.!?:;)]$/.test(normalizeText(previous.text));
+  return !endsWithParagraphTerminal(normalizeText(previous.text));
+}
+
+function endsWithParagraphTerminal(text) {
+  return /[.!?:;)\u3002\uff01\uff1f\uff0e\uff61]$/.test(text);
 }
 
 function createRulingTableExports(lines, rulingTables) {

@@ -673,7 +673,7 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 ### 8.4 Multilingual Expansion
 
 - [x] Improve RTL grouping and bidi output.
-- [ ] Improve CJK line breaking.
+- [x] Improve CJK line breaking.
 - [ ] Improve vertical writing support.
 - [ ] Add language/script-specific OCR settings.
 - [ ] Add normalization rules by script.
