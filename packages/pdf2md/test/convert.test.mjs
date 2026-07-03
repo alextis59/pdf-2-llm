@@ -222,6 +222,48 @@ test("convertPdfToMarkdown reports WebGPU CPU fallback diagnostics by default", 
   assert.equal(result.diagnostics.acceleration.webgpu.execution.routedPages, 0);
 });
 
+test("convertPdfToMarkdown preserves OCR outputs when WebGPU falls back to CPU", async () => {
+  const bytes = createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 });
+  const createOptions = (webgpu) => ({
+    webgpu,
+    ocr: {
+      results: [
+        {
+          pageIndex: 0,
+          coordinateSpace: "page",
+          lines: [
+            {
+              text: "Provider parity OCR text",
+              confidence: 94,
+              x: 72,
+              y: 720,
+              width: 170,
+              height: 12
+            }
+          ]
+        }
+      ]
+    }
+  });
+
+  const cpuResult = await convertPdfToMarkdown(bytes, createOptions(undefined));
+  const fallbackResult = await convertPdfToMarkdown(bytes, createOptions({ preferred: true }));
+
+  assert.equal(fallbackResult.diagnostics.acceleration.webgpu.selectedProvider, "cpu");
+  assert.equal(fallbackResult.diagnostics.acceleration.webgpu.fallbackReason, "node-stable-gpu-path-unavailable");
+  assert.deepEqual(fallbackResult.diagnostics.acceleration.webgpu.execution.output, {
+    format: "ocr-result-pages",
+    source: "options.ocr.results",
+    normalizedBy: "ocr-text",
+    coordinateSpaces: ["page", "raster"],
+    compatibleWith: "cpu"
+  });
+  assert.equal(fallbackResult.markdown, cpuResult.markdown);
+  assert.deepEqual(fallbackResult.sourceMap, cpuResult.sourceMap);
+  assert.deepEqual(fallbackResult.ir, cpuResult.ir);
+  assert.deepEqual(fallbackResult.assets, cpuResult.assets);
+});
+
 test("convertPdfToMarkdown records OCR page language overrides", async () => {
   const result = await convertPdfToMarkdown(
     createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 }),

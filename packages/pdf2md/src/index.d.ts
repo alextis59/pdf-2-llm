@@ -194,8 +194,17 @@ export type WebGpuExecutionDiagnostics = {
     maxMemoryBytes: number;
     bytesPerPixel: number;
   };
+  output: WebGpuExecutionOutputDiagnostics;
   batches: WebGpuExecutionBatchDiagnostics[];
   skipped: WebGpuExecutionSkippedPageDiagnostics[];
+};
+
+export type WebGpuExecutionOutputDiagnostics = {
+  format: "ocr-result-pages";
+  source: "options.ocr.results";
+  normalizedBy: "ocr-text";
+  coordinateSpaces: Array<"page" | "raster">;
+  compatibleWith: "cpu";
 };
 
 export type WebGpuExecutionBatchDiagnostics = {

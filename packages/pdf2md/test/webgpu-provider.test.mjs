@@ -120,3 +120,34 @@ test("createWebGpuExecutionPlan skips pages that exceed memory limits", () => {
     }
   ]);
 });
+
+test("createWebGpuExecutionPlan keeps OCR output contracts provider-compatible", () => {
+  const scanDetection = {
+    pages: [{ pageIndex: 0, sourceType: "scanned" }]
+  };
+  const cpuPlan = createWebGpuExecutionPlan({
+    scanDetection,
+    webgpu: {
+      selectedProvider: "cpu",
+      fallbackReason: "navigator-gpu-missing"
+    }
+  });
+  const webgpuPlan = createWebGpuExecutionPlan({
+    rasterPlan: {
+      pages: [{ pageIndex: 0, status: "planned", pixelCount: 5_000 }]
+    },
+    scanDetection,
+    webgpu: {
+      selectedProvider: "webgpu"
+    }
+  });
+
+  assert.deepEqual(cpuPlan.output, {
+    format: "ocr-result-pages",
+    source: "options.ocr.results",
+    normalizedBy: "ocr-text",
+    coordinateSpaces: ["page", "raster"],
+    compatibleWith: "cpu"
+  });
+  assert.deepEqual(webgpuPlan.output, cpuPlan.output);
+});

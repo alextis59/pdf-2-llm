@@ -620,8 +620,8 @@ Goal: accelerate OCR/layout workloads where available without changing results.
 - [x] Batch page images where memory allows.
 - [x] Enforce GPU memory limits.
 - [x] Handle device loss.
-- [ ] Keep model outputs compatible with CPU path.
-- [ ] Add provider parity tests.
+- [x] Keep model outputs compatible with CPU path.
+- [x] Add provider parity tests.
 
 ### 7.3 Benchmarks
 

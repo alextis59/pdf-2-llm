@@ -2,6 +2,13 @@ const defaultMaxBatchPixels = 8_000_000;
 const defaultMaxMemoryBytes = 256 * 1024 * 1024;
 const bytesPerPixelRgba = 4;
 const gpuRoutedSourceTypes = new Set(["scanned", "hybrid"]);
+const ocrOutputContract = Object.freeze({
+  format: "ocr-result-pages",
+  source: "options.ocr.results",
+  normalizedBy: "ocr-text",
+  coordinateSpaces: Object.freeze(["page", "raster"]),
+  compatibleWith: "cpu"
+});
 
 export function createWebGpuExecutionPlan({
   options = {},
@@ -98,6 +105,10 @@ function createDiagnostics({
       maxBatchPixels,
       maxMemoryBytes,
       bytesPerPixel: bytesPerPixelRgba
+    },
+    output: {
+      ...ocrOutputContract,
+      coordinateSpaces: [...ocrOutputContract.coordinateSpaces]
     },
     batches,
     skipped: skippedPages
