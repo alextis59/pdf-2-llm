@@ -36,6 +36,7 @@ export type ConvertOptions = {
   password?: string | ((request: PasswordRequest) => string | Promise<string>);
   security?: {
     maxBytes?: number;
+    maxDecodedStreamBytes?: number;
     maxPages?: number;
     maxObjects?: number;
     maxImagePixels?: number;

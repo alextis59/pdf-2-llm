@@ -694,7 +694,7 @@ Goal: make the package safe and predictable enough for real use.
 
 - [x] Enforce max file size.
 - [x] Enforce max page count.
-- [ ] Enforce max decoded stream size.
+- [x] Enforce max decoded stream size.
 - [ ] Enforce max image pixels.
 - [ ] Enforce max object count.
 - [ ] Enforce parse and conversion timeouts.

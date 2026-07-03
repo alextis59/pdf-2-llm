@@ -123,6 +123,11 @@ test("raster image filters are metadata-only pass-through filters", () => {
 
 test("decoder enforces limits and reports corrupt streams", () => {
   assert.throws(
+    () => decodeStreamBytes(Buffer.from("abc", "latin1"), parsePdfValue("<< >>").value, { maxBytes: 2 }),
+    (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.decoded_too_large"
+  );
+
+  assert.throws(
     () => decode("48656c6c6f>", "/ASCIIHexDecode", { maxBytes: 2 }),
     (error) => error instanceof PdfStreamDecodeError && error.code === "pdf.stream.decoded_too_large"
   );

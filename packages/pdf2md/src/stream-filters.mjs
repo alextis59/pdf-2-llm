@@ -41,6 +41,9 @@ export function decodeStreamBytes(bytes, dictionary, { maxBytes = 50 * 1024 * 10
   const decodeParms = readDecodeParms(dictionary, filters.length);
   let output = bytes;
   const skippedFilters = [];
+  if (filters.length === 0) {
+    enforceMaxBytes(output, maxBytes, "unfiltered");
+  }
 
   for (let index = 0; index < filters.length; index += 1) {
     const filter = filters[index];

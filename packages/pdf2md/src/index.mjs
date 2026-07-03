@@ -43,6 +43,7 @@ import { createWebGpuExecutionPlan } from "./webgpu-provider.mjs";
 
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
+  maxDecodedStreamBytes: 50 * 1024 * 1024,
   maxPages: 5000,
   maxObjects: 100000,
   maxImagePixels: 100_000_000,
@@ -95,6 +96,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   } else if (pdfVersion) {
     const parserOptions = {
       maxBytes: security.maxBytes,
+      maxDecodedStreamBytes: security.maxDecodedStreamBytes,
       maxObjects: security.maxObjects,
       deadline,
       mode: options.parser?.mode ?? "strict"
@@ -968,6 +970,7 @@ function summarizeOptions(options, rasterPlan, ocrAdapter, security) {
     rasterDpi: rasterPlan.dpi,
     rasterThumbnailDpi: rasterPlan.thumbnailDpi,
     maxBytes: security.maxBytes,
+    maxDecodedStreamBytes: security.maxDecodedStreamBytes,
     maxPages: security.maxPages,
     maxObjects: security.maxObjects,
     maxImagePixels: rasterPlan.maxPixels,
@@ -1172,6 +1175,7 @@ function createPageCountWarning(pages, maxPages) {
 function isSecurityLimitParseWarning(warning) {
   return (
     warning?.details?.code === "pdf.input_too_large" ||
+    warning?.details?.code === "pdf.stream.decoded_too_large" ||
     warning?.details?.code === "pdf.object_limit_exceeded" ||
     warning?.details?.code === warningCodes.PageCountExceeded
   );
@@ -1211,6 +1215,9 @@ function throwIfAborted(signal) {
 }
 
 function validateSecurityLimits(security) {
+  if (!Number.isInteger(security.maxDecodedStreamBytes) || security.maxDecodedStreamBytes < 0) {
+    throw new RangeError("security.maxDecodedStreamBytes must be a non-negative integer");
+  }
   if (!Number.isInteger(security.maxPages) || security.maxPages < 0) {
     throw new RangeError("security.maxPages must be a non-negative integer");
   }
