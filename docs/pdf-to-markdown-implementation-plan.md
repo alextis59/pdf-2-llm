@@ -731,7 +731,7 @@ Goal: make the package safe and predictable enough for real use.
 
 ### 9.4 Release Readiness
 
-- [ ] Run full accepted corpus.
+- [x] Run full accepted corpus.
 - [ ] Run full fuzz smoke suite.
 - [ ] Run package build in a clean checkout.
 - [ ] Run package install test in a separate fixture project.
