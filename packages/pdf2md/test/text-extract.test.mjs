@@ -512,6 +512,30 @@ test("linesToMarkdown groups wrapped lines into paragraphs", () => {
   );
 });
 
+test("linesToMarkdown orders RTL row fragments and emits bidi paragraph markup", () => {
+  const right = "\u05d0\u05d1\u05d2";
+  const left = "\u05d3\u05d4\u05d5";
+  const markdown = linesToMarkdown([
+    { text: "RTL Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: left, fontSize: 12, x: 260, y: 680, width: 48, height: 12, pageIndex: 0 },
+    { text: right, fontSize: 12, x: 320, y: 680, width: 48, height: 12, pageIndex: 0 }
+  ]);
+
+  assert.equal(markdown, `# RTL Fixture\n\n<p dir="rtl">${right} ${left}</p>\n`);
+});
+
+test("linesToMarkdown groups wrapped RTL lines by right edge", () => {
+  const first = "\u05d0\u05d1\u05d2 \u05d3\u05d4\u05d5";
+  const second = "\u05d6\u05d7\u05d8 \u05d9\u05db\u05dc";
+  const markdown = linesToMarkdown([
+    { text: "RTL Wrap Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    { text: first, fontSize: 12, x: 300, y: 680, width: 80, height: 12, pageIndex: 0 },
+    { text: second, fontSize: 12, x: 260, y: 664, width: 120, height: 12, pageIndex: 0 }
+  ]);
+
+  assert.equal(markdown, `# RTL Wrap Fixture\n\n<p dir="rtl">${first} ${second}</p>\n`);
+});
+
 test("linesToMarkdown orders interleaved two-column lines by geometry", () => {
   const markdown = linesToMarkdown([
     { text: "Layout Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },

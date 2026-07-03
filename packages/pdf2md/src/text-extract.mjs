@@ -287,7 +287,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     previousWasList = false;
     const paragraph = readParagraphAt(lines, index, text, headingModel, rulingTableExports, equationModel);
     blocks.push(
-      createMarkdownBlock(escapeMarkdownParagraph(paragraph.text), "paragraph", paragraph.sourceLines)
+      createMarkdownBlock(formatParagraphMarkdown(paragraph), "paragraph", paragraph.sourceLines)
     );
     index = paragraph.endIndex - 1;
   }
@@ -948,6 +948,13 @@ function escapeMarkdownParagraph(value) {
     .replace(/^(\d+)\. /, "$1\\. ");
 }
 
+function formatParagraphMarkdown(paragraph) {
+  if (paragraphDirection(paragraph.sourceLines) === "rtl") {
+    return `<p dir="rtl">${escapeHtml(paragraph.text)}</p>`;
+  }
+  return escapeMarkdownParagraph(paragraph.text);
+}
+
 function escapeMarkdownInline(value) {
   let result = "";
   let offset = 0;
@@ -1275,16 +1282,17 @@ function groupLinesIntoRows(indexedLines) {
 }
 
 function createReadingRows(row) {
-  const items = sortRowItems(row.items);
-  if (items.length <= 1 || isLikelyTabularRowItems(items)) {
-    return [createReadingRow(items)];
+  const direction = rowDirection(row.items);
+  const items = sortRowItems(row.items, direction);
+  if (items.length <= 1 || direction === "rtl" || isLikelyTabularRowItems(items)) {
+    return [createReadingRow(items, direction)];
   }
 
-  return items.map((item) => createReadingRow([item]));
+  return items.map((item) => createReadingRow([item], direction));
 }
 
-function createReadingRow(items) {
-  items = sortRowItems(items);
+function createReadingRow(items, direction = rowDirection(items)) {
+  items = sortRowItems(items, direction);
   const left = Math.min(...items.map((item) => item.line.x));
   const right = Math.max(...items.map((item) => lineRightEdge(item.line)));
   return {
@@ -1297,12 +1305,76 @@ function createReadingRow(items) {
   };
 }
 
-function sortRowItems(items) {
+function sortRowItems(items, direction = rowDirection(items)) {
   return [...items].sort(
-    (left, right) =>
-      left.line.x - right.line.x ||
-      left.line.y - right.line.y ||
-      left.index - right.index
+    direction === "rtl"
+      ? (left, right) =>
+          lineRightEdge(right.line) - lineRightEdge(left.line) ||
+          right.line.x - left.line.x ||
+          left.line.y - right.line.y ||
+          left.index - right.index
+      : (left, right) =>
+          left.line.x - right.line.x ||
+          left.line.y - right.line.y ||
+          left.index - right.index
+  );
+}
+
+function rowDirection(items) {
+  return dominantDirection(items.map((item) => item.line));
+}
+
+function paragraphDirection(lines) {
+  return dominantDirection(lines);
+}
+
+function dominantDirection(lines) {
+  let rtl = 0;
+  let ltr = 0;
+  for (const line of lines) {
+    const direction = lineDirection(line);
+    if (direction === "rtl") {
+      rtl += 1;
+    } else if (direction === "ltr") {
+      ltr += 1;
+    }
+  }
+  return rtl > ltr ? "rtl" : ltr > 0 ? "ltr" : "unknown";
+}
+
+function lineDirection(line) {
+  if (line?.direction === "rtl" || line?.direction === "ltr" || line?.direction === "vertical") {
+    return line.direction;
+  }
+  return textDirection(normalizeText(line?.text ?? ""));
+}
+
+function textDirection(text) {
+  let rtl = 0;
+  let ltr = 0;
+  for (const char of text) {
+    const codePoint = char.codePointAt(0);
+    if (isRtlCodePoint(codePoint)) {
+      rtl += 1;
+    } else if (isLatinCodePoint(codePoint)) {
+      ltr += 1;
+    }
+  }
+  return rtl > ltr ? "rtl" : ltr > 0 ? "ltr" : "unknown";
+}
+
+function isRtlCodePoint(codePoint) {
+  return (
+    (codePoint >= 0x0590 && codePoint <= 0x08ff) ||
+    (codePoint >= 0xfb1d && codePoint <= 0xfdff) ||
+    (codePoint >= 0xfe70 && codePoint <= 0xfeff)
+  );
+}
+
+function isLatinCodePoint(codePoint) {
+  return (
+    (codePoint >= 0x0041 && codePoint <= 0x005a) ||
+    (codePoint >= 0x0061 && codePoint <= 0x007a)
   );
 }
 
@@ -1615,11 +1687,26 @@ function isParagraphContinuation(previous, next) {
   if ((previous.pageIndex ?? null) !== (next.pageIndex ?? null)) {
     return false;
   }
-  if (Math.abs(previous.x - next.x) > 4 || Math.abs(previous.fontSize - next.fontSize) > 0.5) {
+  const previousDirection = lineDirection(previous);
+  const nextDirection = lineDirection(next);
+  const verticalGap = Math.abs(previous.y - next.y);
+  if (
+    previousDirection === "rtl" &&
+    nextDirection === "rtl" &&
+    verticalGap <= Math.max(lineRowTolerance(previous), lineRowTolerance(next)) &&
+    Math.abs(previous.fontSize - next.fontSize) <= 0.5
+  ) {
+    return true;
+  }
+
+  const aligned =
+    previousDirection === "rtl" && nextDirection === "rtl"
+      ? Math.abs(lineRightEdge(previous) - lineRightEdge(next)) <= 4
+      : Math.abs(previous.x - next.x) <= 4;
+  if (!aligned || Math.abs(previous.fontSize - next.fontSize) > 0.5) {
     return false;
   }
 
-  const verticalGap = Math.abs(previous.y - next.y);
   if (verticalGap <= 0 || verticalGap > Math.max(14, previous.fontSize * 1.35)) {
     return false;
   }
