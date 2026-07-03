@@ -733,7 +733,7 @@ Goal: make the package safe and predictable enough for real use.
 
 - [x] Run full accepted corpus.
 - [x] Run full fuzz smoke suite.
-- [ ] Run package build in a clean checkout.
+- [x] Run package build in a clean checkout.
 - [ ] Run package install test in a separate fixture project.
 - [ ] Run browser smoke test in Chromium and Firefox.
 - [ ] Run Node smoke test on supported Node versions.
