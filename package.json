@@ -23,6 +23,7 @@
     "corpus:validate": "node scripts/corpus/validate-manifest.mjs",
     "fuzz:smoke": "npm run fuzz:smoke --workspace @pdf-2-llm/pdf2md",
     "qa:benchmark": "node scripts/qa/benchmark.mjs --gate text-mvp",
+    "qa:benchmark:webgpu": "node --expose-gc scripts/qa/benchmark.mjs --id synthetic-scanned-text --id synthetic-searchable-scan-regions --id synthetic-two-column --webgpu-comparison --iterations 1 --warmup 0 --report corpus/reports/webgpu-benchmark.json",
     "qa:benchmark:long-memory": "node --expose-gc scripts/qa/benchmark.mjs --memory-limit-gated --iterations 1 --warmup 0",
     "qa:benchmark:smoke": "node scripts/qa/benchmark.mjs --gate text-mvp --iterations 1 --warmup 0",
     "qa:compare-oracles": "node scripts/qa/compare-oracles.mjs --gate text-mvp",

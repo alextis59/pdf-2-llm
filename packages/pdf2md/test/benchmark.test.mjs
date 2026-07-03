@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  compareProviderResults,
   evaluateMemoryLimits,
+  splitStartupAndThroughputDurations,
   summarizeDurations,
+  summarizeGpuMemoryFromExecution,
+  summarizePeakMemory,
   summarizeMemory
 } from "../../../scripts/qa/benchmark.mjs";
 
@@ -27,6 +31,112 @@ test("benchmark memory summary reports deltas", () => {
       externalDeltaBytes: 3,
       arrayBuffersDeltaBytes: 8
     }
+  );
+});
+
+test("benchmark peak memory summary reports absolute and delta peaks", () => {
+  assert.deepEqual(
+    summarizePeakMemory(
+      { rss: 100, heapUsed: 10, external: 5, arrayBuffers: 3 },
+      [
+        { rss: 120, heapUsed: 8, external: 12, arrayBuffers: 3 },
+        { rss: 90, heapUsed: 16, external: 7, arrayBuffers: 20 }
+      ]
+    ),
+    {
+      rssPeakBytes: 120,
+      heapUsedPeakBytes: 16,
+      externalPeakBytes: 12,
+      arrayBuffersPeakBytes: 20,
+      rssPeakDeltaBytes: 20,
+      heapUsedPeakDeltaBytes: 6
+    }
+  );
+});
+
+test("benchmark startup and throughput durations are tracked separately", () => {
+  assert.deepEqual(splitStartupAndThroughputDurations([12, 8, 10]), {
+    startupMs: 12,
+    throughputDurations: [8, 10]
+  });
+  assert.deepEqual(splitStartupAndThroughputDurations([12]), {
+    startupMs: 12,
+    throughputDurations: [12]
+  });
+});
+
+test("benchmark GPU memory summary reports planned WebGPU memory", () => {
+  assert.deepEqual(
+    summarizeGpuMemoryFromExecution({
+      provider: "webgpu",
+      totalEstimatedBytes: 60,
+      limits: { maxMemoryBytes: 100 },
+      plannedPages: 2,
+      skippedPages: 1,
+      batches: [{ estimatedBytes: 40 }, { estimatedBytes: 20 }]
+    }),
+    {
+      provider: "webgpu",
+      source: "webgpu-execution-plan",
+      estimatedBytes: 60,
+      maxBatchEstimatedBytes: 40,
+      limitBytes: 100,
+      plannedPages: 2,
+      skippedPages: 1
+    }
+  );
+});
+
+test("benchmark provider comparison reports parity and speed ratio", () => {
+  assert.deepEqual(
+    compareProviderResults([
+      {
+        id: "sample",
+        workload: "ocr",
+        providerMode: "cpu",
+        outputChars: 100,
+        textLines: 2,
+        warnings: [],
+        pagesPerSecond: 10,
+        startup: { durationMs: 20 },
+        modelLoad: { durationMs: 0 },
+        peakMemory: { rssPeakBytes: 100 },
+        acceleration: { selectedProvider: "cpu", fallbackReason: null },
+        gpuMemory: { estimatedBytes: 0 }
+      },
+      {
+        id: "sample",
+        workload: "ocr",
+        providerMode: "webgpu-preferred",
+        outputChars: 100,
+        textLines: 2,
+        warnings: [],
+        pagesPerSecond: 15,
+        startup: { durationMs: 18 },
+        modelLoad: { durationMs: 0 },
+        peakMemory: { rssPeakBytes: 120 },
+        acceleration: {
+          selectedProvider: "cpu",
+          fallbackReason: "node-stable-gpu-path-unavailable"
+        },
+        gpuMemory: { estimatedBytes: 0 }
+      }
+    ]),
+    [
+      {
+        id: "sample",
+        workload: "ocr",
+        cpuSelectedProvider: "cpu",
+        webgpuSelectedProvider: "cpu",
+        webgpuFallbackReason: "node-stable-gpu-path-unavailable",
+        equivalentAcceptedOutput: true,
+        pagesPerSecondRatio: 1.5,
+        startupDeltaMs: -2,
+        modelLoadDeltaMs: 0,
+        rssPeakDeltaBytes: 20,
+        gpuEstimatedBytes: 0
+      }
+    ]
   );
 });
 

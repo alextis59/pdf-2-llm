@@ -625,18 +625,18 @@ Goal: accelerate OCR/layout workloads where available without changing results.
 
 ### 7.3 Benchmarks
 
-- [ ] Benchmark OCR CPU versus WebGPU.
-- [ ] Benchmark layout model CPU versus WebGPU.
-- [ ] Track startup/model-load time separately from page throughput.
-- [ ] Track peak CPU and GPU memory.
-- [ ] Publish benchmark reports under `corpus/reports/`.
+- [x] Benchmark OCR CPU versus WebGPU.
+- [x] Benchmark layout model CPU versus WebGPU.
+- [x] Track startup/model-load time separately from page throughput.
+- [x] Track peak CPU and GPU memory.
+- [x] Publish benchmark reports under `corpus/reports/`.
 
 Gate 6 acceptance:
 
 - [ ] CPU and WebGPU paths produce equivalent accepted outputs.
 - [ ] WebGPU is measurably faster on selected workloads.
-- [ ] Unsupported WebGPU environments pass the same corpus through CPU fallback.
-- [ ] Device errors produce structured diagnostics.
+- [x] Unsupported WebGPU environments pass the same corpus through CPU fallback.
+- [x] Device errors produce structured diagnostics.
 
 ## Phase 8: Gate 7 - Advanced Document Intelligence
 

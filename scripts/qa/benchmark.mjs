@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { performance } from "node:perf_hooks";
@@ -35,6 +35,87 @@ export function summarizeMemory(before, after) {
     externalDeltaBytes: after.external - before.external,
     arrayBuffersDeltaBytes: after.arrayBuffers - before.arrayBuffers
   };
+}
+
+export function summarizePeakMemory(baseline, samples) {
+  const peak = samples.reduce(
+    (current, sample) => ({
+      rss: Math.max(current.rss, sample.rss),
+      heapUsed: Math.max(current.heapUsed, sample.heapUsed),
+      external: Math.max(current.external, sample.external),
+      arrayBuffers: Math.max(current.arrayBuffers, sample.arrayBuffers)
+    }),
+    { ...baseline }
+  );
+  return {
+    rssPeakBytes: peak.rss,
+    heapUsedPeakBytes: peak.heapUsed,
+    externalPeakBytes: peak.external,
+    arrayBuffersPeakBytes: peak.arrayBuffers,
+    rssPeakDeltaBytes: peak.rss - baseline.rss,
+    heapUsedPeakDeltaBytes: peak.heapUsed - baseline.heapUsed
+  };
+}
+
+export function splitStartupAndThroughputDurations(durationsMs) {
+  const startupMs = durationsMs[0] ?? 0;
+  const throughputDurations = durationsMs.length > 1 ? durationsMs.slice(1) : durationsMs;
+  return {
+    startupMs,
+    throughputDurations
+  };
+}
+
+export function summarizeGpuMemoryFromExecution(execution = null) {
+  const batches = execution?.batches ?? [];
+  return {
+    provider: execution?.provider ?? "cpu",
+    source: "webgpu-execution-plan",
+    estimatedBytes: execution?.totalEstimatedBytes ?? 0,
+    maxBatchEstimatedBytes: batches.reduce(
+      (max, batch) => Math.max(max, batch.estimatedBytes ?? 0),
+      0
+    ),
+    limitBytes: execution?.limits?.maxMemoryBytes ?? null,
+    plannedPages: execution?.plannedPages ?? 0,
+    skippedPages: execution?.skippedPages ?? 0
+  };
+}
+
+export function compareProviderResults(results) {
+  const byId = new Map();
+  for (const result of results) {
+    const group = byId.get(result.id) ?? [];
+    group.push(result);
+    byId.set(result.id, group);
+  }
+
+  const comparisons = [];
+  for (const [id, group] of byId) {
+    const cpu = group.find((result) => result.providerMode === "cpu");
+    const webgpu = group.find((result) => result.providerMode === "webgpu-preferred");
+    if (!cpu || !webgpu) {
+      continue;
+    }
+    comparisons.push({
+      id,
+      workload: webgpu.workload,
+      cpuSelectedProvider: cpu.acceleration.selectedProvider,
+      webgpuSelectedProvider: webgpu.acceleration.selectedProvider,
+      webgpuFallbackReason: webgpu.acceleration.fallbackReason,
+      equivalentAcceptedOutput:
+        cpu.outputChars === webgpu.outputChars &&
+        cpu.textLines === webgpu.textLines &&
+        JSON.stringify(cpu.warnings) === JSON.stringify(webgpu.warnings),
+      pagesPerSecondRatio:
+        cpu.pagesPerSecond > 0 ? webgpu.pagesPerSecond / cpu.pagesPerSecond : null,
+      startupDeltaMs: webgpu.startup.durationMs - cpu.startup.durationMs,
+      modelLoadDeltaMs: webgpu.modelLoad.durationMs - cpu.modelLoad.durationMs,
+      rssPeakDeltaBytes: webgpu.peakMemory.rssPeakBytes - cpu.peakMemory.rssPeakBytes,
+      gpuEstimatedBytes: webgpu.gpuMemory.estimatedBytes
+    });
+  }
+  return comparisons;
 }
 
 export function evaluateMemoryLimits(memory, acceptance) {
@@ -90,6 +171,7 @@ function usage() {
 Options:
   --manifest <path>          Manifest path. Defaults to corpus/manifest.json.
   --root <path>              Repository root. Defaults to cwd.
+  --webgpu-comparison        Run each selected case in CPU and WebGPU-preferred modes.
   --dry-run                  Print selected cases without converting them.
 `;
 }
@@ -246,33 +328,44 @@ function formatAcceptanceSkip(corpusCase, code) {
   return `${code}: ${detail}`;
 }
 
-async function runBenchmarkCase(repoRoot, corpusCase, { iterations, warmup }) {
+async function runBenchmarkCase(repoRoot, corpusCase, { iterations, providerMode, warmup }) {
   const { entry, acceptance } = corpusCase;
   const pdfPath = path.join(repoRoot, entry.path);
+  const options = await createConversionOptions(repoRoot, entry, providerMode);
 
   for (let index = 0; index < warmup; index += 1) {
-    await convertPdfToMarkdown(pdfPath, { ocr: { enabled: false } });
+    await convertPdfToMarkdown(pdfPath, options);
   }
 
-  const memoryBefore = collectMemorySnapshot();
+  const memoryBefore = collectMemorySnapshot({ forceGc: true });
+  const memorySamples = [memoryBefore];
   const durationsMs = [];
   let lastResult = null;
   for (let index = 0; index < iterations; index += 1) {
     const startedAt = performance.now();
-    lastResult = await convertPdfToMarkdown(pdfPath, { ocr: { enabled: false } });
+    lastResult = await convertPdfToMarkdown(pdfPath, options);
     durationsMs.push(performance.now() - startedAt);
+    memorySamples.push(collectMemorySnapshot({ forceGc: false }));
   }
-  const memoryAfter = collectMemorySnapshot();
+  const memoryAfter = collectMemorySnapshot({ forceGc: true });
+  memorySamples.push(memoryAfter);
   const memory = summarizeMemory(memoryBefore, memoryAfter);
+  const peakMemory = summarizePeakMemory(memoryBefore, memorySamples);
   const memoryLimitViolations = evaluateMemoryLimits(memory, acceptance);
 
   const pages = Math.max(1, lastResult?.diagnostics.pages.length ?? 0);
   const duration = summarizeDurations(durationsMs);
-  const totalPages = pages * iterations;
-  const totalSeconds = durationsMs.reduce((sum, value) => sum + value, 0) / 1000;
+  const { startupMs, throughputDurations } = splitStartupAndThroughputDurations(durationsMs);
+  const throughput = summarizeDurations(throughputDurations);
+  const throughputPages = pages * throughputDurations.length;
+  const throughputSeconds = throughputDurations.reduce((sum, value) => sum + value, 0) / 1000;
+  const webgpuDiagnostics = lastResult?.diagnostics.acceleration.webgpu ?? null;
+  const ocrModelLoading = lastResult?.diagnostics.extraction.ocr.modelLoading ?? null;
   return {
     id: entry.id,
     gate: acceptance.gate,
+    workload: benchmarkWorkload(acceptance),
+    providerMode,
     bytes: entry.bytes,
     pdfVersion: entry.pdfVersion,
     iterations,
@@ -282,8 +375,20 @@ async function runBenchmarkCase(repoRoot, corpusCase, { iterations, warmup }) {
     textLines: lastResult?.diagnostics.extraction.textLines ?? 0,
     warnings: lastResult?.warnings.map((warning) => warning.code) ?? [],
     ...duration,
-    pagesPerSecond: totalSeconds > 0 ? totalPages / totalSeconds : 0,
+    startup: {
+      durationMs: startupMs
+    },
+    modelLoad: summarizeModelLoad(ocrModelLoading, options),
+    throughput: {
+      iterations: throughputDurations.length,
+      ...throughput,
+      pagesPerSecond: throughputSeconds > 0 ? throughputPages / throughputSeconds : 0
+    },
+    pagesPerSecond: throughputSeconds > 0 ? throughputPages / throughputSeconds : 0,
+    acceleration: summarizeAcceleration(webgpuDiagnostics),
     memory,
+    peakMemory,
+    gpuMemory: summarizeGpuMemoryFromExecution(webgpuDiagnostics?.execution),
     memoryLimits: {
       maxRssDeltaBytes: acceptance.maxRssDeltaBytes,
       maxHeapUsedDeltaBytes: acceptance.maxHeapUsedDeltaBytes
@@ -293,8 +398,67 @@ async function runBenchmarkCase(repoRoot, corpusCase, { iterations, warmup }) {
   };
 }
 
-function collectMemorySnapshot() {
-  if (typeof globalThis.gc === "function") {
+async function createConversionOptions(repoRoot, entry, providerMode) {
+  const options = {
+    ocr: entry.ocrResultsFile ? { results: await readOcrResults(repoRoot, entry) } : { enabled: false }
+  };
+  if (providerMode === "webgpu-preferred") {
+    options.webgpu = { preferred: true };
+  }
+  return options;
+}
+
+async function readOcrResults(repoRoot, entry) {
+  const ocrPath = path.join(repoRoot, entry.ocrResultsFile);
+  try {
+    const payload = JSON.parse(await readFile(ocrPath, "utf8"));
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (Array.isArray(payload.results)) {
+      return payload.results;
+    }
+    throw new Error("expected a JSON array or an object with a results array");
+  } catch (error) {
+    throw new Error(`${entry.id}: OCR results are not readable at ${ocrPath}: ${error.message}`);
+  }
+}
+
+function benchmarkWorkload(acceptance) {
+  if (acceptance.gate === "ocr-v1") {
+    return "ocr";
+  }
+  if (acceptance.gate === "layout-v1") {
+    return "layout";
+  }
+  return "conversion";
+}
+
+function summarizeModelLoad(modelLoading, options) {
+  return {
+    durationMs: 0,
+    measured: false,
+    reason: options.ocr?.results ? "injected-ocr-results" : "ocr-disabled-or-lazy",
+    strategy: modelLoading?.strategy ?? null,
+    source: modelLoading?.source ?? null,
+    languages: modelLoading?.languages ?? [],
+    modelFiles: modelLoading?.modelFiles ?? []
+  };
+}
+
+function summarizeAcceleration(webgpuDiagnostics) {
+  return {
+    requested: webgpuDiagnostics?.requested ?? "disabled",
+    selectedProvider: webgpuDiagnostics?.selectedProvider ?? "cpu",
+    fallbackReason: webgpuDiagnostics?.fallbackReason ?? null,
+    runtime: webgpuDiagnostics?.runtime ?? "unknown",
+    executionProvider: webgpuDiagnostics?.execution?.provider ?? "cpu",
+    executionStatus: webgpuDiagnostics?.execution?.status ?? "no-routed-pages"
+  };
+}
+
+function collectMemorySnapshot({ forceGc = true } = {}) {
+  if (forceGc && typeof globalThis.gc === "function") {
     globalThis.gc();
   }
   return process.memoryUsage();
@@ -314,11 +478,15 @@ function printResult(result) {
     ? ` maxHeapDeltaKiB=${formatNumber(result.memoryLimits.maxHeapUsedDeltaBytes / 1024)}`
     : "";
   console.log(
-    `${prefix} ${result.id} meanMs=${formatNumber(result.meanMs)} medianMs=${formatNumber(
+    `${prefix} ${result.id} mode=${result.providerMode} workload=${result.workload} meanMs=${formatNumber(result.meanMs)} medianMs=${formatNumber(
       result.medianMs
-    )} pagesPerSecond=${formatNumber(result.pagesPerSecond)} textLines=${result.textLines} rssDeltaKiB=${formatNumber(
+    )} startupMs=${formatNumber(result.startup.durationMs)} pagesPerSecond=${formatNumber(result.pagesPerSecond)} textLines=${result.textLines} provider=${result.acceleration.selectedProvider} gpuKiB=${formatNumber(
+      result.gpuMemory.estimatedBytes / 1024
+    )} rssDeltaKiB=${formatNumber(
       result.memory.rssDeltaBytes / 1024
-    )}${rssLimit} heapDeltaKiB=${formatNumber(
+    )}${rssLimit} peakRssKiB=${formatNumber(
+      result.peakMemory.rssPeakBytes / 1024
+    )} heapDeltaKiB=${formatNumber(
       result.memory.heapUsedDeltaBytes / 1024
     )}${heapLimit}`
   );
@@ -349,6 +517,7 @@ async function main() {
   );
   const iterations = readIntegerOption("--iterations", 3);
   const warmup = readIntegerOption("--warmup", 1);
+  const providerModes = hasFlag("--webgpu-comparison") ? ["cpu", "webgpu-preferred"] : ["cpu"];
   if (iterations === 0 && !hasFlag("--dry-run")) {
     throw new Error("--iterations must be greater than 0 unless --dry-run is used");
   }
@@ -373,20 +542,30 @@ async function main() {
 
   const results = [];
   for (const corpusCase of selected) {
-    const result = await runBenchmarkCase(repoRoot, corpusCase, { iterations, warmup });
-    results.push(result);
-    printResult(result);
+    for (const providerMode of providerModes) {
+      const result = await runBenchmarkCase(repoRoot, corpusCase, {
+        iterations,
+        providerMode,
+        warmup
+      });
+      results.push(result);
+      printResult(result);
+    }
   }
 
   const report = {
     generatedAt: new Date().toISOString(),
     iterations,
     warmup,
+    providerModes,
+    comparisons: compareProviderResults(results),
     results
   };
   const reportPath = readOption("--report");
   if (reportPath) {
-    await writeFile(path.resolve(reportPath), `${JSON.stringify(report, null, 2)}\n`);
+    const resolvedReportPath = path.resolve(reportPath);
+    await mkdir(path.dirname(resolvedReportPath), { recursive: true });
+    await writeFile(resolvedReportPath, `${JSON.stringify(report, null, 2)}\n`);
   }
 
   const failed = results.filter((result) => !result.passed);
