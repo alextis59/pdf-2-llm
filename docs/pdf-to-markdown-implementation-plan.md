@@ -784,7 +784,7 @@ Core metrics:
 
 - [x] Character error rate for extracted text.
 - [x] Word error rate for OCR text.
-- [ ] Unicode mapping accuracy for born-digital text.
+- [x] Unicode mapping accuracy for born-digital text.
 - [ ] Paragraph grouping F1.
 - [ ] Hyphenation repair accuracy.
 - [x] Reading-order edit distance.
