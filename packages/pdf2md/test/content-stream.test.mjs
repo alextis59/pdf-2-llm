@@ -310,6 +310,26 @@ test("extractContentStreamTextLines applies ToUnicode font maps to string bytes"
   assert.equal(lines[0].confidence, 0.95);
 });
 
+test("extractContentStreamTextLines records invisible text rendering mode", () => {
+  const lines = extractContentStreamTextLines(
+    [
+      "BT /F1 12 Tf 3 Tr 10 20 Td (Hidden) Tj ET",
+      "BT /F1 12 Tf 0 Tr 10 40 Td (Visible) Tj ET"
+    ].join("\n"),
+    { resources }
+  );
+
+  assert.equal(lines[0].textRenderMode, 3);
+  assert.deepEqual(lines[0].textRenderModes, [3]);
+  assert.equal(lines[0].hidden, true);
+  assert.equal(lines[0].hasHiddenText, true);
+  assert.equal(lines[0].spans[0].hidden, true);
+  assert.equal(lines[0].spans[0].textRenderMode, 3);
+  assert.equal(lines[1].textRenderMode, 0);
+  assert.equal(lines[1].hidden, false);
+  assert.equal(lines[1].hasHiddenText, false);
+});
+
 test("extractContentStreamTextLines attaches tagged structure from marked content", () => {
   const lines = extractContentStreamTextLines(
     [

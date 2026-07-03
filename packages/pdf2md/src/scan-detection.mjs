@@ -1,6 +1,7 @@
 const defaultImageCoverageThreshold = 0.5;
 const defaultMinTextLines = 3;
 const defaultMinTextAreaRatio = 0.01;
+const defaultMinHiddenTextLines = 1;
 
 export function createScanDetection(pages = [], options = {}) {
   const textLinesByPage = groupByPage(options.textLines ?? []);
@@ -17,11 +18,16 @@ export function createScanDetection(pages = [], options = {}) {
     Number.isFinite(options.minTextAreaRatio) && options.minTextAreaRatio >= 0
       ? options.minTextAreaRatio
       : defaultMinTextAreaRatio;
+  const minHiddenTextLines =
+    Number.isInteger(options.minHiddenTextLines) && options.minHiddenTextLines >= 0
+      ? options.minHiddenTextLines
+      : defaultMinHiddenTextLines;
 
   const pageDiagnostics = pages.map((page) =>
     createPageScanDiagnostics(page, {
       imageCoverageThreshold,
       imageDraws: imageDrawsByPage.get(page.pageIndex) ?? [],
+      minHiddenTextLines,
       minTextAreaRatio,
       minTextLines,
       textLines: textLinesByPage.get(page.pageIndex) ?? []
@@ -32,10 +38,12 @@ export function createScanDetection(pages = [], options = {}) {
     thresholds: {
       imageCoverageRatio: imageCoverageThreshold,
       minTextLines,
-      minTextAreaRatio
+      minTextAreaRatio,
+      minHiddenTextLines
     },
     imageDominantPages: pageDiagnostics.filter((page) => page.imageDominant).length,
     littleOrNoTextPages: pageDiagnostics.filter((page) => page.littleOrNoText).length,
+    hiddenOcrOverlayPages: pageDiagnostics.filter((page) => page.hiddenOcrOverlayLikely).length,
     pages: pageDiagnostics
   };
 }
@@ -45,8 +53,16 @@ function createPageScanDiagnostics(page, options) {
   const textLines = options.textLines.filter(
     (line) => Number.isFinite(line.width) && Number.isFinite(line.height)
   );
+  const hiddenTextLines = options.textLines.filter(isHiddenTextLine);
+  const measurableHiddenTextLines = hiddenTextLines.filter(
+    (line) => Number.isFinite(line.width) && Number.isFinite(line.height)
+  );
   const textLineCount = options.textLines.length;
   const textArea = textLines.reduce(
+    (total, line) => total + Math.max(0, line.width) * Math.max(0, line.height),
+    0
+  );
+  const hiddenTextArea = measurableHiddenTextLines.reduce(
     (total, line) => total + Math.max(0, line.width) * Math.max(0, line.height),
     0
   );
@@ -70,6 +86,10 @@ function createPageScanDiagnostics(page, options) {
     textLineCount < options.minTextLines &&
     (textAreaRatio === null || textAreaRatio < options.minTextAreaRatio);
   const littleOrNoText = noText || littleText;
+  const hiddenTextAreaRatio =
+    pageArea && pageArea > 0 ? normalizeRatio(Math.min(hiddenTextArea / pageArea, 1)) : null;
+  const hiddenOcrOverlayLikely =
+    imageDominant && hiddenTextLines.length >= options.minHiddenTextLines;
 
   return {
     pageIndex: page.pageIndex,
@@ -79,6 +99,10 @@ function createPageScanDiagnostics(page, options) {
     noText,
     littleText,
     littleOrNoText,
+    hiddenTextLineCount: hiddenTextLines.length,
+    hiddenTextArea: normalizeNullableNumber(hiddenTextArea),
+    hiddenTextAreaRatio,
+    hiddenOcrOverlayLikely,
     imageResourceCount: countImageResources(page),
     imageDrawCount: imageDraws.length,
     pageArea: normalizeNullableNumber(pageArea),
@@ -94,6 +118,13 @@ function createPageScanDiagnostics(page, options) {
     }),
     imageDraws: imageDraws.map(summarizeImageDraw)
   };
+}
+
+function isHiddenTextLine(line) {
+  if (line.hidden === true || line.textRenderMode === 3) {
+    return true;
+  }
+  return (line.spans ?? []).some((span) => span.hidden === true || span.textRenderMode === 3);
 }
 
 function groupByPage(items) {

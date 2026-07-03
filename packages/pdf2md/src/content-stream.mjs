@@ -603,6 +603,13 @@ function executeOperator(operator, context) {
     }
     return;
   }
+  if (operator === "Tr") {
+    const textRenderMode = tokenNumber(operands.at(-1));
+    if (Number.isInteger(textRenderMode) && textRenderMode >= 0 && textRenderMode <= 7) {
+      state.textRenderMode = textRenderMode;
+    }
+    return;
+  }
   if (operator === "Tc") {
     state.charSpacing = tokenNumber(operands.at(-1)) ?? state.charSpacing;
     return;
@@ -692,16 +699,19 @@ function emitText(text, context) {
   const mergeKey = `${context.options.pageIndex ?? ""}:${context.options.streamIndex ?? ""}:${context.textObjectId}:${context.lineSerial}`;
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
+    const span = createSpan(text, context.state, position, metrics, confidence, structure);
     lastLine.text += text;
     lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
     lastLine.height = Math.max(lastLine.height, metrics.height);
-    lastLine.spans.push(createSpan(text, context.state, position, metrics, confidence, structure));
+    lastLine.spans.push(span);
     lastLine.glyphs.push(...metrics.glyphs);
+    mergeLineVisibility(lastLine, span);
     mergeLineStructure(lastLine, structure);
     advanceTextPosition(context.state, text);
     return;
   }
 
+  const span = createSpan(text, context.state, position, metrics, confidence, structure);
   context.lines.push({
     text,
     fontSize: context.state.fontSize,
@@ -711,12 +721,16 @@ function emitText(text, context) {
     y: position.y,
     width: metrics.width,
     height: metrics.height,
-    spans: [createSpan(text, context.state, position, metrics, confidence, structure)],
+    spans: [span],
     glyphs: metrics.glyphs,
     pageIndex: context.options.pageIndex ?? null,
     streamIndex: context.options.streamIndex ?? null,
     source: "content-stream",
     confidence,
+    textRenderMode: context.state.textRenderMode,
+    textRenderModes: [context.state.textRenderMode],
+    hidden: context.state.textRenderMode === 3,
+    hasHiddenText: context.state.textRenderMode === 3,
     markedContentId: structure?.mcid ?? null,
     markedContentTag: structure?.tag ?? null,
     structureRole: structure?.role ?? null,
@@ -775,6 +789,7 @@ function createInitialState(resources = null) {
     horizontalScaling: 100,
     leading: 0,
     textRise: 0,
+    textRenderMode: 0,
     markedContent: [],
     resources
   };
@@ -842,12 +857,23 @@ function createSpan(text, state, position, metrics, confidence, structure = null
     width: metrics.width,
     height: metrics.height,
     confidence,
+    textRenderMode: state.textRenderMode,
+    hidden: state.textRenderMode === 3,
     source: structure?.role ? "tagged-pdf" : "pdf-text",
     markedContentId: structure?.mcid ?? null,
     markedContentTag: structure?.tag ?? null,
     structureRole: structure?.role ?? null,
     structurePath: structure?.path ?? []
   };
+}
+
+function mergeLineVisibility(line, span) {
+  if (!line.textRenderModes.includes(span.textRenderMode)) {
+    line.textRenderModes.push(span.textRenderMode);
+  }
+  line.textRenderMode = line.textRenderModes.length === 1 ? line.textRenderModes[0] : null;
+  line.hidden = line.spans.every((item) => item.hidden === true);
+  line.hasHiddenText = line.spans.some((item) => item.hidden === true);
 }
 
 function measureTextWidth(state, text) {

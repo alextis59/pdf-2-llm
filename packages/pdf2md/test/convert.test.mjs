@@ -204,8 +204,10 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.imageCoverageRatio, 0.5);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextLines, 3);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextAreaRatio, 0.01);
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minHiddenTextLines, 1);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.imageDominantPages, 1);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.littleOrNoTextPages, 1);
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.hiddenOcrOverlayPages, 0);
   assert.deepEqual(fullPage.diagnostics.extraction.scanDetection.pages[0], {
     pageIndex: 0,
     textLineCount: 0,
@@ -214,6 +216,10 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
     noText: true,
     littleText: false,
     littleOrNoText: true,
+    hiddenTextLineCount: 0,
+    hiddenTextArea: 0,
+    hiddenTextAreaRatio: 0,
+    hiddenOcrOverlayLikely: false,
     imageResourceCount: 1,
     imageDrawCount: 1,
     pageArea: 484704,
@@ -262,6 +268,39 @@ test("convertPdfToMarkdown reports little and no-text scan detection diagnostics
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].noText, false);
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].littleText, false);
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].littleOrNoText, false);
+});
+
+test("convertPdfToMarkdown reports hidden OCR overlay scan diagnostics", async () => {
+  const hiddenOverlay = await convertPdfToMarkdown(
+    createSinglePageImagePdf({
+      x: 0,
+      y: 0,
+      widthPt: 612,
+      heightPt: 792,
+      textOperations: [invisibleTextOperation(72, 720, 12, "OCR")]
+    })
+  );
+  const visibleOverlay = await convertPdfToMarkdown(
+    createSinglePageImagePdf({
+      x: 0,
+      y: 0,
+      widthPt: 612,
+      heightPt: 792,
+      textOperations: [textOperation(72, 720, 12, "OCR")]
+    })
+  );
+  const hiddenPage = hiddenOverlay.diagnostics.extraction.scanDetection.pages[0];
+  const visiblePage = visibleOverlay.diagnostics.extraction.scanDetection.pages[0];
+
+  assert.equal(hiddenOverlay.diagnostics.extraction.scanDetection.hiddenOcrOverlayPages, 1);
+  assert.equal(hiddenPage.imageDominant, true);
+  assert.equal(hiddenPage.hiddenTextLineCount, 1);
+  assert.equal(hiddenPage.hiddenTextArea, 216);
+  assert.equal(hiddenPage.hiddenTextAreaRatio, 0.000446);
+  assert.equal(hiddenPage.hiddenOcrOverlayLikely, true);
+  assert.equal(visibleOverlay.diagnostics.extraction.scanDetection.hiddenOcrOverlayPages, 0);
+  assert.equal(visiblePage.hiddenTextLineCount, 0);
+  assert.equal(visiblePage.hiddenOcrOverlayLikely, false);
 });
 
 test("CLI emits JSON scaffold output", () => {
@@ -500,6 +539,10 @@ function textOperation(x, y, size, value) {
   return `BT /F1 ${size} Tf ${x} ${y} Td (${pdfString(value)}) Tj ET`;
 }
 
+function invisibleTextOperation(x, y, size, value) {
+  return `BT /F1 ${size} Tf 3 Tr ${x} ${y} Td (${pdfString(value)}) Tj ET`;
+}
+
 function streamObject(content, dictionary = "") {
   const bytes = Buffer.from(content, "binary");
   const prefix = dictionary ? `${dictionary} ` : "";
@@ -517,13 +560,17 @@ function createSinglePageTextPdf(operations) {
   return createPdf(objects);
 }
 
-function createSinglePageImagePdf({ x, y, widthPt, heightPt }) {
+function createSinglePageImagePdf({ x, y, widthPt, heightPt, textOperations = [] }) {
+  const operations = [
+    `q ${widthPt} 0 0 ${heightPt} ${x} ${y} cm /ImScan Do Q`,
+    ...textOperations
+  ];
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> /XObject << /ImScan 6 0 R >> >> /Contents 5 0 R >>",
-    streamObject(`q ${widthPt} 0 0 ${heightPt} ${x} ${y} cm /ImScan Do Q\n`),
+    streamObject(`${operations.join("\n")}\n`),
     streamObject(
       "abc",
       "/Type /XObject /Subtype /Image /Width 2550 /Height 3300 /ColorSpace /DeviceRGB /BitsPerComponent 8"
