@@ -5,9 +5,8 @@
 Date: 2026-07-03
 
 This is a release-readiness snapshot for `@pdf-2-llm/pdf2md`, not an npm
-publish event. The package manifest still has `"private": true` and
-`"license": "UNLICENSED"`, so publishing requires an explicit metadata and
-licensing decision first.
+publish event. The package manifests still have `"private": true` to prevent
+accidental publication, and the source is licensed under `0BSD`.
 
 ### Scope
 
@@ -74,8 +73,8 @@ fixtures:
 
 #### Packaging And Publishing
 
-- The package is private and unlicensed for npm publishing until the manifest is
-  intentionally changed.
+- The package is private for npm publishing until the manifest is intentionally
+  changed. The repository source is licensed under `0BSD`.
 - The package includes a small single-threaded `./wasm` preflight bridge, and
   an opt-in threaded WASM source can be selected only after runtime thread
   feature detection passes. The full parser and extraction pipeline still run

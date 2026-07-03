@@ -14,8 +14,10 @@ are recorded.
 ## Current Status
 
 This repository is at a `0.0.0` alpha-readiness snapshot. It is not currently
-published to npm: both package manifests are marked `private: true` and
-`UNLICENSED`.
+published to npm: both package manifests are still marked `private: true` to
+prevent accidental publication. The project source is licensed under the
+[Zero-Clause BSD license](LICENSE), so it can be used, copied, modified,
+distributed, and sold for any purpose, including commercial use.
 
 Current capabilities include:
 
@@ -332,6 +334,12 @@ pdf-2-llm/
 - [Warnings And Confidence Scores](docs/warnings-confidence.md)
 - [Release Notes](docs/release-notes.md)
 - [Corpus README](corpus/README.md)
+
+## License
+
+This project is licensed under the [Zero-Clause BSD license](LICENSE). It is a
+permissive license with no attribution requirement and permits commercial use,
+modification, distribution, and sale.
 
 ## Integration Guidance
 

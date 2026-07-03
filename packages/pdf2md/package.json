@@ -2,7 +2,7 @@
   "name": "@pdf-2-llm/pdf2md",
   "version": "0.0.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "0BSD",
   "type": "module",
   "main": "./src/node.mjs",
   "types": "./src/index.d.ts",

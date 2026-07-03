@@ -2,7 +2,7 @@
   "name": "pdf-2-llm",
   "version": "0.0.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "0BSD",
   "type": "module",
   "workspaces": [
     "packages/*"

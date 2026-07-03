@@ -12,6 +12,7 @@ const dependencyFields = [
 
 const rootPackagePath = path.join(repoRoot, "package.json");
 const lockfilePath = path.join(repoRoot, "package-lock.json");
+const projectLicense = "0BSD";
 const failures = [];
 
 const rootPackage = await readPackageJson(rootPackagePath);
@@ -100,8 +101,8 @@ function validatePackageLicense({ packagePath, packageJson }, failures) {
     failures.push(`${relativePath} is missing a license field.`);
     return;
   }
-  if (packageJson.private === true && packageJson.license !== "UNLICENSED") {
-    failures.push(`${relativePath} is private and should use license "UNLICENSED".`);
+  if (packageJson.license !== projectLicense) {
+    failures.push(`${relativePath} should use project license "${projectLicense}".`);
   }
 }
 
