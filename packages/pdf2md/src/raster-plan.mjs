@@ -6,7 +6,7 @@ const internalRasterRenderer = Object.freeze({
   output: "raster-plan",
   status: "selected",
   notes:
-    "Uses parsed page geometry as the stable rasterization seam; pixel rendering is implemented incrementally behind this adapter."
+    "Uses parsed page geometry as the stable rasterization seam; pixel rendering is implemented incrementally behind this adapter without retaining page pixel buffers."
 });
 
 export const defaultRasterDpi = 300;
@@ -45,9 +45,19 @@ export function createRasterPlan(pages = [], options = {}) {
     thumbnailDpi,
     maxPixels,
     renderer,
+    retention: createRasterRetentionPolicy(),
     limitedPages: plannedPages.filter((page) => page.exceedsPixelLimit).length,
     limitedThumbnails: plannedPages.filter((page) => page.thumbnail.exceedsPixelLimit).length,
     pages: plannedPages
+  };
+}
+
+function createRasterRetentionPolicy() {
+  return {
+    strategy: "metadata-only",
+    pagePixelsRetained: false,
+    thumbnailPixelsRetained: false,
+    retainedBytes: 0
   };
 }
 

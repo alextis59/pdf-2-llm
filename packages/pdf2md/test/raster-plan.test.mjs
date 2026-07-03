@@ -36,6 +36,12 @@ test("createRasterPlan records parser-backed page plans when enabled", () => {
   assert.equal(plan.limitedPages, 0);
   assert.equal(plan.limitedThumbnails, 0);
   assert.equal(plan.renderer.status, "selected");
+  assert.deepEqual(plan.retention, {
+    strategy: "metadata-only",
+    pagePixelsRetained: false,
+    thumbnailPixelsRetained: false,
+    retainedBytes: 0
+  });
   assert.deepEqual(plan.pages, [
     {
       pageIndex: 0,
@@ -193,5 +199,11 @@ test("createRasterPlan keeps pages empty while raster planning is disabled", () 
   assert.equal(plan.limitedPages, 0);
   assert.equal(plan.limitedThumbnails, 0);
   assert.equal(plan.renderer.status, "selected");
+  assert.deepEqual(plan.retention, {
+    strategy: "metadata-only",
+    pagePixelsRetained: false,
+    thumbnailPixelsRetained: false,
+    retainedBytes: 0
+  });
   assert.deepEqual(plan.pages, []);
 });

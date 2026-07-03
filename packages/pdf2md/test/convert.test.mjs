@@ -390,6 +390,12 @@ test("convertPdfToMarkdown exposes the selected scoped raster path when enabled"
   assert.equal(result.diagnostics.extraction.raster.renderer.id, "internal-page-geometry");
   assert.equal(result.diagnostics.extraction.raster.renderer.dependency, null);
   assert.equal(result.diagnostics.extraction.raster.renderer.status, "selected");
+  assert.deepEqual(result.diagnostics.extraction.raster.retention, {
+    strategy: "metadata-only",
+    pagePixelsRetained: false,
+    thumbnailPixelsRetained: false,
+    retainedBytes: 0
+  });
   assert.deepEqual(result.diagnostics.extraction.raster.pages, [
     {
       pageIndex: 0,
