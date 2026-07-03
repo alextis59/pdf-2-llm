@@ -138,6 +138,73 @@ export function evaluateMemoryLimits(memory, acceptance) {
     .filter((limit) => limit.actual > limit.limit + Number.EPSILON);
 }
 
+export function createMemoryProfileSummary(results, { scope = "memory-limit-gated" } = {}) {
+  const cases = results.filter((result) => hasMemoryLimits(result.memoryLimits)).map(profileResult);
+  return {
+    profileType: "long-memory",
+    scope,
+    resultCount: cases.length,
+    passed: cases.every((profile) => profile.passed),
+    totals: {
+      pages: cases.reduce((sum, profile) => sum + profile.pages, 0),
+      bytes: cases.reduce((sum, profile) => sum + profile.bytes, 0)
+    },
+    peaks: {
+      rssDeltaBytes: maxProfileMetric(cases, "rssDeltaBytes"),
+      heapUsedDeltaBytes: maxProfileMetric(cases, "heapUsedDeltaBytes"),
+      rssPeakBytes: maxProfileMetric(cases, "rssPeakBytes"),
+      heapUsedPeakBytes: maxProfileMetric(cases, "heapUsedPeakBytes"),
+      rssPeakDeltaBytes: maxProfileMetric(cases, "rssPeakDeltaBytes"),
+      heapUsedPeakDeltaBytes: maxProfileMetric(cases, "heapUsedPeakDeltaBytes")
+    },
+    cases
+  };
+}
+
+function profileResult(result) {
+  const pages = Math.max(0, result.pages ?? 0);
+  const perPageDivisor = Math.max(1, pages);
+  const memory = result.memory ?? {};
+  const peakMemory = result.peakMemory ?? {};
+  return {
+    id: result.id,
+    gate: result.gate,
+    kind: result.kind,
+    features: result.features ?? [],
+    workload: result.workload,
+    providerMode: result.providerMode,
+    pages,
+    bytes: result.bytes ?? 0,
+    iterations: result.iterations ?? 0,
+    warmup: result.warmup ?? 0,
+    rssDeltaBytes: memory.rssDeltaBytes ?? 0,
+    heapUsedDeltaBytes: memory.heapUsedDeltaBytes ?? 0,
+    externalDeltaBytes: memory.externalDeltaBytes ?? 0,
+    arrayBuffersDeltaBytes: memory.arrayBuffersDeltaBytes ?? 0,
+    rssPeakBytes: peakMemory.rssPeakBytes ?? 0,
+    heapUsedPeakBytes: peakMemory.heapUsedPeakBytes ?? 0,
+    rssPeakDeltaBytes: peakMemory.rssPeakDeltaBytes ?? 0,
+    heapUsedPeakDeltaBytes: peakMemory.heapUsedPeakDeltaBytes ?? 0,
+    rssDeltaBytesPerPage: (memory.rssDeltaBytes ?? 0) / perPageDivisor,
+    heapUsedDeltaBytesPerPage: (memory.heapUsedDeltaBytes ?? 0) / perPageDivisor,
+    rssPeakDeltaBytesPerPage: (peakMemory.rssPeakDeltaBytes ?? 0) / perPageDivisor,
+    heapUsedPeakDeltaBytesPerPage: (peakMemory.heapUsedPeakDeltaBytes ?? 0) / perPageDivisor,
+    limits: {
+      maxRssDeltaBytes: result.memoryLimits?.maxRssDeltaBytes ?? null,
+      maxHeapUsedDeltaBytes: result.memoryLimits?.maxHeapUsedDeltaBytes ?? null
+    },
+    violations: result.memoryLimitViolations ?? [],
+    passed: result.passed === true
+  };
+}
+
+function maxProfileMetric(cases, metricName) {
+  if (cases.length === 0) {
+    return null;
+  }
+  return Math.max(...cases.map((profile) => profile[metricName] ?? 0));
+}
+
 function hasFlag(name) {
   return args.includes(name);
 }
@@ -310,8 +377,8 @@ function selectCases(cases, { selectedIds, selectedGate, memoryLimitGated = fals
 
 function hasMemoryLimits(acceptance) {
   return (
-    Number.isFinite(acceptance.maxRssDeltaBytes) ||
-    Number.isFinite(acceptance.maxHeapUsedDeltaBytes)
+    Number.isFinite(acceptance?.maxRssDeltaBytes) ||
+    Number.isFinite(acceptance?.maxHeapUsedDeltaBytes)
   );
 }
 
@@ -364,6 +431,8 @@ async function runBenchmarkCase(repoRoot, corpusCase, { iterations, providerMode
   return {
     id: entry.id,
     gate: acceptance.gate,
+    kind: entry.kind,
+    features: entry.features ?? [],
     workload: benchmarkWorkload(acceptance),
     providerMode,
     bytes: entry.bytes,
@@ -559,6 +628,9 @@ async function main() {
     warmup,
     providerModes,
     comparisons: compareProviderResults(results),
+    memoryProfile: createMemoryProfileSummary(results, {
+      scope: memoryLimitGated ? "memory-limit-gated" : "selected-cases"
+    }),
     results
   };
   const reportPath = readOption("--report");

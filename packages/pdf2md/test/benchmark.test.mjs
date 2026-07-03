@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   compareProviderResults,
+  createMemoryProfileSummary,
   evaluateMemoryLimits,
   splitStartupAndThroughputDurations,
   summarizeDurations,
@@ -137,6 +138,108 @@ test("benchmark provider comparison reports parity and speed ratio", () => {
         gpuEstimatedBytes: 0
       }
     ]
+  );
+});
+
+test("benchmark memory profile summarizes memory-gated long documents", () => {
+  assert.deepEqual(
+    createMemoryProfileSummary(
+      [
+        {
+          id: "long-manual",
+          gate: "layout-v1",
+          kind: "long-document",
+          features: ["long-document", "government-report"],
+          workload: "conversion",
+          providerMode: "cpu",
+          bytes: 4000,
+          iterations: 1,
+          warmup: 0,
+          pages: 4,
+          memory: {
+            rssDeltaBytes: 800,
+            heapUsedDeltaBytes: 120,
+            externalDeltaBytes: 40,
+            arrayBuffersDeltaBytes: 8
+          },
+          peakMemory: {
+            rssPeakBytes: 2000,
+            heapUsedPeakBytes: 600,
+            rssPeakDeltaBytes: 1000,
+            heapUsedPeakDeltaBytes: 200
+          },
+          memoryLimits: {
+            maxRssDeltaBytes: 1000,
+            maxHeapUsedDeltaBytes: 400
+          },
+          memoryLimitViolations: [],
+          passed: true
+        },
+        {
+          id: "short-smoke",
+          pages: 1,
+          memory: { rssDeltaBytes: 50, heapUsedDeltaBytes: 10 },
+          peakMemory: { rssPeakBytes: 500, heapUsedPeakBytes: 100 },
+          memoryLimits: {
+            maxRssDeltaBytes: null,
+            maxHeapUsedDeltaBytes: null
+          },
+          memoryLimitViolations: [],
+          passed: true
+        }
+      ],
+      { scope: "memory-limit-gated" }
+    ),
+    {
+      profileType: "long-memory",
+      scope: "memory-limit-gated",
+      resultCount: 1,
+      passed: true,
+      totals: {
+        pages: 4,
+        bytes: 4000
+      },
+      peaks: {
+        rssDeltaBytes: 800,
+        heapUsedDeltaBytes: 120,
+        rssPeakBytes: 2000,
+        heapUsedPeakBytes: 600,
+        rssPeakDeltaBytes: 1000,
+        heapUsedPeakDeltaBytes: 200
+      },
+      cases: [
+        {
+          id: "long-manual",
+          gate: "layout-v1",
+          kind: "long-document",
+          features: ["long-document", "government-report"],
+          workload: "conversion",
+          providerMode: "cpu",
+          pages: 4,
+          bytes: 4000,
+          iterations: 1,
+          warmup: 0,
+          rssDeltaBytes: 800,
+          heapUsedDeltaBytes: 120,
+          externalDeltaBytes: 40,
+          arrayBuffersDeltaBytes: 8,
+          rssPeakBytes: 2000,
+          heapUsedPeakBytes: 600,
+          rssPeakDeltaBytes: 1000,
+          heapUsedPeakDeltaBytes: 200,
+          rssDeltaBytesPerPage: 200,
+          heapUsedDeltaBytesPerPage: 30,
+          rssPeakDeltaBytesPerPage: 250,
+          heapUsedPeakDeltaBytesPerPage: 50,
+          limits: {
+            maxRssDeltaBytes: 1000,
+            maxHeapUsedDeltaBytes: 400
+          },
+          violations: [],
+          passed: true
+        }
+      ]
+    }
   );
 });
 

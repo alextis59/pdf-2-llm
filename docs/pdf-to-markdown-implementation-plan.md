@@ -708,7 +708,7 @@ Goal: make the package safe and predictable enough for real use.
 
 - [x] Stream page processing where possible.
 - [x] Avoid retaining full page rasters unnecessarily.
-- [ ] Add memory profile for long manuals.
+- [x] Add memory profile for long manuals.
 - [ ] Add throughput benchmark for text-only PDFs.
 - [ ] Add throughput benchmark for OCR PDFs.
 - [ ] Add startup benchmark for browser and Node.
