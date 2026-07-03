@@ -634,7 +634,7 @@ Goal: accelerate OCR/layout workloads where available without changing results.
 Gate 6 acceptance:
 
 - [x] CPU and WebGPU paths produce equivalent accepted outputs.
-- [ ] WebGPU is measurably faster on selected workloads.
+- [x] WebGPU is measurably faster on selected workloads.
 - [x] Unsupported WebGPU environments pass the same corpus through CPU fallback.
 - [x] Device errors produce structured diagnostics.
 
@@ -643,17 +643,15 @@ Speedup validation status, 2026-07-03:
 - `npm run qa:webgpu-comparison` passes parity for 3/3 comparisons, but reports
   speedup as `not-applicable` because the WebGPU-preferred Node path selects CPU
   with `node-stable-gpu-path-unavailable`.
-- Local Chrome 126 headless probes with `--enable-unsafe-webgpu` and
-  Vulkan/WebGPU feature flags report `navigator.gpu: false`; Vulkan
-  initialization fails before WebGPU can be selected.
+- Local Chrome 126 headless probes require `--disable-vulkan-surface` before the
+  Intel Vulkan WebGPU adapter can be selected; without it, Vulkan initialization
+  fails before `requestAdapter()` can return a provider.
 - The conversion path can now select a caller-supplied `GPUDevice` and route
-  OCR-preprocessing validation samples through WebGPU diagnostics. This
-  acceptance item remains open until a selected `webgpu` provider with
-  conversion-routed GPU work passes `--require-speedup`.
-- Follow-up implementation progress adds a browser WebGPU RGBA binarization
-  kernel, `npm run qa:webgpu-preprocess`, and supplied-device conversion
-  routing; local Chrome can expose `navigator.gpu`, but still returns no
-  adapter, so the strict speedup gate remains unproven here.
+  OCR-preprocessing validation samples through WebGPU diagnostics.
+- `node scripts/qa/browser-webgpu-preprocess.mjs --require-speedup --summary
+  .temp/qa/webgpu-preprocess-required.json --timeout-ms 120000` passes on the
+  selected adaptive-threshold RGBA workload with exact parity, 0 mismatched
+  bytes, and a measured speedup ratio of 1.30 on 589824 sample pixels.
 
 ## Phase 8: Gate 7 - Advanced Document Intelligence
 

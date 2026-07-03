@@ -2,6 +2,10 @@ const defaultWorkgroupSize = 64;
 const defaultThreshold = 128;
 const defaultMaxSamplePixelsPerPage = 262_144;
 const defaultMinSpeedup = 1.05;
+const defaultAdaptiveRadius = 8;
+const defaultAdaptiveBias = 7;
+const adaptiveThresholdWorkload = "adaptive-threshold-rgba";
+const binarizeWorkload = "binarize-rgba";
 
 const defaultGpuBufferUsage = Object.freeze({
   MAP_READ: 1,
@@ -34,13 +38,66 @@ export function binarizeRgbaCpu(rgba, { threshold = defaultThreshold } = {}) {
   return output;
 }
 
+export function adaptiveThresholdRgbaCpu(
+  rgba,
+  {
+    bias = defaultAdaptiveBias,
+    height,
+    radius = defaultAdaptiveRadius,
+    width
+  } = {}
+) {
+  const input = normalizeRgbaInput(rgba);
+  const geometry = normalizeImageGeometry(input, { height, width });
+  const normalizedRadius = normalizePositiveInteger(radius, defaultAdaptiveRadius);
+  const normalizedBias = Math.round(normalizePositiveNumber(bias, defaultAdaptiveBias));
+  const luma = new Uint16Array(geometry.pixelCount);
+  for (let pixel = 0, offset = 0; pixel < geometry.pixelCount; pixel += 1, offset += 4) {
+    luma[pixel] = (77 * input[offset] + 150 * input[offset + 1] + 29 * input[offset + 2]) >>> 8;
+  }
+
+  const output = new Uint8Array(input.length);
+  for (let y = 0; y < geometry.height; y += 1) {
+    for (let x = 0; x < geometry.width; x += 1) {
+      const index = y * geometry.width + x;
+      let sum = 0;
+      let count = 0;
+      if (
+        x < normalizedRadius ||
+        y < normalizedRadius ||
+        x + normalizedRadius >= geometry.width ||
+        y + normalizedRadius >= geometry.height
+      ) {
+        sum = luma[index];
+        count = 1;
+      } else {
+        for (let sampleY = y - normalizedRadius; sampleY <= y + normalizedRadius; sampleY += 1) {
+          const rowOffset = sampleY * geometry.width;
+          for (let sampleX = x - normalizedRadius; sampleX <= x + normalizedRadius; sampleX += 1) {
+            sum += luma[rowOffset + sampleX];
+            count += 1;
+          }
+        }
+      }
+      const offset = index * 4;
+      const average = Math.floor(sum / count);
+      const value = luma[index] + normalizedBias >= average ? 255 : 0;
+      output[offset] = value;
+      output[offset + 1] = value;
+      output[offset + 2] = value;
+      output[offset + 3] = input[offset + 3];
+    }
+  }
+  return output;
+}
+
 export function createBinarizeRgbaShaderSource({ workgroupSize = defaultWorkgroupSize } = {}) {
   const normalizedWorkgroupSize = normalizePositiveInteger(workgroupSize, defaultWorkgroupSize);
   return `
 struct Params {
   pixelCount: u32,
   threshold: u32,
-  _padding0: u32,
+  workgroupsPerRow: u32,
   _padding1: u32,
 };
 
@@ -50,7 +107,7 @@ struct Params {
 
 @compute @workgroup_size(${normalizedWorkgroupSize})
 fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  let index = id.x;
+  let index = id.x + id.y * params.workgroupsPerRow * ${normalizedWorkgroupSize}u;
   if (index >= params.pixelCount) {
     return;
   }
@@ -62,6 +119,71 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   let alpha = pixel & 4278190080u;
   let luma = (77u * r + 150u * g + 29u * b) >> 8u;
   let value = select(0u, 255u, luma >= params.threshold);
+  outputPixels[index] = value | (value << 8u) | (value << 16u) | alpha;
+}
+`.trim();
+}
+
+export function createAdaptiveThresholdRgbaShaderSource({
+  workgroupSize = defaultWorkgroupSize
+} = {}) {
+  const normalizedWorkgroupSize = normalizePositiveInteger(workgroupSize, defaultWorkgroupSize);
+  return `
+@group(0) @binding(0) var<storage, read> inputPixels: array<u32>;
+@group(0) @binding(1) var<storage, read_write> outputPixels: array<u32>;
+@group(0) @binding(2) var<storage, read> params: array<u32>;
+
+fn luma(pixel: u32) -> u32 {
+  let r = pixel & 255u;
+  let g = (pixel >> 8u) & 255u;
+  let b = (pixel >> 16u) & 255u;
+  return (77u * r + 150u * g + 29u * b) >> 8u;
+}
+
+@compute @workgroup_size(${normalizedWorkgroupSize})
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+  let pixelCount = params[0];
+  let width = params[1];
+  let height = params[2];
+  let radius = params[3];
+  let bias = params[4];
+  let workgroupsPerRow = params[5];
+  let index = id.x + id.y * workgroupsPerRow * ${normalizedWorkgroupSize}u;
+  if (index >= pixelCount) {
+    return;
+  }
+
+  let x = index % width;
+  let y = index / width;
+  let pixel = inputPixels[index];
+  let current = luma(pixel);
+  var sum = 0u;
+  var count = 0u;
+  if (x < radius || y < radius || x + radius >= width || y + radius >= height) {
+    sum = current;
+    count = 1u;
+  } else {
+    var sampleY = y - radius;
+    loop {
+      var sampleX = x - radius;
+      loop {
+        sum = sum + luma(inputPixels[sampleY * width + sampleX]);
+        count = count + 1u;
+        if (sampleX >= x + radius) {
+          break;
+        }
+        sampleX = sampleX + 1u;
+      }
+      if (sampleY >= y + radius) {
+        break;
+      }
+      sampleY = sampleY + 1u;
+    }
+  }
+
+  let alpha = pixel & 4278190080u;
+  let average = sum / count;
+  let value = select(0u, 255u, current + bias >= average);
   outputPixels[index] = value | (value << 8u) | (value << 16u) | alpha;
 }
 `.trim();
@@ -97,6 +219,10 @@ export function createWebGpuBinarizeRgbaRunner({
       const inputWords = packRgbaWords(input);
       const size = inputWords.byteLength;
       const normalizedThreshold = normalizeThreshold(threshold);
+      const dispatch = createDispatchPlan(inputWords.length, {
+        maxWorkgroupsPerDimension: readMaxComputeWorkgroupsPerDimension(device),
+        workgroupSize: normalizedWorkgroupSize
+      });
       const inputBuffer = device.createBuffer({
         label: `${label}-input`,
         size,
@@ -122,7 +248,12 @@ export function createWebGpuBinarizeRgbaRunner({
       device.queue.writeBuffer(
         paramsBuffer,
         0,
-        new Uint32Array([inputWords.length, normalizedThreshold, 0, 0])
+        new Uint32Array([
+          inputWords.length,
+          normalizedThreshold,
+          dispatch.workgroupsPerRow,
+          0
+        ])
       );
 
       const bindGroup = device.createBindGroup({
@@ -138,7 +269,116 @@ export function createWebGpuBinarizeRgbaRunner({
       const pass = encoder.beginComputePass({ label: `${label}-pass` });
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, bindGroup);
-      pass.dispatchWorkgroups(Math.ceil(inputWords.length / normalizedWorkgroupSize));
+      pass.dispatchWorkgroups(dispatch.workgroupsPerRow, dispatch.rows);
+      pass.end();
+      encoder.copyBufferToBuffer(outputBuffer, 0, readbackBuffer, 0, size);
+      device.queue.submit([encoder.finish()]);
+
+      await readbackBuffer.mapAsync(mapModes.READ);
+      const mapped = readbackBuffer.getMappedRange();
+      const outputWords = new Uint32Array(mapped.slice(0));
+      readbackBuffer.unmap();
+      destroyBuffers([inputBuffer, outputBuffer, paramsBuffer, readbackBuffer]);
+      return unpackRgbaWords(outputWords, input.length);
+    }
+  };
+}
+
+export function createWebGpuAdaptiveThresholdRgbaRunner({
+  device,
+  gpuBufferUsage = globalThis.GPUBufferUsage,
+  gpuMapMode = globalThis.GPUMapMode,
+  label = "pdf2md-ocr-preprocess-adaptive-threshold-rgba",
+  workgroupSize = defaultWorkgroupSize
+} = {}) {
+  validateWebGpuDevice(device);
+  const usages = gpuBufferUsage ?? defaultGpuBufferUsage;
+  const mapModes = gpuMapMode ?? defaultGpuMapMode;
+  const normalizedWorkgroupSize = normalizePositiveInteger(workgroupSize, defaultWorkgroupSize);
+  const shaderModule = device.createShaderModule({
+    label: `${label}-shader`,
+    code: createAdaptiveThresholdRgbaShaderSource({ workgroupSize: normalizedWorkgroupSize })
+  });
+  const pipeline = device.createComputePipeline({
+    label: `${label}-pipeline`,
+    layout: "auto",
+    compute: {
+      module: shaderModule,
+      entryPoint: "main"
+    }
+  });
+
+  return {
+    async run(
+      rgba,
+      {
+        bias = defaultAdaptiveBias,
+        height,
+        radius = defaultAdaptiveRadius,
+        width
+      } = {}
+    ) {
+      const input = normalizeRgbaInput(rgba);
+      const geometry = normalizeImageGeometry(input, { height, width });
+      const inputWords = packRgbaWords(input);
+      const size = inputWords.byteLength;
+      const normalizedRadius = normalizePositiveInteger(radius, defaultAdaptiveRadius);
+      const normalizedBias = Math.round(normalizePositiveNumber(bias, defaultAdaptiveBias));
+      const dispatch = createDispatchPlan(inputWords.length, {
+        maxWorkgroupsPerDimension: readMaxComputeWorkgroupsPerDimension(device),
+        workgroupSize: normalizedWorkgroupSize
+      });
+      const inputBuffer = device.createBuffer({
+        label: `${label}-input`,
+        size,
+        usage: usages.STORAGE | usages.COPY_DST
+      });
+      const outputBuffer = device.createBuffer({
+        label: `${label}-output`,
+        size,
+        usage: usages.STORAGE | usages.COPY_SRC
+      });
+      const paramsBuffer = device.createBuffer({
+        label: `${label}-params`,
+        size: 32,
+        usage: usages.STORAGE | usages.COPY_DST
+      });
+      const readbackBuffer = device.createBuffer({
+        label: `${label}-readback`,
+        size,
+        usage: usages.MAP_READ | usages.COPY_DST
+      });
+
+      device.queue.writeBuffer(inputBuffer, 0, inputWords);
+      device.queue.writeBuffer(
+        paramsBuffer,
+        0,
+        new Uint32Array([
+          inputWords.length,
+          geometry.width,
+          geometry.height,
+          normalizedRadius,
+          normalizedBias,
+          dispatch.workgroupsPerRow,
+          0,
+          0
+        ])
+      );
+
+      const bindGroup = device.createBindGroup({
+        label: `${label}-bind-group`,
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [
+          { binding: 0, resource: { buffer: inputBuffer } },
+          { binding: 1, resource: { buffer: outputBuffer } },
+          { binding: 2, resource: { buffer: paramsBuffer } }
+        ]
+      });
+      const encoder = device.createCommandEncoder({ label: `${label}-encoder` });
+      const pass = encoder.beginComputePass({ label: `${label}-pass` });
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(0, bindGroup);
+      pass.dispatchWorkgroups(dispatch.workgroupsPerRow, dispatch.rows);
       pass.end();
       encoder.copyBufferToBuffer(outputBuffer, 0, readbackBuffer, 0, size);
       device.queue.submit([encoder.finish()]);
@@ -158,13 +398,26 @@ export async function binarizeRgbaWithWebGpu(options = {}) {
   return runner.run(options.rgba, { threshold: options.threshold });
 }
 
+export async function adaptiveThresholdRgbaWithWebGpu(options = {}) {
+  const runner = createWebGpuAdaptiveThresholdRgbaRunner(options);
+  return runner.run(options.rgba, {
+    bias: options.bias,
+    height: options.height,
+    radius: options.radius,
+    width: options.width
+  });
+}
+
 export async function createWebGpuPreprocessingDiagnostics({
   execution = null,
   options = {},
   webgpu = null
 } = {}) {
   const preprocessingOptions = options.preprocessing ?? {};
+  const workload = normalizeWorkload(preprocessingOptions.workload);
   const threshold = normalizeThreshold(preprocessingOptions.threshold ?? defaultThreshold);
+  const radius = normalizePositiveInteger(preprocessingOptions.radius, defaultAdaptiveRadius);
+  const bias = normalizePositiveNumber(preprocessingOptions.bias, defaultAdaptiveBias);
   const maxSamplePixelsPerPage = normalizePositiveInteger(
     preprocessingOptions.maxSamplePixelsPerPage,
     defaultMaxSamplePixelsPerPage
@@ -178,8 +431,10 @@ export async function createWebGpuPreprocessingDiagnostics({
     enabled: preprocessingOptions.enabled !== false,
     provider: webgpu?.selectedProvider ?? "cpu",
     status: "disabled",
-    workload: "ocr-preprocess-binarize-rgba",
+    workload: `ocr-preprocess-${workload}`,
     threshold,
+    radius,
+    bias,
     minSpeedup,
     routedPages: execution?.routedPages ?? 0,
     plannedPages: plannedPages.length,
@@ -219,7 +474,7 @@ export async function createWebGpuPreprocessingDiagnostics({
 
   let runner = null;
   try {
-    runner = preprocessingOptions.runner ?? createRunnerFromDevice(options.device);
+    runner = preprocessingOptions.runner ?? createRunnerFromDevice(options.device, { workload });
   } catch (error) {
     return {
       ...base,
@@ -238,15 +493,26 @@ export async function createWebGpuPreprocessingDiagnostics({
 
   const pages = [];
   for (const page of plannedPages) {
-    const samplePixels = Math.min(page.pixelCount, maxSamplePixelsPerPage);
-    const input = createDeterministicRgbaSample(samplePixels, page.pageIndex);
+    const sample = createPreprocessingSample(
+      Math.min(page.pixelCount, maxSamplePixelsPerPage),
+      page.pageIndex
+    );
+    const input = sample.rgba;
+    const workloadOptions = {
+      bias,
+      height: sample.height,
+      page,
+      radius,
+      threshold,
+      width: sample.width
+    };
     const cpuStartedAt = nowMs();
-    const expected = binarizeRgbaCpu(input, { threshold });
+    const expected = runCpuPreprocessing(input, { workload, ...workloadOptions });
     const cpuMs = nowMs() - cpuStartedAt;
     const gpuStartedAt = nowMs();
     let actual;
     try {
-      actual = await runner.run(input, { threshold, page });
+      actual = await runner.run(input, workloadOptions);
     } catch (error) {
       return {
         ...base,
@@ -267,7 +533,9 @@ export async function createWebGpuPreprocessingDiagnostics({
     pages.push({
       pageIndex: page.pageIndex,
       sourceType: page.sourceType,
-      samplePixels,
+      samplePixels: sample.pixelCount,
+      sampleWidth: sample.width,
+      sampleHeight: sample.height,
       parity,
       cpuMs,
       gpuMs,
@@ -352,6 +620,46 @@ function normalizePositiveInteger(value, fallback) {
   return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
+function normalizeWorkload(value) {
+  return value === adaptiveThresholdWorkload ? adaptiveThresholdWorkload : binarizeWorkload;
+}
+
+function normalizeImageGeometry(rgba, { height, width } = {}) {
+  const normalizedWidth = normalizePositiveInteger(width, 0);
+  const normalizedHeight = normalizePositiveInteger(height, 0);
+  const pixelCount = rgba.length / 4;
+  if (normalizedWidth <= 0 || normalizedHeight <= 0) {
+    throw new Error("width and height are required for adaptive RGBA preprocessing");
+  }
+  if (normalizedWidth * normalizedHeight !== pixelCount) {
+    throw new Error("width and height must match the RGBA pixel count");
+  }
+  return {
+    height: normalizedHeight,
+    pixelCount,
+    width: normalizedWidth
+  };
+}
+
+function readMaxComputeWorkgroupsPerDimension(device) {
+  return normalizePositiveInteger(device?.limits?.maxComputeWorkgroupsPerDimension, 65_535);
+}
+
+function createDispatchPlan(itemCount, { maxWorkgroupsPerDimension, workgroupSize }) {
+  const totalWorkgroups = Math.ceil(itemCount / workgroupSize);
+  const workgroupsPerRow = Math.min(totalWorkgroups, maxWorkgroupsPerDimension);
+  const rows = Math.ceil(totalWorkgroups / workgroupsPerRow);
+  if (rows > maxWorkgroupsPerDimension) {
+    throw new Error(
+      `WebGPU dispatch requires ${rows} rows, exceeding maxComputeWorkgroupsPerDimension=${maxWorkgroupsPerDimension}`
+    );
+  }
+  return {
+    workgroupsPerRow,
+    rows
+  };
+}
+
 function plannedExecutionPages(execution) {
   return (execution?.batches ?? [])
     .flatMap((batch) => batch.pages ?? [])
@@ -362,11 +670,40 @@ function plannedExecutionPages(execution) {
     );
 }
 
-function createRunnerFromDevice(device) {
+function createRunnerFromDevice(device, { workload }) {
   if (!device) {
     return null;
   }
+  if (workload === adaptiveThresholdWorkload) {
+    return createWebGpuAdaptiveThresholdRgbaRunner({ device });
+  }
   return createWebGpuBinarizeRgbaRunner({ device });
+}
+
+function runCpuPreprocessing(rgba, { workload, ...options }) {
+  if (workload === adaptiveThresholdWorkload) {
+    return adaptiveThresholdRgbaCpu(rgba, options);
+  }
+  return binarizeRgbaCpu(rgba, options);
+}
+
+function createPreprocessingSample(pixelCount, seed = 0) {
+  const geometry = createSampleGeometry(pixelCount);
+  return {
+    ...geometry,
+    rgba: createDeterministicRgbaSample(geometry.pixelCount, seed)
+  };
+}
+
+function createSampleGeometry(pixelCount) {
+  const maxPixels = normalizePositiveInteger(pixelCount, 1);
+  const width = Math.max(1, Math.floor(Math.sqrt(maxPixels)));
+  const height = Math.max(1, Math.floor(maxPixels / width));
+  return {
+    height,
+    pixelCount: width * height,
+    width
+  };
 }
 
 function createDeterministicRgbaSample(pixelCount, seed = 0) {

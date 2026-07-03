@@ -1,14 +1,21 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 
 const args = process.argv.slice(2);
-const defaultPixels = 4_194_304;
-const defaultIterations = 3;
+const defaultPixels = 589_824;
+const defaultIterations = 1;
 const defaultWarmup = 1;
 const defaultMinSpeedup = 1.05;
+const defaultTimeoutMs = 60_000;
+const adaptiveThresholdWorkload = "adaptive-threshold-rgba";
+const binarizeWorkload = "binarize-rgba";
+const defaultWorkload = adaptiveThresholdWorkload;
+const defaultAdaptiveRadius = 12;
+const defaultAdaptiveBias = 7;
 
 function readOption(name) {
   const index = args.indexOf(name);
@@ -30,6 +37,14 @@ function readPositiveIntegerOption(name, fallback) {
 function readPositiveNumberOption(name, fallback) {
   const parsed = Number.parseFloat(readOption(name) ?? "");
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function readWorkloadOption() {
+  const workload = readOption("--workload") ?? defaultWorkload;
+  if (workload === adaptiveThresholdWorkload || workload === binarizeWorkload) {
+    return workload;
+  }
+  return defaultWorkload;
 }
 
 function findChrome() {
@@ -80,20 +95,41 @@ async function startServer(repoRoot, pageHtml) {
   return server;
 }
 
-function createPageHtml({ iterations, minSpeedup, pixels, warmup }) {
+function createPageHtml({ bias, iterations, minSpeedup, pixels, radius, warmup, workload }) {
   return `<!doctype html>
 <body>pending</body>
 <script type="module">
 import {
+  adaptiveThresholdRgbaCpu,
   binarizeRgbaCpu,
+  createWebGpuAdaptiveThresholdRgbaRunner,
   createWebGpuBinarizeRgbaRunner
 } from "/packages/pdf2md/src/webgpu-preprocess.mjs";
 
-const config = ${JSON.stringify({ iterations, minSpeedup, pixels, warmup })};
+const config = ${JSON.stringify({
+    bias,
+    iterations,
+    minSpeedup,
+    pixels,
+    radius,
+    warmup,
+    workload
+  })};
+
+function createGeometry(pixelCount) {
+  const width = Math.max(1, Math.floor(Math.sqrt(pixelCount)));
+  const height = Math.max(1, Math.floor(pixelCount / width));
+  return {
+    height,
+    pixelCount: width * height,
+    width
+  };
+}
 
 function createInput(pixelCount) {
-  const rgba = new Uint8Array(pixelCount * 4);
-  for (let pixel = 0; pixel < pixelCount; pixel += 1) {
+  const geometry = createGeometry(pixelCount);
+  const rgba = new Uint8Array(geometry.pixelCount * 4);
+  for (let pixel = 0; pixel < geometry.pixelCount; pixel += 1) {
     const offset = pixel * 4;
     const value = (pixel * 13 + (pixel >>> 8)) & 255;
     rgba[offset] = value;
@@ -101,43 +137,118 @@ function createInput(pixelCount) {
     rgba[offset + 2] = (255 - value) & 255;
     rgba[offset + 3] = 255;
   }
-  return rgba;
+  return { ...geometry, rgba };
 }
 
 function arraysEqual(left, right) {
+  return findMismatch(left, right) === null;
+}
+
+function findMismatch(left, right) {
   if (left.length !== right.length) {
-    return false;
+    return {
+      index: -1,
+      leftLength: left.length,
+      rightLength: right.length
+    };
   }
   for (let index = 0; index < left.length; index += 1) {
     if (left[index] !== right[index]) {
-      return false;
+      return {
+        index,
+        actual: right[index],
+        expected: left[index]
+      };
     }
   }
-  return true;
+  return null;
 }
 
-function measureCpu(input) {
+function countMismatches(left, right) {
+  if (left.length !== right.length) {
+    return Math.max(left.length, right.length);
+  }
+  let count = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function findMismatchPixels(left, right, limit = 10) {
+  const pixels = [];
+  const byteLength = Math.min(left.length, right.length);
+  for (let index = 0; index < byteLength; index += 4) {
+    if (
+      left[index] !== right[index] ||
+      left[index + 1] !== right[index + 1] ||
+      left[index + 2] !== right[index + 2] ||
+      left[index + 3] !== right[index + 3]
+    ) {
+      pixels.push({
+        actual: [right[index], right[index + 1], right[index + 2], right[index + 3]],
+        expected: [left[index], left[index + 1], left[index + 2], left[index + 3]],
+        pixelIndex: index / 4
+      });
+      if (pixels.length >= limit) {
+        break;
+      }
+    }
+  }
+  return pixels;
+}
+
+function createWorkloadOptions(sample) {
+  if (config.workload === "${adaptiveThresholdWorkload}") {
+    return {
+      bias: config.bias,
+      height: sample.height,
+      radius: config.radius,
+      width: sample.width
+    };
+  }
+  return {};
+}
+
+function runCpu(input, options) {
+  if (config.workload === "${adaptiveThresholdWorkload}") {
+    return adaptiveThresholdRgbaCpu(input, options);
+  }
+  return binarizeRgbaCpu(input);
+}
+
+function createRunner(device) {
+  if (config.workload === "${adaptiveThresholdWorkload}") {
+    return createWebGpuAdaptiveThresholdRgbaRunner({ device });
+  }
+  return createWebGpuBinarizeRgbaRunner({ device });
+}
+
+function measureCpu(input, options) {
   const startedAt = performance.now();
   for (let index = 0; index < config.iterations; index += 1) {
-    binarizeRgbaCpu(input);
+    runCpu(input, options);
   }
   return performance.now() - startedAt;
 }
 
-async function measureGpu(runner, input) {
+async function measureGpu(runner, input, options) {
   const startedAt = performance.now();
   for (let index = 0; index < config.iterations; index += 1) {
-    await runner.run(input);
+    await runner.run(input, options);
   }
   return performance.now() - startedAt;
 }
 
 async function main() {
   const base = {
-    benchmark: "webgpu-ocr-preprocess-binarize-rgba",
+    benchmark: "webgpu-ocr-preprocess-" + config.workload,
     pixels: config.pixels,
     iterations: config.iterations,
     warmup: config.warmup,
+    workload: config.workload,
     minSpeedup: config.minSpeedup,
     isSecureContext,
     hasNavigatorGpu: !!navigator.gpu,
@@ -154,24 +265,32 @@ async function main() {
     return { ...base, reason: "adapter-unavailable" };
   }
   const device = await adapter.requestDevice();
-  const runner = createWebGpuBinarizeRgbaRunner({ device });
-  const input = createInput(config.pixels);
-  const expected = binarizeRgbaCpu(input);
+  const runner = createRunner(device);
+  const sample = createInput(config.pixels);
+  const input = sample.rgba;
+  const options = createWorkloadOptions(sample);
+  const expected = runCpu(input, options);
   for (let index = 0; index < config.warmup; index += 1) {
-    await runner.run(input);
+    await runner.run(input, options);
   }
-  const actual = await runner.run(input);
-  const parity = arraysEqual(expected, actual);
-  const cpuMs = measureCpu(input);
-  const gpuMs = await measureGpu(runner, input);
+  const actual = await runner.run(input, options);
+  const mismatch = findMismatch(expected, actual);
+  const parity = mismatch === null;
+  const cpuMs = measureCpu(input, options);
+  const gpuMs = await measureGpu(runner, input, options);
   const speedupRatio = gpuMs > 0 ? cpuMs / gpuMs : null;
   device.destroy?.();
   return {
     ...base,
+    sampleHeight: sample.height,
+    sampleWidth: sample.width,
     selectedProvider: "webgpu",
     status: parity && speedupRatio >= config.minSpeedup ? "passed" : "failed",
     reason: parity ? "speedup-threshold" : "parity-mismatch",
     parity,
+    mismatch,
+    mismatchCount: countMismatches(expected, actual),
+    mismatchPixels: findMismatchPixels(expected, actual),
     cpuMs,
     gpuMs,
     speedupRatio
@@ -197,7 +316,8 @@ main()
 </script>`;
 }
 
-async function runChrome(chrome, url) {
+async function runChrome(chrome, url, { timeoutMs = defaultTimeoutMs } = {}) {
+  const userDataDir = await mkdtemp(path.join(tmpdir(), "pdf2md-webgpu-chrome-"));
   const chromeArgs = [
     "--headless=new",
     "--no-sandbox",
@@ -205,37 +325,191 @@ async function runChrome(chrome, url) {
     "--enable-features=Vulkan,WebGPU,UnsafeWebGPU",
     "--ignore-gpu-blocklist",
     "--disable-dev-shm-usage",
-    "--virtual-time-budget=30000",
-    url,
-    "--dump-dom"
+    "--disable-background-timer-throttling",
+    "--disable-vulkan-surface",
+    "--remote-debugging-port=0",
+    `--user-data-dir=${userDataDir}`,
+    url
   ];
-  return new Promise((resolve) => {
-    const child = spawn(chrome.path, chromeArgs, {
-      stdio: ["ignore", "pipe", "pipe"]
+  const child = spawn(chrome.path, chromeArgs, {
+    stdio: ["ignore", "pipe", "pipe"],
+    env: process.env
+  });
+  let stdout = "";
+  let stderr = "";
+  let exitStatus = null;
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk;
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+
+  try {
+    const port = await waitForDevToolsPort({
+      child,
+      getStderr: () => stderr,
+      timeoutMs
     });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
+    const page = await waitForPageTarget(port, url, timeoutMs);
+    const summary = await waitForPageSummary(page.webSocketDebuggerUrl, timeoutMs);
+    exitStatus = await stopChrome(child);
+    return { status: exitStatus, stdout, stderr, summary };
+  } finally {
+    if (exitStatus === null) {
+      exitStatus = await stopChrome(child);
+    }
+    await rm(userDataDir, { force: true, recursive: true });
+  }
+}
+
+function waitForDevToolsPort({ child, getStderr, timeoutMs }) {
+  const startedAt = Date.now();
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const finish = (callback, value) => {
+      if (done) {
+        return;
+      }
+      done = true;
+      clearTimeout(timeout);
+      child.stderr.off("data", onData);
+      child.off("close", onClose);
+      callback(value);
+    };
+    const check = () => {
+      const match = getStderr().match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\//);
+      if (match) {
+        finish(resolve, Number(match[1]));
+      }
+    };
+    const onData = () => check();
+    const onClose = (status) => {
+      finish(
+        reject,
+        new Error(`Chrome exited before DevTools was available; status=${status}`)
+      );
+    };
+    const timeout = setTimeout(() => {
+      finish(
+        reject,
+        new Error(`Timed out waiting ${Date.now() - startedAt}ms for Chrome DevTools`)
+      );
+    }, timeoutMs);
+    child.stderr.on("data", onData);
+    child.on("close", onClose);
+    check();
+  });
+}
+
+async function waitForPageTarget(port, url, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let lastTargets = [];
+  while (Date.now() < deadline) {
+    const response = await fetch(`http://127.0.0.1:${port}/json/list`);
+    lastTargets = await response.json();
+    const page = lastTargets.find(
+      (target) =>
+        target.type === "page" &&
+        target.url === url &&
+        typeof target.webSocketDebuggerUrl === "string"
+    );
+    if (page) {
+      return page;
+    }
+    await delay(100);
+  }
+  throw new Error(
+    `Timed out waiting for Chrome page target; targets=${JSON.stringify(lastTargets)}`
+  );
+}
+
+async function waitForPageSummary(webSocketDebuggerUrl, timeoutMs) {
+  const cdp = await connectCdp(webSocketDebuggerUrl);
+  const deadline = Date.now() + timeoutMs;
+  let lastText = "";
+  try {
+    await cdp.send("Runtime.enable");
+    while (Date.now() < deadline) {
+      const response = await cdp.send("Runtime.evaluate", {
+        expression: "document.body.textContent",
+        returnByValue: true
+      });
+      lastText = String(response.result?.value ?? "").trim();
+      if (lastText.startsWith("{")) {
+        return JSON.parse(lastText);
+      }
+      await delay(100);
+    }
+  } finally {
+    cdp.close();
+  }
+  throw new Error(`Timed out waiting for page summary; lastBody=${lastText}`);
+}
+
+function connectCdp(webSocketDebuggerUrl) {
+  const socket = new WebSocket(webSocketDebuggerUrl);
+  const pending = new Map();
+  let nextId = 1;
+  return new Promise((resolve, reject) => {
+    socket.addEventListener("open", () => {
+      resolve({
+        send(method, params = {}) {
+          const id = nextId;
+          nextId += 1;
+          socket.send(JSON.stringify({ id, method, params }));
+          return new Promise((sendResolve, sendReject) => {
+            pending.set(id, { resolve: sendResolve, reject: sendReject });
+          });
+        },
+        close() {
+          socket.close();
+        }
+      });
+    }, { once: true });
+    socket.addEventListener("message", (event) => {
+      const message = JSON.parse(event.data);
+      const request = pending.get(message.id);
+      if (!request) {
+        return;
+      }
+      pending.delete(message.id);
+      if (message.error) {
+        request.reject(new Error(message.error.message ?? "CDP request failed"));
+        return;
+      }
+      request.resolve(message.result ?? {});
     });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
-    child.on("close", (status) => {
-      resolve({ status, stdout, stderr });
+    socket.addEventListener("error", () => {
+      reject(new Error("Chrome DevTools WebSocket failed"));
+    }, { once: true });
+    socket.addEventListener("close", () => {
+      for (const request of pending.values()) {
+        request.reject(new Error("Chrome DevTools WebSocket closed"));
+      }
+      pending.clear();
     });
   });
 }
 
-function parseDumpedDom(stdout) {
-  const match = stdout.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  if (!match) {
-    throw new Error("Chrome output did not contain a body element");
+function stopChrome(child) {
+  if (child.exitCode !== null) {
+    return Promise.resolve(child.exitCode);
   }
-  const text = match[1].replace(/<script[\s\S]*$/i, "").trim();
-  return JSON.parse(text);
+  return new Promise((resolve) => {
+    child.once("close", (status) => {
+      resolve(status);
+    });
+    child.kill("SIGTERM");
+  });
+}
+
+function delay(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 async function writeSummary(summaryPath, summary) {
@@ -254,7 +528,7 @@ function printSummary(summary) {
   }
   const prefix = summary.status === "passed" ? "PASS" : "FAIL";
   console.log(
-    `${prefix} webgpu preprocessing provider=${summary.selectedProvider} parity=${summary.parity} speedup=${formatNumber(summary.speedupRatio)} min=${summary.minSpeedup}`
+    `${prefix} webgpu preprocessing workload=${summary.workload} provider=${summary.selectedProvider} parity=${summary.parity} speedup=${formatNumber(summary.speedupRatio)} min=${summary.minSpeedup}`
   );
 }
 
@@ -267,6 +541,7 @@ function formatNumber(value) {
 async function main() {
   const repoRoot = path.resolve(readOption("--root") ?? process.cwd());
   const summaryPath = readOption("--summary");
+  const timeoutMs = readPositiveIntegerOption("--timeout-ms", defaultTimeoutMs);
   const chrome = findChrome();
   if (!chrome) {
     const summary = {
@@ -284,19 +559,21 @@ async function main() {
   }
 
   const pageHtml = createPageHtml({
+    bias: readPositiveNumberOption("--bias", defaultAdaptiveBias),
     iterations: readPositiveIntegerOption("--iterations", defaultIterations),
     minSpeedup: readPositiveNumberOption("--min-speedup", defaultMinSpeedup),
     pixels: readPositiveIntegerOption("--pixels", defaultPixels),
-    warmup: readPositiveIntegerOption("--warmup", defaultWarmup)
+    radius: readPositiveIntegerOption("--radius", defaultAdaptiveRadius),
+    warmup: readPositiveIntegerOption("--warmup", defaultWarmup),
+    workload: readWorkloadOption()
   });
   const server = await startServer(repoRoot, pageHtml);
   const address = server.address();
   const url = `http://127.0.0.1:${address.port}/`;
   try {
-    const result = await runChrome(chrome, url);
-    const pageSummary = parseDumpedDom(result.stdout);
+    const result = await runChrome(chrome, url, { timeoutMs });
     const summary = {
-      ...pageSummary,
+      ...result.summary,
       chrome: chrome.version,
       chromeExitStatus: result.status,
       chromeStderr: result.stderr

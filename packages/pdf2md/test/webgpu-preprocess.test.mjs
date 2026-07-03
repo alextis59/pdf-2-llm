@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  adaptiveThresholdRgbaCpu,
   binarizeRgbaCpu,
+  createAdaptiveThresholdRgbaShaderSource,
   createBinarizeRgbaShaderSource,
   createWebGpuPreprocessingDiagnostics,
   createWebGpuBinarizeRgbaRunner,
@@ -26,6 +28,23 @@ test("binarizeRgbaCpu thresholds RGBA pixels while preserving alpha", () => {
   );
 });
 
+test("adaptiveThresholdRgbaCpu applies a local threshold while preserving alpha", () => {
+  const input = new Uint8Array([
+    0, 0, 0, 255,
+    100, 100, 100, 128,
+    255, 255, 255, 64
+  ]);
+
+  assert.deepEqual(
+    [...adaptiveThresholdRgbaCpu(input, { bias: 0, height: 1, radius: 1, width: 3 })],
+    [
+      255, 255, 255, 255,
+      255, 255, 255, 128,
+      255, 255, 255, 64
+    ]
+  );
+});
+
 test("packRgbaWords and unpackRgbaWords preserve channel order", () => {
   const input = new Uint8Array([
     1, 2, 3, 4,
@@ -46,11 +65,79 @@ test("createBinarizeRgbaShaderSource emits the configured workgroup size", () =>
   assert.match(source, /params.threshold/);
 });
 
+test("createAdaptiveThresholdRgbaShaderSource emits local threshold parameters", () => {
+  const source = createAdaptiveThresholdRgbaShaderSource({ workgroupSize: 128 });
+
+  assert.match(source, /@compute @workgroup_size\(128\)/);
+  assert.match(source, /let radius = params\[3\]/);
+  assert.match(source, /let bias = params\[4\]/);
+  assert.match(source, /inputPixels\[sampleY \* width \+ sampleX\]/);
+});
+
 test("createWebGpuBinarizeRgbaRunner validates required WebGPU device methods", () => {
   assert.throws(
     () => createWebGpuBinarizeRgbaRunner({ device: {} }),
     /missing createBindGroup/
   );
+});
+
+test("createWebGpuBinarizeRgbaRunner splits large work into two-dimensional dispatch", async () => {
+  const dispatches = [];
+  const device = {
+    limits: {
+      maxComputeWorkgroupsPerDimension: 2
+    },
+    queue: {
+      writeBuffer() {},
+      submit() {}
+    },
+    createBindGroup() {
+      return {};
+    },
+    createBuffer({ size }) {
+      return {
+        destroy() {},
+        getMappedRange() {
+          return new ArrayBuffer(size);
+        },
+        async mapAsync() {},
+        unmap() {}
+      };
+    },
+    createCommandEncoder() {
+      return {
+        beginComputePass() {
+          return {
+            dispatchWorkgroups(x, y) {
+              dispatches.push([x, y]);
+            },
+            end() {},
+            setBindGroup() {},
+            setPipeline() {}
+          };
+        },
+        copyBufferToBuffer() {},
+        finish() {
+          return {};
+        }
+      };
+    },
+    createComputePipeline() {
+      return {
+        getBindGroupLayout() {
+          return {};
+        }
+      };
+    },
+    createShaderModule() {
+      return {};
+    }
+  };
+  const runner = createWebGpuBinarizeRgbaRunner({ device, workgroupSize: 4 });
+
+  await runner.run(new Uint8Array(10 * 4));
+
+  assert.deepEqual(dispatches, [[2, 2]]);
 });
 
 test("binarizeRgbaCpu rejects non-RGBA input", () => {

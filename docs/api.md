@@ -295,7 +295,10 @@ not render full image buffers. Page and thumbnail targets that exceed
     device?: unknown;
     preprocessing?: {
       enabled?: boolean;
+      workload?: "binarize-rgba" | "adaptive-threshold-rgba";
       threshold?: number;
+      radius?: number;
+      bias?: number;
       maxSamplePixelsPerPage?: number;
       minSpeedup?: number;
       runner?: WebGpuPreprocessingRunner;

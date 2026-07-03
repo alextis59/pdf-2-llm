@@ -81,7 +81,10 @@ export type ConvertOptions = {
     device?: unknown;
     preprocessing?: {
       enabled?: boolean;
+      workload?: "binarize-rgba" | "adaptive-threshold-rgba";
       threshold?: number;
+      radius?: number;
+      bias?: number;
       maxSamplePixelsPerPage?: number;
       minSpeedup?: number;
       runner?: WebGpuPreprocessingRunner;
@@ -261,7 +264,11 @@ export type WebGpuPreprocessingRunner = {
   run(
     rgba: Uint8Array,
     options?: {
+      bias?: number;
+      height?: number;
+      radius?: number;
       threshold?: number;
+      width?: number;
       page?: {
         pageIndex: number;
         sourceType: "scanned" | "hybrid";
@@ -282,8 +289,10 @@ export type WebGpuPreprocessingDiagnostics = {
     | "device-unavailable"
     | "completed"
     | "failed";
-  workload: "ocr-preprocess-binarize-rgba";
+  workload: "ocr-preprocess-binarize-rgba" | "ocr-preprocess-adaptive-threshold-rgba";
   threshold: number;
+  radius: number;
+  bias: number;
   minSpeedup: number;
   routedPages: number;
   plannedPages: number;
@@ -307,6 +316,8 @@ export type WebGpuPreprocessingPageDiagnostics = {
   pageIndex: number;
   sourceType: "scanned" | "hybrid";
   samplePixels: number;
+  sampleWidth: number;
+  sampleHeight: number;
   parity: boolean;
   cpuMs: number;
   gpuMs: number;

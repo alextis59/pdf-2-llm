@@ -44,7 +44,10 @@ Supported options:
 | `maxMemoryBytes` | `268435456` | Maximum planned bytes per page/batch for WebGPU OCR planning. |
 | `device` | `undefined` | Advanced browser hook for supplying an already-created `GPUDevice`. |
 | `preprocessing.enabled` | `true` | Controls conversion-routed OCR preprocessing diagnostics when WebGPU is selected. |
+| `preprocessing.workload` | `"binarize-rgba"` | Selects `binarize-rgba` or compute-heavy `adaptive-threshold-rgba` diagnostics. |
 | `preprocessing.threshold` | `128` | Binarization threshold used by WebGPU preprocessing samples. |
+| `preprocessing.radius` | `8` | Adaptive threshold local-window radius. Border pixels use self-thresholding. |
+| `preprocessing.bias` | `7` | Adaptive threshold bias added to the current pixel luma before comparison. |
 | `preprocessing.maxSamplePixelsPerPage` | `262144` | Maximum deterministic sample pixels per routed OCR page. |
 | `preprocessing.minSpeedup` | `1.05` | Minimum preprocessing speed ratio used for diagnostic pass/fail status. |
 | `preprocessing.runner` | `undefined` | Test and integration hook for injecting a compatible preprocessing runner. |
@@ -237,7 +240,7 @@ also emits preprocessing diagnostics:
 {
   "provider": "webgpu",
   "status": "completed",
-  "workload": "ocr-preprocess-binarize-rgba",
+  "workload": "ocr-preprocess-adaptive-threshold-rgba",
   "processedPages": 1,
   "parity": true,
   "speedupRatio": 1.2,
@@ -320,8 +323,10 @@ npm run qa:webgpu-preprocess
 ```
 
 This browser harness serves the preprocessing module from localhost, launches
-Chrome with WebGPU flags, and runs the RGBA binarization kernel when
-`requestAdapter()` succeeds. Without a usable adapter it writes an explicit
+Chrome with WebGPU flags, and runs the adaptive-threshold RGBA preprocessing
+kernel when `requestAdapter()` succeeds. The harness includes
+`--disable-vulkan-surface` because Chrome 126 headless can otherwise fail Vulkan
+initialization on Linux. Without a usable adapter it writes an explicit
 not-applicable summary. On a WebGPU-capable host, use the strict form to require
 measurable speedup:
 
