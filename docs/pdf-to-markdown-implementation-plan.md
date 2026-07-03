@@ -591,7 +591,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 - [x] Implement deskew/preprocessing where practical.
 - [x] Reconcile PDF text layer and OCR text for hybrid pages.
 - [x] Prefer PDF text only when it aligns with visible geometry.
-- [ ] Add OCR sidecar outputs for debugging.
+- [x] Add OCR sidecar outputs for debugging.
 - [ ] Add language configuration.
 
 Gate 5 acceptance:

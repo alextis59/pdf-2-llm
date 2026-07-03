@@ -40,6 +40,7 @@ export type ConvertOptions = {
     languages?: string[];
     modelBaseUrl?: string;
     results?: OcrPageResult[];
+    debugSidecars?: boolean;
     preprocessing?: {
       enabled?: boolean;
       deskew?: boolean;
@@ -131,6 +132,7 @@ export type OcrDiagnostics = {
   modelLoading: OcrModelLoadingDiagnostics;
   preprocessing: OcrPreprocessingDiagnostics;
   reconciliation: OcrReconciliationDiagnostics;
+  sidecars: OcrSidecarDiagnostics;
   textBoxes: OcrTextBoxDiagnostics;
   adapter: OcrAdapterDiagnostics | null;
 };
@@ -264,6 +266,18 @@ export type OcrReconciliationPageDiagnostics = {
   selectedOcrTextLines: number;
   suppressedPdfTextLines: number;
   suppressedOcrTextLines: number;
+};
+
+export type OcrSidecarDiagnostics = {
+  enabled: boolean;
+  assets: number;
+  pages: OcrSidecarPageDiagnostics[];
+};
+
+export type OcrSidecarPageDiagnostics = {
+  pageIndex: number | null;
+  assetId: string;
+  boxes: number;
 };
 
 export type OcrModelLoadingDiagnostics = {

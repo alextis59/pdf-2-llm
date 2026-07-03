@@ -163,6 +163,11 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
         }
       ]
     },
+    sidecars: {
+      enabled: false,
+      assets: 0,
+      pages: []
+    },
     textBoxes: {
       enabled: true,
       status: "no-routed-pages",
@@ -481,6 +486,7 @@ test("convertPdfToMarkdown emits OCR text boxes with confidence for routed scan 
     {
       ocr: {
         adapter: "tesseract.js",
+        debugSidecars: true,
         results: [
           {
             pageIndex: 0,
@@ -513,6 +519,7 @@ test("convertPdfToMarkdown emits OCR text boxes with confidence for routed scan 
   assert.equal(result.ir.sourceType, "scanned");
   assert.equal(result.diagnostics.extraction.mode, "ocr");
   assert.equal(result.diagnostics.extraction.textLines, 2);
+  assert.equal(result.diagnostics.options.ocrDebugSidecars, true);
   assert.deepEqual(result.diagnostics.extraction.ocr.textBoxes, {
     enabled: true,
     status: "completed",
@@ -533,6 +540,59 @@ test("convertPdfToMarkdown emits OCR text boxes with confidence for routed scan 
       }
     ]
   });
+  const expectedOcrSidecarContent = JSON.stringify(
+    {
+      pageIndex: 0,
+      boxes: [
+        {
+          text: "Scanned OCR line",
+          confidence: 0.93,
+          x: 72,
+          y: 700,
+          width: 180,
+          height: 12,
+          direction: "ltr",
+          language: "eng",
+          coordinateSpace: "page"
+        },
+        {
+          text: "OCR body text",
+          confidence: 0.82,
+          x: 72,
+          y: 680,
+          width: 128,
+          height: 12,
+          direction: "ltr",
+          language: "eng",
+          coordinateSpace: "page"
+        }
+      ]
+    },
+    null,
+    2
+  );
+  assert.deepEqual(result.diagnostics.extraction.ocr.sidecars, {
+    enabled: true,
+    assets: 1,
+    pages: [
+      {
+        pageIndex: 0,
+        assetId: "ocr-page-1-json",
+        boxes: 2
+      }
+    ]
+  });
+  assert.deepEqual(result.assets, [
+    {
+      id: "ocr-page-1-json",
+      kind: "ocr-debug-json",
+      path: "assets/ocr-page-1-json.json",
+      mediaType: "application/json",
+      content: expectedOcrSidecarContent,
+      pageIndex: 0
+    }
+  ]);
+  assert.deepEqual(result.ir.assets, result.assets);
   assert.match(result.markdown, /Scanned OCR line/);
   assert.equal(result.sourceMap.entries[0].regions[0].source, "ocr");
   assert.deepEqual(result.ir.pages[0].elements, [

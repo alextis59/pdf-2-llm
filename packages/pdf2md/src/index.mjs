@@ -192,9 +192,13 @@ export async function convertPdfToMarkdown(input, options = {}) {
     scanDetection
   });
   const markdownTextLines = textReconciliation.lines;
+  const ocrDebugSidecars = createOcrDebugSidecars(ocrTextExtraction.lines, {
+    enabled: options.ocr?.debugSidecars === true
+  });
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
     enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
   });
+  const assets = [...tableCsvSidecars.assets, ...ocrDebugSidecars.assets];
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   const markdownResult = linesToMarkdownWithSourceMap(markdownTextLines, {
@@ -253,7 +257,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       })
     );
   }
-  ir.assets = tableCsvSidecars.assets;
+  ir.assets = assets;
   ir.warnings = warnings;
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
@@ -262,7 +266,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   const result = {
     markdown,
     sourceMap,
-    assets: tableCsvSidecars.assets,
+    assets,
     ir,
     warnings,
     diagnostics: {
@@ -292,6 +296,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
           ...ocrAdapter,
           preprocessing: ocrPreprocessing,
           reconciliation: textReconciliation.diagnostics,
+          sidecars: ocrDebugSidecars.diagnostics,
           textBoxes: ocrTextExtraction.diagnostics
         },
         tables: markdownResult.tables,
@@ -786,7 +791,87 @@ function summarizeOptions(options, rasterPlan, ocrAdapter) {
     rasterDpi: rasterPlan.dpi,
     rasterThumbnailDpi: rasterPlan.thumbnailDpi,
     maxImagePixels: rasterPlan.maxPixels,
+    ocrDebugSidecars: options.ocr?.debugSidecars === true,
     assetsEnabled: options.assets?.enabled ?? null
+  };
+}
+
+function createOcrDebugSidecars(ocrTextLines, options = {}) {
+  const assets = [];
+  const pages = [];
+  if (options.enabled !== true) {
+    return {
+      assets,
+      diagnostics: {
+        enabled: false,
+        assets: 0,
+        pages
+      }
+    };
+  }
+
+  const linesByPage = groupLinesByPage(ocrTextLines);
+  for (const [pageIndex, lines] of linesByPage) {
+    const pageLabel = Number.isInteger(pageIndex) ? `page-${pageIndex + 1}` : "page-unknown";
+    const id = `ocr-${pageLabel}-json`;
+    const boxes = lines.map(ocrLineToDebugBox);
+    assets.push({
+      id,
+      kind: "ocr-debug-json",
+      path: `assets/${id}.json`,
+      mediaType: "application/json",
+      content: JSON.stringify({ pageIndex, boxes }, null, 2),
+      pageIndex
+    });
+    pages.push({
+      pageIndex,
+      assetId: id,
+      boxes: boxes.length
+    });
+  }
+
+  return {
+    assets,
+    diagnostics: {
+      enabled: true,
+      assets: assets.length,
+      pages
+    }
+  };
+}
+
+function groupLinesByPage(lines) {
+  const pages = new Map();
+  for (const line of lines) {
+    const pageIndex = Number.isInteger(line.pageIndex) ? line.pageIndex : null;
+    const pageLines = pages.get(pageIndex) ?? [];
+    pageLines.push(line);
+    pages.set(pageIndex, pageLines);
+  }
+  return new Map(
+    [...pages.entries()].sort(([left], [right]) => {
+      if (left === null) {
+        return 1;
+      }
+      if (right === null) {
+        return -1;
+      }
+      return left - right;
+    })
+  );
+}
+
+function ocrLineToDebugBox(line) {
+  return {
+    text: line.text,
+    confidence: line.confidence,
+    x: line.x,
+    y: line.y,
+    width: line.width,
+    height: line.height,
+    direction: line.direction ?? "unknown",
+    language: line.language ?? null,
+    coordinateSpace: line.coordinateSpace ?? "page"
   };
 }
 
