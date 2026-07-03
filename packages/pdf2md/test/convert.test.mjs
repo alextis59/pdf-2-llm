@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
+import { convertPdfToMarkdown as convertPdfToMarkdownFromNode } from "../src/node.mjs";
+import { convertPdfToMarkdown as convertPdfToMarkdownFromBrowser } from "../src/browser.mjs";
 
 const fixturePath = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
 const twoColumnFixturePath = new URL(
@@ -918,6 +920,43 @@ test("convertPdfToMarkdown records OCR preprocessing for rotated scan pages", as
       }
     ]
   });
+});
+
+test("browser and Node entrypoints convert a scanned OCR fixture", async () => {
+  const bytes = createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 });
+  const createOptions = () => ({
+    ocr: {
+      results: [
+        {
+          pageIndex: 0,
+          coordinateSpace: "page",
+          lines: [
+            {
+              text: "Runtime OCR fixture text",
+              confidence: 96,
+              x: 72,
+              y: 720,
+              width: 180,
+              height: 12
+            }
+          ]
+        }
+      ]
+    }
+  });
+
+  const nodeResult = await convertPdfToMarkdownFromNode(new Uint8Array(bytes), createOptions());
+  const browserResult = await convertPdfToMarkdownFromBrowser(new Uint8Array(bytes), createOptions());
+
+  for (const result of [nodeResult, browserResult]) {
+    assert.equal(result.ir.sourceType, "scanned");
+    assert.equal(result.ir.pages[0].sourceType, "scanned");
+    assert.equal(result.diagnostics.extraction.mode, "ocr");
+    assert.equal(result.diagnostics.extraction.ocr.reconciliation.selectedOcrTextLines, 1);
+    assert.equal(result.diagnostics.extraction.ocr.textBoxes.completedPages, 1);
+    assert.match(result.markdown, /Runtime OCR fixture text/);
+  }
+  assert.equal(browserResult.markdown, nodeResult.markdown);
 });
 
 test("CLI emits JSON scaffold output", () => {
