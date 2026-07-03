@@ -821,7 +821,7 @@ Minimum release bars for a serious beta:
 - [x] Layout V1 accepted corpus passes.
 - [x] Tables V1 accepted corpus passes for simple and visible-border tables.
 - [x] OCR V1 accepted corpus passes for selected scanned and hybrid PDFs.
-- [ ] Full corpus reports are generated in CI or release CI.
+- [x] Full corpus reports are generated in CI or release CI.
 - [x] Performance budgets are enforced.
 - [x] Browser fallback behavior is documented and tested.
 - [x] Known limitations are described with concrete warning codes.

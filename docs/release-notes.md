@@ -31,6 +31,7 @@ fixtures:
 - Fuzz smoke passed 4 targets with 100 iterations each.
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.
+- CI runs `npm run check` and uploads generated QA/report artifacts.
 - Clean checkout build passed.
 - Packed package install passed in a separate fixture project.
 - Browser smoke passed in Chromium and Firefox against
