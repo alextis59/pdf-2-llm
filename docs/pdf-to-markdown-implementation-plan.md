@@ -711,7 +711,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Add memory profile for long manuals.
 - [x] Add throughput benchmark for text-only PDFs.
 - [x] Add throughput benchmark for OCR PDFs.
-- [ ] Add startup benchmark for browser and Node.
+- [x] Add startup benchmark for browser and Node.
 - [ ] Add package-size budget.
 - [ ] Add model-size budget.
 - [ ] Add performance regression threshold in CI.

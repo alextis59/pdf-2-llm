@@ -1,0 +1,171 @@
+{
+  "generatedAt": "2026-07-03T03:18:40.179Z",
+  "iterations": 3,
+  "warmup": 1,
+  "fixture": {
+    "path": "corpus/generated/synthetic-simple-text.pdf"
+  },
+  "executionEnvironment": {
+    "kind": "node-esm-fresh-process",
+    "node": "v22.19.0",
+    "notes": "Browser package entrypoint startup is measured under Node ESM; real browser smoke is tracked separately in release readiness."
+  },
+  "startupProfile": {
+    "profileType": "entrypoint-startup",
+    "scope": "entrypoints",
+    "resultCount": 2,
+    "passed": true,
+    "totals": {
+      "outputChars": 230,
+      "textLines": 6
+    },
+    "cases": [
+      {
+        "id": "node-entrypoint",
+        "runtime": "node",
+        "entrypoint": "packages/pdf2md/src/node.mjs",
+        "executionEnvironment": "node-esm-fresh-process",
+        "iterations": 3,
+        "warmup": 1,
+        "importMs": {
+          "minMs": 11.617823999999999,
+          "maxMs": 12.474402999999999,
+          "meanMs": 12.128250999999999,
+          "medianMs": 12.292525999999999
+        },
+        "firstConversionMs": {
+          "minMs": 12.872514000000002,
+          "maxMs": 13.524857999999998,
+          "meanMs": 13.182851333333332,
+          "medianMs": 13.151181999999999
+        },
+        "totalStartupMs": {
+          "minMs": 25.143980000000003,
+          "maxMs": 25.627421000000002,
+          "meanMs": 25.312643333333337,
+          "medianMs": 25.166529
+        },
+        "outputChars": 115,
+        "textLines": 3,
+        "passed": true
+      },
+      {
+        "id": "browser-entrypoint",
+        "runtime": "browser",
+        "entrypoint": "packages/pdf2md/src/browser.mjs",
+        "executionEnvironment": "node-esm-fresh-process",
+        "iterations": 3,
+        "warmup": 1,
+        "importMs": {
+          "minMs": 11.853231000000001,
+          "maxMs": 12.244606999999998,
+          "meanMs": 11.992787666666667,
+          "medianMs": 11.880524999999999
+        },
+        "firstConversionMs": {
+          "minMs": 12.819389000000001,
+          "maxMs": 14.109386,
+          "meanMs": 13.422105333333334,
+          "medianMs": 13.337541000000002
+        },
+        "totalStartupMs": {
+          "minMs": 25.065516000000002,
+          "maxMs": 25.965966,
+          "meanMs": 25.417073333333335,
+          "medianMs": 25.219738
+        },
+        "outputChars": 115,
+        "textLines": 3,
+        "passed": true
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "node-entrypoint",
+      "runtime": "node",
+      "entrypoint": "packages/pdf2md/src/node.mjs",
+      "executionEnvironment": "node-esm-fresh-process",
+      "iterations": 3,
+      "warmup": 1,
+      "samples": [
+        {
+          "id": "node-entrypoint",
+          "runtime": "node",
+          "importMs": 12.474402999999999,
+          "firstConversionMs": 13.151181999999999,
+          "totalStartupMs": 25.627421000000002,
+          "outputChars": 115,
+          "textLines": 3,
+          "passed": true
+        },
+        {
+          "id": "node-entrypoint",
+          "runtime": "node",
+          "importMs": 11.617823999999999,
+          "firstConversionMs": 13.524857999999998,
+          "totalStartupMs": 25.143980000000003,
+          "outputChars": 115,
+          "textLines": 3,
+          "passed": true
+        },
+        {
+          "id": "node-entrypoint",
+          "runtime": "node",
+          "importMs": 12.292525999999999,
+          "firstConversionMs": 12.872514000000002,
+          "totalStartupMs": 25.166529,
+          "outputChars": 115,
+          "textLines": 3,
+          "passed": true
+        }
+      ],
+      "outputChars": 115,
+      "textLines": 3,
+      "passed": true
+    },
+    {
+      "id": "browser-entrypoint",
+      "runtime": "browser",
+      "entrypoint": "packages/pdf2md/src/browser.mjs",
+      "executionEnvironment": "node-esm-fresh-process",
+      "iterations": 3,
+      "warmup": 1,
+      "samples": [
+        {
+          "id": "browser-entrypoint",
+          "runtime": "browser",
+          "importMs": 11.880524999999999,
+          "firstConversionMs": 13.337541000000002,
+          "totalStartupMs": 25.219738,
+          "outputChars": 115,
+          "textLines": 3,
+          "passed": true
+        },
+        {
+          "id": "browser-entrypoint",
+          "runtime": "browser",
+          "importMs": 11.853231000000001,
+          "firstConversionMs": 14.109386,
+          "totalStartupMs": 25.965966,
+          "outputChars": 115,
+          "textLines": 3,
+          "passed": true
+        },
+        {
+          "id": "browser-entrypoint",
+          "runtime": "browser",
+          "importMs": 12.244606999999998,
+          "firstConversionMs": 12.819389000000001,
+          "totalStartupMs": 25.065516000000002,
+          "outputChars": 115,
+          "textLines": 3,
+          "passed": true
+        }
+      ],
+      "outputChars": 115,
+      "textLines": 3,
+      "passed": true
+    }
+  ]
+}

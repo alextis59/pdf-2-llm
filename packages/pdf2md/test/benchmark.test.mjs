@@ -11,6 +11,7 @@ import {
   summarizePeakMemory,
   summarizeMemory
 } from "../../../scripts/qa/benchmark.mjs";
+import { createStartupProfile } from "../../../scripts/qa/startup-benchmark.mjs";
 
 test("benchmark duration summary reports min max mean and median", () => {
   assert.deepEqual(summarizeDurations([9, 1, 5, 3]), {
@@ -146,6 +147,116 @@ test("benchmark throughput profile summarizes selected text cases", () => {
           pagesPerSecond: 50,
           outputCharsPerSecond: 5000,
           inputBytesPerSecond: 15000,
+          passed: true
+        }
+      ]
+    }
+  );
+});
+
+test("startup profile summarizes browser and Node entrypoint startup", () => {
+  assert.deepEqual(
+    createStartupProfile(
+      [
+        {
+          id: "node-entrypoint",
+          runtime: "node",
+          entrypoint: "packages/pdf2md/src/node.mjs",
+          executionEnvironment: "node-esm-fresh-process",
+          iterations: 2,
+          warmup: 1,
+          outputChars: 100,
+          textLines: 3,
+          passed: true,
+          samples: [
+            { importMs: 4, firstConversionMs: 20, totalStartupMs: 24 },
+            { importMs: 6, firstConversionMs: 16, totalStartupMs: 22 }
+          ]
+        },
+        {
+          id: "browser-entrypoint",
+          runtime: "browser",
+          entrypoint: "packages/pdf2md/src/browser.mjs",
+          executionEnvironment: "node-esm-fresh-process",
+          iterations: 2,
+          warmup: 1,
+          outputChars: 100,
+          textLines: 3,
+          passed: true,
+          samples: [
+            { importMs: 8, firstConversionMs: 21, totalStartupMs: 29 },
+            { importMs: 10, firstConversionMs: 19, totalStartupMs: 31 }
+          ]
+        }
+      ],
+      { scope: "entrypoints" }
+    ),
+    {
+      profileType: "entrypoint-startup",
+      scope: "entrypoints",
+      resultCount: 2,
+      passed: true,
+      totals: {
+        outputChars: 200,
+        textLines: 6
+      },
+      cases: [
+        {
+          id: "node-entrypoint",
+          runtime: "node",
+          entrypoint: "packages/pdf2md/src/node.mjs",
+          executionEnvironment: "node-esm-fresh-process",
+          iterations: 2,
+          warmup: 1,
+          importMs: {
+            minMs: 4,
+            maxMs: 6,
+            meanMs: 5,
+            medianMs: 5
+          },
+          firstConversionMs: {
+            minMs: 16,
+            maxMs: 20,
+            meanMs: 18,
+            medianMs: 18
+          },
+          totalStartupMs: {
+            minMs: 22,
+            maxMs: 24,
+            meanMs: 23,
+            medianMs: 23
+          },
+          outputChars: 100,
+          textLines: 3,
+          passed: true
+        },
+        {
+          id: "browser-entrypoint",
+          runtime: "browser",
+          entrypoint: "packages/pdf2md/src/browser.mjs",
+          executionEnvironment: "node-esm-fresh-process",
+          iterations: 2,
+          warmup: 1,
+          importMs: {
+            minMs: 8,
+            maxMs: 10,
+            meanMs: 9,
+            medianMs: 9
+          },
+          firstConversionMs: {
+            minMs: 19,
+            maxMs: 21,
+            meanMs: 20,
+            medianMs: 20
+          },
+          totalStartupMs: {
+            minMs: 29,
+            maxMs: 31,
+            meanMs: 30,
+            medianMs: 30
+          },
+          outputChars: 100,
+          textLines: 3,
           passed: true
         }
       ]
