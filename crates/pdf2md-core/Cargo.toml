@@ -1,0 +1,10 @@
+[package]
+name = "pdf2md-core"
+version = "0.0.0"
+edition = "2021"
+license = "UNLICENSED"
+publish = false
+
+[lib]
+name = "pdf2md_core"
+path = "src/lib.rs"

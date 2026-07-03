@@ -317,7 +317,7 @@ Goal: create stable contracts so agents can implement modules independently.
 
 ### 1.3 Build System
 
-- [ ] Create Rust workspace.
+- [x] Create Rust workspace.
 - [x] Create TypeScript package workspace.
 - [ ] Add `wasm-bindgen` or equivalent WASM bridge.
 - [x] Add Node build target.
@@ -331,7 +331,7 @@ Goal: create stable contracts so agents can implement modules independently.
 
 ### 1.4 Quality Gates
 
-- [ ] Add unit test framework for Rust.
+- [x] Add unit test framework for Rust.
 - [x] Add unit/integration test framework for TypeScript.
 - [x] Add snapshot testing for Markdown.
 - [x] Add snapshot testing for serialized IR.
@@ -345,7 +345,7 @@ Goal: create stable contracts so agents can implement modules independently.
 Definition of done:
 
 - [x] `npm run build` succeeds.
-- [ ] `cargo test --workspace` succeeds.
+- [x] `cargo test --workspace` succeeds.
 - [x] A synthetic single-page PDF can pass through a stub pipeline and return
   structured diagnostics.
 - [x] The corpus runner can list accepted PDFs and skip future gates.
