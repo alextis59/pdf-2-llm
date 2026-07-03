@@ -696,7 +696,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Enforce max page count.
 - [x] Enforce max decoded stream size.
 - [x] Enforce max image pixels.
-- [ ] Enforce max object count.
+- [x] Enforce max object count.
 - [ ] Enforce parse and conversion timeouts.
 - [ ] Enforce recursion/depth limits.
 - [ ] Audit all unsafe Rust blocks.
