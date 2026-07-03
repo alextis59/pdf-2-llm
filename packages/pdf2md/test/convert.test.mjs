@@ -210,6 +210,7 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
     hybrid: 0,
     unknown: 0
   });
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.routingConfidence, 0.95);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.imageCoverageRatio, 0.5);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextLines, 3);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextAreaRatio, 0.01);
@@ -225,6 +226,8 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
   assert.deepEqual(fullPage.diagnostics.extraction.scanDetection.pages[0], {
     pageIndex: 0,
     sourceType: "scanned",
+    routingConfidence: 0.95,
+    routingReasons: ["image_dominant", "no_text"],
     textLineCount: 0,
     textArea: 0,
     textAreaRatio: 0,
@@ -285,6 +288,10 @@ test("convertPdfToMarkdown reports little and no-text scan detection diagnostics
   assert.equal(normalText.ir.pages[0].sourceType, "digital");
   assert.equal(normalText.diagnostics.extraction.scanDetection.littleOrNoTextPages, 0);
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].sourceType, "digital");
+  assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].routingConfidence, 0.9);
+  assert.deepEqual(normalText.diagnostics.extraction.scanDetection.pages[0].routingReasons, [
+    "text_present"
+  ]);
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].noText, false);
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].littleText, false);
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].littleOrNoText, false);
@@ -317,6 +324,8 @@ test("convertPdfToMarkdown reports hidden OCR overlay scan diagnostics", async (
   assert.equal(hiddenOverlay.diagnostics.extraction.scanDetection.sourceType, "hybrid");
   assert.equal(hiddenOverlay.diagnostics.extraction.scanDetection.hiddenOcrOverlayPages, 1);
   assert.equal(hiddenPage.sourceType, "hybrid");
+  assert.equal(hiddenPage.routingConfidence, 0.9);
+  assert.deepEqual(hiddenPage.routingReasons, ["image_dominant", "hidden_ocr_overlay"]);
   assert.equal(hiddenPage.imageDominant, true);
   assert.equal(hiddenPage.hiddenTextLineCount, 1);
   assert.equal(hiddenPage.hiddenTextArea, 216);
@@ -345,6 +354,12 @@ test("convertPdfToMarkdown reports hidden text and visible image geometry mismat
   assert.equal(mismatch.diagnostics.extraction.scanDetection.hiddenTextImageMismatchPages, 1);
   assert.equal(mismatch.ir.sourceType, "hybrid");
   assert.equal(page.sourceType, "hybrid");
+  assert.equal(page.routingConfidence, 0.6);
+  assert.deepEqual(page.routingReasons, [
+    "image_dominant",
+    "hidden_ocr_overlay",
+    "hidden_text_image_mismatch"
+  ]);
   assert.equal(page.imageDominant, true);
   assert.equal(page.imageCoverageRatio, 0.653595);
   assert.equal(page.hiddenOcrOverlayLikely, true);

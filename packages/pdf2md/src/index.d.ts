@@ -169,6 +169,7 @@ export type ScanDetectionDiagnostics = {
     hybrid: number;
     unknown: number;
   };
+  routingConfidence: number;
   thresholds: {
     imageCoverageRatio: number;
     minTextLines: number;
@@ -186,6 +187,8 @@ export type ScanDetectionDiagnostics = {
 export type ScanDetectionPageDiagnostics = {
   pageIndex: number;
   sourceType: "digital" | "scanned" | "hybrid" | "unknown";
+  routingConfidence: number;
+  routingReasons: string[];
   textLineCount: number;
   textArea: number | null;
   textAreaRatio: number | null;

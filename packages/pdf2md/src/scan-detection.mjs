@@ -45,6 +45,7 @@ export function createScanDetection(pages = [], options = {}) {
   return {
     sourceType: documentSourceType(sourceTypeCounts, pageDiagnostics.length),
     sourceTypeCounts,
+    routingConfidence: averageRoutingConfidence(pageDiagnostics),
     thresholds: {
       imageCoverageRatio: imageCoverageThreshold,
       minTextLines,
@@ -108,17 +109,22 @@ function createPageScanDiagnostics(page, options) {
   ).length;
   const hiddenTextImageMismatchLikely =
     hiddenOcrOverlayLikely && hiddenTextImageMismatchLineCount > 0;
-  const sourceType = routePageSourceType({
+  const routing = createPageRouting({
     hiddenOcrOverlayLikely,
+    hiddenTextImageMismatchLikely,
+    imageCoverageRatio,
     imageDominant,
     imageDrawCount: imageDraws.length,
     littleOrNoText,
+    noText,
     textLineCount
   });
 
   return {
     pageIndex: page.pageIndex,
-    sourceType,
+    sourceType: routing.sourceType,
+    routingConfidence: routing.confidence,
+    routingReasons: routing.reasons,
     textLineCount,
     textArea: normalizeNullableNumber(textArea),
     textAreaRatio,
@@ -148,26 +154,51 @@ function createPageScanDiagnostics(page, options) {
   };
 }
 
-function routePageSourceType({
+function createPageRouting({
   hiddenOcrOverlayLikely,
+  hiddenTextImageMismatchLikely,
+  imageCoverageRatio,
   imageDominant,
   imageDrawCount,
   littleOrNoText,
+  noText,
   textLineCount
 }) {
   if (imageDominant && hiddenOcrOverlayLikely) {
-    return "hybrid";
+    return {
+      sourceType: "hybrid",
+      confidence: hiddenTextImageMismatchLikely ? 0.6 : 0.9,
+      reasons: hiddenTextImageMismatchLikely
+        ? ["image_dominant", "hidden_ocr_overlay", "hidden_text_image_mismatch"]
+        : ["image_dominant", "hidden_ocr_overlay"]
+    };
   }
   if (imageDominant && !littleOrNoText && textLineCount > 0) {
-    return "hybrid";
+    return {
+      sourceType: "hybrid",
+      confidence: 0.75,
+      reasons: ["image_dominant", "text_present"]
+    };
   }
   if (imageDominant && littleOrNoText) {
-    return "scanned";
+    return {
+      sourceType: "scanned",
+      confidence: noText && imageCoverageRatio >= 0.9 ? 0.95 : 0.85,
+      reasons: noText ? ["image_dominant", "no_text"] : ["image_dominant", "little_text"]
+    };
   }
   if (textLineCount > 0 || imageDrawCount > 0) {
-    return "digital";
+    return {
+      sourceType: "digital",
+      confidence: textLineCount > 0 ? 0.9 : 0.65,
+      reasons: textLineCount > 0 ? ["text_present"] : ["image_not_dominant"]
+    };
   }
-  return "unknown";
+  return {
+    sourceType: "unknown",
+    confidence: 0.2,
+    reasons: ["no_text_or_image_signal"]
+  };
 }
 
 function countSourceTypes(pages) {
@@ -197,6 +228,14 @@ function documentSourceType(counts, pageCount) {
     return "digital";
   }
   return "unknown";
+}
+
+function averageRoutingConfidence(pages) {
+  if (pages.length === 0) {
+    return 0;
+  }
+  const total = pages.reduce((sum, page) => sum + page.routingConfidence, 0);
+  return normalizeRatio(total / pages.length);
 }
 
 function isHiddenTextLine(line) {
