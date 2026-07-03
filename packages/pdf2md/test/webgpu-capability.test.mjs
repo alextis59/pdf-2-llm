@@ -24,6 +24,7 @@ test("detectWebGpuCapabilities keeps CPU selected when WebGPU is not requested",
     adapter: null,
     device: {
       status: "not-requested",
+      source: "detected",
       lostReason: null,
       lostMessage: null,
       error: null
@@ -99,6 +100,7 @@ test("detectWebGpuCapabilities reports browser WebGPU adapter features and limit
     },
     device: {
       status: "available",
+      source: "detected",
       lostReason: null,
       lostMessage: null,
       error: null
@@ -147,6 +149,32 @@ test("detectWebGpuCapabilities keeps Node on CPU without a stable GPU path", asy
   assert.equal(result.fallbackReason, "node-stable-gpu-path-unavailable");
 });
 
+test("detectWebGpuCapabilities selects supplied WebGPU devices before Node fallback", async () => {
+  const result = await detectWebGpuCapabilities(
+    {
+      preferred: true,
+      device: {
+        label: "supplied test device"
+      }
+    },
+    {
+      process: {
+        versions: {
+          node: "22.0.0"
+        }
+      }
+    }
+  );
+
+  assert.equal(result.enabled, true);
+  assert.equal(result.runtime, "node");
+  assert.equal(result.status, "selected");
+  assert.equal(result.selectedProvider, "webgpu");
+  assert.equal(result.fallbackReason, null);
+  assert.equal(result.device.status, "available");
+  assert.equal(result.device.source, "supplied");
+});
+
 test("detectWebGpuCapabilities falls back to CPU when a WebGPU device is already lost", async () => {
   const result = await detectWebGpuCapabilities(
     { preferred: true },
@@ -179,6 +207,7 @@ test("detectWebGpuCapabilities falls back to CPU when a WebGPU device is already
   assert.equal(result.fallbackReason, "device-lost");
   assert.deepEqual(result.device, {
     status: "lost",
+    source: "detected",
     lostReason: "destroyed",
     lostMessage: "device was lost during setup",
     error: null

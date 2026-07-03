@@ -62,6 +62,26 @@ test("evaluateWebGpuComparisonReport enforces speedup when WebGPU is selected", 
   assert.equal(failed.speedupFailures.length, 1);
 });
 
+test("evaluateWebGpuComparisonReport accepts WebGPU preprocessing speedup metrics", () => {
+  const summary = evaluateWebGpuComparisonReport({
+    comparisons: [
+      {
+        id: "scan",
+        equivalentAcceptedOutput: true,
+        webgpuSelectedProvider: "webgpu",
+        webgpuFallbackReason: null,
+        speedupMetric: "webgpu-preprocessing",
+        speedupRatio: 1.2,
+        pagesPerSecondRatio: 0.9
+      }
+    ]
+  });
+
+  assert.equal(summary.passed, true);
+  assert.equal(summary.speedupStatus, "passed");
+  assert.equal(summary.speedupFailures.length, 0);
+});
+
 test("evaluateWebGpuComparisonReport fails parity mismatches and required missing speedup", () => {
   assert.equal(
     evaluateWebGpuComparisonReport({

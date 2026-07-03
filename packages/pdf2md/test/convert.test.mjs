@@ -6,6 +6,7 @@ import test from "node:test";
 import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
 import { convertPdfToMarkdown as convertPdfToMarkdownFromNode } from "../src/node.mjs";
 import { convertPdfToMarkdown as convertPdfToMarkdownFromBrowser } from "../src/browser.mjs";
+import { binarizeRgbaCpu } from "../src/webgpu-preprocess.mjs";
 
 const fixturePath = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
 const twoColumnFixturePath = new URL(
@@ -262,6 +263,41 @@ test("convertPdfToMarkdown preserves OCR outputs when WebGPU falls back to CPU",
   assert.deepEqual(fallbackResult.sourceMap, cpuResult.sourceMap);
   assert.deepEqual(fallbackResult.ir, cpuResult.ir);
   assert.deepEqual(fallbackResult.assets, cpuResult.assets);
+});
+
+test("convertPdfToMarkdown routes WebGPU OCR preprocessing with a supplied device and runner", async () => {
+  const bytes = createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 });
+  const calls = [];
+  const result = await convertPdfToMarkdown(bytes, {
+    raster: {
+      enabled: true,
+      dpi: 72
+    },
+    webgpu: {
+      preferred: true,
+      device: {
+        label: "supplied test device"
+      },
+      preprocessing: {
+        maxSamplePixelsPerPage: 16,
+        runner: {
+          async run(rgba, options) {
+            calls.push(options.page.pageIndex);
+            return binarizeRgbaCpu(rgba, { threshold: options.threshold });
+          }
+        }
+      }
+    }
+  });
+
+  assert.deepEqual(calls, [0]);
+  assert.equal(result.diagnostics.acceleration.webgpu.selectedProvider, "webgpu");
+  assert.equal(result.diagnostics.acceleration.webgpu.device.source, "supplied");
+  assert.equal(result.diagnostics.acceleration.webgpu.execution.provider, "webgpu");
+  assert.equal(result.diagnostics.acceleration.webgpu.preprocessing.status, "completed");
+  assert.equal(result.diagnostics.acceleration.webgpu.preprocessing.processedPages, 1);
+  assert.equal(result.diagnostics.acceleration.webgpu.preprocessing.totalSamplePixels, 16);
+  assert.equal(result.diagnostics.acceleration.webgpu.preprocessing.parity, true);
 });
 
 test("convertPdfToMarkdown records OCR page language overrides", async () => {

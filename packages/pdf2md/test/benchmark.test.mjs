@@ -637,7 +637,10 @@ test("benchmark provider comparison reports parity and speed ratio", () => {
         webgpuSelectedProvider: "cpu",
         webgpuFallbackReason: "node-stable-gpu-path-unavailable",
         equivalentAcceptedOutput: true,
+        speedupMetric: "pages-per-second",
+        speedupRatio: 1.5,
         pagesPerSecondRatio: 1.5,
+        webgpuPreprocessingSpeedupRatio: null,
         startupDeltaMs: -2,
         modelLoadDeltaMs: 0,
         rssPeakDeltaBytes: 20,
@@ -645,6 +648,50 @@ test("benchmark provider comparison reports parity and speed ratio", () => {
       }
     ]
   );
+});
+
+test("benchmark provider comparison prefers WebGPU preprocessing speed ratio", () => {
+  const [comparison] = compareProviderResults([
+    {
+      id: "sample",
+      workload: "ocr",
+      providerMode: "cpu",
+      outputChars: 100,
+      textLines: 2,
+      warnings: [],
+      pagesPerSecond: 10,
+      startup: { durationMs: 20 },
+      modelLoad: { durationMs: 0 },
+      peakMemory: { rssPeakBytes: 100 },
+      acceleration: { selectedProvider: "cpu", fallbackReason: null },
+      gpuMemory: { estimatedBytes: 0 }
+    },
+    {
+      id: "sample",
+      workload: "ocr",
+      providerMode: "webgpu-preferred",
+      outputChars: 100,
+      textLines: 2,
+      warnings: [],
+      pagesPerSecond: 9,
+      startup: { durationMs: 18 },
+      modelLoad: { durationMs: 0 },
+      peakMemory: { rssPeakBytes: 120 },
+      acceleration: {
+        selectedProvider: "webgpu",
+        fallbackReason: null,
+        preprocessing: {
+          speedupRatio: 1.4
+        }
+      },
+      gpuMemory: { estimatedBytes: 1024 }
+    }
+  ]);
+
+  assert.equal(comparison.speedupMetric, "webgpu-preprocessing");
+  assert.equal(comparison.speedupRatio, 1.4);
+  assert.equal(comparison.pagesPerSecondRatio, 0.9);
+  assert.equal(comparison.webgpuPreprocessingSpeedupRatio, 1.4);
 });
 
 test("benchmark memory profile summarizes memory-gated long documents", () => {

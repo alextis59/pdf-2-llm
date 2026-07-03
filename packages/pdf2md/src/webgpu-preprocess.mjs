@@ -1,5 +1,7 @@
 const defaultWorkgroupSize = 64;
 const defaultThreshold = 128;
+const defaultMaxSamplePixelsPerPage = 262_144;
+const defaultMinSpeedup = 1.05;
 
 const defaultGpuBufferUsage = Object.freeze({
   MAP_READ: 1,
@@ -156,6 +158,142 @@ export async function binarizeRgbaWithWebGpu(options = {}) {
   return runner.run(options.rgba, { threshold: options.threshold });
 }
 
+export async function createWebGpuPreprocessingDiagnostics({
+  execution = null,
+  options = {},
+  webgpu = null
+} = {}) {
+  const preprocessingOptions = options.preprocessing ?? {};
+  const threshold = normalizeThreshold(preprocessingOptions.threshold ?? defaultThreshold);
+  const maxSamplePixelsPerPage = normalizePositiveInteger(
+    preprocessingOptions.maxSamplePixelsPerPage,
+    defaultMaxSamplePixelsPerPage
+  );
+  const minSpeedup = normalizePositiveNumber(
+    preprocessingOptions.minSpeedup,
+    defaultMinSpeedup
+  );
+  const plannedPages = plannedExecutionPages(execution);
+  const base = {
+    enabled: preprocessingOptions.enabled !== false,
+    provider: webgpu?.selectedProvider ?? "cpu",
+    status: "disabled",
+    workload: "ocr-preprocess-binarize-rgba",
+    threshold,
+    minSpeedup,
+    routedPages: execution?.routedPages ?? 0,
+    plannedPages: plannedPages.length,
+    processedPages: 0,
+    maxSamplePixelsPerPage,
+    totalSamplePixels: 0,
+    parity: null,
+    cpuMs: null,
+    gpuMs: null,
+    speedupRatio: null,
+    speedupPassed: false,
+    fallbackReason: null,
+    error: null,
+    pages: []
+  };
+
+  if (preprocessingOptions.enabled === false) {
+    return {
+      ...base,
+      enabled: false,
+      status: "disabled"
+    };
+  }
+  if (webgpu?.selectedProvider !== "webgpu") {
+    return {
+      ...base,
+      status: "cpu-fallback",
+      fallbackReason: webgpu?.fallbackReason ?? "webgpu-unavailable"
+    };
+  }
+  if (plannedPages.length === 0) {
+    return {
+      ...base,
+      status: "no-routed-pages"
+    };
+  }
+
+  let runner = null;
+  try {
+    runner = preprocessingOptions.runner ?? createRunnerFromDevice(options.device);
+  } catch (error) {
+    return {
+      ...base,
+      status: "failed",
+      fallbackReason: "webgpu-runner-create-failed",
+      error: describeError(error)
+    };
+  }
+  if (!runner) {
+    return {
+      ...base,
+      status: "device-unavailable",
+      fallbackReason: "webgpu-device-unavailable"
+    };
+  }
+
+  const pages = [];
+  for (const page of plannedPages) {
+    const samplePixels = Math.min(page.pixelCount, maxSamplePixelsPerPage);
+    const input = createDeterministicRgbaSample(samplePixels, page.pageIndex);
+    const cpuStartedAt = nowMs();
+    const expected = binarizeRgbaCpu(input, { threshold });
+    const cpuMs = nowMs() - cpuStartedAt;
+    const gpuStartedAt = nowMs();
+    let actual;
+    try {
+      actual = await runner.run(input, { threshold, page });
+    } catch (error) {
+      return {
+        ...base,
+        status: "failed",
+        processedPages: pages.length,
+        totalSamplePixels: pages.reduce((sum, page) => sum + page.samplePixels, 0),
+        parity: false,
+        cpuMs: pages.reduce((sum, page) => sum + page.cpuMs, 0),
+        gpuMs: pages.reduce((sum, page) => sum + page.gpuMs, 0),
+        fallbackReason: "webgpu-preprocessing-run-failed",
+        error: describeError(error),
+        pages
+      };
+    }
+    const gpuMs = nowMs() - gpuStartedAt;
+    const parity = byteArraysEqual(expected, actual);
+    const speedupRatio = gpuMs > 0 ? cpuMs / gpuMs : null;
+    pages.push({
+      pageIndex: page.pageIndex,
+      sourceType: page.sourceType,
+      samplePixels,
+      parity,
+      cpuMs,
+      gpuMs,
+      speedupRatio,
+      speedupPassed: Number.isFinite(speedupRatio) && speedupRatio >= minSpeedup
+    });
+  }
+
+  const parity = pages.every((page) => page.parity);
+  const cpuMs = pages.reduce((sum, page) => sum + page.cpuMs, 0);
+  const gpuMs = pages.reduce((sum, page) => sum + page.gpuMs, 0);
+  const speedupRatio = gpuMs > 0 ? cpuMs / gpuMs : null;
+  return {
+    ...base,
+    status: parity ? "completed" : "failed",
+    processedPages: pages.length,
+    totalSamplePixels: pages.reduce((sum, page) => sum + page.samplePixels, 0),
+    parity,
+    cpuMs,
+    gpuMs,
+    speedupRatio,
+    speedupPassed: Number.isFinite(speedupRatio) && speedupRatio >= minSpeedup,
+    pages
+  };
+}
+
 export function packRgbaWords(rgba) {
   const input = normalizeRgbaInput(rgba);
   const output = new Uint32Array(input.length / 4);
@@ -205,8 +343,67 @@ function normalizeThreshold(value) {
   return Math.max(0, Math.min(255, Math.round(threshold)));
 }
 
+function normalizePositiveNumber(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
 function normalizePositiveInteger(value, fallback) {
   return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function plannedExecutionPages(execution) {
+  return (execution?.batches ?? [])
+    .flatMap((batch) => batch.pages ?? [])
+    .filter((page) =>
+      Number.isInteger(page.pageIndex) &&
+      Number.isInteger(page.pixelCount) &&
+      page.pixelCount > 0
+    );
+}
+
+function createRunnerFromDevice(device) {
+  if (!device) {
+    return null;
+  }
+  return createWebGpuBinarizeRgbaRunner({ device });
+}
+
+function createDeterministicRgbaSample(pixelCount, seed = 0) {
+  const normalizedPixelCount = normalizePositiveInteger(pixelCount, 1);
+  const rgba = new Uint8Array(normalizedPixelCount * 4);
+  for (let pixel = 0; pixel < normalizedPixelCount; pixel += 1) {
+    const offset = pixel * 4;
+    const value = (pixel * 13 + seed * 29 + (pixel >>> 8)) & 255;
+    rgba[offset] = value;
+    rgba[offset + 1] = (value * 3 + seed) & 255;
+    rgba[offset + 2] = (255 - value + seed * 7) & 255;
+    rgba[offset + 3] = 255;
+  }
+  return rgba;
+}
+
+function byteArraysEqual(left, right) {
+  if (!(right instanceof Uint8Array) || left.length !== right.length) {
+    return false;
+  }
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function nowMs() {
+  return globalThis.performance?.now?.() ?? Date.now();
+}
+
+function describeError(error) {
+  return {
+    name: error?.name ?? "Error",
+    message: error?.message ?? String(error)
+  };
 }
 
 function validateWebGpuDevice(device) {

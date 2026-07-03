@@ -292,15 +292,24 @@ not render full image buffers. Page and thumbnail targets that exceed
     powerPreference?: "low-power" | "high-performance";
     maxBatchPixels?: number;
     maxMemoryBytes?: number;
+    device?: unknown;
+    preprocessing?: {
+      enabled?: boolean;
+      threshold?: number;
+      maxSamplePixelsPerPage?: number;
+      minSpeedup?: number;
+      runner?: WebGpuPreprocessingRunner;
+    };
   };
 }
 ```
 
-The WebGPU path currently performs capability detection and OCR batch planning.
-In Node, the stable GPU execution path falls back to CPU. Browser support
-depends on `navigator.gpu`, adapter/device creation, and device health. If
-`required` is true but WebGPU is unavailable, the converter records
-`webgpu.unavailable` and continues with CPU fallback.
+The WebGPU path performs capability detection, OCR batch planning, and
+conversion-routed OCR preprocessing diagnostics. In Node, the stable GPU
+execution path falls back to CPU unless a caller supplies a concrete browser
+`GPUDevice`. Browser support depends on `navigator.gpu`, adapter/device
+creation, and device health. If `required` is true but WebGPU is unavailable,
+the converter records `webgpu.unavailable` and continues with CPU fallback.
 
 ### Tables
 

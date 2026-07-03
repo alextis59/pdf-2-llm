@@ -108,13 +108,14 @@ fixtures:
 
 #### WebGPU
 
-- The converter WebGPU path currently performs capability detection and OCR
-  batch planning only.
+- The converter WebGPU path performs capability detection, OCR batch planning,
+  and supplied-device OCR-preprocessing sample diagnostics.
 - Node always falls back to CPU with
   `node-stable-gpu-path-unavailable`.
 - A browser WebGPU OCR-preprocessing binarization kernel and
   `qa:webgpu-preprocess` harness are available for adapter-backed validation,
-  but the converter does not yet route raster OCR buffers through that kernel.
+  and browser callers can supply a `GPUDevice` to route conversion diagnostics
+  through that kernel.
 - WebGPU speedup reports are `not-applicable` in CPU-fallback environments and
   do not claim acceleration unless `selectedProvider` is `webgpu`.
 - The Gate 6 speedup acceptance item remains open until a conversion-routed

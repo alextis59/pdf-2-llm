@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   binarizeRgbaCpu,
   createBinarizeRgbaShaderSource,
+  createWebGpuPreprocessingDiagnostics,
   createWebGpuBinarizeRgbaRunner,
   packRgbaWords,
   unpackRgbaWords
@@ -57,4 +58,105 @@ test("binarizeRgbaCpu rejects non-RGBA input", () => {
     () => binarizeRgbaCpu(new Uint8Array([1, 2, 3])),
     /multiple of 4/
   );
+});
+
+test("createWebGpuPreprocessingDiagnostics executes routed samples through a runner", async () => {
+  const calls = [];
+  const diagnostics = await createWebGpuPreprocessingDiagnostics({
+    execution: {
+      routedPages: 1,
+      batches: [
+        {
+          pages: [
+            {
+              pageIndex: 0,
+              sourceType: "scanned",
+              pixelCount: 32,
+              estimatedBytes: 128
+            }
+          ]
+        }
+      ]
+    },
+    options: {
+      preprocessing: {
+        maxSamplePixelsPerPage: 8,
+        runner: {
+          async run(rgba, options) {
+            calls.push(options.page.pageIndex);
+            return binarizeRgbaCpu(rgba, { threshold: options.threshold });
+          }
+        }
+      }
+    },
+    webgpu: {
+      selectedProvider: "webgpu"
+    }
+  });
+
+  assert.deepEqual(calls, [0]);
+  assert.equal(diagnostics.status, "completed");
+  assert.equal(diagnostics.provider, "webgpu");
+  assert.equal(diagnostics.processedPages, 1);
+  assert.equal(diagnostics.totalSamplePixels, 8);
+  assert.equal(diagnostics.parity, true);
+  assert.equal(diagnostics.pages[0].parity, true);
+});
+
+test("createWebGpuPreprocessingDiagnostics records fallback without a selected provider", async () => {
+  const diagnostics = await createWebGpuPreprocessingDiagnostics({
+    execution: {
+      routedPages: 1,
+      batches: []
+    },
+    webgpu: {
+      selectedProvider: "cpu",
+      fallbackReason: "node-stable-gpu-path-unavailable"
+    }
+  });
+
+  assert.equal(diagnostics.status, "cpu-fallback");
+  assert.equal(diagnostics.fallbackReason, "node-stable-gpu-path-unavailable");
+  assert.equal(diagnostics.processedPages, 0);
+});
+
+test("createWebGpuPreprocessingDiagnostics records runner failures", async () => {
+  const diagnostics = await createWebGpuPreprocessingDiagnostics({
+    execution: {
+      routedPages: 1,
+      batches: [
+        {
+          pages: [
+            {
+              pageIndex: 0,
+              sourceType: "scanned",
+              pixelCount: 32,
+              estimatedBytes: 128
+            }
+          ]
+        }
+      ]
+    },
+    options: {
+      preprocessing: {
+        runner: {
+          async run() {
+            throw new Error("runner failed");
+          }
+        }
+      }
+    },
+    webgpu: {
+      selectedProvider: "webgpu"
+    }
+  });
+
+  assert.equal(diagnostics.status, "failed");
+  assert.equal(diagnostics.fallbackReason, "webgpu-preprocessing-run-failed");
+  assert.deepEqual(diagnostics.error, {
+    name: "Error",
+    message: "runner failed"
+  });
+  assert.equal(diagnostics.processedPages, 0);
+  assert.equal(diagnostics.parity, false);
 });

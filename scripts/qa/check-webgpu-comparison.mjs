@@ -13,8 +13,8 @@ export function evaluateWebGpuComparisonReport(report, { minSpeedup = 1.05, requ
   );
   const speedupFailures = webgpuComparisons.filter(
     (comparison) =>
-      !Number.isFinite(comparison.pagesPerSecondRatio) ||
-      comparison.pagesPerSecondRatio < minSpeedup
+      !Number.isFinite(comparison.speedupRatio ?? comparison.pagesPerSecondRatio) ||
+      (comparison.speedupRatio ?? comparison.pagesPerSecondRatio) < minSpeedup
   );
   const fallbackReasons = [
     ...new Set(

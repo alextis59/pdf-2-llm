@@ -78,6 +78,14 @@ export type ConvertOptions = {
     powerPreference?: "low-power" | "high-performance";
     maxBatchPixels?: number;
     maxMemoryBytes?: number;
+    device?: unknown;
+    preprocessing?: {
+      enabled?: boolean;
+      threshold?: number;
+      maxSamplePixelsPerPage?: number;
+      minSpeedup?: number;
+      runner?: WebGpuPreprocessingRunner;
+    };
   };
   tables?: {
     enabled?: boolean;
@@ -169,6 +177,7 @@ export type WebGpuDiagnostics = {
   adapter: WebGpuAdapterDiagnostics | null;
   device: WebGpuDeviceDiagnostics;
   execution: WebGpuExecutionDiagnostics;
+  preprocessing: WebGpuPreprocessingDiagnostics;
   error?: {
     name: string;
     message: string;
@@ -177,6 +186,7 @@ export type WebGpuDiagnostics = {
 
 export type WebGpuDeviceDiagnostics = {
   status: "not-requested" | "available" | "request-failed" | "lost";
+  source: "detected" | "supplied";
   lostReason: string | null;
   lostMessage: string | null;
   error: {
@@ -245,6 +255,63 @@ export type WebGpuExecutionSkippedPageDiagnostics = {
   pixelCount: number | null;
   estimatedBytes: number | null;
   status: "missing-raster" | "exceeds-memory-limit";
+};
+
+export type WebGpuPreprocessingRunner = {
+  run(
+    rgba: Uint8Array,
+    options?: {
+      threshold?: number;
+      page?: {
+        pageIndex: number;
+        sourceType: "scanned" | "hybrid";
+        pixelCount: number;
+        estimatedBytes: number;
+      };
+    }
+  ): Promise<Uint8Array> | Uint8Array;
+};
+
+export type WebGpuPreprocessingDiagnostics = {
+  enabled: boolean;
+  provider: "cpu" | "webgpu";
+  status:
+    | "disabled"
+    | "cpu-fallback"
+    | "no-routed-pages"
+    | "device-unavailable"
+    | "completed"
+    | "failed";
+  workload: "ocr-preprocess-binarize-rgba";
+  threshold: number;
+  minSpeedup: number;
+  routedPages: number;
+  plannedPages: number;
+  processedPages: number;
+  maxSamplePixelsPerPage: number;
+  totalSamplePixels: number;
+  parity: boolean | null;
+  cpuMs: number | null;
+  gpuMs: number | null;
+  speedupRatio: number | null;
+  speedupPassed: boolean;
+  fallbackReason: string | null;
+  error: {
+    name: string;
+    message: string;
+  } | null;
+  pages: WebGpuPreprocessingPageDiagnostics[];
+};
+
+export type WebGpuPreprocessingPageDiagnostics = {
+  pageIndex: number;
+  sourceType: "scanned" | "hybrid";
+  samplePixels: number;
+  parity: boolean;
+  cpuMs: number;
+  gpuMs: number;
+  speedupRatio: number | null;
+  speedupPassed: boolean;
 };
 
 export type OcrDiagnostics = {

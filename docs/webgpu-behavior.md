@@ -14,10 +14,11 @@ The current implementation performs:
   workloads.
 - CPU parity diagnostics when WebGPU is unavailable or not requested.
 
-The converter path does not yet materialize raster image buffers or route OCR
-through the binarization kernel. It still plans provider, memory, and batching
-behavior so browser OCR/layout acceleration can be wired in without changing
-caller-facing result shapes.
+The converter path does not yet materialize PDF raster image buffers, but it can
+route OCR-preprocessing validation samples through the binarization kernel when
+a browser caller supplies a `GPUDevice` or test runner. This keeps
+caller-facing result shapes stable while browser OCR/layout acceleration is
+incrementally wired in.
 
 ## Options
 
@@ -41,6 +42,12 @@ Supported options:
 | `powerPreference` | `"high-performance"` | Passed to `navigator.gpu.requestAdapter()` in browsers. |
 | `maxBatchPixels` | `8000000` | Maximum planned pixels per WebGPU OCR batch. |
 | `maxMemoryBytes` | `268435456` | Maximum planned bytes per page/batch for WebGPU OCR planning. |
+| `device` | `undefined` | Advanced browser hook for supplying an already-created `GPUDevice`. |
+| `preprocessing.enabled` | `true` | Controls conversion-routed OCR preprocessing diagnostics when WebGPU is selected. |
+| `preprocessing.threshold` | `128` | Binarization threshold used by WebGPU preprocessing samples. |
+| `preprocessing.maxSamplePixelsPerPage` | `262144` | Maximum deterministic sample pixels per routed OCR page. |
+| `preprocessing.minSpeedup` | `1.05` | Minimum preprocessing speed ratio used for diagnostic pass/fail status. |
+| `preprocessing.runner` | `undefined` | Test and integration hook for injecting a compatible preprocessing runner. |
 
 `required` does not throw today. It records a structured warning if WebGPU
 cannot be selected.
@@ -93,6 +100,27 @@ When all checks pass, diagnostics use:
 Adapter diagnostics include optional adapter name, adapter info, sorted feature
 names, and numeric limits. Device diagnostics report `available` when the
 requested device is healthy.
+
+## Supplied Device
+
+Advanced browser callers may supply a concrete `GPUDevice`:
+
+```js
+const adapter = await navigator.gpu.requestAdapter();
+const device = await adapter.requestDevice();
+const result = await convertPdfToMarkdown(bytes, {
+  raster: { enabled: true },
+  webgpu: {
+    preferred: true,
+    device
+  }
+});
+```
+
+When a device is supplied, the converter selects `webgpu` before Node fallback
+checks and records `device.source: "supplied"` in diagnostics. This path is
+intended for browser or worker integrations that manage adapter/device lifetime
+outside the converter.
 
 ## Node Behavior
 
@@ -199,6 +227,27 @@ Pages can be skipped during planning:
 
 The plan uses RGBA memory estimation, so estimated bytes are
 `pixelCount * 4`.
+
+## Preprocessing Diagnostics
+
+When WebGPU is selected and the execution plan has routed OCR pages, conversion
+also emits preprocessing diagnostics:
+
+```json
+{
+  "provider": "webgpu",
+  "status": "completed",
+  "workload": "ocr-preprocess-binarize-rgba",
+  "processedPages": 1,
+  "parity": true,
+  "speedupRatio": 1.2,
+  "speedupPassed": true
+}
+```
+
+Without a supplied device or injected runner, preprocessing reports
+`status: "device-unavailable"` and leaves Markdown output unchanged. With CPU
+fallback it reports `status: "cpu-fallback"` and the WebGPU fallback reason.
 
 ## Output Parity
 

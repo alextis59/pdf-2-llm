@@ -21,6 +21,31 @@ export async function detectWebGpuCapabilities(options = {}, environment = globa
     });
   }
 
+  if (options.device) {
+    return {
+      enabled: true,
+      requested,
+      runtime,
+      status: "selected",
+      selectedProvider: "webgpu",
+      fallbackReason: null,
+      browser: {
+        supported: browser.supported,
+        reason: browser.reason
+      },
+      provider: {
+        id: "webgpu",
+        kind: "gpu",
+        status: "selected"
+      },
+      adapter: null,
+      device: createDeviceDiagnostics("available", {
+        source: "supplied"
+      }),
+      error: null
+    };
+  }
+
   if (runtime === "node") {
     return createResult({
       browser,
@@ -213,6 +238,7 @@ async function alreadySettledDeviceLoss(lostPromise) {
 function createDeviceDiagnostics(status, details = {}) {
   return {
     status,
+    source: details.source ?? "detected",
     lostReason: details.lostReason ?? null,
     lostMessage: details.lostMessage ?? null,
     error: details.error ?? null

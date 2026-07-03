@@ -107,6 +107,9 @@ export function compareProviderResults(results) {
     if (!cpu || !webgpu) {
       continue;
     }
+    const pagesPerSecondRatio =
+      cpu.pagesPerSecond > 0 ? webgpu.pagesPerSecond / cpu.pagesPerSecond : null;
+    const preprocessingSpeedupRatio = webgpu.acceleration.preprocessing?.speedupRatio ?? null;
     comparisons.push({
       id,
       workload: webgpu.workload,
@@ -117,8 +120,14 @@ export function compareProviderResults(results) {
         cpu.outputChars === webgpu.outputChars &&
         cpu.textLines === webgpu.textLines &&
         JSON.stringify(cpu.warnings) === JSON.stringify(webgpu.warnings),
-      pagesPerSecondRatio:
-        cpu.pagesPerSecond > 0 ? webgpu.pagesPerSecond / cpu.pagesPerSecond : null,
+      speedupMetric: Number.isFinite(preprocessingSpeedupRatio)
+        ? "webgpu-preprocessing"
+        : "pages-per-second",
+      speedupRatio: Number.isFinite(preprocessingSpeedupRatio)
+        ? preprocessingSpeedupRatio
+        : pagesPerSecondRatio,
+      pagesPerSecondRatio,
+      webgpuPreprocessingSpeedupRatio: preprocessingSpeedupRatio,
       startupDeltaMs: webgpu.startup.durationMs - cpu.startup.durationMs,
       modelLoadDeltaMs: webgpu.modelLoad.durationMs - cpu.modelLoad.durationMs,
       rssPeakDeltaBytes: webgpu.peakMemory.rssPeakBytes - cpu.peakMemory.rssPeakBytes,
@@ -586,7 +595,8 @@ function summarizeAcceleration(webgpuDiagnostics) {
     fallbackReason: webgpuDiagnostics?.fallbackReason ?? null,
     runtime: webgpuDiagnostics?.runtime ?? "unknown",
     executionProvider: webgpuDiagnostics?.execution?.provider ?? "cpu",
-    executionStatus: webgpuDiagnostics?.execution?.status ?? "no-routed-pages"
+    executionStatus: webgpuDiagnostics?.execution?.status ?? "no-routed-pages",
+    preprocessing: webgpuDiagnostics?.preprocessing ?? null
   };
 }
 

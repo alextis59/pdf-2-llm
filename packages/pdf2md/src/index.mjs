@@ -35,6 +35,7 @@ import { createRasterPlan } from "./raster-plan.mjs";
 import { createScanDetection } from "./scan-detection.mjs";
 import { detectWebGpuCapabilities } from "./webgpu-capability.mjs";
 import { createWebGpuExecutionPlan } from "./webgpu-provider.mjs";
+import { createWebGpuPreprocessingDiagnostics } from "./webgpu-preprocess.mjs";
 import { bytesToAscii, now, readFileBytes, sha256Hex } from "./runtime.mjs";
 
 const defaultSecurityLimits = Object.freeze({
@@ -203,6 +204,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
     scanDetection,
     webgpu: webgpuCapabilities
   });
+  const webgpuPreprocessing = await createWebGpuPreprocessingDiagnostics({
+    execution: webgpuExecution,
+    options: options.webgpu ?? {},
+    webgpu: webgpuCapabilities
+  });
   const ocrLanguage = createOcrLanguageConfig({
     adapter: ocrAdapter,
     options: options.ocr ?? {},
@@ -353,7 +359,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
       acceleration: {
         webgpu: {
           ...webgpuCapabilities,
-          execution: webgpuExecution
+          execution: webgpuExecution,
+          preprocessing: webgpuPreprocessing
         }
       },
       extraction: {
