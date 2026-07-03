@@ -1163,7 +1163,10 @@ function resolveStructureTree(structureTreeRootRef, getObject, pages) {
     path: [],
     role: null,
     rawRole: null,
-    pageRef: null
+    pageRef: null,
+    altText: null,
+    actualText: null,
+    language: null
   });
 
   return structure;
@@ -1207,19 +1210,24 @@ function walkStructureItem(value, context) {
   if (rawRole) {
     const role = mapStructureRole(rawRole, context.roleMap);
     const path = [...context.path, role];
+    const attributes = structureAttributesFromDictionary(dict);
     context.elements.push({
       role,
       rawRole,
       depth: path.length,
       objectNumber: object?.objectNumber ?? null,
-      generationNumber: object?.generationNumber ?? null
+      generationNumber: object?.generationNumber ?? null,
+      ...structureAttributeProperties(attributes)
     });
     walkStructureItem(dict.entries.K, {
       ...context,
       path,
       role,
       rawRole,
-      pageRef: dict.entries.Pg ?? context.pageRef
+      pageRef: dict.entries.Pg ?? context.pageRef,
+      altText: attributes.altText ?? context.altText ?? null,
+      actualText: attributes.actualText ?? context.actualText ?? null,
+      language: attributes.language ?? context.language ?? null
     });
     return;
   }
@@ -1244,8 +1252,33 @@ function recordMarkedContent(mcid, pageRef, context) {
       : null,
     role: context.role,
     rawRole: context.rawRole,
-    path: context.path
+    path: context.path,
+    ...structureAttributeProperties(context)
   });
+}
+
+function structureAttributesFromDictionary(dict) {
+  return {
+    altText: normalizeStructureText(pdfTextValue(dict.entries.Alt)),
+    actualText: normalizeStructureText(pdfTextValue(dict.entries.ActualText)),
+    language: normalizeStructureText(pdfTextValue(dict.entries.Lang))
+  };
+}
+
+function structureAttributeProperties(attributes) {
+  return {
+    ...(attributes.altText ? { altText: attributes.altText } : {}),
+    ...(attributes.actualText ? { actualText: attributes.actualText } : {}),
+    ...(attributes.language ? { language: attributes.language } : {})
+  };
+}
+
+function normalizeStructureText(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized || null;
 }
 
 function resolveStructureObject(value, getObject) {

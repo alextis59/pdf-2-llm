@@ -153,6 +153,47 @@ test("extractContentStreamRulingLines detects stroked axis-aligned paths", () =>
   assert.deepEqual([...new Set(lines.map((line) => line.source))], ["path-operator"]);
 });
 
+test("extractContentStreamRulingLines preserves marked-content alt text", () => {
+  const lines = extractContentStreamRulingLines(
+    [
+      "/Figure << /MCID 4 >> BDC",
+      "10 20 70 40 re S",
+      "EMC"
+    ].join("\n"),
+    {
+      pageIndex: 3,
+      streamIndex: 2,
+      structureByMcid: new Map([
+        [
+          4,
+          {
+            mcid: 4,
+            role: "Figure",
+            path: ["Document", "Figure"],
+            altText: "Tagged vector figure"
+          }
+        ]
+      ])
+    }
+  );
+
+  assert.equal(lines.length, 4);
+  assert.deepEqual(
+    lines.map(({ markedContentId, structureRole, structurePath, altText }) => ({
+      markedContentId,
+      structureRole,
+      structurePath,
+      altText
+    })),
+    Array.from({ length: 4 }, () => ({
+      markedContentId: 4,
+      structureRole: "Figure",
+      structurePath: ["Document", "Figure"],
+      altText: "Tagged vector figure"
+    }))
+  );
+});
+
 test("extractContentStreamImageDraws detects transformed image XObjects", () => {
   const images = extractContentStreamImageDraws(
     [
@@ -197,6 +238,38 @@ test("extractContentStreamImageDraws detects transformed image XObjects", () => 
       source: "xobject-do"
     }
   ]);
+});
+
+test("extractContentStreamImageDraws preserves marked-content alt text", () => {
+  const images = extractContentStreamImageDraws(
+    [
+      "/Figure << /MCID 7 >> BDC",
+      "q 200 0 0 100 10 20 cm /ImScan Do Q",
+      "EMC"
+    ].join("\n"),
+    {
+      resources,
+      pageIndex: 3,
+      streamIndex: 2,
+      structureByMcid: new Map([
+        [
+          7,
+          {
+            mcid: 7,
+            role: "Figure",
+            path: ["Document", "Figure"],
+            altText: "Tagged image figure"
+          }
+        ]
+      ])
+    }
+  );
+
+  assert.equal(images.length, 1);
+  assert.equal(images[0].markedContentId, 7);
+  assert.equal(images[0].structureRole, "Figure");
+  assert.deepEqual(images[0].structurePath, ["Document", "Figure"]);
+  assert.equal(images[0].altText, "Tagged image figure");
 });
 
 test("extractContentStreamRulingLines merges near-collinear path fragments", () => {

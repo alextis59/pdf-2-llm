@@ -43,7 +43,8 @@ export function createFigureDetections({
         height: visualRegion.height,
         visualElements: visualRegion.count,
         pageWidthPt: pageByIndex.get(pageIndex)?.widthPt ?? null,
-        pageHeightPt: pageByIndex.get(pageIndex)?.heightPt ?? null
+        pageHeightPt: pageByIndex.get(pageIndex)?.heightPt ?? null,
+        ...figureAltTextProperties(visualRegion)
       });
     }
   }
@@ -62,7 +63,8 @@ export function createFigureAssets(figures) {
     kind: "figure-preview",
     path: figure.assetPath,
     mediaType: figure.assetMediaType,
-    pageIndex: figure.pageIndex
+    pageIndex: figure.pageIndex,
+    ...figureAltTextProperties(figure)
   }));
 }
 
@@ -74,6 +76,7 @@ export function figureElementsByPage(figures) {
       type: "figure",
       caption: figure.caption ?? undefined,
       assetId: figure.assetId,
+      ...figureAltTextProperties(figure),
       x: figure.x,
       y: figure.y,
       width: figure.width,
@@ -151,7 +154,7 @@ function createFigureMarkdownInsertion(markdown, figure) {
   return {
     figure,
     index,
-    text: `![Figure ${figure.captionNumber ?? figure.figureNumber}](${figure.assetPath})\n\n`
+    text: `![${markdownImageAltText(figure)}](${figure.assetPath})\n\n`
   };
 }
 
@@ -180,7 +183,8 @@ function visualRegionAboveCaption(items, caption) {
   return {
     kind: candidates.some((candidate) => candidate.kind === "image") ? "image" : "vector",
     ...bounds,
-    count: candidates.length
+    count: candidates.length,
+    ...figureAltTextProperties(firstAltTextCandidate(candidates))
   };
 }
 
@@ -193,7 +197,8 @@ function regionFromVisualItem(item) {
       x,
       y,
       width: Math.abs(item.x2 - item.x1),
-      height: Math.abs(item.y2 - item.y1)
+      height: Math.abs(item.y2 - item.y1),
+      ...figureAltTextProperties(item)
     };
   }
   if (Number.isFinite(item?.x) && Number.isFinite(item?.y)) {
@@ -202,10 +207,44 @@ function regionFromVisualItem(item) {
       x: item.x,
       y: item.y,
       width: item.width,
-      height: item.height
+      height: item.height,
+      ...figureAltTextProperties(item)
     };
   }
   return null;
+}
+
+function firstAltTextCandidate(candidates) {
+  return candidates.find((candidate) => normalizeAltText(candidate.altText)) ?? null;
+}
+
+function figureAltTextProperties(item) {
+  const altText = normalizeAltText(item?.altText);
+  if (!altText) {
+    return {};
+  }
+  return {
+    altText,
+    altTextSource: item.altTextSource ?? "tagged-pdf"
+  };
+}
+
+function markdownImageAltText(figure) {
+  return escapeMarkdownImageAlt(
+    normalizeAltText(figure.altText) ?? `Figure ${figure.captionNumber ?? figure.figureNumber}`
+  );
+}
+
+function escapeMarkdownImageAlt(value) {
+  return value.replace(/\s+/g, " ").trim().replace(/\\/g, "\\\\").replace(/]/g, "\\]");
+}
+
+function normalizeAltText(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized || null;
 }
 
 function boundsForRegions(regions) {

@@ -655,7 +655,7 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 - [x] Group images and vector regions into figures.
 - [x] Attach captions to figures.
 - [x] Extract figure assets.
-- [ ] Preserve alt text from tagged PDFs where present.
+- [x] Preserve alt text from tagged PDFs where present.
 - [x] Do not invent chart data from visual charts.
 - [x] Emit asset links and warnings for low-semantic visual content.
 

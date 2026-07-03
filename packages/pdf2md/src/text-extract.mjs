@@ -71,12 +71,14 @@ function documentTextLines(document) {
 
 function documentRulingLines(document) {
   if (document.pages?.length > 0) {
+    const structureByPage = structureSignalsByPage(document.structure);
     return mergeRulingLines(
       document.pages.flatMap((page) =>
         page.contentStreams.flatMap((stream, streamIndex) =>
           extractContentStreamRulingLines(stream.text, {
             pageIndex: page.pageIndex,
-            streamIndex
+            streamIndex,
+            structureByMcid: structureByPage.get(page.pageIndex) ?? new Map()
           })
         )
       )
@@ -92,12 +94,14 @@ function documentRulingLines(document) {
 
 function documentImageDraws(document) {
   if (document.pages?.length > 0) {
+    const structureByPage = structureSignalsByPage(document.structure);
     return document.pages.flatMap((page) =>
       page.contentStreams.flatMap((stream, streamIndex) =>
         extractContentStreamImageDraws(stream.text, {
           pageIndex: page.pageIndex,
           resources: page.resources,
-          streamIndex
+          streamIndex,
+          structureByMcid: structureByPage.get(page.pageIndex) ?? new Map()
         })
       )
     );

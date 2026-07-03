@@ -160,6 +160,39 @@ test("parsePdfDocument resolves tagged structure and uses consistent tags", asyn
   assert.equal(result.diagnostics.extraction.structure.roles.H2, 1);
 });
 
+test("parsePdfDocument preserves tagged figure alt text", () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 6 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R /StructParents 0 >>",
+    streamObject("/Figure << /MCID 0 >> BDC\n20 200 120 80 re S\nEMC\n"),
+    "<< /Type /StructTreeRoot /K 7 0 R >>",
+    "<< /Type /StructElem /S /Document /K 8 0 R >>",
+    "<< /Type /StructElem /S /Figure /P 7 0 R /Alt (Flow diagram showing intake and review) /K << /Type /MCR /Pg 4 0 R /MCID 0 >> >>"
+  ]);
+  const document = parsePdfDocument(bytes);
+
+  assert.deepEqual(
+    document.structure.elements.map(({ role, altText }) => ({ role, altText })),
+    [
+      { role: "Document", altText: undefined },
+      { role: "Figure", altText: "Flow diagram showing intake and review" }
+    ]
+  );
+  assert.deepEqual(document.structure.markedContent, [
+    {
+      mcid: 0,
+      pageObjectNumber: 4,
+      pageIndex: 0,
+      role: "Figure",
+      rawRole: "Figure",
+      path: ["Document", "Figure"],
+      altText: "Flow diagram showing intake and review"
+    }
+  ]);
+});
+
 test("convertPdfToMarkdown warns when tagged structure conflicts with layout", async () => {
   const bytes = createTestPdf([
     "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 6 0 R >>",

@@ -203,9 +203,19 @@ function executePathOperator(operator, context) {
   if (operator === "Q") {
     const restored = context.stack.pop();
     if (restored) {
+      const markedContent = state.markedContent;
       state.ctm = restored.ctm;
       state.lineWidth = restored.lineWidth;
+      state.markedContent = markedContent;
     }
+    return;
+  }
+  if (operator === "BMC" || operator === "BDC") {
+    state.markedContent.push(readMarkedContent(operands, operator, context.options));
+    return;
+  }
+  if (operator === "EMC") {
+    state.markedContent.pop();
     return;
   }
   if (operator === "cm") {
@@ -272,15 +282,16 @@ function executePathOperator(operator, context) {
 }
 
 function emitRulingSegments(context) {
+  const structure = currentStructureSignal(context.state);
   for (const segment of context.state.segments) {
-    const rulingLine = normalizeRulingSegment(segment, context.options);
+    const rulingLine = normalizeRulingSegment(segment, context.options, structure);
     if (rulingLine) {
       context.lines.push(rulingLine);
     }
   }
 }
 
-function normalizeRulingSegment(segment, options) {
+function normalizeRulingSegment(segment, options, structure = null) {
   const axisTolerance = options.axisTolerance ?? 0.5;
   const minLength = options.minLength ?? 2;
   const dx = Math.abs(segment.to.x - segment.from.x);
@@ -290,20 +301,20 @@ function normalizeRulingSegment(segment, options) {
     const x1 = Math.min(segment.from.x, segment.to.x);
     const x2 = Math.max(segment.from.x, segment.to.x);
     const y = (segment.from.y + segment.to.y) / 2;
-    return createRulingLine("horizontal", x1, y, x2, y, segment, options);
+    return createRulingLine("horizontal", x1, y, x2, y, segment, options, structure);
   }
 
   if (dx <= axisTolerance && dy >= minLength) {
     const x = (segment.from.x + segment.to.x) / 2;
     const y1 = Math.min(segment.from.y, segment.to.y);
     const y2 = Math.max(segment.from.y, segment.to.y);
-    return createRulingLine("vertical", x, y1, x, y2, segment, options);
+    return createRulingLine("vertical", x, y1, x, y2, segment, options, structure);
   }
 
   return null;
 }
 
-function createRulingLine(orientation, x1, y1, x2, y2, segment, options) {
+function createRulingLine(orientation, x1, y1, x2, y2, segment, options, structure = null) {
   return {
     type: "ruling-line",
     orientation,
@@ -315,7 +326,8 @@ function createRulingLine(orientation, x1, y1, x2, y2, segment, options) {
     segmentCount: 1,
     pageIndex: options.pageIndex ?? null,
     streamIndex: options.streamIndex ?? null,
-    source: "path-operator"
+    source: "path-operator",
+    ...markedContentProperties(structure)
   };
 }
 
@@ -458,7 +470,8 @@ function createInitialPathState() {
     lineWidth: 1,
     segments: [],
     currentPoint: null,
-    subpathStart: null
+    subpathStart: null,
+    markedContent: []
   };
 }
 
@@ -479,8 +492,18 @@ function executeImageOperator(operator, context) {
   if (operator === "Q") {
     const restored = context.stack.pop();
     if (restored) {
+      const markedContent = state.markedContent;
       state.ctm = restored.ctm;
+      state.markedContent = markedContent;
     }
+    return;
+  }
+  if (operator === "BMC" || operator === "BDC") {
+    state.markedContent.push(readMarkedContent(operands, operator, context.options));
+    return;
+  }
+  if (operator === "EMC") {
+    state.markedContent.pop();
     return;
   }
   if (operator === "cm") {
@@ -514,6 +537,7 @@ function emitImageDraw(context) {
   const y = Math.min(...ys);
   const width = Math.max(...xs) - x;
   const height = Math.max(...ys) - y;
+  const structure = currentStructureSignal(context.state);
   const pixels =
     Number.isFinite(image.width) && Number.isFinite(image.height)
       ? image.width * image.height
@@ -533,14 +557,16 @@ function emitImageDraw(context) {
     imagePixels: pixels,
     pageIndex: context.options.pageIndex ?? null,
     streamIndex: context.options.streamIndex ?? null,
-    source: "xobject-do"
+    source: "xobject-do",
+    ...markedContentProperties(structure)
   });
 }
 
 function createInitialImageState(resources = null) {
   return {
     ctm: [...identityMatrix],
-    resources
+    resources,
+    markedContent: []
   };
 }
 
@@ -751,7 +777,22 @@ function readMarkedContent(operands, operator, options) {
     tag,
     mcid,
     role: structure?.role ?? null,
-    path: structure?.path ?? []
+    path: structure?.path ?? [],
+    altText: structure?.altText ?? null,
+    actualText: structure?.actualText ?? null,
+    language: structure?.language ?? null
+  };
+}
+
+function markedContentProperties(structure) {
+  return {
+    ...(Number.isInteger(structure?.mcid) ? { markedContentId: structure.mcid } : {}),
+    ...(structure?.tag ? { markedContentTag: structure.tag } : {}),
+    ...(structure?.role ? { structureRole: structure.role } : {}),
+    ...(structure?.path?.length ? { structurePath: structure.path } : {}),
+    ...(structure?.altText ? { altText: structure.altText } : {}),
+    ...(structure?.actualText ? { actualText: structure.actualText } : {}),
+    ...(structure?.language ? { language: structure.language } : {})
   };
 }
 

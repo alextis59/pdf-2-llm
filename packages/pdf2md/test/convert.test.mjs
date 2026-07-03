@@ -1278,6 +1278,59 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
   });
 });
 
+test("convertPdfToMarkdown preserves tagged figure alt text", async () => {
+  const result = await convertPdfToMarkdown(createTaggedFigureAltPdf());
+
+  assert.equal(
+    result.markdown,
+    "# Tagged Figure Alt Fixture\n\n![Flow diagram showing intake and review](assets/document-page-1-figure-1.png)\n\nFigure 1. Flow diagram.\n"
+  );
+  assert.deepEqual(result.assets, [
+    {
+      id: "document-page-1-figure-1",
+      kind: "figure-preview",
+      path: "assets/document-page-1-figure-1.png",
+      mediaType: "image/png",
+      pageIndex: 0,
+      altText: "Flow diagram showing intake and review",
+      altTextSource: "tagged-pdf"
+    }
+  ]);
+  assert.deepEqual(result.ir.pages[0].elements, [
+    {
+      type: "figure",
+      caption: "Figure 1. Flow diagram.",
+      assetId: "document-page-1-figure-1",
+      altText: "Flow diagram showing intake and review",
+      altTextSource: "tagged-pdf",
+      x: 120,
+      y: 520,
+      width: 240,
+      height: 120
+    }
+  ]);
+  assert.deepEqual(result.diagnostics.extraction.figures.figures[0], {
+    figureIndex: 0,
+    pageIndex: 0,
+    figureNumber: 1,
+    captionNumber: "1",
+    caption: "Figure 1. Flow diagram.",
+    assetId: "document-page-1-figure-1",
+    assetPath: "assets/document-page-1-figure-1.png",
+    assetMediaType: "image/png",
+    kind: "vector",
+    x: 120,
+    y: 520,
+    width: 240,
+    height: 120,
+    visualElements: 4,
+    pageWidthPt: 612,
+    pageHeightPt: 792,
+    altText: "Flow diagram showing intake and review",
+    altTextSource: "tagged-pdf"
+  });
+});
+
 test("convertPdfToMarkdown extracts form, annotation, attachment, and signature metadata", async () => {
   const result = await convertPdfToMarkdown(createInteractiveDocumentPdf(), {
     attachments: {
@@ -1742,6 +1795,27 @@ function createSinglePageImagePdf({ x, y, widthPt, heightPt, rotation = 0, textO
       "abc",
       "/Type /XObject /Subtype /Image /Width 2550 /Height 3300 /ColorSpace /DeviceRGB /BitsPerComponent 8"
     )
+  ];
+  return createPdf(objects);
+}
+
+function createTaggedFigureAltPdf() {
+  const operations = [
+    textOperation(72, 740, 20, "Tagged Figure Alt Fixture"),
+    "/Figure << /MCID 0 >> BDC",
+    "120 520 240 120 re S",
+    "EMC",
+    textOperation(120, 480, 12, "Figure 1. Flow diagram.")
+  ];
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R /StructTreeRoot 6 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R /StructParents 0 >>",
+    streamObject(`${operations.join("\n")}\n`),
+    "<< /Type /StructTreeRoot /K 7 0 R >>",
+    "<< /Type /StructElem /S /Document /K 8 0 R >>",
+    "<< /Type /StructElem /S /Figure /P 7 0 R /Alt (Flow diagram showing intake and review) /K << /Type /MCR /Pg 4 0 R /MCID 0 >> >>"
   ];
   return createPdf(objects);
 }
