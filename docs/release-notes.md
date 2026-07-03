@@ -48,7 +48,9 @@ fixtures:
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.
 - WASM size is budgeted and reported for the packaged preflight module.
-- CI runs `npm run check` and uploads generated QA/report artifacts.
+- CI runs explicit `ci:*` commands for Rust tests, lint, build, package tests,
+  and corpus smoke tests before the full `npm run check` gate, then uploads
+  generated QA/report artifacts.
 - Clean checkout build passed.
 - Packed package install passed in a separate fixture project.
 - Browser smoke passed in Chromium and Firefox against

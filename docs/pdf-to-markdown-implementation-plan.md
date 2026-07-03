@@ -326,7 +326,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [x] Add single-threaded WASM build.
 - [ ] Add threaded WASM build behind feature detection.
 - [x] Add local examples for Node and browser.
-- [ ] Add CI commands for Rust tests, TypeScript tests, lint, build, and corpus
+- [x] Add CI commands for Rust tests, TypeScript tests, lint, build, and corpus
   smoke tests.
 
 ### 1.4 Quality Gates
