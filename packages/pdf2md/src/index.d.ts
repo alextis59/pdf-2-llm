@@ -37,6 +37,10 @@ export type ConvertOptions = {
     enabled?: boolean;
     languages?: string[];
   };
+  raster?: {
+    enabled?: boolean;
+    renderer?: "internal-page-geometry";
+  };
   webgpu?: {
     required?: boolean;
     preferred?: boolean;
@@ -92,9 +96,37 @@ export type Diagnostics = {
     structure: StructureDiagnostics;
     taggedStructureConflicts: number;
     layout: LayoutDiagnostics;
+    raster: RasterDiagnostics;
     parser: Record<string, unknown>;
   };
   pages: PageDiagnostics[];
+};
+
+export type RasterDiagnostics = {
+  enabled: boolean;
+  renderer: RasterRendererDiagnostics;
+  pages: RasterPageDiagnostics[];
+};
+
+export type RasterRendererDiagnostics = {
+  id: string;
+  kind: "scoped-internal";
+  dependency: string | null;
+  environments: string[];
+  output: "raster-plan";
+  status: "selected" | "unsupported";
+  requested: string;
+  notes: string;
+};
+
+export type RasterPageDiagnostics = {
+  pageIndex: number;
+  status: "planned";
+  sourceBox: "cropBox" | "mediaBox" | "unknown";
+  widthPt: number | null;
+  heightPt: number | null;
+  rotation: number;
+  userUnit: number;
 };
 
 export type OutlineDiagnostics = {

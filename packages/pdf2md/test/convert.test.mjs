@@ -90,6 +90,30 @@ test("convertPdfToMarkdown can preserve configured running titles", async () => 
   assert.equal(result.diagnostics.options.preserveRunningTitles, true);
 });
 
+test("convertPdfToMarkdown exposes the selected scoped raster path when enabled", async () => {
+  const result = await convertPdfToMarkdown(fixturePath.pathname, {
+    raster: { enabled: true }
+  });
+
+  assert.equal(result.diagnostics.options.rasterEnabled, true);
+  assert.equal(result.diagnostics.options.rasterRenderer, "internal-page-geometry");
+  assert.equal(result.diagnostics.extraction.raster.enabled, true);
+  assert.equal(result.diagnostics.extraction.raster.renderer.id, "internal-page-geometry");
+  assert.equal(result.diagnostics.extraction.raster.renderer.dependency, null);
+  assert.equal(result.diagnostics.extraction.raster.renderer.status, "selected");
+  assert.deepEqual(result.diagnostics.extraction.raster.pages, [
+    {
+      pageIndex: 0,
+      status: "planned",
+      sourceBox: "mediaBox",
+      widthPt: 612,
+      heightPt: 792,
+      rotation: 0,
+      userUnit: 1
+    }
+  ]);
+});
+
 test("CLI emits JSON scaffold output", () => {
   const cliPath = new URL("../src/cli.mjs", import.meta.url);
   const run = spawnSync(process.execPath, [cliPath.pathname, fixturePath.pathname, "--json"], {

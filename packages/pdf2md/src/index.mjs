@@ -23,6 +23,7 @@ import {
   inferRulingGrids
 } from "./table-grid.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
+import { createRasterPlan } from "./raster-plan.mjs";
 
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
@@ -148,6 +149,10 @@ export async function convertPdfToMarkdown(input, options = {}) {
     assignTextLinesToGridCells(rulingGrids, textLines),
     rulingLines
   );
+  const rasterPlan = createRasterPlan(pdfDocument?.pages ?? [], {
+    enabled: options.raster?.enabled === true,
+    renderer: options.raster?.renderer
+  });
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
     enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
   });
@@ -237,6 +242,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         layout: markdownResult.layout,
         tables: markdownResult.tables,
         lowConfidenceTables: markdownResult.lowConfidenceTables,
+        raster: rasterPlan,
         rulingLines: summarizeRulingLines(rulingLines),
         rulingGrids: summarizeRulingGrids(rulingGrids),
         rulingTables: summarizeRulingTables(rulingTables, tableCsvSidecars.byTable),
@@ -717,6 +723,8 @@ function summarizeOptions(options) {
     tablesEnabled: options.tables?.enabled ?? null,
     tableCsvSidecars:
       options.tables?.enabled === false ? false : options.tables?.csvSidecars ?? true,
+    rasterEnabled: options.raster?.enabled === true,
+    rasterRenderer: options.raster?.renderer ?? "internal-page-geometry",
     assetsEnabled: options.assets?.enabled ?? null
   };
 }

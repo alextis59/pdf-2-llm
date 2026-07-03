@@ -567,7 +567,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 
 ### 6.1 Page Rasterization
 
-- [ ] Select rendering dependency or implement scoped rasterization path.
+- [x] Select rendering dependency or implement scoped rasterization path.
 - [ ] Render pages at configurable DPI.
 - [ ] Respect page boxes and rotation.
 - [ ] Enforce image pixel limits.
