@@ -782,7 +782,7 @@ Coordination checklist:
 
 Core metrics:
 
-- [ ] Character error rate for extracted text.
+- [x] Character error rate for extracted text.
 - [x] Word error rate for OCR text.
 - [ ] Unicode mapping accuracy for born-digital text.
 - [ ] Paragraph grouping F1.

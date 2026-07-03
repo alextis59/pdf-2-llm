@@ -51,6 +51,10 @@ expected behavior has been written here.
   normalized reading-order edit distance from 0 to 1. Reviewed expected
   Markdown is preferred as the reading-order oracle when available because
   external text tools can interleave multi-column pages.
+- If `metrics.maxCharacterErrorRate` is present, the oracle comparator enforces
+  normalized character edit distance from 0 to 1 against reviewed expected
+  Markdown when available. Use this only where the text oracle is reliable
+  enough to catch glyph, spacing, or omission errors.
 - If `metrics.maxOcrCharacterErrorRate` or `metrics.maxOcrWordErrorRate` is
   present, the corpus runner compares expected Markdown with OCR-produced
   Markdown after Markdown syntax normalization. Character error rate catches

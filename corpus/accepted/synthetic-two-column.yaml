@@ -13,6 +13,7 @@ mustNot:
 metrics:
   minTextCoverage: 1
   maxReadingOrderDistance: 0
+  maxCharacterErrorRate: 0
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
@@ -30,4 +31,4 @@ assets:
 review:
   humanReviewedBy: "codex"
   reviewedAt: "2026-07-02"
-  notes: "Expected order is left column top-down, then right column top-down."
+  notes: "Expected order is left column top-down, then right column top-down; maxCharacterErrorRate is zero because expected Markdown is the reviewed oracle."

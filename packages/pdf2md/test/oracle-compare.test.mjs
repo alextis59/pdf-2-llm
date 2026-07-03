@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  compareCharacterErrorRate,
   compareReadingOrder,
   compareTextCoverage,
   markdownToComparableText,
@@ -39,6 +40,16 @@ test("oracle comparison reports normalized reading-order edit distance", () => {
   assert.equal(reordered.readingOrderEdits, 2);
   assert.equal(reordered.readingOrderDistance, 2 / 3);
   assert.ok(Math.abs(reordered.readingOrderSimilarity - 1 / 3) < Number.EPSILON);
+});
+
+test("oracle comparison reports normalized character error rate", () => {
+  const exact = compareCharacterErrorRate("# Title\n\nAlpha beta", "Title\n\nAlpha beta");
+  const mutated = compareCharacterErrorRate("Alpha beta", "Alpha bet");
+
+  assert.equal(exact.characterEdits, 0);
+  assert.equal(exact.characterErrorRate, 0);
+  assert.equal(mutated.characterEdits, 1);
+  assert.equal(mutated.characterErrorRate, 1 / "alpha beta".length);
 });
 
 test("tokenEditDistance handles insertions and deletions", () => {

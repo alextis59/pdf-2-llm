@@ -28,6 +28,8 @@ fixtures:
 - `npm run check` passed, including corpus gates, QA checks, fuzz smoke, build,
   and 221 API tests.
 - Full accepted corpus passed with 31 converted entries and 2 documented skips.
+- Extracted text character error rate is gated for exact generated fixtures with
+  reviewed Markdown oracles.
 - Fuzz smoke passed 4 targets with 100 iterations each.
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.

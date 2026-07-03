@@ -12,6 +12,7 @@ mustNot:
   - emit_binary_garbage
 metrics:
   minTextCoverage: 1
+  maxCharacterErrorRate: 0
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
@@ -29,4 +30,4 @@ assets:
 review:
   humanReviewedBy: "codex"
   reviewedAt: "2026-07-02"
-  notes: "Exact-output generated fixture with one heading and two paragraphs."
+  notes: "Exact-output generated fixture with one heading and two paragraphs; maxCharacterErrorRate is zero because expected Markdown is the reviewed oracle."

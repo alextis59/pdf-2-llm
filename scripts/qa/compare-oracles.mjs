@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -61,6 +61,33 @@ export function compareReadingOrder(oracleText, actualMarkdown) {
   };
 }
 
+export function compareCharacterErrorRate(oracleText, actualMarkdown) {
+  const oracleChars = Array.from(normalizeComparablePlainText(oracleText));
+  const actualChars = Array.from(normalizeComparablePlainText(actualMarkdown));
+  const characterEdits = tokenEditDistance(oracleChars, actualChars);
+  const characterErrorRate =
+    oracleChars.length === 0
+      ? actualChars.length === 0
+        ? 0
+        : 1
+      : characterEdits / oracleChars.length;
+  return {
+    characterErrorRate,
+    characterEdits,
+    oracleCharacters: oracleChars.length,
+    actualCharacters: actualChars.length
+  };
+}
+
+export function normalizeComparablePlainText(value) {
+  return markdownToComparableText(value)
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
 export function tokenEditDistance(leftTokens, rightTokens) {
   let previous = Array.from({ length: rightTokens.length + 1 }, (_, index) => index);
   for (let leftIndex = 1; leftIndex <= leftTokens.length; leftIndex += 1) {
@@ -108,6 +135,7 @@ function usage() {
   node scripts/qa/compare-oracles.mjs --gate <gate> [--dry-run] [--report <path>]
   node scripts/qa/compare-oracles.mjs --id <manifest-id> [--dry-run] [--report <path>]
   node scripts/qa/compare-oracles.mjs --reading-order-gated [--dry-run] [--report <path>]
+  node scripts/qa/compare-oracles.mjs --character-error-gated [--dry-run] [--report <path>]
 
 Options:
   --manifest <path>          Manifest path. Defaults to corpus/manifest.json.
@@ -177,7 +205,8 @@ async function loadAcceptance(repoRoot, entry) {
     gating: scalars.get("gating") === "true",
     skipReason: scalars.get("skipReason") ?? "",
     minTextCoverage: readNumber(metrics.get("minTextCoverage"), 1),
-    maxReadingOrderDistance: readNumber(metrics.get("maxReadingOrderDistance"), null)
+    maxReadingOrderDistance: readNumber(metrics.get("maxReadingOrderDistance"), null),
+    maxCharacterErrorRate: readNumber(metrics.get("maxCharacterErrorRate"), null)
   };
 }
 
@@ -193,7 +222,10 @@ async function loadCases(repoRoot, manifestPath) {
   return cases;
 }
 
-function selectCases(cases, { selectedIds, selectedGate, readingOrderGated = false }) {
+function selectCases(
+  cases,
+  { selectedIds, selectedGate, readingOrderGated = false, characterErrorGated = false }
+) {
   const idSet = new Set(selectedIds);
   const selected = [];
   const skipped = [];
@@ -222,6 +254,13 @@ function selectCases(cases, { selectedIds, selectedGate, readingOrderGated = fal
       !Number.isFinite(corpusCase.acceptance.maxReadingOrderDistance)
     ) {
       reason = "reading-order-filter: no metrics.maxReadingOrderDistance threshold";
+    }
+    if (
+      !reason &&
+      characterErrorGated &&
+      !Number.isFinite(corpusCase.acceptance.maxCharacterErrorRate)
+    ) {
+      reason = "character-error-filter: no metrics.maxCharacterErrorRate threshold";
     }
 
     if (reason) {
@@ -257,29 +296,39 @@ async function compareCase(repoRoot, corpusCase, thresholdOverride) {
   const { entry, acceptance } = corpusCase;
   const textOracle = await readTextOracle(repoRoot, entry);
   const readingOrderOracle = await readReadingOrderOracle(repoRoot, entry, textOracle);
+  const characterErrorOracle = await readCharacterErrorOracle(repoRoot, entry, textOracle);
   const result = await convertPdfToMarkdown(path.join(repoRoot, entry.path), {
     ocr: { enabled: false }
   });
   const comparison = compareTextCoverage(textOracle.text, result.markdown);
   const readingOrder = compareReadingOrder(readingOrderOracle.text, result.markdown);
+  const characterError = compareCharacterErrorRate(characterErrorOracle.text, result.markdown);
   const minTextCoverage = thresholdOverride ?? acceptance.minTextCoverage;
   const maxReadingOrderDistance = acceptance.maxReadingOrderDistance;
+  const maxCharacterErrorRate = acceptance.maxCharacterErrorRate;
   const passedTextCoverage = comparison.coverage + Number.EPSILON >= minTextCoverage;
   const passedReadingOrder =
     !Number.isFinite(maxReadingOrderDistance) ||
     readingOrder.readingOrderDistance <= maxReadingOrderDistance + Number.EPSILON;
+  const passedCharacterError =
+    !Number.isFinite(maxCharacterErrorRate) ||
+    characterError.characterErrorRate <= maxCharacterErrorRate + Number.EPSILON;
   return {
     id: entry.id,
     gate: acceptance.gate,
     oraclePath: path.relative(repoRoot, textOracle.path),
     readingOrderOraclePath: path.relative(repoRoot, readingOrderOracle.path),
+    characterErrorOraclePath: path.relative(repoRoot, characterErrorOracle.path),
     minTextCoverage,
     maxReadingOrderDistance,
+    maxCharacterErrorRate,
     ...comparison,
     ...readingOrder,
+    ...characterError,
     passedTextCoverage,
     passedReadingOrder,
-    passed: passedTextCoverage && passedReadingOrder
+    passedCharacterError,
+    passed: passedTextCoverage && passedReadingOrder && passedCharacterError
   };
 }
 
@@ -296,6 +345,14 @@ async function readTextOracle(repoRoot, entry) {
 }
 
 async function readReadingOrderOracle(repoRoot, entry, textOracle) {
+  try {
+    return await readExpectedMarkdownOracle(repoRoot, entry);
+  } catch {
+    return textOracle;
+  }
+}
+
+async function readCharacterErrorOracle(repoRoot, entry, textOracle) {
   try {
     return await readExpectedMarkdownOracle(repoRoot, entry);
   } catch {
@@ -325,12 +382,18 @@ function printResult(result) {
   const readingOrderLimit = Number.isFinite(result.maxReadingOrderDistance)
     ? ` maxReadingOrderDistance=${formatNumber(result.maxReadingOrderDistance)}`
     : "";
+  const characterErrorLimit = Number.isFinite(result.maxCharacterErrorRate)
+    ? ` maxCharacterErrorRate=${formatNumber(result.maxCharacterErrorRate)} edits=${
+        result.characterEdits
+      }/${result.oracleCharacters}`
+    : "";
   console.log(
     `${prefix} ${result.id} textCoverage=${formatNumber(result.coverage)} min=${formatNumber(
       result.minTextCoverage
     )} matched=${result.matchedTokens}/${result.oracleTokens} actualTokens=${
       result.actualTokens
-    } readingOrderDistance=${formatNumber(result.readingOrderDistance)}${readingOrderLimit}`
+    } readingOrderDistance=${formatNumber(result.readingOrderDistance)}${readingOrderLimit} ` +
+      `characterErrorRate=${formatNumber(result.characterErrorRate)}${characterErrorLimit}`
   );
 }
 
@@ -346,9 +409,16 @@ async function main() {
 
   const selectAll = hasFlag("--all");
   const readingOrderGated = hasFlag("--reading-order-gated");
+  const characterErrorGated = hasFlag("--character-error-gated");
   const selectedIds = readOptions("--id");
   const selectedGate = readOption("--gate");
-  if (!selectAll && !selectedGate && selectedIds.length === 0 && !readingOrderGated) {
+  if (
+    !selectAll &&
+    !selectedGate &&
+    selectedIds.length === 0 &&
+    !readingOrderGated &&
+    !characterErrorGated
+  ) {
     console.error(usage());
     process.exit(1);
   }
@@ -368,7 +438,8 @@ async function main() {
   const { selected, skipped } = selectCases(cases, {
     selectedIds,
     selectedGate,
-    readingOrderGated
+    readingOrderGated,
+    characterErrorGated
   });
 
   if (hasFlag("--dry-run")) {
@@ -391,7 +462,9 @@ async function main() {
 
   const reportPath = readOption("--report");
   if (reportPath) {
-    await writeFile(path.resolve(reportPath), `${JSON.stringify({ results }, null, 2)}\n`);
+    const resolvedReportPath = path.resolve(reportPath);
+    await mkdir(path.dirname(resolvedReportPath), { recursive: true });
+    await writeFile(resolvedReportPath, `${JSON.stringify({ results }, null, 2)}\n`);
   }
 
   const failed = results.filter((result) => !result.passed);

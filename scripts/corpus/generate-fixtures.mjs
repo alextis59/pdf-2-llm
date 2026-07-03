@@ -515,6 +515,10 @@ function acceptanceYaml(fixture) {
     fixture.maxReadingOrderDistance == null
       ? ""
       : `  maxReadingOrderDistance: ${fixture.maxReadingOrderDistance}\n`;
+  const characterErrorMetric =
+    fixture.maxCharacterErrorRate == null
+      ? ""
+      : `  maxCharacterErrorRate: ${fixture.maxCharacterErrorRate}\n`;
   const renderedHtmlTextMetric =
     fixture.minRenderedHtmlTextChars == null
       ? ""
@@ -568,6 +572,7 @@ ${yamlList([
 metrics:
   minTextCoverage: ${fixture.minTextCoverage}
 ${readingOrderMetric}\
+${characterErrorMetric}\
 ${ocrCharacterMetric}\
 ${ocrWordMetric}\
 ${renderedHtmlTextMetric}\
@@ -639,6 +644,7 @@ const fixtures = [
     features: ["born-digital", "paragraphs", "headings"],
     description: "Simple one-page born-digital text fixture.",
     minTextCoverage: 1,
+    maxCharacterErrorRate: 0,
     must: ["extract_main_text", "preserve_heading", "preserve_paragraph_order"],
     mustNot: [],
     structures: ["heading_level_1", "paragraphs"],
@@ -646,7 +652,8 @@ const fixtures = [
       { page: 1, contains: "Synthetic Simple Text" },
       { page: 1, contains: "This fixture validates basic paragraph extraction." }
     ],
-    reviewNotes: "Exact-output generated fixture with one heading and two paragraphs.",
+    reviewNotes:
+      "Exact-output generated fixture with one heading and two paragraphs; maxCharacterErrorRate is zero because expected Markdown is the reviewed oracle.",
     expectedMarkdown:
       "# Synthetic Simple Text\n\nThis fixture validates basic paragraph extraction.\n\nThe expected output is deterministic.\n",
     pages: [
@@ -666,6 +673,7 @@ const fixtures = [
     features: ["born-digital", "headings", "lists"],
     description: "Headings and simple list fixture.",
     minTextCoverage: 1,
+    maxCharacterErrorRate: 0,
     must: ["extract_headings", "extract_bullet_list", "preserve_list_order"],
     mustNot: [],
     structures: ["heading_level_1", "heading_level_2", "unordered_list"],
@@ -673,7 +681,8 @@ const fixtures = [
       { page: 1, contains: "Implementation Checklist" },
       { page: 1, contains: "Parse objects" }
     ],
-    reviewNotes: "Exact-output generated fixture with visible list markers.",
+    reviewNotes:
+      "Exact-output generated fixture with visible list markers; maxCharacterErrorRate is zero because expected Markdown is the reviewed oracle.",
     expectedMarkdown:
       "# Implementation Checklist\n\n## Parser\n\n- Parse objects\n- Decode streams\n- Emit warnings\n",
     pages: [
@@ -696,6 +705,7 @@ const fixtures = [
     description: "Two-column reading-order fixture.",
     minTextCoverage: 1,
     maxReadingOrderDistance: 0,
+    maxCharacterErrorRate: 0,
     must: ["detect_columns", "preserve_left_then_right_reading_order"],
     mustNot: ["interleave_columns_line_by_line"],
     structures: ["two_columns", "reading_order"],
@@ -703,7 +713,8 @@ const fixtures = [
       { page: 1, contains: "Left column starts here." },
       { page: 1, contains: "Right column starts here." }
     ],
-    reviewNotes: "Expected order is left column top-down, then right column top-down.",
+    reviewNotes:
+      "Expected order is left column top-down, then right column top-down; maxCharacterErrorRate is zero because expected Markdown is the reviewed oracle.",
     expectedMarkdown:
       "# Two Column Fixture\n\nLeft column starts here.\n\nLeft column continues here.\n\nRight column starts here.\n\nRight column continues here.\n",
     pages: [
@@ -726,6 +737,7 @@ const fixtures = [
     description: "Two-column scientific reading-order fixture.",
     minTextCoverage: 1,
     maxReadingOrderDistance: 0,
+    maxCharacterErrorRate: 0,
     must: ["detect_columns", "preserve_left_then_right_reading_order", "preserve_caption"],
     mustNot: ["interleave_columns_line_by_line", "move_caption_before_body"],
     structures: ["two_columns", "reading_order", "caption"],
@@ -734,7 +746,7 @@ const fixtures = [
       { page: 1, contains: "Conclusion follows the discussion." }
     ],
     reviewNotes:
-      "Expected order is left column top-down, including the figure caption, then right column top-down; maxReadingOrderDistance is zero because the generated fixture has exact reviewed Markdown. Rendered HTML thresholds confirm the paper fixture keeps a title and five readable paragraphs without paragraph collapse.",
+      "Expected order is left column top-down, including the figure caption, then right column top-down; maxReadingOrderDistance and maxCharacterErrorRate are zero because the generated fixture has exact reviewed Markdown. Rendered HTML thresholds confirm the paper fixture keeps a title and five readable paragraphs without paragraph collapse.",
     minRenderedHtmlTextChars: 150,
     minRenderedHtmlHeadings: 1,
     minRenderedHtmlParagraphs: 5,
