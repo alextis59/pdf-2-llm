@@ -6,6 +6,7 @@ export function reconcileOcrTextLines({
   const pdfLinesByPage = groupByPage(pdfTextLines);
   const ocrLinesByPage = groupByPage(ocrTextLines);
   const scanPagesByIndex = new Map((scanDetection?.pages ?? []).map((page) => [page.pageIndex, page]));
+  const alignmentThreshold = scanDetection?.thresholds?.minHiddenTextImageOverlapRatio ?? 0.5;
   const pageIndexes = sortedPageIndexes(pdfLinesByPage, ocrLinesByPage, scanPagesByIndex);
   const pages = [];
   const lines = [];
@@ -15,6 +16,7 @@ export function reconcileOcrTextLines({
     const pdfLines = pdfLinesByPage.get(pageIndex) ?? [];
     const ocrLines = ocrLinesByPage.get(pageIndex) ?? [];
     const decision = reconcilePageText({
+      alignmentThreshold,
       ocrLines,
       pageIndex,
       pdfLines,
@@ -38,9 +40,10 @@ export function reconcileOcrTextLines({
   };
 }
 
-function reconcilePageText({ ocrLines, pageIndex, pdfLines, scanPage }) {
+function reconcilePageText({ alignmentThreshold, ocrLines, pageIndex, pdfLines, scanPage }) {
   const sourceType = scanPage?.sourceType ?? inferSourceType({ ocrLines, pdfLines });
-  const selected = selectPageSource({ ocrLines, pdfLines, scanPage, sourceType });
+  const pdfGeometry = pdfTextGeometry({ alignmentThreshold, pdfLines, scanPage });
+  const selected = selectPageSource({ ocrLines, pdfGeometry, pdfLines, sourceType });
   const lines = selected === "ocr" ? ocrLines : selected === "pdf" ? pdfLines : [...pdfLines, ...ocrLines];
 
   return {
@@ -48,9 +51,14 @@ function reconcilePageText({ ocrLines, pageIndex, pdfLines, scanPage }) {
       pageIndex,
       sourceType,
       selected,
-      reason: selectionReason({ ocrLines, pdfLines, scanPage, selected, sourceType }),
+      reason: selectionReason({ ocrLines, pdfGeometry, pdfLines, selected, sourceType }),
       pdfTextLines: pdfLines.length,
       ocrTextLines: ocrLines.length,
+      pdfVisibleTextLines: pdfGeometry.visibleTextLines,
+      pdfHiddenTextLines: pdfGeometry.hiddenTextLines,
+      pdfHiddenImageAlignedTextLines: pdfGeometry.hiddenImageAlignedTextLines,
+      pdfHiddenImageUnalignedTextLines: pdfGeometry.hiddenImageUnalignedTextLines,
+      pdfVisibleGeometryAligned: pdfGeometry.visibleGeometryAligned,
       selectedPdfTextLines: selected === "pdf" || selected === "combined" ? pdfLines.length : 0,
       selectedOcrTextLines: selected === "ocr" || selected === "combined" ? ocrLines.length : 0,
       suppressedPdfTextLines: selected === "ocr" ? pdfLines.length : 0,
@@ -60,7 +68,7 @@ function reconcilePageText({ ocrLines, pageIndex, pdfLines, scanPage }) {
   };
 }
 
-function selectPageSource({ ocrLines, pdfLines, scanPage, sourceType }) {
+function selectPageSource({ ocrLines, pdfGeometry, pdfLines, sourceType }) {
   if (pdfLines.length === 0 && ocrLines.length === 0) {
     return "none";
   }
@@ -71,7 +79,7 @@ function selectPageSource({ ocrLines, pdfLines, scanPage, sourceType }) {
     return pdfLines.length > 0 ? "pdf" : "ocr";
   }
   if (sourceType === "hybrid") {
-    if (scanPage?.hiddenTextImageMismatchLikely === true && ocrLines.length > 0) {
+    if (pdfLines.length > 0 && !pdfGeometry.visibleGeometryAligned && ocrLines.length > 0) {
       return "ocr";
     }
     if (pdfLines.length > 0) {
@@ -85,7 +93,7 @@ function selectPageSource({ ocrLines, pdfLines, scanPage, sourceType }) {
   return pdfLines.length > 0 ? "pdf" : "ocr";
 }
 
-function selectionReason({ ocrLines, pdfLines, scanPage, selected, sourceType }) {
+function selectionReason({ ocrLines, pdfGeometry, pdfLines, selected, sourceType }) {
   if (selected === "none") {
     return "no-text";
   }
@@ -96,15 +104,85 @@ function selectionReason({ ocrLines, pdfLines, scanPage, selected, sourceType })
     return selected === "pdf" ? "digital-page-pdf" : "digital-page-no-pdf";
   }
   if (sourceType === "hybrid") {
-    if (scanPage?.hiddenTextImageMismatchLikely === true && ocrLines.length > 0) {
-      return "hidden-text-image-mismatch";
+    if (pdfLines.length > 0 && !pdfGeometry.visibleGeometryAligned && ocrLines.length > 0) {
+      return "pdf-visible-geometry-mismatch";
+    }
+    if (pdfLines.length > 0 && pdfGeometry.visibleGeometryAligned) {
+      return "pdf-visible-geometry-aligned";
     }
     if (pdfLines.length > 0) {
-      return "hybrid-pdf-text-present";
+      return "hybrid-pdf-text-fallback";
     }
     return "hybrid-no-pdf-text";
   }
   return selected === "combined" ? "unknown-source-combined" : "single-source-available";
+}
+
+function pdfTextGeometry({ alignmentThreshold, pdfLines, scanPage }) {
+  const hiddenLines = pdfLines.filter(isHiddenTextLine);
+  const visibleLines = pdfLines.filter((line) => !isHiddenTextLine(line));
+  const imageDraws = scanPage?.imageDraws ?? [];
+  const hiddenImageAlignedTextLines = hiddenLines.filter(
+    (line) => maxImageOverlapRatio(line, imageDraws) >= alignmentThreshold
+  ).length;
+  const hiddenImageUnalignedTextLines = hiddenLines.length - hiddenImageAlignedTextLines;
+  const visibleGeometryAligned =
+    pdfLines.length > 0 &&
+    hiddenImageUnalignedTextLines === 0 &&
+    (visibleLines.length > 0 || hiddenImageAlignedTextLines === hiddenLines.length);
+
+  return {
+    visibleTextLines: visibleLines.length,
+    hiddenTextLines: hiddenLines.length,
+    hiddenImageAlignedTextLines,
+    hiddenImageUnalignedTextLines,
+    visibleGeometryAligned
+  };
+}
+
+function isHiddenTextLine(line) {
+  if (line.hidden === true || line.textRenderMode === 3) {
+    return true;
+  }
+  return (line.spans ?? []).some((span) => span.hidden === true || span.textRenderMode === 3);
+}
+
+function maxImageOverlapRatio(line, imageDraws) {
+  const lineBox = lineBoundingBox(line);
+  if (!lineBox || imageDraws.length === 0) {
+    return 0;
+  }
+  const lineArea = lineBox.width * lineBox.height;
+  if (lineArea <= 0) {
+    return 0;
+  }
+
+  const maxOverlapArea = imageDraws.reduce(
+    (max, image) => Math.max(max, rectangleOverlapArea(lineBox, image)),
+    0
+  );
+  return maxOverlapArea / lineArea;
+}
+
+function lineBoundingBox(line) {
+  const x = finiteNumber(line.x);
+  const y = finiteNumber(line.y);
+  const width = finiteNumber(line.width);
+  const height = finiteNumber(line.height);
+  if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) {
+    return null;
+  }
+  return { x, y, width, height };
+}
+
+function rectangleOverlapArea(left, right) {
+  const x1 = Math.max(left.x, right.x);
+  const y1 = Math.max(left.y, right.y);
+  const x2 = Math.min(left.x + left.width, right.x + right.width);
+  const y2 = Math.min(left.y + left.height, right.y + right.height);
+  const width = Math.max(0, x2 - x1);
+  const height = Math.max(0, y2 - y1);
+  return width * height;
 }
 
 function groupByPage(lines) {
@@ -147,4 +225,9 @@ function inferSourceType({ ocrLines, pdfLines }) {
     return "digital";
   }
   return "unknown";
+}
+
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }

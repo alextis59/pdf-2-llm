@@ -151,6 +151,11 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
           reason: "digital-page-pdf",
           pdfTextLines: 3,
           ocrTextLines: 0,
+          pdfVisibleTextLines: 3,
+          pdfHiddenTextLines: 0,
+          pdfHiddenImageAlignedTextLines: 0,
+          pdfHiddenImageUnalignedTextLines: 0,
+          pdfVisibleGeometryAligned: true,
           selectedPdfTextLines: 3,
           selectedOcrTextLines: 0,
           suppressedPdfTextLines: 0,
@@ -616,15 +621,74 @@ test("convertPdfToMarkdown reconciles searchable hybrid pages without OCR duplic
         pageIndex: 0,
         sourceType: "hybrid",
         selected: "pdf",
-        reason: "hybrid-pdf-text-present",
+        reason: "pdf-visible-geometry-aligned",
         pdfTextLines: 3,
         ocrTextLines: 1,
+        pdfVisibleTextLines: 3,
+        pdfHiddenTextLines: 0,
+        pdfHiddenImageAlignedTextLines: 0,
+        pdfHiddenImageUnalignedTextLines: 0,
+        pdfVisibleGeometryAligned: true,
         selectedPdfTextLines: 3,
         selectedOcrTextLines: 0,
         suppressedPdfTextLines: 0,
         suppressedOcrTextLines: 1
       }
     ]
+  });
+});
+
+test("convertPdfToMarkdown prefers aligned hidden PDF text over OCR duplicates", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({
+      x: 0,
+      y: 0,
+      widthPt: 612,
+      heightPt: 792,
+      textOperations: [invisibleTextOperation(72, 720, 12, "Aligned hidden layer")]
+    }),
+    {
+      ocr: {
+        results: [
+          {
+            pageIndex: 0,
+            coordinateSpace: "page",
+            lines: [
+              {
+                text: "OCR duplicate layer",
+                confidence: 91,
+                x: 72,
+                y: 720,
+                width: 130,
+                height: 12
+              }
+            ]
+          }
+        ]
+      }
+    }
+  );
+
+  assert.equal(result.ir.sourceType, "hybrid");
+  assert.equal(result.diagnostics.extraction.scanDetection.hiddenTextImageMismatchPages, 0);
+  assert.match(result.markdown, /Aligned hidden layer/);
+  assert.doesNotMatch(result.markdown, /OCR duplicate layer/);
+  assert.deepEqual(result.diagnostics.extraction.ocr.reconciliation.pages[0], {
+    pageIndex: 0,
+    sourceType: "hybrid",
+    selected: "pdf",
+    reason: "pdf-visible-geometry-aligned",
+    pdfTextLines: 1,
+    ocrTextLines: 1,
+    pdfVisibleTextLines: 0,
+    pdfHiddenTextLines: 1,
+    pdfHiddenImageAlignedTextLines: 1,
+    pdfHiddenImageUnalignedTextLines: 0,
+    pdfVisibleGeometryAligned: true,
+    selectedPdfTextLines: 1,
+    selectedOcrTextLines: 0,
+    suppressedPdfTextLines: 0,
+    suppressedOcrTextLines: 1
   });
 });
 
@@ -676,9 +740,14 @@ test("convertPdfToMarkdown reconciles hidden text mismatch hybrid pages to OCR",
         pageIndex: 0,
         sourceType: "hybrid",
         selected: "ocr",
-        reason: "hidden-text-image-mismatch",
+        reason: "pdf-visible-geometry-mismatch",
         pdfTextLines: 1,
         ocrTextLines: 1,
+        pdfVisibleTextLines: 0,
+        pdfHiddenTextLines: 1,
+        pdfHiddenImageAlignedTextLines: 0,
+        pdfHiddenImageUnalignedTextLines: 1,
+        pdfVisibleGeometryAligned: false,
         selectedPdfTextLines: 0,
         selectedOcrTextLines: 1,
         suppressedPdfTextLines: 1,

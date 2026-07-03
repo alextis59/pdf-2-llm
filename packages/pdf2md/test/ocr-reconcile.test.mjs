@@ -6,6 +6,11 @@ test("reconcileOcrTextLines selects OCR for hidden-text mismatch hybrid pages", 
   const pdfLine = {
     pageIndex: 0,
     text: "Hidden layer",
+    x: 120,
+    y: 120,
+    width: 80,
+    height: 12,
+    hidden: true,
     source: "pdf-text"
   };
   const ocrLine = {
@@ -21,7 +26,14 @@ test("reconcileOcrTextLines selects OCR for hidden-text mismatch hybrid pages", 
         {
           pageIndex: 0,
           sourceType: "hybrid",
-          hiddenTextImageMismatchLikely: true
+          imageDraws: [
+            {
+              x: 0,
+              y: 0,
+              width: 50,
+              height: 50
+            }
+          ]
         }
       ]
     }
@@ -40,9 +52,14 @@ test("reconcileOcrTextLines selects OCR for hidden-text mismatch hybrid pages", 
         pageIndex: 0,
         sourceType: "hybrid",
         selected: "ocr",
-        reason: "hidden-text-image-mismatch",
+        reason: "pdf-visible-geometry-mismatch",
         pdfTextLines: 1,
         ocrTextLines: 1,
+        pdfVisibleTextLines: 0,
+        pdfHiddenTextLines: 1,
+        pdfHiddenImageAlignedTextLines: 0,
+        pdfHiddenImageUnalignedTextLines: 1,
+        pdfVisibleGeometryAligned: false,
         selectedPdfTextLines: 0,
         selectedOcrTextLines: 1,
         suppressedPdfTextLines: 1,

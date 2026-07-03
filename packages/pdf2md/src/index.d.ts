@@ -247,13 +247,19 @@ export type OcrReconciliationPageDiagnostics = {
     | "scanned-page-no-ocr"
     | "digital-page-pdf"
     | "digital-page-no-pdf"
-    | "hidden-text-image-mismatch"
-    | "hybrid-pdf-text-present"
+    | "pdf-visible-geometry-aligned"
+    | "pdf-visible-geometry-mismatch"
+    | "hybrid-pdf-text-fallback"
     | "hybrid-no-pdf-text"
     | "unknown-source-combined"
     | "single-source-available";
   pdfTextLines: number;
   ocrTextLines: number;
+  pdfVisibleTextLines: number;
+  pdfHiddenTextLines: number;
+  pdfHiddenImageAlignedTextLines: number;
+  pdfHiddenImageUnalignedTextLines: number;
+  pdfVisibleGeometryAligned: boolean;
   selectedPdfTextLines: number;
   selectedOcrTextLines: number;
   suppressedPdfTextLines: number;
