@@ -364,6 +364,7 @@ test("table MVP matches expected markdown for generated table fixtures", async (
     "synthetic-visible-table",
     "synthetic-split-across-page-table",
     "synthetic-table-with-note",
+    "synthetic-complex-spanned-table",
     "synthetic-borderless-table"
   ];
 

@@ -742,6 +742,35 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-table-with-note.yaml",
       "notes": "Visible table fixture with a note directly below the grid."
+    },
+    {
+      "id": "synthetic-complex-spanned-table",
+      "kind": "complex-table",
+      "path": "corpus/generated/synthetic-complex-spanned-table.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Visible ruled table fixture with a merged header cell requiring HTML output.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "59cd704b1489fe78e3c22ad77e19e4d42d5f30ae9932cae57d6d76cdc7e8cc31",
+      "bytes": 839,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "visible-table",
+        "ruling-lines",
+        "column-span",
+        "html-table"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-complex-spanned-table.yaml",
+      "notes": "Visible ruled table fixture with a merged header cell requiring HTML output."
     }
   ]
 }

@@ -627,6 +627,40 @@ const fixtures = [
     ]
   },
   {
+    id: "synthetic-complex-spanned-table",
+    kind: "complex-table",
+    gate: "tables-v1",
+    features: ["born-digital", "visible-table", "ruling-lines", "column-span", "html-table"],
+    description: "Visible ruled table fixture with a merged header cell requiring HTML output.",
+    minTextCoverage: 1,
+    minTableCsvCellTextAccuracy: 1,
+    minTableSpanAccuracy: 1,
+    must: ["detect_visible_table", "detect_cell_span", "emit_html_table", "emit_csv_sidecar"],
+    mustNot: ["emit_broken_gfm_for_spans", "drop_spanned_header"],
+    structures: ["html_table", "column_span", "csv_sidecar"],
+    snippets: [
+      { page: 1, contains: "Revenue <Total>" },
+      { page: 1, contains: "100 \"net\"" }
+    ],
+    reviewNotes:
+      "The missing vertical rule in the header creates a colspan; Markdown cannot represent the span, so acceptance requires HTML table output plus CSV cell text coverage.",
+    expectedMarkdown:
+      "# Complex Spanned Table\n\n<table>\n  <thead>\n    <tr>\n      <th colspan=\"2\">Revenue &lt;Total&gt;</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <td>Q1 &amp; Q2</td>\n      <td>100 &quot;net&quot;</td>\n    </tr>\n  </tbody>\n</table>\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Complex Spanned Table"),
+          rect(72, 610, 240, 60),
+          line(192, 610, 192, 640),
+          line(72, 640, 312, 640),
+          text(82, 650, 11, "Revenue <Total>"),
+          text(82, 620, 11, "Q1 & Q2"),
+          text(202, 620, 11, "100 \"net\"")
+        ]
+      }
+    ]
+  },
+  {
     id: "synthetic-borderless-table",
     kind: "borderless-table",
     gate: "tables-v1",

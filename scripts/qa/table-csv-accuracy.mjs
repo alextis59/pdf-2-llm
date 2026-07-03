@@ -2,7 +2,9 @@ import { extractMarkdownTableCells } from "./table-span-accuracy.mjs";
 
 export function compareTableCsvCellTextAccuracy(expectedMarkdown, assets) {
   const expectedCells = extractMarkdownTableCells(expectedMarkdown).map(csvComparableCell);
-  const actualCells = extractTableCsvCells(assets).map(csvComparableCell);
+  const actualCells = extractTableCsvCells(assets)
+    .filter((cell) => normalizeCellText(cell.text).length > 0)
+    .map(csvComparableCell);
   const actualCounts = countCells(actualCells);
   const missing = [];
   let matchedCells = 0;

@@ -75,3 +75,23 @@ test("compareTableCsvCellTextAccuracy penalizes incorrect cell text", () => {
     [{ text: "100", rowIndex: 1, columnIndex: 1 }]
   );
 });
+
+test("compareTableCsvCellTextAccuracy ignores empty span placeholders in sidecars", () => {
+  const expected = [
+    "<table>",
+    "<tr><th colspan=\"2\">Merged</th></tr>",
+    "<tr><td>A</td><td>B</td></tr>",
+    "</table>"
+  ].join("");
+  const comparison = compareTableCsvCellTextAccuracy(expected, [
+    {
+      kind: "table-csv",
+      tableIndex: 0,
+      content: "Merged,\nA,B\n"
+    }
+  ]);
+
+  assert.equal(comparison.score, 1);
+  assert.equal(comparison.matchedCells, 3);
+  assert.equal(comparison.actualCells, 3);
+});
