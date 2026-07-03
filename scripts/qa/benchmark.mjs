@@ -8,22 +8,32 @@ import { convertPdfToMarkdown } from "../../packages/pdf2md/src/index.mjs";
 const args = process.argv.slice(2);
 
 export function summarizeDurations(durationsMs) {
-  if (durationsMs.length === 0) {
+  const summary = summarizeNumbers(durationsMs);
+  return {
+    minMs: summary.min,
+    maxMs: summary.max,
+    meanMs: summary.mean,
+    medianMs: summary.median
+  };
+}
+
+function summarizeNumbers(values) {
+  if (values.length === 0) {
     return {
-      minMs: 0,
-      maxMs: 0,
-      meanMs: 0,
-      medianMs: 0
+      min: 0,
+      max: 0,
+      mean: 0,
+      median: 0
     };
   }
-  const sorted = [...durationsMs].sort((left, right) => left - right);
-  const total = durationsMs.reduce((sum, value) => sum + value, 0);
+  const sorted = [...values].sort((left, right) => left - right);
+  const total = values.reduce((sum, value) => sum + value, 0);
   const middle = Math.floor(sorted.length / 2);
   return {
-    minMs: sorted[0],
-    maxMs: sorted[sorted.length - 1],
-    meanMs: total / sorted.length,
-    medianMs:
+    min: sorted[0],
+    max: sorted[sorted.length - 1],
+    mean: total / sorted.length,
+    median:
       sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle]
   };
 }
@@ -203,6 +213,60 @@ function maxProfileMetric(cases, metricName) {
     return null;
   }
   return Math.max(...cases.map((profile) => profile[metricName] ?? 0));
+}
+
+export function createThroughputProfileSummary(
+  results,
+  { profileType = "throughput", scope = "selected-cases" } = {}
+) {
+  const cases = results.map(throughputResult);
+  return {
+    profileType,
+    scope,
+    resultCount: cases.length,
+    passed: cases.every((profile) => profile.passed),
+    totals: {
+      pages: cases.reduce((sum, profile) => sum + profile.pages, 0),
+      bytes: cases.reduce((sum, profile) => sum + profile.bytes, 0),
+      outputChars: cases.reduce((sum, profile) => sum + profile.outputChars, 0),
+      textLines: cases.reduce((sum, profile) => sum + profile.textLines, 0)
+    },
+    rates: {
+      pagesPerSecond: summarizeNumbers(cases.map((profile) => profile.pagesPerSecond)),
+      outputCharsPerSecond: summarizeNumbers(
+        cases.map((profile) => profile.outputCharsPerSecond)
+      ),
+      inputBytesPerSecond: summarizeNumbers(cases.map((profile) => profile.inputBytesPerSecond))
+    },
+    cases
+  };
+}
+
+function throughputResult(result) {
+  const throughput = result.throughput ?? {};
+  const meanMs = throughput.meanMs ?? result.meanMs ?? 0;
+  return {
+    id: result.id,
+    gate: result.gate,
+    kind: result.kind,
+    features: result.features ?? [],
+    workload: result.workload,
+    providerMode: result.providerMode,
+    pages: Math.max(0, result.pages ?? 0),
+    bytes: result.bytes ?? 0,
+    outputChars: result.outputChars ?? 0,
+    textLines: result.textLines ?? 0,
+    iterations: result.iterations ?? 0,
+    warmup: result.warmup ?? 0,
+    startupMs: result.startup?.durationMs ?? 0,
+    throughputIterations: throughput.iterations ?? 0,
+    throughputMeanMs: meanMs,
+    throughputMedianMs: throughput.medianMs ?? result.medianMs ?? 0,
+    pagesPerSecond: throughput.pagesPerSecond ?? result.pagesPerSecond ?? 0,
+    outputCharsPerSecond: meanMs > 0 ? ((result.outputChars ?? 0) * 1000) / meanMs : 0,
+    inputBytesPerSecond: meanMs > 0 ? ((result.bytes ?? 0) * 1000) / meanMs : 0,
+    passed: result.passed === true
+  };
 }
 
 function hasFlag(name) {
@@ -565,6 +629,29 @@ function formatNumber(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
 }
 
+function reportScope({ memoryLimitGated, selectedGate, selectedIds, selectAll }) {
+  if (memoryLimitGated) {
+    return "memory-limit-gated";
+  }
+  if (selectedGate) {
+    return `gate:${selectedGate}`;
+  }
+  if (selectedIds.length > 0) {
+    return "selected-ids";
+  }
+  return selectAll ? "all" : "selected-cases";
+}
+
+function throughputProfileType(selectedGate) {
+  if (selectedGate === "text-mvp") {
+    return "text-throughput";
+  }
+  if (selectedGate === "ocr-v1") {
+    return "ocr-throughput";
+  }
+  return selectedGate ? `${selectedGate}-throughput` : "throughput";
+}
+
 async function main() {
   if (hasFlag("--help") || hasFlag("-h")) {
     console.log(usage());
@@ -622,14 +709,18 @@ async function main() {
     }
   }
 
+  const scope = reportScope({ memoryLimitGated, selectedGate, selectedIds, selectAll });
+  const memoryProfile = createMemoryProfileSummary(results, { scope });
   const report = {
     generatedAt: new Date().toISOString(),
     iterations,
     warmup,
     providerModes,
     comparisons: compareProviderResults(results),
-    memoryProfile: createMemoryProfileSummary(results, {
-      scope: memoryLimitGated ? "memory-limit-gated" : "selected-cases"
+    ...(memoryProfile.resultCount > 0 ? { memoryProfile } : {}),
+    throughputProfile: createThroughputProfileSummary(results, {
+      profileType: throughputProfileType(selectedGate),
+      scope
     }),
     results
   };

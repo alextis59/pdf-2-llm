@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   compareProviderResults,
   createMemoryProfileSummary,
+  createThroughputProfileSummary,
   evaluateMemoryLimits,
   splitStartupAndThroughputDurations,
   summarizeDurations,
@@ -18,6 +19,138 @@ test("benchmark duration summary reports min max mean and median", () => {
     meanMs: 4.5,
     medianMs: 4
   });
+});
+
+test("benchmark throughput profile summarizes selected text cases", () => {
+  assert.deepEqual(
+    createThroughputProfileSummary(
+      [
+        {
+          id: "text-a",
+          gate: "text-mvp",
+          kind: "synthetic",
+          features: ["born-digital"],
+          workload: "conversion",
+          providerMode: "cpu",
+          pages: 2,
+          bytes: 1000,
+          outputChars: 500,
+          textLines: 10,
+          iterations: 3,
+          warmup: 1,
+          startup: { durationMs: 20 },
+          throughput: {
+            iterations: 2,
+            meanMs: 10,
+            medianMs: 10,
+            pagesPerSecond: 200
+          },
+          passed: true
+        },
+        {
+          id: "text-b",
+          gate: "text-mvp",
+          kind: "synthetic",
+          features: ["born-digital"],
+          workload: "conversion",
+          providerMode: "cpu",
+          pages: 1,
+          bytes: 300,
+          outputChars: 100,
+          textLines: 4,
+          iterations: 3,
+          warmup: 1,
+          startup: { durationMs: 12 },
+          throughput: {
+            iterations: 2,
+            meanMs: 20,
+            medianMs: 20,
+            pagesPerSecond: 50
+          },
+          passed: true
+        }
+      ],
+      { profileType: "text-throughput", scope: "gate:text-mvp" }
+    ),
+    {
+      profileType: "text-throughput",
+      scope: "gate:text-mvp",
+      resultCount: 2,
+      passed: true,
+      totals: {
+        pages: 3,
+        bytes: 1300,
+        outputChars: 600,
+        textLines: 14
+      },
+      rates: {
+        pagesPerSecond: {
+          min: 50,
+          max: 200,
+          mean: 125,
+          median: 125
+        },
+        outputCharsPerSecond: {
+          min: 5000,
+          max: 50000,
+          mean: 27500,
+          median: 27500
+        },
+        inputBytesPerSecond: {
+          min: 15000,
+          max: 100000,
+          mean: 57500,
+          median: 57500
+        }
+      },
+      cases: [
+        {
+          id: "text-a",
+          gate: "text-mvp",
+          kind: "synthetic",
+          features: ["born-digital"],
+          workload: "conversion",
+          providerMode: "cpu",
+          pages: 2,
+          bytes: 1000,
+          outputChars: 500,
+          textLines: 10,
+          iterations: 3,
+          warmup: 1,
+          startupMs: 20,
+          throughputIterations: 2,
+          throughputMeanMs: 10,
+          throughputMedianMs: 10,
+          pagesPerSecond: 200,
+          outputCharsPerSecond: 50000,
+          inputBytesPerSecond: 100000,
+          passed: true
+        },
+        {
+          id: "text-b",
+          gate: "text-mvp",
+          kind: "synthetic",
+          features: ["born-digital"],
+          workload: "conversion",
+          providerMode: "cpu",
+          pages: 1,
+          bytes: 300,
+          outputChars: 100,
+          textLines: 4,
+          iterations: 3,
+          warmup: 1,
+          startupMs: 12,
+          throughputIterations: 2,
+          throughputMeanMs: 20,
+          throughputMedianMs: 20,
+          pagesPerSecond: 50,
+          outputCharsPerSecond: 5000,
+          inputBytesPerSecond: 15000,
+          passed: true
+        }
+      ]
+    }
+  );
 });
 
 test("benchmark memory summary reports deltas", () => {
