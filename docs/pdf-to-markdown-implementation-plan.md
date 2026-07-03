@@ -646,10 +646,14 @@ Speedup validation status, 2026-07-03:
 - Local Chrome 126 headless probes with `--enable-unsafe-webgpu` and
   Vulkan/WebGPU feature flags report `navigator.gpu: false`; Vulkan
   initialization fails before WebGPU can be selected.
-- The current implementation intentionally performs capability detection and
-  OCR batch planning only. This acceptance item remains open until real GPU
-  kernels are implemented and a run with a selected `webgpu` provider passes
+- The conversion path intentionally performs capability detection and OCR batch
+  planning only. This acceptance item remains open until a selected `webgpu`
+  provider with conversion-routed GPU work passes
   `node scripts/qa/check-webgpu-comparison.mjs --report <report> --require-speedup`.
+- Follow-up implementation progress adds a browser WebGPU RGBA binarization
+  kernel and `npm run qa:webgpu-preprocess`; local Chrome can expose
+  `navigator.gpu`, but still returns no adapter, so the strict speedup gate
+  remains unproven here.
 
 ## Phase 8: Gate 7 - Advanced Document Intelligence
 

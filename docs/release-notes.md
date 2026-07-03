@@ -108,14 +108,17 @@ fixtures:
 
 #### WebGPU
 
-- WebGPU currently performs capability detection and OCR batch planning only; it
-  does not execute GPU kernels.
+- The converter WebGPU path currently performs capability detection and OCR
+  batch planning only.
 - Node always falls back to CPU with
   `node-stable-gpu-path-unavailable`.
+- A browser WebGPU OCR-preprocessing binarization kernel and
+  `qa:webgpu-preprocess` harness are available for adapter-backed validation,
+  but the converter does not yet route raster OCR buffers through that kernel.
 - WebGPU speedup reports are `not-applicable` in CPU-fallback environments and
   do not claim acceleration unless `selectedProvider` is `webgpu`.
-- The Gate 6 speedup acceptance item remains open until a real WebGPU execution
-  provider with GPU kernels passes the comparison gate with `--require-speedup`.
+- The Gate 6 speedup acceptance item remains open until a conversion-routed
+  WebGPU provider passes the comparison gate with `--require-speedup`.
 - Browser WebGPU unavailability falls back to CPU. When `webgpu.required` is
   true, the user-visible warning is `webgpu.unavailable`.
 

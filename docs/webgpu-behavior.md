@@ -10,11 +10,14 @@ The current implementation performs:
 - Runtime and browser WebGPU capability detection.
 - Adapter and device health checks in browsers.
 - OCR workload batch planning for scanned and hybrid pages.
+- A browser WebGPU OCR-preprocessing binarization kernel for validation
+  workloads.
 - CPU parity diagnostics when WebGPU is unavailable or not requested.
 
-It does not currently execute GPU kernels. The WebGPU path plans provider,
-memory, and batching behavior so future OCR/layout acceleration can be added
-without changing caller-facing result shapes.
+The converter path does not yet materialize raster image buffers or route OCR
+through the binarization kernel. It still plans provider, memory, and batching
+behavior so browser OCR/layout acceleration can be wired in without changing
+caller-facing result shapes.
 
 ## Options
 
@@ -263,6 +266,22 @@ The benchmark comparison should report equivalent accepted output between CPU
 and WebGPU-preferred modes. In Node, the WebGPU-preferred mode is expected to
 select CPU with `node-stable-gpu-path-unavailable`.
 
+```sh
+npm run qa:webgpu-preprocess
+```
+
+This browser harness serves the preprocessing module from localhost, launches
+Chrome with WebGPU flags, and runs the RGBA binarization kernel when
+`requestAdapter()` succeeds. Without a usable adapter it writes an explicit
+not-applicable summary. On a WebGPU-capable host, use the strict form to require
+measurable speedup:
+
+```sh
+node scripts/qa/browser-webgpu-preprocess.mjs \
+  --summary .temp/qa/webgpu-preprocess.json \
+  --require-speedup
+```
+
 ## Common Failure Modes
 
 `selectedProvider` is `cpu` even with `preferred: true`
@@ -290,3 +309,10 @@ Benchmark ratios vary between runs
 Current WebGPU-preferred benchmarks in Node still execute through CPU fallback,
 so timing differences are process noise. Use `equivalentAcceptedOutput` and
 provider diagnostics as the primary correctness checks.
+
+`qa:webgpu-preprocess` reports `adapter-unavailable`
+
+Chrome exposed `navigator.gpu`, but `requestAdapter()` returned no adapter.
+This usually means the local browser/GPU stack cannot run WebGPU compute in the
+current environment. The harness records this as not-applicable unless
+`--require-speedup` is used.
