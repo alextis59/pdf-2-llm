@@ -206,7 +206,16 @@ export async function convertPdfToMarkdown(input, options = {}) {
     );
   }
 
-  const ir = createDocumentIr({ sourceType: pdfVersion ? "digital" : "unknown" });
+  const scanPagesByIndex = new Map(
+    scanDetection.pages.map((page) => [page.pageIndex, page])
+  );
+  const ir = createDocumentIr({
+    sourceType: pdfDocument?.pages?.length
+      ? scanDetection.sourceType
+      : pdfVersion
+        ? "digital"
+        : "unknown"
+  });
   if (pdfDocument?.pages) {
     ir.pages = pdfDocument.pages.map((page) =>
       createPageIr({
@@ -214,7 +223,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         widthPt: page.widthPt,
         heightPt: page.heightPt,
         rotation: page.rotation,
-        sourceType: "digital",
+        sourceType: scanPagesByIndex.get(page.pageIndex)?.sourceType ?? "unknown",
         elements: []
       })
     );

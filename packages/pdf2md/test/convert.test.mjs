@@ -201,6 +201,15 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
     createSinglePageImagePdf({ x: 72, y: 600, widthPt: 72, heightPt: 72 })
   );
 
+  assert.equal(fullPage.ir.sourceType, "scanned");
+  assert.equal(fullPage.ir.pages[0].sourceType, "scanned");
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.sourceType, "scanned");
+  assert.deepEqual(fullPage.diagnostics.extraction.scanDetection.sourceTypeCounts, {
+    digital: 0,
+    scanned: 1,
+    hybrid: 0,
+    unknown: 0
+  });
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.imageCoverageRatio, 0.5);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextLines, 3);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextAreaRatio, 0.01);
@@ -215,6 +224,7 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
   assert.equal(fullPage.diagnostics.extraction.scanDetection.hiddenTextImageMismatchPages, 0);
   assert.deepEqual(fullPage.diagnostics.extraction.scanDetection.pages[0], {
     pageIndex: 0,
+    sourceType: "scanned",
     textLineCount: 0,
     textArea: 0,
     textAreaRatio: 0,
@@ -271,7 +281,10 @@ test("convertPdfToMarkdown reports little and no-text scan detection diagnostics
   assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].noText, false);
   assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].littleText, true);
   assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].littleOrNoText, true);
+  assert.equal(normalText.ir.sourceType, "digital");
+  assert.equal(normalText.ir.pages[0].sourceType, "digital");
   assert.equal(normalText.diagnostics.extraction.scanDetection.littleOrNoTextPages, 0);
+  assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].sourceType, "digital");
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].noText, false);
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].littleText, false);
   assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].littleOrNoText, false);
@@ -299,7 +312,11 @@ test("convertPdfToMarkdown reports hidden OCR overlay scan diagnostics", async (
   const hiddenPage = hiddenOverlay.diagnostics.extraction.scanDetection.pages[0];
   const visiblePage = visibleOverlay.diagnostics.extraction.scanDetection.pages[0];
 
+  assert.equal(hiddenOverlay.ir.sourceType, "hybrid");
+  assert.equal(hiddenOverlay.ir.pages[0].sourceType, "hybrid");
+  assert.equal(hiddenOverlay.diagnostics.extraction.scanDetection.sourceType, "hybrid");
   assert.equal(hiddenOverlay.diagnostics.extraction.scanDetection.hiddenOcrOverlayPages, 1);
+  assert.equal(hiddenPage.sourceType, "hybrid");
   assert.equal(hiddenPage.imageDominant, true);
   assert.equal(hiddenPage.hiddenTextLineCount, 1);
   assert.equal(hiddenPage.hiddenTextArea, 216);
@@ -326,6 +343,8 @@ test("convertPdfToMarkdown reports hidden text and visible image geometry mismat
   const page = mismatch.diagnostics.extraction.scanDetection.pages[0];
 
   assert.equal(mismatch.diagnostics.extraction.scanDetection.hiddenTextImageMismatchPages, 1);
+  assert.equal(mismatch.ir.sourceType, "hybrid");
+  assert.equal(page.sourceType, "hybrid");
   assert.equal(page.imageDominant, true);
   assert.equal(page.imageCoverageRatio, 0.653595);
   assert.equal(page.hiddenOcrOverlayLikely, true);

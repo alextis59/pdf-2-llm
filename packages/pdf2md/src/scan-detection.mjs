@@ -40,8 +40,11 @@ export function createScanDetection(pages = [], options = {}) {
       textLines: textLinesByPage.get(page.pageIndex) ?? []
     })
   );
+  const sourceTypeCounts = countSourceTypes(pageDiagnostics);
 
   return {
+    sourceType: documentSourceType(sourceTypeCounts, pageDiagnostics.length),
+    sourceTypeCounts,
     thresholds: {
       imageCoverageRatio: imageCoverageThreshold,
       minTextLines,
@@ -105,9 +108,17 @@ function createPageScanDiagnostics(page, options) {
   ).length;
   const hiddenTextImageMismatchLikely =
     hiddenOcrOverlayLikely && hiddenTextImageMismatchLineCount > 0;
+  const sourceType = routePageSourceType({
+    hiddenOcrOverlayLikely,
+    imageDominant,
+    imageDrawCount: imageDraws.length,
+    littleOrNoText,
+    textLineCount
+  });
 
   return {
     pageIndex: page.pageIndex,
+    sourceType,
     textLineCount,
     textArea: normalizeNullableNumber(textArea),
     textAreaRatio,
@@ -135,6 +146,57 @@ function createPageScanDiagnostics(page, options) {
     }),
     imageDraws: imageDraws.map(summarizeImageDraw)
   };
+}
+
+function routePageSourceType({
+  hiddenOcrOverlayLikely,
+  imageDominant,
+  imageDrawCount,
+  littleOrNoText,
+  textLineCount
+}) {
+  if (imageDominant && hiddenOcrOverlayLikely) {
+    return "hybrid";
+  }
+  if (imageDominant && !littleOrNoText && textLineCount > 0) {
+    return "hybrid";
+  }
+  if (imageDominant && littleOrNoText) {
+    return "scanned";
+  }
+  if (textLineCount > 0 || imageDrawCount > 0) {
+    return "digital";
+  }
+  return "unknown";
+}
+
+function countSourceTypes(pages) {
+  const counts = {
+    digital: 0,
+    scanned: 0,
+    hybrid: 0,
+    unknown: 0
+  };
+  for (const page of pages) {
+    counts[page.sourceType] += 1;
+  }
+  return counts;
+}
+
+function documentSourceType(counts, pageCount) {
+  if (pageCount === 0 || counts.unknown === pageCount) {
+    return "unknown";
+  }
+  if (counts.hybrid > 0 || (counts.digital > 0 && counts.scanned > 0)) {
+    return "hybrid";
+  }
+  if (counts.scanned > 0 && counts.digital === 0) {
+    return "scanned";
+  }
+  if (counts.digital > 0 && counts.scanned === 0) {
+    return "digital";
+  }
+  return "unknown";
 }
 
 function isHiddenTextLine(line) {
