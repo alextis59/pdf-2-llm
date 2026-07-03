@@ -89,7 +89,16 @@ test("convertPdfToMarkdown supports path input", async () => {
 
 test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
   const result = await convertPdfToMarkdown(fixturePath.pathname, {
-    ocr: { adapter: "tesseract.js", languages: ["eng", "fra"] }
+    ocr: {
+      adapter: "tesseract.js",
+      languages: ["eng", "fra"],
+      modelBaseUrl: "/models/tesseract",
+      cache: {
+        enabled: true,
+        strategy: "adapter-default",
+        directory: ".cache/pdf2md-ocr"
+      }
+    }
   });
 
   assert.equal(result.diagnostics.options.ocrEnabled, true);
@@ -101,6 +110,22 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
     requested: "tesseract.js",
     status: "selected",
     languages: ["eng", "fra"],
+    modelLoading: {
+      strategy: "lazy",
+      trigger: "routed-scanned-or-hybrid-pages",
+      workerLifecycle: "reuse-worker-per-language-set",
+      source: "/models/tesseract",
+      languages: ["eng", "fra"],
+      modelFiles: ["eng.traineddata", "fra.traineddata"],
+      cache: {
+        enabled: true,
+        strategy: "adapter-default",
+        directory: ".cache/pdf2md-ocr",
+        keyPrefix: "tesseract.js:7.0.0",
+        browser: "adapter-default-indexeddb",
+        node: "adapter-default-filesystem"
+      }
+    },
     adapter: {
       id: "tesseract.js",
       kind: "cpu",

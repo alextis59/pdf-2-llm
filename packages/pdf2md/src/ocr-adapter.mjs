@@ -14,6 +14,7 @@ export function selectOcrAdapter(options = {}) {
   const enabled = options.enabled !== false;
   const requested = options.adapter ?? cpuAdapter.id;
   const languages = normalizeLanguages(options.languages);
+  const modelLoading = createModelLoadingPlan(languages, options);
 
   if (!enabled) {
     return {
@@ -21,6 +22,7 @@ export function selectOcrAdapter(options = {}) {
       requested,
       status: "disabled",
       languages,
+      modelLoading,
       adapter: cpuAdapter
     };
   }
@@ -31,6 +33,7 @@ export function selectOcrAdapter(options = {}) {
       requested,
       status: "unsupported",
       languages,
+      modelLoading,
       adapter: null
     };
   }
@@ -40,7 +43,29 @@ export function selectOcrAdapter(options = {}) {
     requested,
     status: "selected",
     languages,
+    modelLoading,
     adapter: cpuAdapter
+  };
+}
+
+function createModelLoadingPlan(languages, options) {
+  const cacheEnabled = options.cache?.enabled !== false;
+  const cacheStrategy = cacheEnabled ? options.cache?.strategy ?? "adapter-default" : "none";
+  return {
+    strategy: "lazy",
+    trigger: "routed-scanned-or-hybrid-pages",
+    workerLifecycle: "reuse-worker-per-language-set",
+    source: options.modelBaseUrl ?? "adapter-default",
+    languages,
+    modelFiles: languages.map((language) => `${language}.traineddata`),
+    cache: {
+      enabled: cacheEnabled,
+      strategy: cacheStrategy,
+      directory: options.cache?.directory ?? null,
+      keyPrefix: `${cpuAdapter.id}:${cpuAdapter.version}`,
+      browser: cacheEnabled ? "adapter-default-indexeddb" : "disabled",
+      node: cacheEnabled ? "adapter-default-filesystem" : "disabled"
+    }
   };
 }
 

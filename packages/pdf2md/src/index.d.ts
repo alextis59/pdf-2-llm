@@ -38,6 +38,12 @@ export type ConvertOptions = {
     enabled?: boolean;
     adapter?: "tesseract.js";
     languages?: string[];
+    modelBaseUrl?: string;
+    cache?: {
+      enabled?: boolean;
+      strategy?: "adapter-default" | "none";
+      directory?: string;
+    };
   };
   raster?: {
     enabled?: boolean;
@@ -113,7 +119,25 @@ export type OcrDiagnostics = {
   requested: string;
   status: "disabled" | "selected" | "unsupported";
   languages: string[];
+  modelLoading: OcrModelLoadingDiagnostics;
   adapter: OcrAdapterDiagnostics | null;
+};
+
+export type OcrModelLoadingDiagnostics = {
+  strategy: "lazy";
+  trigger: "routed-scanned-or-hybrid-pages";
+  workerLifecycle: "reuse-worker-per-language-set";
+  source: string;
+  languages: string[];
+  modelFiles: string[];
+  cache: {
+    enabled: boolean;
+    strategy: "adapter-default" | "none";
+    directory: string | null;
+    keyPrefix: string;
+    browser: "adapter-default-indexeddb" | "disabled";
+    node: "adapter-default-filesystem" | "disabled";
+  };
 };
 
 export type OcrAdapterDiagnostics = {
