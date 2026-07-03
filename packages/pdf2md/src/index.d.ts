@@ -148,8 +148,19 @@ export type WebGpuDiagnostics = {
     status: "fallback" | "selected";
   };
   adapter: WebGpuAdapterDiagnostics | null;
+  device: WebGpuDeviceDiagnostics;
   execution: WebGpuExecutionDiagnostics;
   error?: {
+    name: string;
+    message: string;
+  } | null;
+};
+
+export type WebGpuDeviceDiagnostics = {
+  status: "not-requested" | "available" | "request-failed" | "lost";
+  lostReason: string | null;
+  lostMessage: string | null;
+  error: {
     name: string;
     message: string;
   } | null;

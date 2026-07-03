@@ -619,7 +619,7 @@ Goal: accelerate OCR/layout workloads where available without changing results.
 - [x] Integrate GPU execution provider for OCR or layout models.
 - [x] Batch page images where memory allows.
 - [x] Enforce GPU memory limits.
-- [ ] Handle device loss.
+- [x] Handle device loss.
 - [ ] Keep model outputs compatible with CPU path.
 - [ ] Add provider parity tests.
 

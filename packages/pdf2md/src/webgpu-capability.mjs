@@ -55,6 +55,19 @@ export async function detectWebGpuCapabilities(options = {}, environment = globa
       });
     }
 
+    const device = await requestDeviceDiagnostics(adapter);
+    if (device.status === "request-failed" || device.status === "lost") {
+      return createResult({
+        browser,
+        device,
+        error: device.error,
+        fallbackReason: device.status === "lost" ? "device-lost" : "device-request-failed",
+        requested,
+        runtime,
+        status: "fallback-cpu"
+      });
+    }
+
     return {
       enabled: true,
       requested,
@@ -71,7 +84,9 @@ export async function detectWebGpuCapabilities(options = {}, environment = globa
         kind: "gpu",
         status: "selected"
       },
-      adapter: describeAdapter(adapter)
+      adapter: describeAdapter(adapter),
+      device,
+      error: null
     };
   } catch (error) {
     return createResult({
@@ -85,7 +100,15 @@ export async function detectWebGpuCapabilities(options = {}, environment = globa
   }
 }
 
-function createResult({ browser, error = null, fallbackReason, requested, runtime, status }) {
+function createResult({
+  browser,
+  device = createDeviceDiagnostics("not-requested"),
+  error = null,
+  fallbackReason,
+  requested,
+  runtime,
+  status
+}) {
   return {
     enabled: false,
     requested,
@@ -99,6 +122,7 @@ function createResult({ browser, error = null, fallbackReason, requested, runtim
     },
     provider: cpuProvider,
     adapter: null,
+    device,
     error: error
       ? {
           name: error.name ?? "Error",
@@ -150,6 +174,48 @@ function describeAdapter(adapter) {
     info: describeAdapterInfo(adapter.info),
     features: Array.from(adapter.features ?? []).sort(),
     limits: describeLimits(adapter.limits)
+  };
+}
+
+async function requestDeviceDiagnostics(adapter) {
+  if (typeof adapter.requestDevice !== "function") {
+    return createDeviceDiagnostics("not-requested");
+  }
+  try {
+    const device = await adapter.requestDevice();
+    const lost = await alreadySettledDeviceLoss(device?.lost);
+    if (lost) {
+      return createDeviceDiagnostics("lost", {
+        lostReason: stringOrNull(lost.reason),
+        lostMessage: stringOrNull(lost.message)
+      });
+    }
+    return createDeviceDiagnostics("available");
+  } catch (error) {
+    return createDeviceDiagnostics("request-failed", {
+      error: {
+        name: error.name ?? "Error",
+        message: error.message ?? String(error)
+      }
+    });
+  }
+}
+
+async function alreadySettledDeviceLoss(lostPromise) {
+  if (!lostPromise || typeof lostPromise.then !== "function") {
+    return null;
+  }
+  const pending = Symbol("pending");
+  const result = await Promise.race([lostPromise, Promise.resolve(pending)]);
+  return result === pending ? null : result;
+}
+
+function createDeviceDiagnostics(status, details = {}) {
+  return {
+    status,
+    lostReason: details.lostReason ?? null,
+    lostMessage: details.lostMessage ?? null,
+    error: details.error ?? null
   };
 }
 

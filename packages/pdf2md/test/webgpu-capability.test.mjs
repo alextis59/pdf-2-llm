@@ -22,6 +22,12 @@ test("detectWebGpuCapabilities keeps CPU selected when WebGPU is not requested",
       status: "fallback"
     },
     adapter: null,
+    device: {
+      status: "not-requested",
+      lostReason: null,
+      lostMessage: null,
+      error: null
+    },
     error: null
   });
 });
@@ -48,6 +54,11 @@ test("detectWebGpuCapabilities reports browser WebGPU adapter features and limit
                 maxBufferSize: 1024,
                 maxTextureDimension2D: 8192,
                 ignoredLimit: "not-a-number"
+              },
+              async requestDevice() {
+                return {
+                  lost: new Promise(() => {})
+                };
               }
             };
           }
@@ -85,7 +96,14 @@ test("detectWebGpuCapabilities reports browser WebGPU adapter features and limit
         maxBufferSize: 1024,
         maxTextureDimension2D: 8192
       }
-    }
+    },
+    device: {
+      status: "available",
+      lostReason: null,
+      lostMessage: null,
+      error: null
+    },
+    error: null
   });
 });
 
@@ -127,4 +145,42 @@ test("detectWebGpuCapabilities keeps Node on CPU without a stable GPU path", asy
   assert.equal(result.status, "fallback-cpu");
   assert.equal(result.selectedProvider, "cpu");
   assert.equal(result.fallbackReason, "node-stable-gpu-path-unavailable");
+});
+
+test("detectWebGpuCapabilities falls back to CPU when a WebGPU device is already lost", async () => {
+  const result = await detectWebGpuCapabilities(
+    { preferred: true },
+    {
+      document: {},
+      navigator: {
+        gpu: {
+          async requestAdapter() {
+            return {
+              features: new Set(),
+              limits: {},
+              async requestDevice() {
+                return {
+                  lost: Promise.resolve({
+                    reason: "destroyed",
+                    message: "device was lost during setup"
+                  })
+                };
+              }
+            };
+          }
+        }
+      }
+    }
+  );
+
+  assert.equal(result.enabled, false);
+  assert.equal(result.status, "fallback-cpu");
+  assert.equal(result.selectedProvider, "cpu");
+  assert.equal(result.fallbackReason, "device-lost");
+  assert.deepEqual(result.device, {
+    status: "lost",
+    lostReason: "destroyed",
+    lostMessage: "device was lost during setup",
+    error: null
+  });
 });
