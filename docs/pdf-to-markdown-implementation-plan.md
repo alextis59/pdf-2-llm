@@ -732,7 +732,7 @@ Goal: make the package safe and predictable enough for real use.
 ### 9.4 Release Readiness
 
 - [x] Run full accepted corpus.
-- [ ] Run full fuzz smoke suite.
+- [x] Run full fuzz smoke suite.
 - [ ] Run package build in a clean checkout.
 - [ ] Run package install test in a separate fixture project.
 - [ ] Run browser smoke test in Chromium and Firefox.
