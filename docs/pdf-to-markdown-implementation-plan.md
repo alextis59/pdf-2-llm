@@ -721,7 +721,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Write API documentation.
 - [x] Write CLI documentation.
 - [x] Write browser example.
-- [ ] Write Node example.
+- [x] Write Node example.
 - [ ] Write worker example.
 - [ ] Document WASM loading for bundlers.
 - [ ] Document OCR model loading.
