@@ -557,7 +557,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 Gate 4 acceptance:
 
 - [x] Visible-border synthetic tables pass exact structure tests.
-- [ ] Simple public tables meet cell text and adjacency thresholds.
+- [x] Simple public tables meet cell text and adjacency thresholds.
 - [ ] Complex tables use HTML or sidecar fallback instead of broken GFM.
 - [x] Low-confidence tables emit warnings.
 
