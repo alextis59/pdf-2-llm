@@ -697,7 +697,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Enforce max decoded stream size.
 - [x] Enforce max image pixels.
 - [x] Enforce max object count.
-- [ ] Enforce parse and conversion timeouts.
+- [x] Enforce parse and conversion timeouts.
 - [ ] Enforce recursion/depth limits.
 - [ ] Audit all unsafe Rust blocks.
 - [ ] Run fuzzers for parser, streams, fonts, and content interpreter.
