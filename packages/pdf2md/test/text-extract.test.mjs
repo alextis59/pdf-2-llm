@@ -89,6 +89,60 @@ test("linesToMarkdown infers fenced code blocks from monospace text and indentat
   );
 });
 
+test("linesToMarkdownWithSourceMap preserves display equations", () => {
+  const equation = "\u03a3 x_i = n(n + 1) / 2";
+  const result = linesToMarkdownWithSourceMap([
+    textLine("Equation Fixture", 72, 720, 160, 22),
+    textLine("A short lead-in.", 72, 690, 120, 12),
+    textLine(equation, 168, 660, 170, 12),
+    textLine("After the equation.", 72, 620, 130, 12)
+  ]);
+
+  assert.equal(
+    result.markdown,
+    `# Equation Fixture\n\nA short lead-in.\n\n$$\n${equation}\n$$\n\nAfter the equation.\n`
+  );
+  assert.deepEqual(
+    result.sourceMap.entries.map((entry) => entry.kind),
+    ["heading", "paragraph", "equation", "paragraph"]
+  );
+  assert.deepEqual(result.sourceMap.entries[2].regions, [
+    {
+      pageIndex: 0,
+      x: 168,
+      y: 660,
+      width: 170,
+      height: 12,
+      source: "pdf-text"
+    }
+  ]);
+  assert.deepEqual(result.equations, {
+    total: 1,
+    unicodeEquations: 1,
+    textEquations: 1,
+    imageEquations: 0,
+    formulaOcr: {
+      enabled: false,
+      status: "not-configured"
+    },
+    equations: [
+      {
+        equationIndex: 0,
+        pageIndex: 0,
+        source: "pdf-text",
+        text: equation,
+        latex: null,
+        lineCount: 1,
+        containsUnicodeMath: true,
+        x: 168,
+        y: 660,
+        width: 170,
+        height: 12
+      }
+    ]
+  });
+});
+
 test("linesToMarkdown infers heading levels across the document", () => {
   const markdown = linesToMarkdown([
     { text: "Document Title", fontSize: 24, x: 72, y: 720, pageIndex: 0 },

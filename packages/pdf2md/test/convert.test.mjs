@@ -1131,6 +1131,64 @@ test("convertPdfToMarkdown reports footnote layout regions", async () => {
   assert.match(result.markdown, /1\. Footnote text belongs after the paragraph\./);
 });
 
+test("convertPdfToMarkdown emits equation blocks with diagnostics and source maps", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageTextPdf([
+      textOperation(72, 720, 22, "Equation Fixture"),
+      textOperation(72, 690, 12, "A short lead-in."),
+      textOperation(168, 660, 12, "E = m c^2"),
+      textOperation(72, 620, 12, "After the equation.")
+    ])
+  );
+
+  assert.equal(
+    result.markdown,
+    "# Equation Fixture\n\nA short lead-in.\n\n$$\nE = m c^2\n$$\n\nAfter the equation.\n"
+  );
+  assert.deepEqual(
+    result.sourceMap.entries.map((entry) => entry.kind),
+    ["heading", "paragraph", "equation", "paragraph"]
+  );
+  assert.equal(result.sourceMap.entries[2].regions.length, 1);
+  assert.equal(result.sourceMap.entries[2].regions[0].pageIndex, 0);
+  assert.equal(result.sourceMap.entries[2].regions[0].source, "content-stream");
+  assert.deepEqual(result.diagnostics.extraction.equations, {
+    total: 1,
+    unicodeEquations: 0,
+    textEquations: 1,
+    imageEquations: 0,
+    formulaOcr: {
+      enabled: false,
+      status: "not-configured"
+    },
+    equations: [
+      {
+        equationIndex: 0,
+        pageIndex: 0,
+        source: "content-stream",
+        text: "E = m c^2",
+        latex: null,
+        lineCount: 1,
+        containsUnicodeMath: false,
+        x: result.diagnostics.extraction.equations.equations[0].x,
+        y: result.diagnostics.extraction.equations.equations[0].y,
+        width: result.diagnostics.extraction.equations.equations[0].width,
+        height: result.diagnostics.extraction.equations.equations[0].height
+      }
+    ]
+  });
+  assert.deepEqual(result.ir.pages[0].elements, [
+    {
+      type: "equation",
+      text: "E = m c^2",
+      x: result.diagnostics.extraction.equations.equations[0].x,
+      y: result.diagnostics.extraction.equations.equations[0].y,
+      width: result.diagnostics.extraction.equations.equations[0].width,
+      height: result.diagnostics.extraction.equations.equations[0].height
+    }
+  ]);
+});
+
 test("convertPdfToMarkdown reports figure caption layout regions", async () => {
   const result = await convertPdfToMarkdown(vectorFigureFixturePath.pathname);
   const page = result.diagnostics.extraction.layout.pages[0];

@@ -130,6 +130,7 @@ export type Diagnostics = {
     raster: RasterDiagnostics;
     scanDetection: ScanDetectionDiagnostics;
     parser: Record<string, unknown>;
+    equations: EquationDiagnostics;
     figures: FigureDiagnostics;
     forms: FormsDiagnostics;
     annotations: AnnotationDiagnostics;
@@ -650,6 +651,32 @@ export type FigureRegionDiagnostics = {
   pageHeightPt: number | null;
 };
 
+export type EquationDiagnostics = {
+  total: number;
+  unicodeEquations: number;
+  textEquations: number;
+  imageEquations: number;
+  formulaOcr: {
+    enabled: boolean;
+    status: "not-configured" | "selected" | "disabled";
+  };
+  equations: EquationRegionDiagnostics[];
+};
+
+export type EquationRegionDiagnostics = {
+  equationIndex: number;
+  pageIndex: number | null;
+  source: "pdf-text" | "content-stream" | "ocr" | "image";
+  text: string;
+  latex: string | null;
+  lineCount: number;
+  containsUnicodeMath: boolean;
+  x: number | null;
+  y: number | null;
+  width: number | null;
+  height: number | null;
+};
+
 export type FormsDiagnostics = {
   present: boolean;
   total: number;
@@ -902,6 +929,10 @@ export type EquationBlock = {
   text?: string;
   latex?: string;
   assetId?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 };
 
 export type FormFieldBlock = {

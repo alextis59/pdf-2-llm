@@ -138,6 +138,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const taggedStructureConflicts = taggedStructureConflictsForLines(lines, headingModel);
   const listIndentModel = createListIndentModel(lines);
   const codeModel = createCodeModel(lines);
+  const equationModel = createEquationModel(lines);
   const rulingTableExports = createRulingTableExports(lines, options.rulingTables ?? []);
   const lowConfidenceTables = [];
   const lowConfidenceTableLines = new Set();
@@ -200,6 +201,24 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
 
     appendPageAnchor(blocks, line.pageIndex, options, anchoredPages);
 
+    const equationBlock = readEquationAt(
+      lines,
+      index,
+      headingModel,
+      equationModel,
+      rulingTableExports
+    );
+    if (equationBlock) {
+      previousWasList = false;
+      blocks.push(
+        createMarkdownBlock(formatEquationBlock(equationBlock.sourceLines), "equation", equationBlock.sourceLines, {
+          equation: equationMetadata(equationBlock.sourceLines)
+        })
+      );
+      index = equationBlock.endIndex - 1;
+      continue;
+    }
+
     const codeBlock = readCodeBlockAt(
       lines,
       index,
@@ -245,7 +264,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     }
 
     previousWasList = false;
-    const paragraph = readParagraphAt(lines, index, text, headingModel, rulingTableExports);
+    const paragraph = readParagraphAt(lines, index, text, headingModel, rulingTableExports, equationModel);
     blocks.push(
       createMarkdownBlock(escapeMarkdownParagraph(paragraph.text), "paragraph", paragraph.sourceLines)
     );
@@ -255,6 +274,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   return {
     ...serializeMarkdownBlocks(blocks),
     tables: tableDiagnosticsFromBlocks(blocks),
+    equations: equationDiagnosticsFromBlocks(blocks),
     lowConfidenceTables,
     layout,
     taggedStructureConflicts
@@ -456,6 +476,142 @@ function codeIndent(line, left) {
   return " ".repeat(Math.max(0, Math.round((line.x - left) / 12)));
 }
 
+function createEquationModel(lines) {
+  const textLines = lines.filter((line) => normalizeText(line.text ?? "").length > 0);
+  const leftEdges = textLines.map((line) => line.x).filter(Number.isFinite);
+  const rightEdges = textLines
+    .filter((line) => Number.isFinite(line.x))
+    .map(lineRightEdge)
+    .filter(Number.isFinite);
+  const bodyLeft = leftEdges.length > 0 ? Math.min(...leftEdges) : 0;
+  const bodyRight = rightEdges.length > 0 ? Math.max(...rightEdges) : bodyLeft + 468;
+  return {
+    bodyLeft,
+    bodyWidth: Math.max(1, bodyRight - bodyLeft)
+  };
+}
+
+function readEquationAt(lines, startIndex, headingModel, equationModel, rulingTableExports = new Map()) {
+  const sourceLines = [];
+  let index = startIndex;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    const text = normalizeText(line.text ?? "");
+    if (
+      text.length === 0 ||
+      headingLevelForLine(line, headingModel) !== null ||
+      parseListItem(text) ||
+      startsWithMarkdownBlockMarker(text) ||
+      readRulingTableAt(index, rulingTableExports) ||
+      readConfidentTableAt(lines, index) ||
+      !isEquationLine(line, equationModel)
+    ) {
+      break;
+    }
+    if (
+      sourceLines.length > 0 &&
+      !isEquationContinuation(sourceLines[sourceLines.length - 1], line)
+    ) {
+      break;
+    }
+    sourceLines.push(line);
+    index += 1;
+  }
+
+  if (sourceLines.length === 0) {
+    return null;
+  }
+  return {
+    sourceLines,
+    endIndex: index
+  };
+}
+
+function isEquationLine(line, equationModel) {
+  const text = normalizeText(line.text ?? "");
+  if (
+    text.length < 3 ||
+    text.length > 180 ||
+    isLikelyCodeText(text) ||
+    isLikelyLinkText(text) ||
+    isLikelyProseSentence(text)
+  ) {
+    return false;
+  }
+  if (!hasEquationStructure(text)) {
+    return false;
+  }
+  return hasStrongMathSymbol(text) || isDisplayMathLine(line, equationModel);
+}
+
+function isEquationContinuation(previous, next) {
+  if ((previous.pageIndex ?? null) !== (next.pageIndex ?? null)) {
+    return false;
+  }
+  if (!Number.isFinite(previous.y) || !Number.isFinite(next.y)) {
+    return true;
+  }
+  const verticalGap = Math.abs(previous.y - next.y);
+  return verticalGap <= Math.max(24, (previous.fontSize ?? 12) * 2);
+}
+
+function hasEquationStructure(text) {
+  return (
+    hasStrongMathSymbol(text) ||
+    /(?:^|[\s(])(?:[A-Za-z][A-Za-z0-9_]*|\d+(?:\.\d+)?)\s*(?:=|<=|>=|<|>)\s*[-+A-Za-z0-9([\\]/.test(text) ||
+    /(?:[A-Za-z0-9)\]])\s*(?:\^|_|\/|\*)\s*(?:[A-Za-z0-9([])/.test(text)
+  );
+}
+
+function hasStrongMathSymbol(text) {
+  return /[\u0370-\u03ff\u2200-\u22ff]/.test(text);
+}
+
+function isDisplayMathLine(line, equationModel) {
+  if (!Number.isFinite(line.x)) {
+    return true;
+  }
+  const width = Number.isFinite(line.width) && line.width > 0 ? line.width : lineRightEdge(line) - line.x;
+  const indented = line.x >= equationModel.bodyLeft + 24;
+  const compact = width <= equationModel.bodyWidth * 0.72;
+  return indented || compact;
+}
+
+function isLikelyCodeText(text) {
+  return (
+    /^(?:const|let|var|function|class|if|else|for|while|return|import|export)\b/.test(text) ||
+    /[{};]/.test(text)
+  );
+}
+
+function isLikelyLinkText(text) {
+  return /(https?:\/\/|www\.|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i.test(text);
+}
+
+function isLikelyProseSentence(text) {
+  const words = text.split(/\s+/).filter(Boolean);
+  return words.length >= 7 && /[.!?]$/.test(text) && !hasStrongMathSymbol(text);
+}
+
+function formatEquationBlock(lines) {
+  const body = lines.map((line) => normalizeText(line.text ?? "").replace(/\$\$/g, "\\$\\$")).join("\n");
+  return `$$\n${body}\n$$`;
+}
+
+function equationMetadata(lines) {
+  const bounds = boundsForLines(lines);
+  const text = lines.map((line) => normalizeText(line.text ?? "")).join("\n");
+  return {
+    source: lines.find((line) => typeof line.source === "string")?.source ?? "pdf-text",
+    text,
+    latex: null,
+    lineCount: lines.length,
+    containsUnicodeMath: lines.some((line) => hasStrongMathSymbol(normalizeText(line.text ?? ""))),
+    ...bounds
+  };
+}
+
 function createHeadingModel(lines, { outlines = [] } = {}) {
   const bodyFontSize = dominantFontSize(lines);
   const fontSizes = uniqueSortedFontSizes(lines);
@@ -654,7 +810,14 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-function readParagraphAt(lines, startIndex, firstText, headingModel, rulingTableExports = new Map()) {
+function readParagraphAt(
+  lines,
+  startIndex,
+  firstText,
+  headingModel,
+  rulingTableExports = new Map(),
+  equationModel = createEquationModel(lines)
+) {
   const parts = [firstText];
   let previous = lines[startIndex];
   let index = startIndex + 1;
@@ -668,6 +831,7 @@ function readParagraphAt(lines, startIndex, firstText, headingModel, rulingTable
       parseListItem(text) ||
       startsWithMarkdownBlockMarker(text) ||
       readRulingTableAt(index, rulingTableExports) ||
+      isEquationLine(line, equationModel) ||
       readConfidentTableAt(lines, index) ||
       !isParagraphContinuation(previous, line)
     ) {
@@ -1123,6 +1287,31 @@ function tableDiagnosticsFromBlocks(blocks) {
   return tables;
 }
 
+function equationDiagnosticsFromBlocks(blocks) {
+  const equations = [];
+  for (const block of blocks) {
+    if (block.kind !== "equation" || !block.metadata?.equation) {
+      continue;
+    }
+    equations.push({
+      equationIndex: equations.length,
+      pageIndex: block.sourceLines.find((line) => Number.isInteger(line.pageIndex))?.pageIndex ?? null,
+      ...block.metadata.equation
+    });
+  }
+  return {
+    total: equations.length,
+    unicodeEquations: equations.filter((equation) => equation.containsUnicodeMath).length,
+    textEquations: equations.length,
+    imageEquations: 0,
+    formulaOcr: {
+      enabled: false,
+      status: "not-configured"
+    },
+    equations
+  };
+}
+
 function recordLowConfidenceTable(table, lowConfidenceTables, seenLines) {
   const sourceLines = table.rows.flat();
   if (sourceLines.some((line) => seenLines.has(line))) {
@@ -1191,6 +1380,35 @@ function lineToSourceRegion(line) {
     width: numberOrNull(line.width),
     height: numberOrNull(line.height),
     source: line.source ?? "pdf-text"
+  };
+}
+
+function boundsForLines(lines) {
+  const regions = lines
+    .filter((line) => Number.isFinite(line.x) && Number.isFinite(line.y))
+    .map((line) => ({
+      x: line.x,
+      y: line.y,
+      width: Math.max(1, finiteOr(line.width, lineRightEdge(line) - line.x)),
+      height: Math.max(1, finiteOr(line.height, line.fontSize ?? 10))
+    }));
+  if (regions.length === 0) {
+    return {
+      x: null,
+      y: null,
+      width: null,
+      height: null
+    };
+  }
+  const minX = Math.min(...regions.map((region) => region.x));
+  const maxX = Math.max(...regions.map((region) => region.x + region.width));
+  const minY = Math.min(...regions.map((region) => region.y - region.height));
+  const maxY = Math.max(...regions.map((region) => region.y));
+  return {
+    x: roundNumber(minX),
+    y: roundNumber(maxY),
+    width: roundNumber(maxX - minX),
+    height: roundNumber(maxY - minY)
   };
 }
 

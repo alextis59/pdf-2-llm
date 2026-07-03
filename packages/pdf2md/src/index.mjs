@@ -244,6 +244,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   markdownResult = insertFigureMarkdown(markdownResult, figureDetections.figures);
   const figureAssets = createFigureAssets(figureDetections.figures);
   const figureElements = figureElementsByPage(figureDetections.figures);
+  const equationElements = equationElementsByPage(markdownResult.equations?.equations ?? []);
   const documentInteractions = extractDocumentInteractions(pdfDocument, {
     extractAttachmentAssets: options.attachments?.extract === true
   });
@@ -301,6 +302,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         sourceType: scanPagesByIndex.get(page.pageIndex)?.sourceType ?? "unknown",
         elements: [
           ...(ocrTextExtraction.elementsByPage.get(page.pageIndex) ?? []),
+          ...(equationElements.get(page.pageIndex) ?? []),
           ...(figureElements.get(page.pageIndex) ?? []),
           ...(documentInteractions.elementsByPage.get(page.pageIndex) ?? [])
         ]
@@ -363,6 +365,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         rulingLines: summarizeRulingLines(rulingLines),
         rulingGrids: summarizeRulingGrids(rulingGrids),
         rulingTables: summarizeRulingTables(rulingTables, tableCsvSidecars.byTable),
+        equations: markdownResult.equations,
         figures: figureDetections,
         forms: documentInteractions.forms,
         annotations: documentInteractions.annotations,
@@ -427,6 +430,28 @@ function summarizePageImages(page) {
       rawLength: image.rawLength,
       decodedLength: image.decodedLength
     }));
+}
+
+function equationElementsByPage(equations) {
+  const byPage = new Map();
+  for (const equation of equations) {
+    if (!Number.isInteger(equation.pageIndex)) {
+      continue;
+    }
+    const elements = byPage.get(equation.pageIndex) ?? [];
+    const element = {
+      type: "equation",
+      text: equation.text
+    };
+    for (const key of ["latex", "x", "y", "width", "height"]) {
+      if (equation[key] != null) {
+        element[key] = equation[key];
+      }
+    }
+    elements.push(element);
+    byPage.set(equation.pageIndex, elements);
+  }
+  return byPage;
 }
 
 function summarizeRulingLines(rulingLines) {
