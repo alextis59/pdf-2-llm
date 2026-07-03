@@ -722,7 +722,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Write CLI documentation.
 - [x] Write browser example.
 - [x] Write Node example.
-- [ ] Write worker example.
+- [x] Write worker example.
 - [ ] Document WASM loading for bundlers.
 - [ ] Document OCR model loading.
 - [ ] Document WebGPU behavior and fallback.

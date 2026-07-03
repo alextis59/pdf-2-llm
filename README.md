@@ -14,3 +14,4 @@
 - CLI stub: `node packages/pdf2md/src/cli.mjs corpus/generated/synthetic-simple-text.pdf --json`
 - Browser example: `packages/pdf2md/examples/browser-basic.html`
 - Node example: `node packages/pdf2md/examples/node-basic.mjs`
+- Worker example: `node packages/pdf2md/examples/worker-basic.mjs`
