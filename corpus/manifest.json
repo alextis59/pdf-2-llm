@@ -714,6 +714,34 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-split-across-page-table.yaml",
       "notes": "Two-page visible table fixture whose rows continue on the next page."
+    },
+    {
+      "id": "synthetic-table-with-note",
+      "kind": "visible-table",
+      "path": "corpus/generated/synthetic-table-with-note.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Visible table fixture with a note directly below the grid.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "08ad79221526d8fbb676abb289b96c287c6b828ddfb0c2ee2e1871cca8175423",
+      "bytes": 1162,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "visible-table",
+        "ruling-lines",
+        "table-note"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-table-with-note.yaml",
+      "notes": "Visible table fixture with a note directly below the grid."
     }
   ]
 }

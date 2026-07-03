@@ -583,6 +583,50 @@ const fixtures = [
     ]
   },
   {
+    id: "synthetic-table-with-note",
+    kind: "visible-table",
+    gate: "tables-v1",
+    features: ["born-digital", "visible-table", "ruling-lines", "table-note"],
+    description: "Visible table fixture with a note directly below the grid.",
+    minTextCoverage: 1,
+    minTableCellAdjacency: 1,
+    minTableCsvCellTextAccuracy: 1,
+    minTableSpanAccuracy: 1,
+    must: ["detect_visible_table", "preserve_table_cells", "preserve_table_note"],
+    mustNot: ["fold_note_into_table", "drop_table_note"],
+    structures: ["gfm_table", "table_note", "three_columns", "three_rows"],
+    snippets: [
+      { page: 1, contains: "Region" },
+      { page: 1, contains: "Note: Values are rounded to the nearest whole user." }
+    ],
+    reviewNotes:
+      "The note is close to the ruled grid but outside its borders; acceptance requires preserving it as prose after the table.",
+    expectedMarkdown:
+      "# Table With Note\n\n| Region | Users | Change |\n| --- | ---: | ---: |\n| North | 120 | 5% |\n| South | 95 | -2% |\n\nNote: Values are rounded to the nearest whole user.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Table With Note"),
+          rect(72, 610, 360, 90),
+          line(192, 610, 192, 700),
+          line(312, 610, 312, 700),
+          line(72, 670, 432, 670),
+          line(72, 640, 432, 640),
+          text(82, 680, 11, "Region"),
+          text(202, 680, 11, "Users"),
+          text(322, 680, 11, "Change"),
+          text(82, 650, 11, "North"),
+          text(202, 650, 11, "120"),
+          text(322, 650, 11, "5%"),
+          text(82, 620, 11, "South"),
+          text(202, 620, 11, "95"),
+          text(322, 620, 11, "-2%"),
+          text(72, 580, 10, "Note: Values are rounded to the nearest whole user.")
+        ]
+      }
+    ]
+  },
+  {
     id: "synthetic-borderless-table",
     kind: "borderless-table",
     gate: "tables-v1",

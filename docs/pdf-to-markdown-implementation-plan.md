@@ -552,7 +552,7 @@ Goal: extract common tables without claiming impossible Markdown fidelity.
 - [x] Add CSV cell text accuracy metric.
 - [x] Add rendered HTML table diff helper.
 - [x] Add fixtures for split-across-page tables.
-- [ ] Add fixtures for notes below tables.
+- [x] Add fixtures for notes below tables.
 
 Gate 4 acceptance:
 
