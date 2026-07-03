@@ -774,36 +774,36 @@ Coordination checklist:
 - [ ] Each agent starts by reading the study and this plan.
 - [ ] Each agent writes or updates tests before marking a module complete.
 - [ ] Cross-agent contracts are changed through versioned IR/schema updates.
-- [ ] Corpus regressions block completion of later phases.
+- [x] Corpus regressions block completion of later phases.
 - [ ] Performance changes include before/after benchmark reports.
-- [ ] New unsupported behavior includes a warning code and documentation.
+- [x] New unsupported behavior includes a warning code and documentation.
 
 ## Metrics And Release Gates
 
 Core metrics:
 
 - [ ] Character error rate for extracted text.
-- [ ] Word error rate for OCR text.
+- [x] Word error rate for OCR text.
 - [ ] Unicode mapping accuracy for born-digital text.
 - [ ] Paragraph grouping F1.
 - [ ] Hyphenation repair accuracy.
-- [ ] Reading-order edit distance.
+- [x] Reading-order edit distance.
 - [x] Header/footer removal precision and recall.
 - [ ] Table detection precision and recall.
-- [ ] Table cell adjacency accuracy.
-- [ ] Table span accuracy.
-- [ ] CSV cell text accuracy.
+- [x] Table cell adjacency accuracy.
+- [x] Table span accuracy.
+- [x] CSV cell text accuracy.
 - [ ] Markdown AST diff.
-- [ ] Rendered HTML semantic diff.
+- [x] Rendered HTML semantic diff.
 - [ ] Asset link validity.
 - [ ] Warning-code accuracy.
-- [ ] Pages per second.
-- [ ] Peak memory.
-- [ ] Browser startup time.
+- [x] Pages per second.
+- [x] Peak memory.
+- [x] Browser startup time.
 - [ ] WASM size.
-- [ ] Model download size.
+- [x] Model download size.
 - [ ] GPU speedup where available.
-- [ ] Fuzz stability.
+- [x] Fuzz stability.
 
 Minimum release bars for a first public alpha:
 
@@ -834,7 +834,7 @@ Minimum release bars for a serious beta:
 - [x] Retrieve a small public-domain/public-license external PDF set.
 - [x] Run static analysis and oracle extraction on the first corpus batch.
 - [x] Write acceptance YAML for the first 10 PDFs.
-- [ ] Implement project scaffolding and stub API.
+- [x] Implement project scaffolding and stub API.
 - [x] Make the corpus runner list PDFs and report skipped gates.
-- [ ] Start Gate 1 parser and text extraction work only after the first
+- [x] Start Gate 1 parser and text extraction work only after the first
   acceptance files exist.
