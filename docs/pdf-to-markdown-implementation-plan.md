@@ -702,7 +702,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Audit all unsafe Rust blocks. N/A: repo contains no Rust sources or Cargo manifests.
 - [x] Run fuzzers for parser, streams, fonts, and content interpreter.
 - [x] Add malicious PDF regression fixtures.
-- [ ] Add dependency license and vulnerability checks.
+- [x] Add dependency license and vulnerability checks.
 
 ### 9.2 Performance
 
