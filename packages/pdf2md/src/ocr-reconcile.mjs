@@ -43,15 +43,21 @@ export function reconcileOcrTextLines({
 function reconcilePageText({ alignmentThreshold, ocrLines, pageIndex, pdfLines, scanPage }) {
   const sourceType = scanPage?.sourceType ?? inferSourceType({ ocrLines, pdfLines });
   const pdfGeometry = pdfTextGeometry({ alignmentThreshold, pdfLines, scanPage });
-  const selected = selectPageSource({ ocrLines, pdfGeometry, pdfLines, sourceType });
-  const lines = selected === "ocr" ? ocrLines : selected === "pdf" ? pdfLines : [...pdfLines, ...ocrLines];
+  const selection = selectTextLines({
+    alignmentThreshold,
+    ocrLines,
+    pdfGeometry,
+    pdfLines,
+    scanPage,
+    sourceType
+  });
 
   return {
     diagnostics: {
       pageIndex,
       sourceType,
-      selected,
-      reason: selectionReason({ ocrLines, pdfGeometry, pdfLines, selected, sourceType }),
+      selected: selection.selected,
+      reason: selection.reason,
       pdfTextLines: pdfLines.length,
       ocrTextLines: ocrLines.length,
       pdfVisibleTextLines: pdfGeometry.visibleTextLines,
@@ -59,12 +65,64 @@ function reconcilePageText({ alignmentThreshold, ocrLines, pageIndex, pdfLines, 
       pdfHiddenImageAlignedTextLines: pdfGeometry.hiddenImageAlignedTextLines,
       pdfHiddenImageUnalignedTextLines: pdfGeometry.hiddenImageUnalignedTextLines,
       pdfVisibleGeometryAligned: pdfGeometry.visibleGeometryAligned,
-      selectedPdfTextLines: selected === "pdf" || selected === "combined" ? pdfLines.length : 0,
-      selectedOcrTextLines: selected === "ocr" || selected === "combined" ? ocrLines.length : 0,
-      suppressedPdfTextLines: selected === "ocr" ? pdfLines.length : 0,
-      suppressedOcrTextLines: selected === "pdf" ? ocrLines.length : 0
+      selectedPdfTextLines: selection.selectedPdfLines.length,
+      selectedOcrTextLines: selection.selectedOcrLines.length,
+      suppressedPdfTextLines: pdfLines.length - selection.selectedPdfLines.length,
+      suppressedOcrTextLines: ocrLines.length - selection.selectedOcrLines.length
     },
-    lines
+    lines: selection.lines
+  };
+}
+
+function selectTextLines({ alignmentThreshold, ocrLines, pdfGeometry, pdfLines, scanPage, sourceType }) {
+  const regionalSelection = selectHybridRegionText({
+    alignmentThreshold,
+    ocrLines,
+    pdfLines,
+    scanPage,
+    sourceType
+  });
+  if (regionalSelection) {
+    return regionalSelection;
+  }
+
+  const selected = selectPageSource({ ocrLines, pdfGeometry, pdfLines, sourceType });
+  const selectedPdfLines = selected === "pdf" || selected === "combined" ? pdfLines : [];
+  const selectedOcrLines = selected === "ocr" || selected === "combined" ? ocrLines : [];
+  return {
+    selected,
+    reason: selectionReason({ ocrLines, pdfGeometry, pdfLines, selected, sourceType }),
+    selectedPdfLines,
+    selectedOcrLines,
+    lines: [...selectedPdfLines, ...selectedOcrLines]
+  };
+}
+
+function selectHybridRegionText({ alignmentThreshold, ocrLines, pdfLines, scanPage, sourceType }) {
+  if (sourceType !== "hybrid" || pdfLines.length === 0 || ocrLines.length === 0) {
+    return null;
+  }
+
+  const reliablePdfLines = pdfLines.filter((line) =>
+    isReliableHybridPdfLine(line, scanPage, alignmentThreshold)
+  );
+  if (reliablePdfLines.length === 0 || reliablePdfLines.length === pdfLines.length) {
+    return null;
+  }
+
+  const selectedOcrLines = ocrLines.filter(
+    (line) => maxLineOverlapRatio(line, reliablePdfLines) < alignmentThreshold
+  );
+  if (selectedOcrLines.length === 0) {
+    return null;
+  }
+
+  return {
+    selected: "combined",
+    reason: "hybrid-region-source-selection",
+    selectedPdfLines: reliablePdfLines,
+    selectedOcrLines,
+    lines: [...reliablePdfLines, ...selectedOcrLines]
   };
 }
 
@@ -147,6 +205,13 @@ function isHiddenTextLine(line) {
   return (line.spans ?? []).some((span) => span.hidden === true || span.textRenderMode === 3);
 }
 
+function isReliableHybridPdfLine(line, scanPage, alignmentThreshold) {
+  if (!isHiddenTextLine(line)) {
+    return true;
+  }
+  return maxImageOverlapRatio(line, scanPage?.imageDraws ?? []) >= alignmentThreshold;
+}
+
 function maxImageOverlapRatio(line, imageDraws) {
   const lineBox = lineBoundingBox(line);
   if (!lineBox || imageDraws.length === 0) {
@@ -161,6 +226,23 @@ function maxImageOverlapRatio(line, imageDraws) {
     (max, image) => Math.max(max, rectangleOverlapArea(lineBox, image)),
     0
   );
+  return maxOverlapArea / lineArea;
+}
+
+function maxLineOverlapRatio(line, otherLines) {
+  const lineBox = lineBoundingBox(line);
+  if (!lineBox || otherLines.length === 0) {
+    return 0;
+  }
+  const lineArea = lineBox.width * lineBox.height;
+  if (lineArea <= 0) {
+    return 0;
+  }
+
+  const maxOverlapArea = otherLines.reduce((max, otherLine) => {
+    const otherBox = lineBoundingBox(otherLine);
+    return otherBox ? Math.max(max, rectangleOverlapArea(lineBox, otherBox)) : max;
+  }, 0);
   return maxOverlapArea / lineArea;
 }
 

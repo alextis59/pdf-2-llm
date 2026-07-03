@@ -1,0 +1,43 @@
+%PDF-1.4
+% pdf-2-llm generated fixture
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Length 3 /Type /XObject /Subtype /Image /Width 2550 /Height 3300 /ColorSpace /DeviceRGB /BitsPerComponent 8 >>
+stream
+abc
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> /XObject << /ImScan 4 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 149 >>
+stream
+q 400 0 0 792 0 0 cm /ImScan Do Q
+BT /F1 22 Tf 3 Tr 72 720 Td (Searchable Scan Regions) Tj ET
+BT /F1 12 Tf 3 Tr 520 680 Td (Bad hidden region) Tj ET
+
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f
+0000000039 00000 n
+0000000088 00000 n
+0000000145 00000 n
+0000000242 00000 n
+0000000393 00000 n
+0000000548 00000 n
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+748
+%%EOF

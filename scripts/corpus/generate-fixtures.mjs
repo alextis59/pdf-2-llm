@@ -16,6 +16,10 @@ function text(x, y, size, value) {
   return `BT /F1 ${size} Tf ${x} ${y} Td (${pdfString(value)}) Tj ET`;
 }
 
+function hiddenText(x, y, size, value) {
+  return `BT /F1 ${size} Tf 3 Tr ${x} ${y} Td (${pdfString(value)}) Tj ET`;
+}
+
 function line(x1, y1, x2, y2) {
   return `${x1} ${y1} m ${x2} ${y2} l S`;
 }
@@ -879,6 +883,64 @@ const fixtures = [
     pages: [
       {
         operations: ["q 612 0 0 792 0 0 cm /ImScan Do Q"]
+      }
+    ]
+  },
+  {
+    id: "synthetic-searchable-scan-regions",
+    kind: "searchable-scan",
+    gate: "ocr-v1",
+    sourceType: "hybrid",
+    expectedMode: "hybrid",
+    createPdf: createImagePdf,
+    features: ["searchable-scan", "hidden-ocr-overlay", "mixed-region-reconciliation"],
+    description:
+      "Searchable scan fixture with one aligned hidden text region and one bad hidden text region.",
+    minTextCoverage: 1,
+    maxOcrCharacterErrorRate: 0,
+    maxOcrWordErrorRate: 0,
+    must: ["route_as_hybrid", "prefer_aligned_hidden_text", "use_ocr_for_bad_hidden_region"],
+    mustNot: ["emit_bad_hidden_text", "emit_ocr_duplicate_text"],
+    structures: ["mixed_pdf_ocr_regions"],
+    snippets: [
+      { page: 1, contains: "Searchable Scan Regions" },
+      { page: 1, contains: "Correct OCR fallback" }
+    ],
+    reviewNotes:
+      "The title hidden text overlaps the visible image and is reliable; the second hidden line sits outside the image and must be replaced by the non-overlapping OCR result.",
+    expectedMarkdown: "# Searchable Scan Regions\n\nCorrect OCR fallback\n",
+    ocrResults: [
+      {
+        pageIndex: 0,
+        language: "eng",
+        coordinateSpace: "page",
+        lines: [
+          {
+            text: "OCR duplicate title",
+            confidence: 91,
+            x: 72,
+            y: 720,
+            width: 220,
+            height: 22
+          },
+          {
+            text: "Correct OCR fallback",
+            confidence: 94,
+            x: 72,
+            y: 680,
+            width: 170,
+            height: 12
+          }
+        ]
+      }
+    ],
+    pages: [
+      {
+        operations: [
+          "q 400 0 0 792 0 0 cm /ImScan Do Q",
+          hiddenText(72, 720, 22, "Searchable Scan Regions"),
+          hiddenText(520, 680, 12, "Bad hidden region")
+        ]
       }
     ]
   },

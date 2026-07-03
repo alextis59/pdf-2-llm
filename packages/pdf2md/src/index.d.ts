@@ -283,6 +283,7 @@ export type OcrReconciliationPageDiagnostics = {
     | "digital-page-no-pdf"
     | "pdf-visible-geometry-aligned"
     | "pdf-visible-geometry-mismatch"
+    | "hybrid-region-source-selection"
     | "hybrid-pdf-text-fallback"
     | "hybrid-no-pdf-text"
     | "unknown-source-combined"

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "source": "generated-fixture",
+  "results": [
+    {
+      "pageIndex": 0,
+      "language": "eng",
+      "coordinateSpace": "page",
+      "lines": [
+        {
+          "text": "OCR duplicate title",
+          "confidence": 91,
+          "x": 72,
+          "y": 720,
+          "width": 220,
+          "height": 22
+        },
+        {
+          "text": "Correct OCR fallback",
+          "confidence": 94,
+          "x": 72,
+          "y": 680,
+          "width": 170,
+          "height": 12
+        }
+      ]
+    }
+  ]
+}

@@ -885,6 +885,82 @@ test("convertPdfToMarkdown reconciles hidden text mismatch hybrid pages to OCR",
   });
 });
 
+test("convertPdfToMarkdown chooses reliable searchable scan text per region", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({
+      x: 0,
+      y: 0,
+      widthPt: 400,
+      heightPt: 792,
+      textOperations: [
+        invisibleTextOperation(72, 720, 12, "Aligned hidden region"),
+        invisibleTextOperation(520, 680, 12, "Bad hidden region")
+      ]
+    }),
+    {
+      ocr: {
+        results: [
+          {
+            pageIndex: 0,
+            coordinateSpace: "page",
+            lines: [
+              {
+                text: "OCR duplicate region",
+                confidence: 91,
+                x: 72,
+                y: 720,
+                width: 140,
+                height: 12
+              },
+              {
+                text: "Correct OCR fallback",
+                confidence: 94,
+                x: 72,
+                y: 680,
+                width: 160,
+                height: 12
+              }
+            ]
+          }
+        ]
+      }
+    }
+  );
+
+  assert.equal(result.ir.sourceType, "hybrid");
+  assert.match(result.markdown, /Aligned hidden region/);
+  assert.match(result.markdown, /Correct OCR fallback/);
+  assert.doesNotMatch(result.markdown, /Bad hidden region/);
+  assert.doesNotMatch(result.markdown, /OCR duplicate region/);
+  assert.deepEqual(result.diagnostics.extraction.ocr.reconciliation, {
+    status: "completed",
+    strategy: "page-source-selection",
+    selectedPdfTextLines: 1,
+    selectedOcrTextLines: 1,
+    suppressedPdfTextLines: 1,
+    suppressedOcrTextLines: 1,
+    pages: [
+      {
+        pageIndex: 0,
+        sourceType: "hybrid",
+        selected: "combined",
+        reason: "hybrid-region-source-selection",
+        pdfTextLines: 2,
+        ocrTextLines: 2,
+        pdfVisibleTextLines: 0,
+        pdfHiddenTextLines: 2,
+        pdfHiddenImageAlignedTextLines: 1,
+        pdfHiddenImageUnalignedTextLines: 1,
+        pdfVisibleGeometryAligned: false,
+        selectedPdfTextLines: 1,
+        selectedOcrTextLines: 1,
+        suppressedPdfTextLines: 1,
+        suppressedOcrTextLines: 1
+      }
+    ]
+  });
+});
+
 test("convertPdfToMarkdown records OCR preprocessing for rotated scan pages", async () => {
   const result = await convertPdfToMarkdown(
     createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792, rotation: 90 }),

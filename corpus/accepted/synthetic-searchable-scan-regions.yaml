@@ -1,0 +1,35 @@
+id: synthetic-searchable-scan-regions
+gate: ocr-v1
+sourceType: hybrid
+expectedMode: hybrid
+gating: true
+must:
+  - route_as_hybrid
+  - prefer_aligned_hidden_text
+  - use_ocr_for_bad_hidden_region
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - emit_bad_hidden_text
+  - emit_ocr_duplicate_text
+metrics:
+  minTextCoverage: 1
+  maxOcrCharacterErrorRate: 0
+  maxOcrWordErrorRate: 0
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Searchable Scan Regions"
+  - page: 1
+    contains: "Correct OCR fallback"
+structure:
+  expected:
+    - mixed_pdf_ocr_regions
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "The title hidden text overlaps the visible image and is reliable; the second hidden line sits outside the image and must be replaced by the non-overlapping OCR result."

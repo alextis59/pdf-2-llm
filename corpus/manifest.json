@@ -799,6 +799,34 @@
       "acceptanceFile": "corpus/accepted/synthetic-scanned-text.yaml",
       "ocrResultsFile": "corpus/ocr/synthetic-scanned-text.json",
       "notes": "Image-only scanned page fixture with injected OCR boxes for accuracy gating."
+    },
+    {
+      "id": "synthetic-searchable-scan-regions",
+      "kind": "searchable-scan",
+      "path": "corpus/generated/synthetic-searchable-scan-regions.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Searchable scan fixture with one aligned hidden text region and one bad hidden text region.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "68e125ff1c95202c1b758113945b6494d467a0faf73682c056796953fc03a220",
+      "bytes": 944,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "searchable-scan",
+        "hidden-ocr-overlay",
+        "mixed-region-reconciliation"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-searchable-scan-regions.yaml",
+      "ocrResultsFile": "corpus/ocr/synthetic-searchable-scan-regions.json",
+      "notes": "Searchable scan fixture with one aligned hidden text region and one bad hidden text region."
     }
   ]
 }
