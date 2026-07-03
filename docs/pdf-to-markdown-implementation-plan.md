@@ -737,7 +737,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Run package install test in a separate fixture project.
 - [x] Run browser smoke test in Chromium and Firefox.
 - [x] Run Node smoke test on supported Node versions.
-- [ ] Verify package exports.
+- [x] Verify package exports.
 - [ ] Verify source maps and TypeScript declarations.
 - [ ] Verify README examples.
 - [ ] Produce release notes with known limitations.
