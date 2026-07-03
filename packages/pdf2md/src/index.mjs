@@ -262,6 +262,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   warnings.push(...textOrderingWarnings(markdownTextLines));
   warnings.push(...taggedStructureConflictWarnings(markdownResult.taggedStructureConflicts));
   warnings.push(...lowConfidenceTableWarnings(markdownResult.lowConfidenceTables));
+  warnings.push(...lowSemanticFigureWarnings(figureDetections.figures));
   warnings.push(...rasterPixelLimitWarnings(rasterPlan));
 
   if (textReconciliation.diagnostics.selectedPdfTextLines > 0) {
@@ -795,6 +796,23 @@ function lowConfidenceTableWarnings(tables) {
       warningCodes.TableLowConfidence,
       "Potential table was preserved as text because table confidence was low.",
       table
+    )
+  );
+}
+
+function lowSemanticFigureWarnings(figures) {
+  return figures.map((figure) =>
+    createWarning(
+      warningCodes.FigureLowSemanticContent,
+      "Figure was preserved as a visual asset; semantic chart or diagram data was not inferred.",
+      {
+        figureIndex: figure.figureIndex,
+        pageIndex: figure.pageIndex,
+        assetId: figure.assetId,
+        kind: figure.kind,
+        caption: figure.caption,
+        reason: "visual-preview-only"
+      }
     )
   );
 }

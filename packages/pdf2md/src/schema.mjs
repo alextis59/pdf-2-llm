@@ -16,6 +16,7 @@ export const warningCodes = Object.freeze({
   TextUnicodeMappingSuspect: "text.unicode_mapping_suspect",
   TextOrderingUncertain: "text.ordering_uncertain",
   TableLowConfidence: "table.low_confidence",
+  FigureLowSemanticContent: "figure.low_semantic_content",
   TaggedStructureConflict: "structure.tagged_layout_conflict",
   PdfParseFailed: "pdf.parse_failed"
 });

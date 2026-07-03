@@ -24,7 +24,8 @@ structure:
     - caption
     - vector_paths
 warnings:
-  allowed: []
+  allowed:
+    - figure.low_semantic_content
 assets:
   required: []
 review:

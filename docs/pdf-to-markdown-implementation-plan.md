@@ -657,7 +657,7 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 - [x] Extract figure assets.
 - [ ] Preserve alt text from tagged PDFs where present.
 - [x] Do not invent chart data from visual charts.
-- [ ] Emit asset links and warnings for low-semantic visual content.
+- [x] Emit asset links and warnings for low-semantic visual content.
 
 ### 8.3 Forms, Annotations, Attachments, And Signatures
 

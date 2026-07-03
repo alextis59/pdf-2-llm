@@ -1245,6 +1245,21 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
       }
     ]
   });
+  assert.deepEqual(
+    result.warnings.find((warning) => warning.code === warningCodes.FigureLowSemanticContent),
+    {
+      code: warningCodes.FigureLowSemanticContent,
+      message: "Figure was preserved as a visual asset; semantic chart or diagram data was not inferred.",
+      details: {
+        figureIndex: 0,
+        pageIndex: 0,
+        assetId: "synthetic-vector-figure-page-1-figure-1",
+        kind: "vector",
+        caption: "Figure 1. A generated vector box.",
+        reason: "visual-preview-only"
+      }
+    }
+  );
   const figureSource = result.sourceMap.entries.find((entry) => entry.kind === "figure");
   assert.deepEqual(figureSource, {
     markdownStart: 25,
