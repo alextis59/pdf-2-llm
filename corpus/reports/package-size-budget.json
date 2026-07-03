@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-07-03T03:21:48.603Z",
+  "budget": {
+    "maxPackedBytes": 524288,
+    "maxUnpackedBytes": 1048576,
+    "maxEntryCount": 48
+  },
+  "package": {
+    "id": "@pdf-2-llm/pdf2md@0.0.0",
+    "name": "@pdf-2-llm/pdf2md",
+    "version": "0.0.0",
+    "filename": "pdf-2-llm-pdf2md-0.0.0.tgz",
+    "packedBytes": 76565,
+    "unpackedBytes": 352819,
+    "entryCount": 28
+  },
+  "largestFiles": [
+    {
+      "path": "src/text-extract.mjs",
+      "bytes": 63756
+    },
+    {
+      "path": "src/pdf-parser.mjs",
+      "bytes": 57552
+    },
+    {
+      "path": "src/index.mjs",
+      "bytes": 38288
+    },
+    {
+      "path": "src/content-stream.mjs",
+      "bytes": 36065
+    },
+    {
+      "path": "src/index.d.ts",
+      "bytes": 24095
+    },
+    {
+      "path": "src/document-interactions.mjs",
+      "bytes": 22113
+    },
+    {
+      "path": "src/stream-filters.mjs",
+      "bytes": 15099
+    },
+    {
+      "path": "src/table-grid.mjs",
+      "bytes": 15035
+    },
+    {
+      "path": "src/scan-detection.mjs",
+      "bytes": 11243
+    },
+    {
+      "path": "src/ocr-reconcile.mjs",
+      "bytes": 10007
+    }
+  ],
+  "violations": [],
+  "passed": true
+}

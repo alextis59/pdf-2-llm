@@ -712,7 +712,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Add throughput benchmark for text-only PDFs.
 - [x] Add throughput benchmark for OCR PDFs.
 - [x] Add startup benchmark for browser and Node.
-- [ ] Add package-size budget.
+- [x] Add package-size budget.
 - [ ] Add model-size budget.
 - [ ] Add performance regression threshold in CI.
 

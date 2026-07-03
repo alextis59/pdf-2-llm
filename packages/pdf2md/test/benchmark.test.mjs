@@ -12,6 +12,10 @@ import {
   summarizeMemory
 } from "../../../scripts/qa/benchmark.mjs";
 import { createStartupProfile } from "../../../scripts/qa/startup-benchmark.mjs";
+import {
+  createPackageSizeReport,
+  evaluatePackageSizeBudget
+} from "../../../scripts/qa/check-package-size.mjs";
 
 test("benchmark duration summary reports min max mean and median", () => {
   assert.deepEqual(summarizeDurations([9, 1, 5, 3]), {
@@ -262,6 +266,55 @@ test("startup profile summarizes browser and Node entrypoint startup", () => {
       ]
     }
   );
+});
+
+test("package size report evaluates packed size budgets", () => {
+  const packageInfo = {
+    id: "@scope/pkg@1.0.0",
+    name: "@scope/pkg",
+    version: "1.0.0",
+    filename: "scope-pkg-1.0.0.tgz",
+    size: 900,
+    unpackedSize: 1800,
+    entryCount: 3,
+    files: [
+      { path: "src/index.mjs", size: 1000 },
+      { path: "src/worker.mjs", size: 500 },
+      { path: "package.json", size: 300 }
+    ]
+  };
+  const budget = {
+    maxPackedBytes: 1000,
+    maxUnpackedBytes: 1500,
+    maxEntryCount: 4
+  };
+
+  assert.deepEqual(evaluatePackageSizeBudget(packageInfo, budget), [
+    {
+      metric: "maxUnpackedBytes",
+      actualMetric: "unpackedBytes",
+      actual: 1800,
+      limit: 1500
+    }
+  ]);
+
+  const report = createPackageSizeReport(packageInfo, { budget });
+  assert.equal(report.passed, false);
+  assert.deepEqual(report.budget, budget);
+  assert.deepEqual(report.package, {
+    id: "@scope/pkg@1.0.0",
+    name: "@scope/pkg",
+    version: "1.0.0",
+    filename: "scope-pkg-1.0.0.tgz",
+    packedBytes: 900,
+    unpackedBytes: 1800,
+    entryCount: 3
+  });
+  assert.deepEqual(report.largestFiles, [
+    { path: "src/index.mjs", bytes: 1000 },
+    { path: "src/worker.mjs", bytes: 500 },
+    { path: "package.json", bytes: 300 }
+  ]);
 });
 
 test("benchmark memory summary reports deltas", () => {

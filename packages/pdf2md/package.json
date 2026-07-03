@@ -6,6 +6,10 @@
   "type": "module",
   "main": "./src/node.mjs",
   "types": "./src/index.d.ts",
+  "files": [
+    "examples",
+    "src"
+  ],
   "bin": {
     "pdf2md": "./src/cli.mjs"
   },
