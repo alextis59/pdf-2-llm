@@ -41,6 +41,7 @@ export type ConvertOptions = {
     modelBaseUrl?: string;
     results?: OcrPageResult[];
     debugSidecars?: boolean;
+    pageLanguages?: OcrPageLanguageOverride[];
     preprocessing?: {
       enabled?: boolean;
       deskew?: boolean;
@@ -129,6 +130,7 @@ export type OcrDiagnostics = {
   requested: string;
   status: "disabled" | "selected" | "unsupported";
   languages: string[];
+  language: OcrLanguageDiagnostics;
   modelLoading: OcrModelLoadingDiagnostics;
   preprocessing: OcrPreprocessingDiagnostics;
   reconciliation: OcrReconciliationDiagnostics;
@@ -146,6 +148,36 @@ export type OcrPageResult = {
   boxes?: OcrTextBoxInput[];
   lines?: OcrTextBoxInput[];
   words?: OcrTextBoxInput[];
+};
+
+export type OcrPageLanguageOverride = {
+  pageIndex: number;
+  languages: string[];
+};
+
+export type OcrLanguageDiagnostics = {
+  enabled: boolean;
+  status: "disabled" | "unsupported" | "no-routed-pages" | "configured";
+  defaultLanguages: string[];
+  modelLanguages: string[];
+  workerLanguage: string;
+  pageOverrides: OcrLanguagePageOverrideDiagnostics[];
+  pages: OcrLanguagePageDiagnostics[];
+};
+
+export type OcrLanguagePageOverrideDiagnostics = {
+  pageIndex: number;
+  languages: string[];
+  workerLanguage: string;
+  modelFiles: string[];
+};
+
+export type OcrLanguagePageDiagnostics = {
+  pageIndex: number;
+  sourceType: "scanned" | "hybrid";
+  languages: string[];
+  workerLanguage: string;
+  modelFiles: string[];
 };
 
 export type OcrTextBoxInput = {

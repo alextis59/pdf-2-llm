@@ -110,6 +110,15 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
     requested: "tesseract.js",
     status: "selected",
     languages: ["eng", "fra"],
+    language: {
+      enabled: true,
+      status: "no-routed-pages",
+      defaultLanguages: ["eng", "fra"],
+      modelLanguages: ["eng", "fra"],
+      workerLanguage: "eng+fra",
+      pageOverrides: [],
+      pages: []
+    },
     modelLoading: {
       strategy: "lazy",
       trigger: "routed-scanned-or-hybrid-pages",
@@ -189,6 +198,58 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
       notes: "Selected CPU OCR adapter; model loading and recognition are wired in later OCR phases."
     }
   });
+});
+
+test("convertPdfToMarkdown records OCR page language overrides", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 }),
+    {
+      ocr: {
+        languages: ["eng"],
+        pageLanguages: [
+          {
+            pageIndex: 0,
+            languages: ["fra", "deu"]
+          }
+        ]
+      }
+    }
+  );
+
+  assert.deepEqual(result.diagnostics.extraction.ocr.language, {
+    enabled: true,
+    status: "configured",
+    defaultLanguages: ["eng"],
+    modelLanguages: ["eng", "fra", "deu"],
+    workerLanguage: "eng",
+    pageOverrides: [
+      {
+        pageIndex: 0,
+        languages: ["fra", "deu"],
+        workerLanguage: "fra+deu",
+        modelFiles: ["fra.traineddata", "deu.traineddata"]
+      }
+    ],
+    pages: [
+      {
+        pageIndex: 0,
+        sourceType: "scanned",
+        languages: ["fra", "deu"],
+        workerLanguage: "fra+deu",
+        modelFiles: ["fra.traineddata", "deu.traineddata"]
+      }
+    ]
+  });
+  assert.deepEqual(result.diagnostics.extraction.ocr.modelLoading.languages, [
+    "eng",
+    "fra",
+    "deu"
+  ]);
+  assert.deepEqual(result.diagnostics.extraction.ocr.modelLoading.modelFiles, [
+    "eng.traineddata",
+    "fra.traineddata",
+    "deu.traineddata"
+  ]);
 });
 
 test("convertPdfToMarkdown can emit Markdown page anchors", async () => {

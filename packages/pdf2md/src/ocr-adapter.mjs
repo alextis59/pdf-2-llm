@@ -14,7 +14,8 @@ export function selectOcrAdapter(options = {}) {
   const enabled = options.enabled !== false;
   const requested = options.adapter ?? cpuAdapter.id;
   const languages = normalizeLanguages(options.languages);
-  const modelLoading = createModelLoadingPlan(languages, options);
+  const modelLanguages = collectModelLanguages(languages, options.pageLanguages);
+  const modelLoading = createModelLoadingPlan(modelLanguages, options);
 
   if (!enabled) {
     return {
@@ -77,5 +78,19 @@ function normalizeLanguages(languages) {
     .filter((language) => typeof language === "string")
     .map((language) => language.trim())
     .filter((language) => language.length > 0);
-  return normalized.length > 0 ? normalized : [...defaultLanguages];
+  return uniqueLanguages(normalized.length > 0 ? normalized : defaultLanguages);
+}
+
+function collectModelLanguages(defaultPageLanguages, pageLanguages) {
+  const languages = [...defaultPageLanguages];
+  if (Array.isArray(pageLanguages)) {
+    for (const pageLanguage of pageLanguages) {
+      languages.push(...normalizeLanguages(pageLanguage?.languages));
+    }
+  }
+  return uniqueLanguages(languages);
+}
+
+function uniqueLanguages(languages) {
+  return [...new Set(languages)];
 }

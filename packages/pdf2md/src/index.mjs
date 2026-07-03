@@ -25,6 +25,7 @@ import {
 } from "./table-grid.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 import { selectOcrAdapter } from "./ocr-adapter.mjs";
+import { createOcrLanguageConfig } from "./ocr-language.mjs";
 import { createOcrPreprocessingPlan } from "./ocr-preprocess.mjs";
 import { reconcileOcrTextLines } from "./ocr-reconcile.mjs";
 import { createOcrTextExtraction } from "./ocr-text.mjs";
@@ -172,6 +173,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
     textLines,
     imageDraws
   });
+  const ocrLanguage = createOcrLanguageConfig({
+    adapter: ocrAdapter,
+    options: options.ocr ?? {},
+    scanDetection
+  });
   const ocrPreprocessing = createOcrPreprocessingPlan({
     adapter: ocrAdapter,
     options: options.ocr?.preprocessing ?? {},
@@ -294,6 +300,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         layout: markdownResult.layout,
         ocr: {
           ...ocrAdapter,
+          language: ocrLanguage,
           preprocessing: ocrPreprocessing,
           reconciliation: textReconciliation.diagnostics,
           sidecars: ocrDebugSidecars.diagnostics,
