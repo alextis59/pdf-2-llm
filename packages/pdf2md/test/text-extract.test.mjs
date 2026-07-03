@@ -21,6 +21,19 @@ test("linesToMarkdown normalizes common ligatures and whitespace", () => {
   assert.equal(markdown, "# file flow\n\nplain text\n");
 });
 
+test("linesToMarkdown applies script-specific compatibility normalization", () => {
+  const heading = "\uff26\uff55\uff4c\uff4c\uff57\uff49\uff44\uff54\uff48\u3000\uff11\uff12\uff13";
+  const halfwidthKatakana = "\uff76\uff80\uff76\uff85";
+  const arabicPresentation = "\ufefb";
+  const markdown = linesToMarkdown([
+    { text: heading, fontSize: 22, x: 10, y: 40 },
+    { text: halfwidthKatakana, fontSize: 12, x: 10, y: 20 },
+    { text: arabicPresentation, fontSize: 12, x: 10, y: -20 }
+  ]);
+
+  assert.equal(markdown, "# Fullwidth 123\n\n\u30ab\u30bf\u30ab\u30ca\n\n<p dir=\"rtl\">\u0644\u0627</p>\n");
+});
+
 test("linesToMarkdown infers headings and ordered lists", () => {
   const markdown = linesToMarkdown([
     { text: "Title", fontSize: 22, x: 10, y: 40 },

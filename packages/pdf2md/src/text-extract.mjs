@@ -930,7 +930,7 @@ function normalizeWhitespace(value) {
 
 function normalizeText(value) {
   return normalizeWhitespace(
-    value
+    normalizeScriptCharacters(value)
       .replace(/\uFB00/g, "ff")
       .replace(/\uFB01/g, "fi")
       .replace(/\uFB02/g, "fl")
@@ -938,6 +938,24 @@ function normalizeText(value) {
       .replace(/\uFB04/g, "ffl")
       .replace(/\uFB05/g, "st")
       .replace(/\uFB06/g, "st")
+  );
+}
+
+function normalizeScriptCharacters(value) {
+  let result = "";
+  for (const char of String(value ?? "")) {
+    const codePoint = char.codePointAt(0);
+    result += shouldNormalizeCompatibilityCharacter(codePoint) ? char.normalize("NFKC") : char;
+  }
+  return result;
+}
+
+function shouldNormalizeCompatibilityCharacter(codePoint) {
+  return (
+    codePoint === 0x3000 ||
+    (codePoint >= 0xff01 && codePoint <= 0xff9f) ||
+    (codePoint >= 0xfb50 && codePoint <= 0xfdff) ||
+    (codePoint >= 0xfe70 && codePoint <= 0xfeff)
   );
 }
 

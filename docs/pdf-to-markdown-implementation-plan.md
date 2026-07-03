@@ -676,7 +676,7 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 - [x] Improve CJK line breaking.
 - [x] Improve vertical writing support.
 - [x] Add language/script-specific OCR settings.
-- [ ] Add normalization rules by script.
+- [x] Add normalization rules by script.
 
 Gate 7 acceptance:
 
