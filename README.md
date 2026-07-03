@@ -8,6 +8,7 @@
 - [CLI reference](docs/cli.md)
 - [WASM loading for bundlers](docs/wasm-loading.md)
 - [OCR model loading](docs/ocr-model-loading.md)
+- [WebGPU behavior and fallback](docs/webgpu-behavior.md)
 
 ## Current package scaffold
 
