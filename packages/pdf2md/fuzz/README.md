@@ -12,3 +12,6 @@ npm run fuzz:smoke
 ```
 
 Each target accepts `--iterations <n>` and `--seed <number>` when run directly.
+
+Smoke coverage currently includes the PDF value parser, stream filters, font
+encoding/ToUnicode decoding, and content stream interpreter.

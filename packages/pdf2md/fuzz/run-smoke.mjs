@@ -1,5 +1,6 @@
 import process from "node:process";
 import { runContentStreamFuzz } from "./targets/content-stream.mjs";
+import { runFontEncodingFuzz } from "./targets/font-encoding.mjs";
 import { runPdfValueParserFuzz } from "./targets/pdf-value-parser.mjs";
 import { runStreamFiltersFuzz } from "./targets/stream-filters.mjs";
 
@@ -16,6 +17,7 @@ if (!Number.isInteger(iterations) || iterations < 1) {
 const results = [
   runPdfValueParserFuzz({ iterations }),
   runStreamFiltersFuzz({ iterations }),
+  runFontEncodingFuzz({ iterations }),
   runContentStreamFuzz({ iterations })
 ];
 

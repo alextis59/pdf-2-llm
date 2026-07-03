@@ -700,7 +700,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Enforce parse and conversion timeouts.
 - [x] Enforce recursion/depth limits.
 - [x] Audit all unsafe Rust blocks. N/A: repo contains no Rust sources or Cargo manifests.
-- [ ] Run fuzzers for parser, streams, fonts, and content interpreter.
+- [x] Run fuzzers for parser, streams, fonts, and content interpreter.
 - [ ] Add malicious PDF regression fixtures.
 - [ ] Add dependency license and vulnerability checks.
 
