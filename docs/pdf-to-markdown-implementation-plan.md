@@ -739,7 +739,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Run Node smoke test on supported Node versions.
 - [x] Verify package exports.
 - [x] Verify source maps and TypeScript declarations.
-- [ ] Verify README examples.
+- [x] Verify README examples.
 - [ ] Produce release notes with known limitations.
 
 Gate 8 acceptance:
