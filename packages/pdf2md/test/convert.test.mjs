@@ -207,6 +207,18 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
   });
 });
 
+test("convertPdfToMarkdown reports WebGPU CPU fallback diagnostics by default", async () => {
+  const result = await convertPdfToMarkdown(fixturePath.pathname);
+
+  assert.equal(result.diagnostics.options.webgpuRequired, false);
+  assert.equal(result.diagnostics.options.webgpuPreferred, false);
+  assert.equal(result.diagnostics.acceleration.webgpu.enabled, false);
+  assert.equal(result.diagnostics.acceleration.webgpu.requested, "disabled");
+  assert.equal(result.diagnostics.acceleration.webgpu.status, "disabled");
+  assert.equal(result.diagnostics.acceleration.webgpu.selectedProvider, "cpu");
+  assert.equal(result.diagnostics.acceleration.webgpu.fallbackReason, "not-requested");
+});
+
 test("convertPdfToMarkdown records OCR page language overrides", async () => {
   const result = await convertPdfToMarkdown(
     createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 }),

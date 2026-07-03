@@ -31,6 +31,7 @@ import { reconcileOcrTextLines } from "./ocr-reconcile.mjs";
 import { createOcrTextExtraction } from "./ocr-text.mjs";
 import { createRasterPlan } from "./raster-plan.mjs";
 import { createScanDetection } from "./scan-detection.mjs";
+import { detectWebGpuCapabilities } from "./webgpu-capability.mjs";
 
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
@@ -131,11 +132,18 @@ export async function convertPdfToMarkdown(input, options = {}) {
     warnings.push(createWarning(warningCodes.OcrDisabled, "OCR is disabled by options."));
   }
 
-  if (options.webgpu?.required === true) {
+  const webgpuCapabilities = await detectWebGpuCapabilities(options.webgpu ?? {});
+  if (options.webgpu?.required === true && webgpuCapabilities.selectedProvider !== "webgpu") {
     warnings.push(
       createWarning(
         warningCodes.WebGpuUnavailable,
-        "WebGPU execution is not available in the scaffold implementation."
+        "WebGPU execution is unavailable; CPU fallback was selected.",
+        {
+          status: webgpuCapabilities.status,
+          fallbackReason: webgpuCapabilities.fallbackReason,
+          runtime: webgpuCapabilities.runtime,
+          selectedProvider: webgpuCapabilities.selectedProvider
+        }
       )
     );
   }
@@ -286,6 +294,9 @@ export async function convertPdfToMarkdown(input, options = {}) {
       options: summarizeOptions(options, rasterPlan, ocrAdapter),
       timing: {
         elapsedMs
+      },
+      acceleration: {
+        webgpu: webgpuCapabilities
       },
       extraction: {
         textLines: markdownTextLines.length,
@@ -790,6 +801,7 @@ function summarizeOptions(options, rasterPlan, ocrAdapter) {
     ocrAdapterStatus: ocrAdapter.status,
     ocrLanguages: ocrAdapter.languages,
     webgpuRequired: options.webgpu?.required ?? false,
+    webgpuPreferred: options.webgpu?.preferred ?? false,
     tablesEnabled: options.tables?.enabled ?? null,
     tableCsvSidecars:
       options.tables?.enabled === false ? false : options.tables?.csvSidecars ?? true,

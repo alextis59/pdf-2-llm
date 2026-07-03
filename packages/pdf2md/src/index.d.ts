@@ -110,6 +110,9 @@ export type Diagnostics = {
   timing: {
     elapsedMs: number;
   };
+  acceleration: {
+    webgpu: WebGpuDiagnostics;
+  };
   extraction: {
     textLines: number;
     mode: string;
@@ -123,6 +126,41 @@ export type Diagnostics = {
     parser: Record<string, unknown>;
   };
   pages: PageDiagnostics[];
+};
+
+export type WebGpuDiagnostics = {
+  enabled: boolean;
+  requested: "disabled" | "preferred" | "required";
+  runtime: "browser" | "node" | "unknown";
+  status: "disabled" | "selected" | "fallback-cpu";
+  selectedProvider: "cpu" | "webgpu";
+  fallbackReason: string | null;
+  browser: {
+    supported: boolean;
+    reason: string | null;
+  };
+  provider: {
+    id: "cpu" | "webgpu";
+    kind: "cpu" | "gpu";
+    status: "fallback" | "selected";
+  };
+  adapter: WebGpuAdapterDiagnostics | null;
+  error?: {
+    name: string;
+    message: string;
+  } | null;
+};
+
+export type WebGpuAdapterDiagnostics = {
+  name: string | null;
+  info: {
+    vendor: string | null;
+    architecture: string | null;
+    device: string | null;
+    description: string | null;
+  } | null;
+  features: string[];
+  limits: Record<string, number>;
 };
 
 export type OcrDiagnostics = {

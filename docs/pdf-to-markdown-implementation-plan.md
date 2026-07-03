@@ -608,11 +608,11 @@ Goal: accelerate OCR/layout workloads where available without changing results.
 
 ### 7.1 Capability Detection
 
-- [ ] Detect WebGPU support in browser.
-- [ ] Detect supported adapters and limits.
-- [ ] Detect Node GPU support only if a stable path exists.
-- [ ] Fall back to CPU automatically.
-- [ ] Expose diagnostics showing selected provider.
+- [x] Detect WebGPU support in browser.
+- [x] Detect supported adapters and limits.
+- [x] Detect Node GPU support only if a stable path exists.
+- [x] Fall back to CPU automatically.
+- [x] Expose diagnostics showing selected provider.
 
 ### 7.2 GPU Providers
 
