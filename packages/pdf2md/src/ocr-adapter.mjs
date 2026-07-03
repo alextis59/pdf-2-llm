@@ -1,4 +1,8 @@
-const defaultLanguages = Object.freeze(["eng"]);
+import {
+  normalizeLanguageSelection,
+  uniqueLanguages
+} from "./ocr-script-profiles.mjs";
+
 const cpuAdapter = Object.freeze({
   id: "tesseract.js",
   kind: "cpu",
@@ -13,7 +17,10 @@ const cpuAdapter = Object.freeze({
 export function selectOcrAdapter(options = {}) {
   const enabled = options.enabled !== false;
   const requested = options.adapter ?? cpuAdapter.id;
-  const languages = normalizeLanguages(options.languages);
+  const languages = normalizeLanguageSelection({
+    languages: options.languages,
+    scripts: options.scripts
+  });
   const modelLanguages = collectModelLanguages(languages, options.pageLanguages);
   const modelLoading = createModelLoadingPlan(modelLanguages, options);
 
@@ -70,27 +77,18 @@ function createModelLoadingPlan(languages, options) {
   };
 }
 
-function normalizeLanguages(languages) {
-  if (!Array.isArray(languages)) {
-    return [...defaultLanguages];
-  }
-  const normalized = languages
-    .filter((language) => typeof language === "string")
-    .map((language) => language.trim())
-    .filter((language) => language.length > 0);
-  return uniqueLanguages(normalized.length > 0 ? normalized : defaultLanguages);
-}
-
 function collectModelLanguages(defaultPageLanguages, pageLanguages) {
   const languages = [...defaultPageLanguages];
   if (Array.isArray(pageLanguages)) {
     for (const pageLanguage of pageLanguages) {
-      languages.push(...normalizeLanguages(pageLanguage?.languages));
+      languages.push(
+        ...normalizeLanguageSelection({
+          languages: pageLanguage?.languages,
+          scripts: pageLanguage?.scripts,
+          fallback: pageLanguage?.scripts ? [] : undefined
+        })
+      );
     }
   }
   return uniqueLanguages(languages);
-}
-
-function uniqueLanguages(languages) {
-  return [...new Set(languages)];
 }

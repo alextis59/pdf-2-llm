@@ -316,6 +316,41 @@ test("convertPdfToMarkdown records OCR page language overrides", async () => {
   ]);
 });
 
+test("convertPdfToMarkdown expands OCR script hints into language packs", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 }),
+    {
+      ocr: {
+        scripts: ["japanese", "vertical"],
+        pageLanguages: [
+          {
+            pageIndex: 0,
+            scripts: ["rtl"]
+          }
+        ]
+      }
+    }
+  );
+
+  assert.deepEqual(result.diagnostics.extraction.ocr.languages, ["eng", "jpn", "jpn_vert"]);
+  assert.deepEqual(result.diagnostics.extraction.ocr.modelLoading.languages, [
+    "eng",
+    "jpn",
+    "jpn_vert",
+    "ara",
+    "heb"
+  ]);
+  assert.deepEqual(result.diagnostics.extraction.ocr.language.pages, [
+    {
+      pageIndex: 0,
+      sourceType: "scanned",
+      languages: ["ara", "heb"],
+      workerLanguage: "ara+heb",
+      modelFiles: ["ara.traineddata", "heb.traineddata"]
+    }
+  ]);
+});
+
 test("convertPdfToMarkdown can emit Markdown page anchors", async () => {
   const result = await convertPdfToMarkdown(fixturePath.pathname, {
     markdown: { pageAnchors: true }

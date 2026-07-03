@@ -45,6 +45,7 @@ export type ConvertOptions = {
     enabled?: boolean;
     adapter?: "tesseract.js";
     languages?: string[];
+    scripts?: OcrScriptHint[];
     modelBaseUrl?: string;
     results?: OcrPageResult[];
     debugSidecars?: boolean;
@@ -279,8 +280,20 @@ export type FormulaOcrResult = {
 
 export type OcrPageLanguageOverride = {
   pageIndex: number;
-  languages: string[];
+  languages?: string[];
+  scripts?: OcrScriptHint[];
 };
+
+export type OcrScriptHint =
+  | "latin"
+  | "rtl"
+  | "arabic"
+  | "hebrew"
+  | "cjk"
+  | "chinese"
+  | "japanese"
+  | "korean"
+  | "vertical";
 
 export type OcrLanguageDiagnostics = {
   enabled: boolean;

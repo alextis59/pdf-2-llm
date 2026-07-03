@@ -1,13 +1,20 @@
+import { normalizeLanguageSelection } from "./ocr-script-profiles.mjs";
+
 const routedOcrSourceTypes = new Set(["scanned", "hybrid"]);
-const defaultLanguages = Object.freeze(["eng"]);
 
 export function createOcrLanguageConfig({
   adapter = null,
   options = {},
   scanDetection = null
 } = {}) {
-  const defaultPageLanguages = normalizeLanguages(adapter?.languages ?? options.languages);
-  const modelLanguages = normalizeLanguages(adapter?.modelLoading?.languages ?? defaultPageLanguages);
+  const defaultPageLanguages = normalizeLanguageSelection({
+    languages: adapter?.languages ?? options.languages,
+    scripts: options.scripts
+  });
+  const modelLanguages = normalizeLanguageSelection({
+    languages: adapter?.modelLoading?.languages ?? defaultPageLanguages,
+    scripts: options.scripts
+  });
   const overrides = normalizePageLanguageOverrides(options.pageLanguages);
   const routedPages = (scanDetection?.pages ?? []).filter((page) => routedOcrSourceTypes.has(page.sourceType));
 
@@ -76,7 +83,14 @@ function normalizePageLanguageOverrides(pageLanguages) {
     if (!override || !Number.isInteger(override.pageIndex)) {
       continue;
     }
-    byPage.set(override.pageIndex, normalizeLanguages(override.languages));
+    byPage.set(
+      override.pageIndex,
+      normalizeLanguageSelection({
+        languages: override.languages,
+        scripts: override.scripts,
+        fallback: override.scripts ? [] : undefined
+      })
+    );
   }
 
   const list = [...byPage.entries()]
@@ -88,17 +102,6 @@ function normalizePageLanguageOverrides(pageLanguages) {
       modelFiles: modelFiles(languages)
     }));
   return { byPage, list };
-}
-
-function normalizeLanguages(languages) {
-  if (!Array.isArray(languages)) {
-    return [...defaultLanguages];
-  }
-  const normalized = languages
-    .filter((language) => typeof language === "string")
-    .map((language) => language.trim())
-    .filter((language) => language.length > 0);
-  return [...new Set(normalized.length > 0 ? normalized : defaultLanguages)];
 }
 
 function workerLanguage(languages) {
