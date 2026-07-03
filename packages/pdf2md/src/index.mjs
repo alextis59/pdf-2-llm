@@ -13,9 +13,7 @@ import {
 } from "./schema.mjs";
 import { isTrustedSimpleEncoding } from "./font-encoding.mjs";
 import {
-  extractImageDraws,
-  extractRulingLines,
-  extractTextLines,
+  extractDocumentContent,
   linesToMarkdownWithSourceMap
 } from "./text-extract.mjs";
 import {
@@ -181,18 +179,10 @@ export async function convertPdfToMarkdown(input, options = {}) {
     parseWarning?.code === warningCodes.PasswordIncorrect ||
     parseWarning?.code === warningCodes.UnsupportedEncryption;
   const canExtractPdfContent = pdfVersion && !encryptedWithoutText && !extractionBlockedBySecurityLimit;
-  const textLines =
-    canExtractPdfContent
-      ? extractTextLines(normalized.bytes, { document: pdfDocument })
-      : [];
-  const rulingLines =
-    canExtractPdfContent
-      ? extractRulingLines(normalized.bytes, { document: pdfDocument })
-      : [];
-  const imageDraws =
-    canExtractPdfContent
-      ? extractImageDraws(normalized.bytes, { document: pdfDocument })
-      : [];
+  const extractedContent = canExtractPdfContent
+    ? extractDocumentContent(normalized.bytes, { document: pdfDocument })
+    : { textLines: [], rulingLines: [], imageDraws: [] };
+  const { textLines, rulingLines, imageDraws } = extractedContent;
   const rulingGrids = inferRulingGrids(rulingLines);
   const rulingTables = detectTableCellSpans(
     assignTextLinesToGridCells(rulingGrids, textLines),

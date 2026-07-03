@@ -9,35 +9,19 @@ const linkPattern = /(https?:\/\/[^\s<>()\[\]{}]+|www\.[^\s<>()\[\]{}]+|[A-Z0-9.
 const defaultEquationImageFallbackConfidence = 0.75;
 
 export function extractTextLines(bytes, { document = null } = {}) {
-  if (document) {
-    return documentTextLines(document);
-  }
-
-  return findStreamTextsByScan(bytes).flatMap((stream, streamIndex) =>
-    extractContentStreamTextLines(stream, { streamIndex })
-  );
+  return extractDocumentContent(bytes, { document }).textLines;
 }
 
 export function extractRulingLines(bytes, { document = null } = {}) {
-  if (document) {
-    return documentRulingLines(document);
-  }
-
-  return mergeRulingLines(
-    findStreamTextsByScan(bytes).flatMap((stream, streamIndex) =>
-      extractContentStreamRulingLines(stream, { streamIndex })
-    )
-  );
+  return extractDocumentContent(bytes, { document }).rulingLines;
 }
 
 export function extractImageDraws(bytes, { document = null } = {}) {
-  if (document) {
-    return documentImageDraws(document);
-  }
+  return extractDocumentContent(bytes, { document }).imageDraws;
+}
 
-  return findStreamTextsByScan(bytes).flatMap((stream, streamIndex) =>
-    extractContentStreamImageDraws(stream, { streamIndex })
-  );
+export function extractDocumentContent(bytes, { document = null } = {}) {
+  return document ? extractParsedDocumentContent(document) : extractScannedStreamContent(bytes);
 }
 
 function findStreamTextsByScan(bytes) {
@@ -50,67 +34,60 @@ function findStreamTextsByScan(bytes) {
   return streamTexts;
 }
 
-function documentTextLines(document) {
+function extractScannedStreamContent(bytes) {
+  const content = createEmptyExtractedContent();
+  const streamTexts = findStreamTextsByScan(bytes);
+  for (let streamIndex = 0; streamIndex < streamTexts.length; streamIndex += 1) {
+    appendContentStreamExtraction(content, streamTexts[streamIndex], { streamIndex });
+  }
+  content.rulingLines = mergeRulingLines(content.rulingLines);
+  return content;
+}
+
+function extractParsedDocumentContent(document) {
+  const content = createEmptyExtractedContent();
   if (document.pages?.length > 0) {
     const structureByPage = structureSignalsByPage(document.structure);
-    return document.pages.flatMap((page) =>
-      page.contentStreams.flatMap((stream, streamIndex) =>
-        extractContentStreamTextLines(stream.text, {
+    for (const page of document.pages) {
+      const structureByMcid = structureByPage.get(page.pageIndex) ?? new Map();
+      for (let streamIndex = 0; streamIndex < page.contentStreams.length; streamIndex += 1) {
+        const stream = page.contentStreams[streamIndex];
+        appendContentStreamExtraction(content, stream.text, {
           pageIndex: page.pageIndex,
           resources: page.resources,
           streamIndex,
-          structureByMcid: structureByPage.get(page.pageIndex) ?? new Map()
-        })
-      )
-    );
+          structureByMcid
+        });
+      }
+    }
+    content.rulingLines = mergeRulingLines(content.rulingLines);
+    return content;
   }
 
-  return document.streams.flatMap((stream, streamIndex) =>
-    extractContentStreamTextLines(stream.text, { streamIndex })
-  );
+  for (let streamIndex = 0; streamIndex < document.streams.length; streamIndex += 1) {
+    appendContentStreamExtraction(content, document.streams[streamIndex].text, { streamIndex });
+  }
+  content.rulingLines = mergeRulingLines(content.rulingLines);
+  return content;
 }
 
-function documentRulingLines(document) {
-  if (document.pages?.length > 0) {
-    const structureByPage = structureSignalsByPage(document.structure);
-    return mergeRulingLines(
-      document.pages.flatMap((page) =>
-        page.contentStreams.flatMap((stream, streamIndex) =>
-          extractContentStreamRulingLines(stream.text, {
-            pageIndex: page.pageIndex,
-            streamIndex,
-            structureByMcid: structureByPage.get(page.pageIndex) ?? new Map()
-          })
-        )
-      )
-    );
-  }
-
-  return mergeRulingLines(
-    document.streams.flatMap((stream, streamIndex) =>
-      extractContentStreamRulingLines(stream.text, { streamIndex })
-    )
-  );
+function createEmptyExtractedContent() {
+  return {
+    textLines: [],
+    rulingLines: [],
+    imageDraws: []
+  };
 }
 
-function documentImageDraws(document) {
-  if (document.pages?.length > 0) {
-    const structureByPage = structureSignalsByPage(document.structure);
-    return document.pages.flatMap((page) =>
-      page.contentStreams.flatMap((stream, streamIndex) =>
-        extractContentStreamImageDraws(stream.text, {
-          pageIndex: page.pageIndex,
-          resources: page.resources,
-          streamIndex,
-          structureByMcid: structureByPage.get(page.pageIndex) ?? new Map()
-        })
-      )
-    );
-  }
-
-  return document.streams.flatMap((stream, streamIndex) =>
-    extractContentStreamImageDraws(stream.text, { streamIndex })
+function appendContentStreamExtraction(content, streamText, options) {
+  content.textLines.push(...extractContentStreamTextLines(streamText, options));
+  content.rulingLines.push(
+    ...extractContentStreamRulingLines(streamText, {
+      ...options,
+      mergeRulingLines: false
+    })
   );
+  content.imageDraws.push(...extractContentStreamImageDraws(streamText, options));
 }
 
 function structureSignalsByPage(structure) {

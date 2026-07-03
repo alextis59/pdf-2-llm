@@ -706,7 +706,7 @@ Goal: make the package safe and predictable enough for real use.
 
 ### 9.2 Performance
 
-- [ ] Stream page processing where possible.
+- [x] Stream page processing where possible.
 - [ ] Avoid retaining full page rasters unnecessarily.
 - [ ] Add memory profile for long manuals.
 - [ ] Add throughput benchmark for text-only PDFs.

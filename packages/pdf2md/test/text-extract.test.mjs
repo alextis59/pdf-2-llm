@@ -1,6 +1,63 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { linesToMarkdown, linesToMarkdownWithSourceMap } from "../src/text-extract.mjs";
+import {
+  extractDocumentContent,
+  extractImageDraws,
+  extractRulingLines,
+  extractTextLines,
+  linesToMarkdown,
+  linesToMarkdownWithSourceMap
+} from "../src/text-extract.mjs";
+
+test("extractDocumentContent streams parsed page content into text, rulings, and image draws", () => {
+  const bytes = Buffer.from("%PDF-1.4\n", "binary");
+  const document = {
+    pages: [
+      {
+        pageIndex: 0,
+        resources: {
+          fonts: {
+            F1: {
+              subtype: "Type1",
+              baseFont: "Helvetica",
+              encoding: "WinAnsiEncoding",
+              hasToUnicode: false,
+              toUnicode: null
+            }
+          },
+          xobjects: {
+            Im1: {
+              subtype: "Image",
+              objectNumber: 5,
+              width: 10,
+              height: 20
+            }
+          }
+        },
+        contentStreams: [
+          {
+            text: [
+              "BT /F1 12 Tf 10 20 Td (Hello) Tj ET",
+              "0 0 30 10 re S",
+              "q 15 0 0 25 40 50 cm /Im1 Do Q"
+            ].join("\n")
+          }
+        ]
+      }
+    ],
+    streams: [],
+    structure: { markedContent: [] }
+  };
+
+  const content = extractDocumentContent(bytes, { document });
+
+  assert.deepEqual(content.textLines, extractTextLines(bytes, { document }));
+  assert.deepEqual(content.rulingLines, extractRulingLines(bytes, { document }));
+  assert.deepEqual(content.imageDraws, extractImageDraws(bytes, { document }));
+  assert.equal(content.textLines[0].text, "Hello");
+  assert.equal(content.rulingLines.length, 4);
+  assert.equal(content.imageDraws[0].name, "Im1");
+});
 
 test("linesToMarkdown normalizes common ligatures and whitespace", () => {
   const markdown = linesToMarkdown([
