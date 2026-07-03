@@ -136,6 +136,28 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
       },
       pages: []
     },
+    reconciliation: {
+      status: "completed",
+      strategy: "page-source-selection",
+      selectedPdfTextLines: 3,
+      selectedOcrTextLines: 0,
+      suppressedPdfTextLines: 0,
+      suppressedOcrTextLines: 0,
+      pages: [
+        {
+          pageIndex: 0,
+          sourceType: "digital",
+          selected: "pdf",
+          reason: "digital-page-pdf",
+          pdfTextLines: 3,
+          ocrTextLines: 0,
+          selectedPdfTextLines: 3,
+          selectedOcrTextLines: 0,
+          suppressedPdfTextLines: 0,
+          suppressedOcrTextLines: 0
+        }
+      ]
+    },
     textBoxes: {
       enabled: true,
       status: "no-routed-pages",
@@ -540,6 +562,130 @@ test("convertPdfToMarkdown emits OCR text boxes with confidence for routed scan 
       ]
     }
   ]);
+});
+
+test("convertPdfToMarkdown reconciles searchable hybrid pages without OCR duplicates", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({
+      x: 0,
+      y: 0,
+      widthPt: 612,
+      heightPt: 792,
+      textOperations: [
+        textOperation(72, 720, 12, "PDF layer text"),
+        textOperation(72, 700, 12, "Second PDF layer line"),
+        textOperation(72, 680, 12, "Third PDF layer line")
+      ]
+    }),
+    {
+      ocr: {
+        results: [
+          {
+            pageIndex: 0,
+            coordinateSpace: "page",
+            lines: [
+              {
+                text: "OCR duplicate text",
+                confidence: 92,
+                x: 72,
+                y: 720,
+                width: 130,
+                height: 12
+              }
+            ]
+          }
+        ]
+      }
+    }
+  );
+
+  assert.equal(result.ir.sourceType, "hybrid");
+  assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
+  assert.equal(result.diagnostics.extraction.textLines, 3);
+  assert.match(result.markdown, /PDF layer text/);
+  assert.doesNotMatch(result.markdown, /OCR duplicate text/);
+  assert.deepEqual(result.diagnostics.extraction.ocr.reconciliation, {
+    status: "completed",
+    strategy: "page-source-selection",
+    selectedPdfTextLines: 3,
+    selectedOcrTextLines: 0,
+    suppressedPdfTextLines: 0,
+    suppressedOcrTextLines: 1,
+    pages: [
+      {
+        pageIndex: 0,
+        sourceType: "hybrid",
+        selected: "pdf",
+        reason: "hybrid-pdf-text-present",
+        pdfTextLines: 3,
+        ocrTextLines: 1,
+        selectedPdfTextLines: 3,
+        selectedOcrTextLines: 0,
+        suppressedPdfTextLines: 0,
+        suppressedOcrTextLines: 1
+      }
+    ]
+  });
+});
+
+test("convertPdfToMarkdown reconciles hidden text mismatch hybrid pages to OCR", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({
+      x: 0,
+      y: 0,
+      widthPt: 400,
+      heightPt: 792,
+      textOperations: [invisibleTextOperation(520, 720, 12, "Bad hidden layer")]
+    }),
+    {
+      ocr: {
+        results: [
+          {
+            pageIndex: 0,
+            coordinateSpace: "page",
+            lines: [
+              {
+                text: "Correct visible text",
+                confidence: 94,
+                x: 72,
+                y: 700,
+                width: 150,
+                height: 12
+              }
+            ]
+          }
+        ]
+      }
+    }
+  );
+
+  assert.equal(result.ir.sourceType, "hybrid");
+  assert.equal(result.diagnostics.extraction.mode, "ocr");
+  assert.equal(result.diagnostics.extraction.scanDetection.hiddenTextImageMismatchPages, 1);
+  assert.match(result.markdown, /Correct visible text/);
+  assert.doesNotMatch(result.markdown, /Bad hidden layer/);
+  assert.deepEqual(result.diagnostics.extraction.ocr.reconciliation, {
+    status: "completed",
+    strategy: "page-source-selection",
+    selectedPdfTextLines: 0,
+    selectedOcrTextLines: 1,
+    suppressedPdfTextLines: 1,
+    suppressedOcrTextLines: 0,
+    pages: [
+      {
+        pageIndex: 0,
+        sourceType: "hybrid",
+        selected: "ocr",
+        reason: "hidden-text-image-mismatch",
+        pdfTextLines: 1,
+        ocrTextLines: 1,
+        selectedPdfTextLines: 0,
+        selectedOcrTextLines: 1,
+        suppressedPdfTextLines: 1,
+        suppressedOcrTextLines: 0
+      }
+    ]
+  });
 });
 
 test("convertPdfToMarkdown records OCR preprocessing for rotated scan pages", async () => {

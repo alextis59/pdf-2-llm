@@ -130,6 +130,7 @@ export type OcrDiagnostics = {
   languages: string[];
   modelLoading: OcrModelLoadingDiagnostics;
   preprocessing: OcrPreprocessingDiagnostics;
+  reconciliation: OcrReconciliationDiagnostics;
   textBoxes: OcrTextBoxDiagnostics;
   adapter: OcrAdapterDiagnostics | null;
 };
@@ -224,6 +225,39 @@ export type OcrPreprocessingPageDiagnostics = {
   deskewConfidence: number;
   operations: Array<"normalize-page-rotation" | "estimate-deskew" | "binarize" | "denoise">;
   deferredOperations: Array<"estimate-deskew" | "binarize" | "denoise">;
+};
+
+export type OcrReconciliationDiagnostics = {
+  status: "no-pages" | "completed";
+  strategy: "page-source-selection";
+  selectedPdfTextLines: number;
+  selectedOcrTextLines: number;
+  suppressedPdfTextLines: number;
+  suppressedOcrTextLines: number;
+  pages: OcrReconciliationPageDiagnostics[];
+};
+
+export type OcrReconciliationPageDiagnostics = {
+  pageIndex: number | null;
+  sourceType: "digital" | "scanned" | "hybrid" | "unknown";
+  selected: "pdf" | "ocr" | "combined" | "none";
+  reason:
+    | "no-text"
+    | "scanned-page-ocr"
+    | "scanned-page-no-ocr"
+    | "digital-page-pdf"
+    | "digital-page-no-pdf"
+    | "hidden-text-image-mismatch"
+    | "hybrid-pdf-text-present"
+    | "hybrid-no-pdf-text"
+    | "unknown-source-combined"
+    | "single-source-available";
+  pdfTextLines: number;
+  ocrTextLines: number;
+  selectedPdfTextLines: number;
+  selectedOcrTextLines: number;
+  suppressedPdfTextLines: number;
+  suppressedOcrTextLines: number;
 };
 
 export type OcrModelLoadingDiagnostics = {

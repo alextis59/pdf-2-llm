@@ -26,6 +26,7 @@ import {
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 import { selectOcrAdapter } from "./ocr-adapter.mjs";
 import { createOcrPreprocessingPlan } from "./ocr-preprocess.mjs";
+import { reconcileOcrTextLines } from "./ocr-reconcile.mjs";
 import { createOcrTextExtraction } from "./ocr-text.mjs";
 import { createRasterPlan } from "./raster-plan.mjs";
 import { createScanDetection } from "./scan-detection.mjs";
@@ -185,7 +186,12 @@ export async function convertPdfToMarkdown(input, options = {}) {
     rasterPlan,
     scanDetection
   });
-  const markdownTextLines = [...textLines, ...ocrTextExtraction.lines];
+  const textReconciliation = reconcileOcrTextLines({
+    ocrTextLines: ocrTextExtraction.lines,
+    pdfTextLines: textLines,
+    scanDetection
+  });
+  const markdownTextLines = textReconciliation.lines;
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
     enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
   });
@@ -207,7 +213,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   warnings.push(...lowConfidenceTableWarnings(markdownResult.lowConfidenceTables));
   warnings.push(...rasterPixelLimitWarnings(rasterPlan));
 
-  if (textLines.length > 0) {
+  if (textReconciliation.diagnostics.selectedPdfTextLines > 0) {
     warnings.push(
       createWarning(
         warningCodes.HeuristicTextExtraction,
@@ -273,7 +279,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
       },
       extraction: {
         textLines: markdownTextLines.length,
-        mode: extractionMode({ ocrTextLines: ocrTextExtraction.lines, pdfDocument, textLines }),
+        mode: extractionMode({
+          ocrTextLines: textReconciliation.diagnostics.selectedOcrTextLines,
+          pdfDocument,
+          textLines: textReconciliation.diagnostics.selectedPdfTextLines
+        }),
         outlines: pdfDocument?.outlines ?? [],
         structure: summarizeStructure(pdfDocument?.structure),
         taggedStructureConflicts: markdownResult.taggedStructureConflicts.length,
@@ -281,6 +291,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         ocr: {
           ...ocrAdapter,
           preprocessing: ocrPreprocessing,
+          reconciliation: textReconciliation.diagnostics,
           textBoxes: ocrTextExtraction.diagnostics
         },
         tables: markdownResult.tables,
@@ -323,7 +334,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     },
     confidence: {
       overall: markdownTextLines.length > 0 ? 0.25 : 0,
-      text: textConfidence({ ocrTextExtraction, textLines }),
+      text: textConfidence({ ocrTextExtraction, textReconciliation }),
       layout: markdownResult.layout.pages.length > 0 ? 0.35 : 0,
       tables: tableConfidence(markdownResult.tables)
     }
@@ -780,17 +791,17 @@ function summarizeOptions(options, rasterPlan, ocrAdapter) {
 }
 
 function extractionMode({ ocrTextLines, pdfDocument, textLines }) {
-  if (textLines.length > 0 && ocrTextLines.length > 0) {
+  if (textLines > 0 && ocrTextLines > 0) {
     return pdfDocument ? "parsed-content-streams+ocr" : "fallback-uncompressed-stream-scan+ocr";
   }
-  if (textLines.length > 0) {
+  if (textLines > 0) {
     return pdfDocument ? "parsed-content-streams" : "fallback-uncompressed-stream-scan";
   }
-  return ocrTextLines.length > 0 ? "ocr" : "none";
+  return ocrTextLines > 0 ? "ocr" : "none";
 }
 
-function textConfidence({ ocrTextExtraction, textLines }) {
-  if (textLines.length > 0) {
+function textConfidence({ ocrTextExtraction, textReconciliation }) {
+  if (textReconciliation.diagnostics.selectedPdfTextLines > 0) {
     return 0.4;
   }
   return ocrTextExtraction.diagnostics.averageConfidence ?? 0;
