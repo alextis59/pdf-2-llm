@@ -151,7 +151,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
   );
   const rasterPlan = createRasterPlan(pdfDocument?.pages ?? [], {
     enabled: options.raster?.enabled === true,
-    renderer: options.raster?.renderer
+    renderer: options.raster?.renderer,
+    dpi: options.raster?.dpi
   });
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
     enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
@@ -224,7 +225,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         source: normalized.source,
         pdfVersion
       },
-      options: summarizeOptions(options),
+      options: summarizeOptions(options, rasterPlan),
       timing: {
         elapsedMs
       },
@@ -710,7 +711,7 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function summarizeOptions(options) {
+function summarizeOptions(options, rasterPlan) {
   return {
     pageRange: options.pageRange ?? null,
     output: options.output ?? "markdown",
@@ -725,6 +726,7 @@ function summarizeOptions(options) {
       options.tables?.enabled === false ? false : options.tables?.csvSidecars ?? true,
     rasterEnabled: options.raster?.enabled === true,
     rasterRenderer: options.raster?.renderer ?? "internal-page-geometry",
+    rasterDpi: rasterPlan.dpi,
     assetsEnabled: options.assets?.enabled ?? null
   };
 }

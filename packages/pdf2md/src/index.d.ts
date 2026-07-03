@@ -40,6 +40,7 @@ export type ConvertOptions = {
   raster?: {
     enabled?: boolean;
     renderer?: "internal-page-geometry";
+    dpi?: number;
   };
   webgpu?: {
     required?: boolean;
@@ -104,6 +105,7 @@ export type Diagnostics = {
 
 export type RasterDiagnostics = {
   enabled: boolean;
+  dpi: number;
   renderer: RasterRendererDiagnostics;
   pages: RasterPageDiagnostics[];
 };
@@ -125,6 +127,11 @@ export type RasterPageDiagnostics = {
   sourceBox: "cropBox" | "mediaBox" | "unknown";
   widthPt: number | null;
   heightPt: number | null;
+  dpi: number;
+  scale: number;
+  widthPx: number | null;
+  heightPx: number | null;
+  pixelCount: number | null;
   rotation: number;
   userUnit: number;
 };
