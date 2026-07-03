@@ -25,6 +25,10 @@ export type ConvertOptions = {
   };
   equations?: {
     imageFallbackConfidence?: number;
+    formulaOcr?: {
+      enabled?: boolean;
+      results?: FormulaOcrResult[];
+    };
   };
   parser?: {
     mode?: "strict" | "tolerant";
@@ -263,6 +267,14 @@ export type OcrPageResult = {
   boxes?: OcrTextBoxInput[];
   lines?: OcrTextBoxInput[];
   words?: OcrTextBoxInput[];
+};
+
+export type FormulaOcrResult = {
+  equationIndex?: number;
+  pageIndex?: number;
+  latex: string;
+  confidence?: number;
+  source?: string;
 };
 
 export type OcrPageLanguageOverride = {
@@ -681,6 +693,8 @@ export type EquationRegionDiagnostics = {
   confidence?: number;
   fallbackReason?: "low-ocr-confidence";
   fallbackThreshold?: number;
+  formulaOcrSource?: string;
+  formulaOcrConfidence?: number;
   lineCount: number;
   containsUnicodeMath: boolean;
   x: number | null;

@@ -140,6 +140,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const headingModel = createHeadingModel(lines, {
     outlines: options.outlines ?? []
   });
+  const formulaOcrState = createFormulaOcrState(options.equations?.formulaOcr);
   const taggedStructureConflicts = taggedStructureConflictsForLines(lines, headingModel);
   const listIndentModel = createListIndentModel(lines);
   const codeModel = createCodeModel(lines);
@@ -149,6 +150,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const lowConfidenceTableLines = new Set();
   const blocks = [];
   const equationImageCountsByPage = new Map();
+  let equationSequence = 0;
   let previousWasList = false;
   const anchoredPages = new Set();
 
@@ -215,15 +217,23 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       rulingTableExports
     );
     if (equationBlock) {
-      const imageFallback = equationImageFallbackForLines(
+      const formulaOcr = formulaOcrForEquation(
         equationBlock.sourceLines,
-        options.equations ?? {},
-        equationImageCountsByPage
+        equationSequence,
+        formulaOcrState
       );
+      const imageFallback = formulaOcr
+        ? null
+        : equationImageFallbackForLines(
+            equationBlock.sourceLines,
+            options.equations ?? {},
+            equationImageCountsByPage
+          );
+      equationSequence += 1;
       previousWasList = false;
       blocks.push(
-        createMarkdownBlock(equationMarkdown(equationBlock.sourceLines, imageFallback), "equation", equationBlock.sourceLines, {
-          equation: equationMetadata(equationBlock.sourceLines, imageFallback)
+        createMarkdownBlock(equationMarkdown(equationBlock.sourceLines, imageFallback, formulaOcr), "equation", equationBlock.sourceLines, {
+          equation: equationMetadata(equationBlock.sourceLines, imageFallback, formulaOcr)
         })
       );
       index = equationBlock.endIndex - 1;
@@ -285,7 +295,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   return {
     ...serializeMarkdownBlocks(blocks),
     tables: tableDiagnosticsFromBlocks(blocks),
-    equations: equationDiagnosticsFromBlocks(blocks),
+    equations: equationDiagnosticsFromBlocks(blocks, formulaOcrState),
     lowConfidenceTables,
     layout,
     taggedStructureConflicts
@@ -610,24 +620,38 @@ function formatEquationBlock(lines) {
   return `$$\n${body}\n$$`;
 }
 
-function equationMarkdown(lines, imageFallback) {
+function equationMarkdown(lines, imageFallback, formulaOcr = null) {
+  if (formulaOcr?.latex) {
+    return formatLatexEquationBlock(formulaOcr.latex);
+  }
   if (imageFallback) {
     return `![Equation ${imageFallback.equationNumber}](${imageFallback.assetPath})`;
   }
   return formatEquationBlock(lines);
 }
 
-function equationMetadata(lines, imageFallback = null) {
+function formatLatexEquationBlock(latex) {
+  return `$$\n${latex.replace(/\$\$/g, "\\$\\$")}\n$$`;
+}
+
+function equationMetadata(lines, imageFallback = null, formulaOcr = null) {
   const bounds = boundsForLines(lines);
   const text = lines.map((line) => normalizeText(line.text ?? "")).join("\n");
   const metadata = {
     source: lines.find((line) => typeof line.source === "string")?.source ?? "pdf-text",
     text,
-    latex: null,
+    latex: formulaOcr?.latex ?? null,
     lineCount: lines.length,
     containsUnicodeMath: lines.some((line) => hasStrongMathSymbol(normalizeText(line.text ?? ""))),
     ...bounds
   };
+  if (formulaOcr) {
+    return {
+      ...metadata,
+      formulaOcrSource: formulaOcr.source,
+      ...(formulaOcr.confidence != null ? { formulaOcrConfidence: formulaOcr.confidence } : {})
+    };
+  }
   return imageFallback
     ? {
         ...metadata,
@@ -640,6 +664,82 @@ function equationMetadata(lines, imageFallback = null) {
         fallbackThreshold: imageFallback.fallbackThreshold
       }
     : metadata;
+}
+
+function createFormulaOcrState(config = {}) {
+  if (config?.enabled === false) {
+    return {
+      enabled: false,
+      status: "disabled",
+      results: [],
+      usedResultIndexes: new Set()
+    };
+  }
+  const results = (Array.isArray(config?.results) ? config.results : [])
+    .map(normalizeFormulaOcrResult)
+    .filter(Boolean);
+  const enabled = config?.enabled === true || results.length > 0;
+  return {
+    enabled,
+    status: enabled ? "selected" : "not-configured",
+    results,
+    usedResultIndexes: new Set()
+  };
+}
+
+function normalizeFormulaOcrResult(result, resultIndex) {
+  const latex = normalizeFormulaLatex(result?.latex);
+  if (!latex) {
+    return null;
+  }
+  return {
+    resultIndex,
+    equationIndex: Number.isInteger(result.equationIndex) ? result.equationIndex : null,
+    pageIndex: Number.isInteger(result.pageIndex) ? result.pageIndex : null,
+    latex,
+    confidence: normalizeOptionalConfidence(result.confidence),
+    source: result.source ?? "options.equations.formulaOcr.results"
+  };
+}
+
+function normalizeFormulaLatex(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized || null;
+}
+
+function normalizeOptionalConfidence(value) {
+  const confidence = Number(value);
+  if (!Number.isFinite(confidence)) {
+    return null;
+  }
+  return roundNumber(confidence > 1 ? confidence / 100 : confidence);
+}
+
+function formulaOcrForEquation(lines, equationIndex, state) {
+  if (!state.enabled || state.status === "disabled" || state.results.length === 0) {
+    return null;
+  }
+  const pageIndex = lines.find((line) => Number.isInteger(line.pageIndex))?.pageIndex ?? null;
+  const result = state.results.find((candidate) => {
+    if (state.usedResultIndexes.has(candidate.resultIndex)) {
+      return false;
+    }
+    if (candidate.equationIndex !== null) {
+      return candidate.equationIndex === equationIndex;
+    }
+    if (candidate.pageIndex !== null && Number.isInteger(pageIndex)) {
+      return candidate.pageIndex === pageIndex;
+    }
+    return candidate.resultIndex === equationIndex;
+  });
+  if (!result) {
+    return null;
+  }
+  state.usedResultIndexes.add(result.resultIndex);
+  return result;
 }
 
 function equationImageFallbackForLines(lines, options, countsByPage) {
@@ -1370,7 +1470,7 @@ function tableDiagnosticsFromBlocks(blocks) {
   return tables;
 }
 
-function equationDiagnosticsFromBlocks(blocks) {
+function equationDiagnosticsFromBlocks(blocks, formulaOcrState) {
   const equations = [];
   for (const block of blocks) {
     if (block.kind !== "equation" || !block.metadata?.equation) {
@@ -1388,8 +1488,8 @@ function equationDiagnosticsFromBlocks(blocks) {
     textEquations: equations.filter((equation) => equation.output !== "image").length,
     imageEquations: equations.filter((equation) => equation.output === "image").length,
     formulaOcr: {
-      enabled: false,
-      status: "not-configured"
+      enabled: formulaOcrState.enabled,
+      status: formulaOcrState.status
     },
     equations
   };

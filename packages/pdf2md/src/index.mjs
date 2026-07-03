@@ -235,6 +235,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     outlines: pdfDocument?.outlines ?? [],
     equations: {
       imageFallbackConfidence: options.equations?.imageFallbackConfidence,
+      formulaOcr: options.equations?.formulaOcr,
       assetIdPrefix: assetSlugFromSource(normalized.source)
     }
   });

@@ -216,6 +216,67 @@ test("linesToMarkdownWithSourceMap preserves low-confidence OCR equations as ima
   });
 });
 
+test("linesToMarkdownWithSourceMap applies optional formula OCR LaTeX", () => {
+  const result = linesToMarkdownWithSourceMap(
+    [
+      textLine("Equation Fixture", 72, 720, 160, 22),
+      textLine("A short lead-in.", 72, 690, 120, 12),
+      {
+        ...textLine("E = m c^2", 168, 660, 170, 12),
+        source: "ocr",
+        confidence: 0.42
+      },
+      textLine("After the equation.", 72, 620, 130, 12)
+    ],
+    {
+      equations: {
+        imageFallbackConfidence: 0.75,
+        formulaOcr: {
+          results: [
+            {
+              equationIndex: 0,
+              latex: "E = mc^{2}",
+              confidence: 88
+            }
+          ]
+        }
+      }
+    }
+  );
+
+  assert.equal(
+    result.markdown,
+    "# Equation Fixture\n\nA short lead-in.\n\n$$\nE = mc^{2}\n$$\n\nAfter the equation.\n"
+  );
+  assert.deepEqual(result.equations, {
+    total: 1,
+    unicodeEquations: 0,
+    textEquations: 1,
+    imageEquations: 0,
+    formulaOcr: {
+      enabled: true,
+      status: "selected"
+    },
+    equations: [
+      {
+        equationIndex: 0,
+        pageIndex: 0,
+        source: "ocr",
+        text: "E = m c^2",
+        latex: "E = mc^{2}",
+        lineCount: 1,
+        containsUnicodeMath: false,
+        x: 168,
+        y: 660,
+        width: 170,
+        height: 12,
+        formulaOcrSource: "options.equations.formulaOcr.results",
+        formulaOcrConfidence: 0.88
+      }
+    ]
+  });
+});
+
 test("linesToMarkdown infers heading levels across the document", () => {
   const markdown = linesToMarkdown([
     { text: "Document Title", fontSize: 24, x: 72, y: 720, pageIndex: 0 },
