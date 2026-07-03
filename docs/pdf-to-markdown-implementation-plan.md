@@ -789,7 +789,7 @@ Core metrics:
 - [x] Hyphenation repair accuracy.
 - [x] Reading-order edit distance.
 - [x] Header/footer removal precision and recall.
-- [ ] Table detection precision and recall.
+- [x] Table detection precision and recall.
 - [x] Table cell adjacency accuracy.
 - [x] Table span accuracy.
 - [x] CSV cell text accuracy.
