@@ -1,18 +1,19 @@
 # CLI Reference
 
-The package exposes a `pdf2md` command through
-`packages/pdf2md/src/cli.mjs`.
+The package exposes a `pdf-2-llm` command through
+`packages/pdf2md/src/cli.mjs`. The older `pdf2md` command is also available as
+an alias.
 
 ## Usage
 
 ```sh
-pdf2md <input.pdf> [--output <path>] [--json]
+pdf-2-llm <input.pdf> [--output <path>] [--json]
 ```
 
-Equivalent local development command:
+Local development command from a checkout:
 
 ```sh
-node packages/pdf2md/src/cli.mjs <input.pdf> [--output <path>] [--json]
+npm exec -- pdf-2-llm <input.pdf> [--output <path>] [--json]
 ```
 
 ## Arguments
@@ -32,14 +33,14 @@ or custom security limits, use the JavaScript API documented in
 | --- | --- |
 | `--output <path>` | Write output to a file instead of stdout. |
 | `--json` | Emit the full `ConvertResult` JSON instead of only Markdown. |
-| `--help`, `-h` | Print usage. Current behavior exits non-zero when no input path is supplied. |
+| `--help`, `-h` | Print usage and exit successfully. |
 
 ## Markdown Output
 
 By default the CLI writes Markdown to stdout:
 
 ```sh
-pdf2md corpus/generated/synthetic-simple-text.pdf
+pdf-2-llm corpus/generated/synthetic-simple-text.pdf
 ```
 
 Example output:
@@ -55,7 +56,7 @@ The expected output is deterministic.
 To write Markdown to a file:
 
 ```sh
-pdf2md corpus/generated/synthetic-simple-text.pdf --output .temp/simple.md
+pdf-2-llm corpus/generated/synthetic-simple-text.pdf --output .temp/simple.md
 ```
 
 ## JSON Output
@@ -63,7 +64,7 @@ pdf2md corpus/generated/synthetic-simple-text.pdf --output .temp/simple.md
 Use `--json` to emit the full structured conversion result:
 
 ```sh
-pdf2md corpus/generated/synthetic-simple-text.pdf --json
+pdf-2-llm corpus/generated/synthetic-simple-text.pdf --json
 ```
 
 The JSON object includes:
@@ -79,7 +80,7 @@ The JSON object includes:
 To write JSON to a file:
 
 ```sh
-pdf2md corpus/generated/synthetic-simple-text.pdf --json --output .temp/simple.json
+pdf-2-llm corpus/generated/synthetic-simple-text.pdf --json --output .temp/simple.json
 ```
 
 ## Exit Behavior

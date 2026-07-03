@@ -1,9 +1,49 @@
 {
   "name": "pdf-2-llm",
-  "version": "0.0.0",
-  "private": true,
+  "version": "1.0.0",
   "license": "0BSD",
   "type": "module",
+  "main": "./packages/pdf2md/src/node.mjs",
+  "types": "./packages/pdf2md/src/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "packages/pdf2md/examples",
+    "packages/pdf2md/src"
+  ],
+  "bin": {
+    "pdf-2-llm": "packages/pdf2md/src/cli.mjs",
+    "pdf2md": "packages/pdf2md/src/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./packages/pdf2md/src/index.d.ts",
+      "node": "./packages/pdf2md/src/node.mjs",
+      "browser": "./packages/pdf2md/src/browser.mjs",
+      "default": "./packages/pdf2md/src/index.mjs"
+    },
+    "./node": {
+      "types": "./packages/pdf2md/src/index.d.ts",
+      "default": "./packages/pdf2md/src/node.mjs"
+    },
+    "./browser": {
+      "types": "./packages/pdf2md/src/index.d.ts",
+      "default": "./packages/pdf2md/src/browser.mjs"
+    },
+    "./worker": {
+      "types": "./packages/pdf2md/src/index.d.ts",
+      "default": "./packages/pdf2md/src/worker.mjs"
+    },
+    "./wasm": {
+      "types": "./packages/pdf2md/src/wasm-loader.d.ts",
+      "default": "./packages/pdf2md/src/wasm-loader.mjs"
+    },
+    "./schema": {
+      "types": "./packages/pdf2md/src/schema.d.ts",
+      "default": "./packages/pdf2md/src/schema.mjs"
+    }
+  },
   "workspaces": [
     "packages/*"
   ],

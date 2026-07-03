@@ -7,7 +7,7 @@ const args = process.argv.slice(2);
 
 function usage() {
   return `Usage:
-  pdf2md <input.pdf> [--output <path>] [--json]
+  pdf-2-llm <input.pdf> [--output <path>] [--json]
 `;
 }
 
@@ -23,9 +23,14 @@ const inputPath = args.find((arg) => !arg.startsWith("--"));
 const outputPath = readOption("--output");
 const json = args.includes("--json");
 
-if (!inputPath || args.includes("--help") || args.includes("-h")) {
+if (args.includes("--help") || args.includes("-h")) {
   console.log(usage());
-  process.exit(inputPath ? 0 : 1);
+  process.exit(0);
+}
+
+if (!inputPath) {
+  console.log(usage());
+  process.exit(1);
 }
 
 const result = await convertPdfToMarkdown(inputPath);

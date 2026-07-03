@@ -4,8 +4,8 @@
 documents into Markdown plus machine-readable sidecars that are suitable for
 LLM, search, RAG, archival, and review workflows.
 
-The package in this repository is `@pdf-2-llm/pdf2md`. It exposes a JavaScript
-API, Node/browser/worker entrypoints, a local CLI, JSON schemas, and a small
+The npm package in this repository is `pdf-2-llm`. It exposes a JavaScript API,
+Node/browser/worker entrypoints, a local CLI, JSON schemas, and a small
 Rust/WebAssembly preflight bridge. The project is built around an explicit
 validation corpus: PDFs only become release gates after provenance, license
 status, analysis outputs, reviewed acceptance criteria, and expected behavior
@@ -13,9 +13,9 @@ are recorded.
 
 ## Current Status
 
-This repository is at a `0.0.0` alpha-readiness snapshot. It is not currently
-published to npm: both package manifests are still marked `private: true` to
-prevent accidental publication. The project source is licensed under the
+This repository is at a `0.0.0` alpha-readiness snapshot. The root `pdf-2-llm`
+package is configured for public npm publishing, with the implementation kept in
+the `packages/pdf2md` workspace. The project source is licensed under the
 [Zero-Clause BSD license](LICENSE), so it can be used, copied, modified,
 distributed, and sold for any purpose, including commercial use.
 
@@ -74,16 +74,13 @@ npm run wasm:build
 Run the local CLI against a generated fixture:
 
 ```sh
-node packages/pdf2md/src/cli.mjs corpus/generated/synthetic-simple-text.pdf
+npm exec -- pdf-2-llm corpus/generated/synthetic-simple-text.pdf
 ```
 
 Write the full structured result as JSON:
 
 ```sh
-node packages/pdf2md/src/cli.mjs \
-  corpus/generated/synthetic-simple-text.pdf \
-  --json \
-  --output .temp/simple.json
+npm exec -- pdf-2-llm corpus/generated/synthetic-simple-text.pdf --json --output .temp/simple.json
 ```
 
 Run the Node example:
@@ -106,28 +103,28 @@ package, and runs API tests.
 
 ## CLI
 
-The package exposes a `pdf2md` command:
+The package exposes a `pdf-2-llm` command, with `pdf2md` retained as an alias:
 
 ```sh
-pdf2md <input.pdf> [--output <path>] [--json]
+pdf-2-llm <input.pdf> [--output <path>] [--json]
 ```
 
-Equivalent local development command:
+Local development command from a checkout:
 
 ```sh
-node packages/pdf2md/src/cli.mjs <input.pdf> [--output <path>] [--json]
+npm exec -- pdf-2-llm <input.pdf> [--output <path>] [--json]
 ```
 
 By default, the CLI writes Markdown to stdout:
 
 ```sh
-node packages/pdf2md/src/cli.mjs corpus/generated/synthetic-simple-text.pdf
+pdf-2-llm corpus/generated/synthetic-simple-text.pdf
 ```
 
 Use `--json` to emit the full `ConvertResult` object:
 
 ```sh
-node packages/pdf2md/src/cli.mjs corpus/generated/synthetic-simple-text.pdf --json
+pdf-2-llm corpus/generated/synthetic-simple-text.pdf --json
 ```
 
 The CLI currently accepts local paths only and does not expose flags for OCR
@@ -143,7 +140,7 @@ The primary function is `convertPdfToMarkdown()`:
 
 ```ts
 import { readFile } from "node:fs/promises";
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/node";
+import { convertPdfToMarkdown } from "pdf-2-llm/node";
 
 const bytes = await readFile("document.pdf");
 const result = await convertPdfToMarkdown(bytes, {
@@ -166,7 +163,7 @@ console.log(result.confidence);
 Browser entrypoint:
 
 ```ts
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/browser";
+import { convertPdfToMarkdown } from "pdf-2-llm/browser";
 
 const file = document.querySelector("input[type=file]")?.files?.[0];
 if (file) {
@@ -178,12 +175,12 @@ if (file) {
 Supported package entrypoints:
 
 ```ts
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md";
-import { convertPdfToMarkdown as convertInNode } from "@pdf-2-llm/pdf2md/node";
-import { convertPdfToMarkdown as convertInBrowser } from "@pdf-2-llm/pdf2md/browser";
-import { convertPdfToMarkdown as convertInWorker } from "@pdf-2-llm/pdf2md/worker";
-import { warningCodes } from "@pdf-2-llm/pdf2md/schema";
-import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+import { convertPdfToMarkdown } from "pdf-2-llm";
+import { convertPdfToMarkdown as convertInNode } from "pdf-2-llm/node";
+import { convertPdfToMarkdown as convertInBrowser } from "pdf-2-llm/browser";
+import { convertPdfToMarkdown as convertInWorker } from "pdf-2-llm/worker";
+import { warningCodes } from "pdf-2-llm/schema";
+import { loadPdf2mdCoreWasm } from "pdf-2-llm/wasm";
 ```
 
 The converter returns:

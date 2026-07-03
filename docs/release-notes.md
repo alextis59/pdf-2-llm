@@ -4,9 +4,10 @@
 
 Date: 2026-07-03
 
-This is a release-readiness snapshot for `@pdf-2-llm/pdf2md`, not an npm
-publish event. The package manifests still have `"private": true` to prevent
-accidental publication, and the source is licensed under `0BSD`.
+This is a release-readiness snapshot for `pdf-2-llm`, not an npm publish event.
+The root package is publishable with public npm access, the implementation is
+kept in the `packages/pdf2md` workspace, and the source is licensed under
+`0BSD`.
 
 ### Scope
 
@@ -73,8 +74,8 @@ fixtures:
 
 #### Packaging And Publishing
 
-- The package is private for npm publishing until the manifest is intentionally
-  changed. The repository source is licensed under `0BSD`.
+- The root `pdf-2-llm` package is configured for public npm publishing with a
+  restricted package file list. The repository source is licensed under `0BSD`.
 - The package includes a small single-threaded `./wasm` preflight bridge, and
   an opt-in threaded WASM source can be selected only after runtime thread
   feature detection passes. The full parser and extraction pipeline still run
@@ -144,6 +145,8 @@ fixtures:
 #### CLI
 
 - The CLI currently accepts local file paths only.
+- The package installs `pdf-2-llm` as the primary command and keeps `pdf2md` as
+  an alias.
 - Advanced options such as password callbacks, OCR result injection, parser
   mode, custom security limits, raster planning, WebGPU configuration, table
   sidecar toggles, attachment extraction, and asset output directories require
@@ -152,14 +155,13 @@ fixtures:
 ### Release Notes For Integrators
 
 - Prefer explicit subpath imports:
-  `@pdf-2-llm/pdf2md/node`, `@pdf-2-llm/pdf2md/browser`, or
-  `@pdf-2-llm/pdf2md/worker`.
+  `pdf-2-llm/node`, `pdf-2-llm/browser`, or `pdf-2-llm/worker`.
 - Treat warnings as part of the conversion contract. Downstream RAG, indexing,
   archival, and compliance workflows should gate on warning codes and
   confidence scores.
 - Keep CPU fallback as the correctness baseline. WebGPU and future WASM paths
   must preserve Markdown, IR, source-map, asset, warning, and diagnostic shapes.
-- Use `@pdf-2-llm/pdf2md/wasm` only for explicit WASM preflight loading until
-  the full Rust parser path is promoted. Threaded WASM sources must be supplied
+- Use `pdf-2-llm/wasm` only for explicit WASM preflight loading until the full
+  Rust parser path is promoted. Threaded WASM sources must be supplied
   explicitly and are selected only when `SharedArrayBuffer`, cross-origin
   isolation, and WebAssembly shared memory support are available.

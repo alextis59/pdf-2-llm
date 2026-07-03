@@ -1,6 +1,6 @@
 # API Reference
 
-This document describes the current public API for `@pdf-2-llm/pdf2md`.
+This document describes the current public API for `pdf-2-llm`.
 The source of truth for the full type surface is
 `packages/pdf2md/src/index.d.ts`.
 
@@ -9,10 +9,10 @@ The source of truth for the full type surface is
 All runtime entrypoints currently re-export the same API:
 
 ```ts
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md";
-import { convertPdfToMarkdown as convertInNode } from "@pdf-2-llm/pdf2md/node";
-import { convertPdfToMarkdown as convertInBrowser } from "@pdf-2-llm/pdf2md/browser";
-import { convertPdfToMarkdown as convertInWorker } from "@pdf-2-llm/pdf2md/worker";
+import { convertPdfToMarkdown } from "pdf-2-llm";
+import { convertPdfToMarkdown as convertInNode } from "pdf-2-llm/node";
+import { convertPdfToMarkdown as convertInBrowser } from "pdf-2-llm/browser";
+import { convertPdfToMarkdown as convertInWorker } from "pdf-2-llm/worker";
 ```
 
 The schema entrypoint exports JSON schemas and warning constants:
@@ -23,7 +23,7 @@ import {
   markdownSourceMapJsonSchema,
   schemaVersion,
   warningCodes
-} from "@pdf-2-llm/pdf2md/schema";
+} from "pdf-2-llm/schema";
 ```
 
 ## Main Function
@@ -76,7 +76,7 @@ Node:
 
 ```ts
 import { readFile } from "node:fs/promises";
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md";
+import { convertPdfToMarkdown } from "pdf-2-llm";
 
 const bytes = await readFile("document.pdf");
 const result = await convertPdfToMarkdown(bytes, {
@@ -90,7 +90,7 @@ console.log(result.warnings);
 Browser:
 
 ```ts
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/browser";
+import { convertPdfToMarkdown } from "pdf-2-llm/browser";
 
 const input = document.querySelector("input[type=file]");
 input.addEventListener("change", async () => {
@@ -487,11 +487,11 @@ callers can use the same schemas to validate persisted IR/source-map payloads.
 
 ## WASM Preflight
 
-The optional `@pdf-2-llm/pdf2md/wasm` entrypoint loads the packaged
+The optional `pdf-2-llm/wasm` entrypoint loads the packaged
 single-threaded Rust/WebAssembly preflight module:
 
 ```js
-import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+import { loadPdf2mdCoreWasm } from "pdf-2-llm/wasm";
 
 const core = await loadPdf2mdCoreWasm();
 const looksLikePdf = core.hasPdfHeader(bytes);

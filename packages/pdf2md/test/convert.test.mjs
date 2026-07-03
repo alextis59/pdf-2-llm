@@ -1182,6 +1182,15 @@ test("CLI emits JSON scaffold output", () => {
   );
 });
 
+test("CLI help exits successfully with pdf-2-llm usage", () => {
+  const cliPath = new URL("../src/cli.mjs", import.meta.url);
+  const run = spawnSync(process.execPath, [cliPath.pathname, "--help"], {
+    encoding: "utf8"
+  });
+  assert.equal(run.status, 0, run.stderr);
+  assert.match(run.stdout, /pdf-2-llm <input\.pdf>/);
+});
+
 test("convertPdfToMarkdown warns when content stream order may be uncertain", async () => {
   const result = await convertPdfToMarkdown(twoColumnFixturePath.pathname);
   const warning = result.warnings.find(
