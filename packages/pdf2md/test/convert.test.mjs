@@ -217,6 +217,9 @@ test("convertPdfToMarkdown reports WebGPU CPU fallback diagnostics by default", 
   assert.equal(result.diagnostics.acceleration.webgpu.status, "disabled");
   assert.equal(result.diagnostics.acceleration.webgpu.selectedProvider, "cpu");
   assert.equal(result.diagnostics.acceleration.webgpu.fallbackReason, "not-requested");
+  assert.equal(result.diagnostics.acceleration.webgpu.execution.provider, "cpu");
+  assert.equal(result.diagnostics.acceleration.webgpu.execution.status, "no-routed-pages");
+  assert.equal(result.diagnostics.acceleration.webgpu.execution.routedPages, 0);
 });
 
 test("convertPdfToMarkdown records OCR page language overrides", async () => {

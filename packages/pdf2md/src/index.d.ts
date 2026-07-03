@@ -65,6 +65,9 @@ export type ConvertOptions = {
   webgpu?: {
     required?: boolean;
     preferred?: boolean;
+    powerPreference?: "low-power" | "high-performance";
+    maxBatchPixels?: number;
+    maxMemoryBytes?: number;
   };
   tables?: {
     enabled?: boolean;
@@ -145,6 +148,7 @@ export type WebGpuDiagnostics = {
     status: "fallback" | "selected";
   };
   adapter: WebGpuAdapterDiagnostics | null;
+  execution: WebGpuExecutionDiagnostics;
   error?: {
     name: string;
     message: string;
@@ -161,6 +165,47 @@ export type WebGpuAdapterDiagnostics = {
   } | null;
   features: string[];
   limits: Record<string, number>;
+};
+
+export type WebGpuExecutionDiagnostics = {
+  enabled: boolean;
+  provider: "cpu" | "webgpu";
+  status: "no-routed-pages" | "cpu-fallback" | "planned" | "skipped";
+  fallbackReason: string | null;
+  workload: "ocr";
+  routedPages: number;
+  plannedPages: number;
+  skippedPages: number;
+  totalEstimatedPixels: number;
+  totalEstimatedBytes: number;
+  limits: {
+    maxBatchPixels: number;
+    maxMemoryBytes: number;
+    bytesPerPixel: number;
+  };
+  batches: WebGpuExecutionBatchDiagnostics[];
+  skipped: WebGpuExecutionSkippedPageDiagnostics[];
+};
+
+export type WebGpuExecutionBatchDiagnostics = {
+  batchIndex: number;
+  pages: Array<{
+    pageIndex: number;
+    sourceType: "scanned" | "hybrid";
+    pixelCount: number;
+    estimatedBytes: number;
+  }>;
+  pixelCount: number;
+  estimatedBytes: number;
+};
+
+export type WebGpuExecutionSkippedPageDiagnostics = {
+  pageIndex: number;
+  sourceType: "scanned" | "hybrid";
+  rasterStatus: string;
+  pixelCount: number | null;
+  estimatedBytes: number | null;
+  status: "missing-raster" | "exceeds-memory-limit";
 };
 
 export type OcrDiagnostics = {

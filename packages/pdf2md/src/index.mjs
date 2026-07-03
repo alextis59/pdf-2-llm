@@ -32,6 +32,7 @@ import { createOcrTextExtraction } from "./ocr-text.mjs";
 import { createRasterPlan } from "./raster-plan.mjs";
 import { createScanDetection } from "./scan-detection.mjs";
 import { detectWebGpuCapabilities } from "./webgpu-capability.mjs";
+import { createWebGpuExecutionPlan } from "./webgpu-provider.mjs";
 
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
@@ -181,6 +182,12 @@ export async function convertPdfToMarkdown(input, options = {}) {
     textLines,
     imageDraws
   });
+  const webgpuExecution = createWebGpuExecutionPlan({
+    options: options.webgpu ?? {},
+    rasterPlan,
+    scanDetection,
+    webgpu: webgpuCapabilities
+  });
   const ocrLanguage = createOcrLanguageConfig({
     adapter: ocrAdapter,
     options: options.ocr ?? {},
@@ -296,7 +303,10 @@ export async function convertPdfToMarkdown(input, options = {}) {
         elapsedMs
       },
       acceleration: {
-        webgpu: webgpuCapabilities
+        webgpu: {
+          ...webgpuCapabilities,
+          execution: webgpuExecution
+        }
       },
       extraction: {
         textLines: markdownTextLines.length,
