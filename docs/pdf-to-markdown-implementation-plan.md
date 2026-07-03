@@ -727,7 +727,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Document OCR model loading.
 - [x] Document WebGPU behavior and fallback.
 - [x] Document security limits.
-- [ ] Document warnings and confidence scores.
+- [x] Document warnings and confidence scores.
 
 ### 9.4 Release Readiness
 

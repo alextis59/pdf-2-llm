@@ -10,6 +10,7 @@
 - [OCR model loading](docs/ocr-model-loading.md)
 - [WebGPU behavior and fallback](docs/webgpu-behavior.md)
 - [Security limits](docs/security-limits.md)
+- [Warnings and confidence scores](docs/warnings-confidence.md)
 
 ## Current package scaffold
 
