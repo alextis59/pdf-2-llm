@@ -154,6 +154,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     enabled: options.raster?.enabled === true,
     renderer: options.raster?.renderer,
     dpi: options.raster?.dpi,
+    thumbnailDpi: options.raster?.thumbnailDpi,
     maxPixels: security.maxImagePixels
   });
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
@@ -730,17 +731,18 @@ function summarizeOptions(options, rasterPlan) {
     rasterEnabled: options.raster?.enabled === true,
     rasterRenderer: options.raster?.renderer ?? "internal-page-geometry",
     rasterDpi: rasterPlan.dpi,
+    rasterThumbnailDpi: rasterPlan.thumbnailDpi,
     maxImagePixels: rasterPlan.maxPixels,
     assetsEnabled: options.assets?.enabled ?? null
   };
 }
 
 function rasterPixelLimitWarnings(rasterPlan) {
-  if (!rasterPlan.enabled || rasterPlan.limitedPages === 0) {
+  if (!rasterPlan.enabled || (rasterPlan.limitedPages === 0 && rasterPlan.limitedThumbnails === 0)) {
     return [];
   }
 
-  return rasterPlan.pages
+  const pageWarnings = rasterPlan.pages
     .filter((page) => page.exceedsPixelLimit)
     .map((page) =>
       createWarning(
@@ -752,10 +754,31 @@ function rasterPixelLimitWarnings(rasterPlan) {
           heightPx: page.heightPx,
           pixelCount: page.pixelCount,
           maxImagePixels: page.maxPixels,
-          dpi: page.dpi
+          dpi: page.dpi,
+          target: "page"
         }
       )
     );
+
+  const thumbnailWarnings = rasterPlan.pages
+    .filter((page) => page.thumbnail.exceedsPixelLimit)
+    .map((page) =>
+      createWarning(
+        warningCodes.ImagePixelsExceeded,
+        "Page thumbnail raster target exceeds configured maxImagePixels and was skipped.",
+        {
+          pageIndex: page.pageIndex,
+          widthPx: page.thumbnail.widthPx,
+          heightPx: page.thumbnail.heightPx,
+          pixelCount: page.thumbnail.pixelCount,
+          maxImagePixels: page.thumbnail.maxPixels,
+          dpi: page.thumbnail.dpi,
+          target: "thumbnail"
+        }
+      )
+    );
+
+  return [...pageWarnings, ...thumbnailWarnings];
 }
 
 function createParseWarning(error, extraDetails = {}) {

@@ -38,16 +38,23 @@ test("converter enforces maxImagePixels for raster page targets", async () => {
     security: { maxImagePixels: 1000 }
   });
   const warning = result.warnings.find(
-    (item) => item.code === warningCodes.ImagePixelsExceeded
+    (item) => item.code === warningCodes.ImagePixelsExceeded && item.details.target === "page"
+  );
+  const thumbnailWarning = result.warnings.find(
+    (item) => item.code === warningCodes.ImagePixelsExceeded && item.details.target === "thumbnail"
   );
 
   assert.equal(result.diagnostics.options.maxImagePixels, 1000);
   assert.equal(result.diagnostics.extraction.raster.limitedPages, 1);
+  assert.equal(result.diagnostics.extraction.raster.limitedThumbnails, 1);
   assert.equal(result.diagnostics.extraction.raster.pages[0].status, "skipped-pixel-limit");
   assert.equal(result.diagnostics.extraction.raster.pages[0].pixelCount, 1938816);
+  assert.equal(result.diagnostics.extraction.raster.pages[0].thumbnail.status, "skipped-pixel-limit");
   assert.equal(warning?.details.pageIndex, 0);
   assert.equal(warning?.details.pixelCount, 1938816);
   assert.equal(warning?.details.maxImagePixels, 1000);
+  assert.equal(thumbnailWarning?.details.pageIndex, 0);
+  assert.equal(thumbnailWarning?.details.pixelCount, 121176);
 });
 
 test("converter rejects a pre-aborted signal", async () => {

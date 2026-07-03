@@ -92,17 +92,20 @@ test("convertPdfToMarkdown can preserve configured running titles", async () => 
 
 test("convertPdfToMarkdown exposes the selected scoped raster path when enabled", async () => {
   const result = await convertPdfToMarkdown(fixturePath.pathname, {
-    raster: { enabled: true, dpi: 144 }
+    raster: { enabled: true, dpi: 144, thumbnailDpi: 72 }
   });
 
   assert.equal(result.diagnostics.options.rasterEnabled, true);
   assert.equal(result.diagnostics.options.rasterRenderer, "internal-page-geometry");
   assert.equal(result.diagnostics.options.rasterDpi, 144);
+  assert.equal(result.diagnostics.options.rasterThumbnailDpi, 72);
   assert.equal(result.diagnostics.options.maxImagePixels, 100_000_000);
   assert.equal(result.diagnostics.extraction.raster.enabled, true);
   assert.equal(result.diagnostics.extraction.raster.dpi, 144);
+  assert.equal(result.diagnostics.extraction.raster.thumbnailDpi, 72);
   assert.equal(result.diagnostics.extraction.raster.maxPixels, 100_000_000);
   assert.equal(result.diagnostics.extraction.raster.limitedPages, 0);
+  assert.equal(result.diagnostics.extraction.raster.limitedThumbnails, 0);
   assert.equal(result.diagnostics.extraction.raster.renderer.id, "internal-page-geometry");
   assert.equal(result.diagnostics.extraction.raster.renderer.dependency, null);
   assert.equal(result.diagnostics.extraction.raster.renderer.status, "selected");
@@ -123,6 +126,16 @@ test("convertPdfToMarkdown exposes the selected scoped raster path when enabled"
       pixelCount: 1938816,
       maxPixels: 100_000_000,
       exceedsPixelLimit: false,
+      thumbnail: {
+        status: "planned",
+        dpi: 72,
+        scale: 1,
+        widthPx: 612,
+        heightPx: 792,
+        pixelCount: 484704,
+        maxPixels: 100_000_000,
+        exceedsPixelLimit: false
+      },
       rotation: 0,
       quarterTurn: false,
       userUnit: 1

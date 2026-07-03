@@ -42,6 +42,7 @@ export type ConvertOptions = {
     enabled?: boolean;
     renderer?: "internal-page-geometry";
     dpi?: number;
+    thumbnailDpi?: number;
   };
   webgpu?: {
     required?: boolean;
@@ -107,8 +108,10 @@ export type Diagnostics = {
 export type RasterDiagnostics = {
   enabled: boolean;
   dpi: number;
+  thumbnailDpi: number;
   maxPixels: number;
   limitedPages: number;
+  limitedThumbnails: number;
   renderer: RasterRendererDiagnostics;
   pages: RasterPageDiagnostics[];
 };
@@ -140,9 +143,21 @@ export type RasterPageDiagnostics = {
   pixelCount: number | null;
   maxPixels: number;
   exceedsPixelLimit: boolean;
+  thumbnail: RasterTargetDiagnostics;
   rotation: number;
   quarterTurn: boolean;
   userUnit: number;
+};
+
+export type RasterTargetDiagnostics = {
+  status: "planned" | "skipped-pixel-limit";
+  dpi: number;
+  scale: number;
+  widthPx: number | null;
+  heightPx: number | null;
+  pixelCount: number | null;
+  maxPixels: number;
+  exceedsPixelLimit: boolean;
 };
 
 export type OutlineDiagnostics = {

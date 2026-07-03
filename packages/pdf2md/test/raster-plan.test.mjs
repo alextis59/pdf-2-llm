@@ -31,8 +31,10 @@ test("createRasterPlan records parser-backed page plans when enabled", () => {
 
   assert.equal(plan.enabled, true);
   assert.equal(plan.dpi, 300);
+  assert.equal(plan.thumbnailDpi, 36);
   assert.equal(plan.maxPixels, 100_000_000);
   assert.equal(plan.limitedPages, 0);
+  assert.equal(plan.limitedThumbnails, 0);
   assert.equal(plan.renderer.status, "selected");
   assert.deepEqual(plan.pages, [
     {
@@ -51,6 +53,16 @@ test("createRasterPlan records parser-backed page plans when enabled", () => {
       pixelCount: 5265000,
       maxPixels: 100_000_000,
       exceedsPixelLimit: false,
+      thumbnail: {
+        status: "planned",
+        dpi: 36,
+        scale: 0.5,
+        widthPx: 324,
+        heightPx: 234,
+        pixelCount: 75816,
+        maxPixels: 100_000_000,
+        exceedsPixelLimit: false
+      },
       rotation: 90,
       quarterTurn: true,
       userUnit: 1
@@ -72,8 +84,10 @@ test("createRasterPlan honors configured DPI", () => {
   );
 
   assert.equal(plan.dpi, 144);
+  assert.equal(plan.thumbnailDpi, 36);
   assert.equal(plan.maxPixels, 100_000_000);
   assert.equal(plan.limitedPages, 0);
+  assert.equal(plan.limitedThumbnails, 0);
   assert.equal(plan.pages[0].dpi, 144);
   assert.equal(plan.pages[0].scale, 2);
   assert.equal(plan.pages[0].widthPx, 1224);
@@ -81,9 +95,35 @@ test("createRasterPlan honors configured DPI", () => {
   assert.equal(plan.pages[0].pixelCount, 1938816);
   assert.equal(plan.pages[0].maxPixels, 100_000_000);
   assert.equal(plan.pages[0].exceedsPixelLimit, false);
+  assert.equal(plan.pages[0].thumbnail.dpi, 36);
+  assert.equal(plan.pages[0].thumbnail.widthPx, 306);
+  assert.equal(plan.pages[0].thumbnail.heightPx, 396);
+  assert.equal(plan.pages[0].thumbnail.pixelCount, 121176);
   assert.equal(plan.pages[0].sourceBox, "mediaBox");
   assert.deepEqual(plan.pages[0].boxPt, [0, 0, 612, 792]);
   assert.equal(plan.pages[0].quarterTurn, false);
+});
+
+test("createRasterPlan honors configured thumbnail DPI", () => {
+  const plan = createRasterPlan(
+    [
+      {
+        pageIndex: 0,
+        mediaBox: [0, 0, 612, 792],
+        widthPt: 612,
+        heightPt: 792
+      }
+    ],
+    { enabled: true, dpi: 144, thumbnailDpi: 72 }
+  );
+
+  assert.equal(plan.thumbnailDpi, 72);
+  assert.equal(plan.pages[0].thumbnail.status, "planned");
+  assert.equal(plan.pages[0].thumbnail.dpi, 72);
+  assert.equal(plan.pages[0].thumbnail.scale, 1);
+  assert.equal(plan.pages[0].thumbnail.widthPx, 612);
+  assert.equal(plan.pages[0].thumbnail.heightPx, 792);
+  assert.equal(plan.pages[0].thumbnail.pixelCount, 484704);
 });
 
 test("createRasterPlan normalizes rotation before computing render dimensions", () => {
@@ -120,15 +160,17 @@ test("createRasterPlan skips pages that exceed the configured pixel limit", () =
         heightPt: 792
       }
     ],
-    { enabled: true, dpi: 144, maxPixels: 1000 }
+    { enabled: true, dpi: 144, maxPixels: 200000 }
   );
 
-  assert.equal(plan.maxPixels, 1000);
+  assert.equal(plan.maxPixels, 200000);
   assert.equal(plan.limitedPages, 1);
+  assert.equal(plan.limitedThumbnails, 0);
   assert.equal(plan.pages[0].status, "skipped-pixel-limit");
   assert.equal(plan.pages[0].pixelCount, 1938816);
-  assert.equal(plan.pages[0].maxPixels, 1000);
+  assert.equal(plan.pages[0].maxPixels, 200000);
   assert.equal(plan.pages[0].exceedsPixelLimit, true);
+  assert.equal(plan.pages[0].thumbnail.status, "planned");
 });
 
 test("createRasterPlan rejects invalid DPI values", () => {
@@ -146,8 +188,10 @@ test("createRasterPlan keeps pages empty while raster planning is disabled", () 
 
   assert.equal(plan.enabled, false);
   assert.equal(plan.dpi, 300);
+  assert.equal(plan.thumbnailDpi, 36);
   assert.equal(plan.maxPixels, 100_000_000);
   assert.equal(plan.limitedPages, 0);
+  assert.equal(plan.limitedThumbnails, 0);
   assert.equal(plan.renderer.status, "selected");
   assert.deepEqual(plan.pages, []);
 });

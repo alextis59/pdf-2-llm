@@ -10,6 +10,7 @@ const internalRasterRenderer = Object.freeze({
 });
 
 export const defaultRasterDpi = 300;
+export const defaultThumbnailDpi = 36;
 export const defaultMaxImagePixels = 100_000_000;
 
 export function selectRasterRenderer(options = {}) {
@@ -32,20 +33,26 @@ export function createRasterPlan(pages = [], options = {}) {
   const enabled = options.enabled === true;
   const renderer = selectRasterRenderer(options);
   const dpi = normalizeDpi(options.dpi ?? defaultRasterDpi);
+  const thumbnailDpi = normalizeDpi(options.thumbnailDpi ?? defaultThumbnailDpi);
   const maxPixels = normalizeMaxPixels(options.maxPixels ?? defaultMaxImagePixels);
-  const plannedPages = enabled ? pages.map((page) => createRasterPagePlan(page, dpi, maxPixels)) : [];
+  const plannedPages = enabled
+    ? pages.map((page) => createRasterPagePlan(page, { dpi, thumbnailDpi, maxPixels }))
+    : [];
 
   return {
     enabled,
     dpi,
+    thumbnailDpi,
     maxPixels,
     renderer,
     limitedPages: plannedPages.filter((page) => page.exceedsPixelLimit).length,
+    limitedThumbnails: plannedPages.filter((page) => page.thumbnail.exceedsPixelLimit).length,
     pages: plannedPages
   };
 }
 
-function createRasterPagePlan(page, dpi, maxPixels) {
+function createRasterPagePlan(page, options) {
+  const { dpi, thumbnailDpi, maxPixels } = options;
   const sourceBox = page.cropBox ? "cropBox" : page.mediaBox ? "mediaBox" : "unknown";
   const boxPt = page.cropBox ?? page.mediaBox ?? null;
   const sourceWidthPt = page.widthPt ?? null;
@@ -54,30 +61,39 @@ function createRasterPagePlan(page, dpi, maxPixels) {
   const quarterTurn = rotation === 90 || rotation === 270;
   const widthPt = quarterTurn ? sourceHeightPt : sourceWidthPt;
   const heightPt = quarterTurn ? sourceWidthPt : sourceHeightPt;
-  const scale = dpi / 72;
-  const widthPx = pointsToPixels(widthPt, dpi);
-  const heightPx = pointsToPixels(heightPt, dpi);
-  const pixelCount = widthPx === null || heightPx === null ? null : widthPx * heightPx;
-  const exceedsPixelLimit = pixelCount !== null && pixelCount > maxPixels;
+  const target = createRasterTarget(widthPt, heightPt, dpi, maxPixels);
   return {
     pageIndex: page.pageIndex,
-    status: exceedsPixelLimit ? "skipped-pixel-limit" : "planned",
+    status: target.status,
     sourceBox,
     boxPt,
     sourceWidthPt,
     sourceHeightPt,
     widthPt,
     heightPt,
+    ...target,
+    thumbnail: createRasterTarget(widthPt, heightPt, thumbnailDpi, maxPixels),
+    rotation,
+    quarterTurn,
+    userUnit: page.userUnit ?? 1
+  };
+}
+
+function createRasterTarget(widthPt, heightPt, dpi, maxPixels) {
+  const scale = dpi / 72;
+  const widthPx = pointsToPixels(widthPt, dpi);
+  const heightPx = pointsToPixels(heightPt, dpi);
+  const pixelCount = widthPx === null || heightPx === null ? null : widthPx * heightPx;
+  const exceedsPixelLimit = pixelCount !== null && pixelCount > maxPixels;
+  return {
+    status: exceedsPixelLimit ? "skipped-pixel-limit" : "planned",
     dpi,
     scale,
     widthPx,
     heightPx,
     pixelCount,
     maxPixels,
-    exceedsPixelLimit,
-    rotation,
-    quarterTurn,
-    userUnit: page.userUnit ?? 1
+    exceedsPixelLimit
   };
 }
 
