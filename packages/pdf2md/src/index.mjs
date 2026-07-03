@@ -19,6 +19,12 @@ import {
   linesToMarkdownWithSourceMap
 } from "./text-extract.mjs";
 import {
+  createFigureAssets,
+  createFigureDetections,
+  figureElementsByPage,
+  insertFigureMarkdown
+} from "./figure-detection.mjs";
+import {
   assignTextLinesToGridCells,
   detectTableCellSpans,
   inferRulingGrids
@@ -219,15 +225,25 @@ export async function convertPdfToMarkdown(input, options = {}) {
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
     enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
   });
-  const assets = [...tableCsvSidecars.assets, ...ocrDebugSidecars.assets];
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
-  const markdownResult = linesToMarkdownWithSourceMap(markdownTextLines, {
+  let markdownResult = linesToMarkdownWithSourceMap(markdownTextLines, {
     pageAnchors: options.markdown?.pageAnchors === true,
     preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
     rulingTables,
     outlines: pdfDocument?.outlines ?? []
   });
+  const figureDetections = createFigureDetections({
+    imageDraws,
+    layout: markdownResult.layout,
+    pages: pdfDocument?.pages ?? [],
+    rulingLines,
+    source: normalized.source
+  });
+  markdownResult = insertFigureMarkdown(markdownResult, figureDetections.figures);
+  const figureAssets = createFigureAssets(figureDetections.figures);
+  const figureElements = figureElementsByPage(figureDetections.figures);
+  const assets = [...tableCsvSidecars.assets, ...ocrDebugSidecars.assets, ...figureAssets];
   const markdown = markdownResult.markdown;
   const sourceMap = createMarkdownSourceMap(markdownResult.sourceMap);
   throwIfAborted(options.signal);
@@ -274,7 +290,10 @@ export async function convertPdfToMarkdown(input, options = {}) {
         heightPt: page.heightPt,
         rotation: page.rotation,
         sourceType: scanPagesByIndex.get(page.pageIndex)?.sourceType ?? "unknown",
-        elements: ocrTextExtraction.elementsByPage.get(page.pageIndex) ?? []
+        elements: [
+          ...(ocrTextExtraction.elementsByPage.get(page.pageIndex) ?? []),
+          ...(figureElements.get(page.pageIndex) ?? [])
+        ]
       })
     );
   }
@@ -334,6 +353,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         rulingLines: summarizeRulingLines(rulingLines),
         rulingGrids: summarizeRulingGrids(rulingGrids),
         rulingTables: summarizeRulingTables(rulingTables, tableCsvSidecars.byTable),
+        figures: figureDetections,
         parser: pdfDocument
           ? {
               mode: pdfDocument.xrefMode,

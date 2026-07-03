@@ -867,6 +867,7 @@ function createRegion(kind, rows, extra = {}) {
     width: roundNumber(right - left),
     height: roundNumber(top - bottom),
     rows: rows.length,
+    text: rows.map(rowText).join(" "),
     ...extra
   };
 }

@@ -127,6 +127,7 @@ export type Diagnostics = {
     raster: RasterDiagnostics;
     scanDetection: ScanDetectionDiagnostics;
     parser: Record<string, unknown>;
+    figures: FigureDiagnostics;
   };
   pages: PageDiagnostics[];
 };
@@ -611,8 +612,35 @@ export type LayoutRegionDiagnostics = {
   width: number;
   height: number;
   rows: number;
+  text?: string;
   columnIndex?: number;
   target?: "figure" | "table";
+};
+
+export type FigureDiagnostics = {
+  total: number;
+  vectorFigures: number;
+  imageFigures: number;
+  figures: FigureRegionDiagnostics[];
+};
+
+export type FigureRegionDiagnostics = {
+  figureIndex: number;
+  pageIndex: number | null;
+  figureNumber: number;
+  captionNumber: string | null;
+  caption: string | null;
+  assetId: string;
+  assetPath: string;
+  assetMediaType: "image/png";
+  kind: "vector" | "image";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  visualElements: number;
+  pageWidthPt: number | null;
+  pageHeightPt: number | null;
 };
 
 export type PageDiagnostics = {
@@ -735,6 +763,10 @@ export type FigureBlock = {
   type: "figure";
   caption?: string;
   assetId?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 };
 
 export type EquationBlock = {

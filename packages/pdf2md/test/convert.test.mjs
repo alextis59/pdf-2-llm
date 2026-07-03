@@ -1138,7 +1138,71 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
   assert.equal(page.captions.length, 1);
   assert.equal(page.captions[0].kind, "caption");
   assert.equal(page.captions[0].target, "figure");
-  assert.match(result.markdown, /Figure 1\. A generated vector box\./);
+  assert.equal(
+    result.markdown,
+    "# Vector Figure Fixture\n\n![Figure 1](assets/synthetic-vector-figure-page-1-figure-1.png)\n\nFigure 1. A generated vector box.\n"
+  );
+  assert.deepEqual(result.assets, [
+    {
+      id: "synthetic-vector-figure-page-1-figure-1",
+      kind: "figure-preview",
+      path: "assets/synthetic-vector-figure-page-1-figure-1.png",
+      mediaType: "image/png",
+      pageIndex: 0
+    }
+  ]);
+  assert.deepEqual(result.ir.pages[0].elements, [
+    {
+      type: "figure",
+      caption: "Figure 1. A generated vector box.",
+      assetId: "synthetic-vector-figure-page-1-figure-1",
+      x: 120,
+      y: 520,
+      width: 240,
+      height: 120
+    }
+  ]);
+  assert.deepEqual(result.diagnostics.extraction.figures, {
+    total: 1,
+    vectorFigures: 1,
+    imageFigures: 0,
+    figures: [
+      {
+        figureIndex: 0,
+        pageIndex: 0,
+        figureNumber: 1,
+        captionNumber: "1",
+        caption: "Figure 1. A generated vector box.",
+        assetId: "synthetic-vector-figure-page-1-figure-1",
+        assetPath: "assets/synthetic-vector-figure-page-1-figure-1.png",
+        assetMediaType: "image/png",
+        kind: "vector",
+        x: 120,
+        y: 520,
+        width: 240,
+        height: 120,
+        visualElements: 4,
+        pageWidthPt: 612,
+        pageHeightPt: 792
+      }
+    ]
+  });
+  const figureSource = result.sourceMap.entries.find((entry) => entry.kind === "figure");
+  assert.deepEqual(figureSource, {
+    markdownStart: 25,
+    markdownEnd: 88,
+    kind: "figure",
+    regions: [
+      {
+        pageIndex: 0,
+        x: 120,
+        y: 520,
+        width: 240,
+        height: 120,
+        source: "pdf-vector"
+      }
+    ]
+  });
 });
 
 test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async () => {

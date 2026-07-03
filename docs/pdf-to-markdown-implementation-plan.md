@@ -652,11 +652,11 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 
 ### 8.2 Figures, Charts, And Diagrams
 
-- [ ] Group images and vector regions into figures.
-- [ ] Attach captions to figures.
-- [ ] Extract figure assets.
+- [x] Group images and vector regions into figures.
+- [x] Attach captions to figures.
+- [x] Extract figure assets.
 - [ ] Preserve alt text from tagged PDFs where present.
-- [ ] Do not invent chart data from visual charts.
+- [x] Do not invent chart data from visual charts.
 - [ ] Emit asset links and warnings for low-semantic visual content.
 
 ### 8.3 Forms, Annotations, Attachments, And Signatures
@@ -681,7 +681,7 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 Gate 7 acceptance:
 
 - [ ] Equation fixtures preserve useful math representation or assets.
-- [ ] Figure fixtures preserve captions and asset links.
+- [x] Figure fixtures preserve captions and asset links.
 - [ ] Government form fixtures extract fields and values.
 - [ ] Annotation and attachment fixtures produce expected sidecars.
 - [ ] RTL, CJK, and vertical fixtures meet script-specific acceptance criteria.
