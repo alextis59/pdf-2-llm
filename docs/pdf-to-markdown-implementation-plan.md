@@ -771,11 +771,11 @@ definition-of-done checks for its module.
 
 Coordination checklist:
 
-- [ ] Each agent starts by reading the study and this plan.
-- [ ] Each agent writes or updates tests before marking a module complete.
-- [ ] Cross-agent contracts are changed through versioned IR/schema updates.
+- [x] Each agent starts by reading the study and this plan.
+- [x] Each agent writes or updates tests before marking a module complete.
+- [x] Cross-agent contracts are changed through versioned IR/schema updates.
 - [x] Corpus regressions block completion of later phases.
-- [ ] Performance changes include before/after benchmark reports.
+- [x] Performance changes include before/after benchmark reports.
 - [x] New unsupported behavior includes a warning code and documentation.
 
 ## Metrics And Release Gates

@@ -53,6 +53,8 @@ fixtures:
 - CI runs explicit `ci:*` commands for Rust tests, lint, build, package tests,
   and corpus smoke tests before the full `npm run check` gate, then uploads
   generated QA/report artifacts.
+- Agent coordination requirements are documented and checked by
+  `npm run qa:agent-coordination`.
 - Clean checkout build passed.
 - Packed package install passed in a separate fixture project.
 - Browser smoke passed in Chromium and Firefox against
