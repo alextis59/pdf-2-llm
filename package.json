@@ -79,6 +79,8 @@
     "qa:wasm-size": "node scripts/qa/check-wasm-size.mjs --report .temp/qa/wasm-size-budget.json",
     "qa:wasm-size:report": "node scripts/qa/check-wasm-size.mjs --report corpus/reports/wasm-size-budget.json",
     "rust:build:wasm": "cargo build -p pdf2md-core --target wasm32-unknown-unknown --release",
+    "rust:build:wasm:threaded": "node scripts/build/build-threaded-wasm.mjs",
+    "rust:build:wasm:threaded:required": "node scripts/build/build-threaded-wasm.mjs --required",
     "rust:test": "cargo test --workspace",
     "test:api": "npm run test --workspace @pdf-2-llm/pdf2md",
     "wasm:build": "npm run rust:build:wasm && node scripts/build/copy-wasm.mjs"

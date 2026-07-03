@@ -324,7 +324,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [x] Add browser build target.
 - [x] Add worker bundle target.
 - [x] Add single-threaded WASM build.
-- [ ] Add threaded WASM build behind feature detection.
+- [x] Add threaded WASM build behind feature detection.
 - [x] Add local examples for Node and browser.
 - [x] Add CI commands for Rust tests, TypeScript tests, lint, build, and corpus
   smoke tests.

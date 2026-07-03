@@ -1,10 +1,95 @@
 const defaultWasmUrl = new URL("./wasm/pdf2md_core.wasm", import.meta.url);
+const sharedMemoryProbe = new Uint8Array([
+  0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x05, 0x04, 0x01, 0x03,
+  0x01, 0x01
+]);
 
 export async function loadPdf2mdCoreWasm(options = {}) {
-  const source = isSourceLike(options) ? options : options.source ?? defaultWasmUrl;
+  const plan = resolveWasmLoadPlan(options);
   const imports = isSourceLike(options) ? {} : options.imports ?? {};
-  const instance = await instantiateWasm(source, imports);
-  return createPdf2mdCore(instance.exports);
+  const instance = await instantiateWasm(plan.source, imports);
+  return createPdf2mdCore(instance.exports, plan.threading);
+}
+
+export function detectWasmThreadSupport(environment = globalThis) {
+  const webAssembly = environment.WebAssembly ?? WebAssembly;
+  const sharedArrayBuffer = typeof environment.SharedArrayBuffer === "function";
+  const browserLike = environment.window === environment && typeof environment.document !== "undefined";
+  const isolated = browserLike ? environment.crossOriginIsolated === true : true;
+  const wasmSharedMemory =
+    typeof webAssembly?.validate === "function" && webAssembly.validate(sharedMemoryProbe);
+  const reasons = [];
+  if (!sharedArrayBuffer) {
+    reasons.push("shared-array-buffer-unavailable");
+  }
+  if (!isolated) {
+    reasons.push("cross-origin-isolation-required");
+  }
+  if (!wasmSharedMemory) {
+    reasons.push("wasm-shared-memory-unavailable");
+  }
+  return {
+    supported: sharedArrayBuffer && isolated && wasmSharedMemory,
+    sharedArrayBuffer,
+    crossOriginIsolated: browserLike ? isolated : null,
+    wasmSharedMemory,
+    reasons
+  };
+}
+
+export function resolveWasmLoadPlan(options = {}) {
+  if (isSourceLike(options)) {
+    return {
+      source: options,
+      threading: createThreadingDiagnostics({
+        requested: "single",
+        selected: "single",
+        support: detectWasmThreadSupport()
+      })
+    };
+  }
+
+  const requested = normalizeThreadingMode(options.threading);
+  const source = options.source ?? defaultWasmUrl;
+  const support = options.threadSupport ?? detectWasmThreadSupport(options.environment ?? globalThis);
+  if (requested === "single") {
+    return {
+      source,
+      threading: createThreadingDiagnostics({ requested, selected: "single", support })
+    };
+  }
+  if (!support.supported) {
+    if (requested === "required") {
+      throw new Error(`Threaded WASM requested but unsupported: ${support.reasons.join(", ")}`);
+    }
+    return {
+      source,
+      threading: createThreadingDiagnostics({
+        requested,
+        selected: "single",
+        support,
+        fallbackReason: support.reasons[0] ?? "threaded-wasm-unsupported"
+      })
+    };
+  }
+  if (!options.threadedSource) {
+    if (requested === "required") {
+      throw new Error("Threaded WASM requested but no threadedSource was provided.");
+    }
+    return {
+      source,
+      threading: createThreadingDiagnostics({
+        requested,
+        selected: "single",
+        support,
+        fallbackReason: "threaded-source-unavailable"
+      })
+    };
+  }
+  return {
+    source: options.threadedSource,
+    threading: createThreadingDiagnostics({ requested, selected: "threaded", support })
+  };
 }
 
 async function instantiateWasm(source, imports) {
@@ -42,7 +127,7 @@ async function instantiateResponse(response, imports) {
   return (await WebAssembly.instantiate(await response.arrayBuffer(), imports)).instance;
 }
 
-function createPdf2mdCore(exports) {
+function createPdf2mdCore(exports, threading) {
   const required = [
     "memory",
     "pdf2md_alloc",
@@ -59,6 +144,7 @@ function createPdf2mdCore(exports) {
   }
 
   return Object.freeze({
+    threading,
     version() {
       return [
         exports.pdf2md_core_version_major(),
@@ -82,6 +168,29 @@ function createPdf2mdCore(exports) {
         exports.pdf2md_dealloc(ptr, bytes.byteLength);
       }
     }
+  });
+}
+
+function normalizeThreadingMode(threading) {
+  if (threading === true || threading === "auto") {
+    return "auto";
+  }
+  if (threading === "required") {
+    return "required";
+  }
+  return "single";
+}
+
+function createThreadingDiagnostics({ requested, selected, support, fallbackReason }) {
+  return Object.freeze({
+    requested,
+    selected,
+    supported: support.supported,
+    sharedArrayBuffer: support.sharedArrayBuffer,
+    crossOriginIsolated: support.crossOriginIsolated,
+    wasmSharedMemory: support.wasmSharedMemory,
+    fallbackReason: fallbackReason ?? null,
+    reasons: Object.freeze([...(support.reasons ?? [])])
   });
 }
 

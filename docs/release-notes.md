@@ -68,9 +68,13 @@ fixtures:
 
 - The package is private and unlicensed for npm publishing until the manifest is
   intentionally changed.
-- The package includes a small single-threaded `./wasm` preflight bridge, but
-  the full parser and extraction pipeline still run through JavaScript.
-- Threaded WASM, full Rust-side parsing, and a public `locateWasm` option are
+- The package includes a small single-threaded `./wasm` preflight bridge, and
+  an opt-in threaded WASM source can be selected only after runtime thread
+  feature detection passes. The full parser and extraction pipeline still run
+  through JavaScript.
+- The optional threaded WASM build command reports unavailable on stable
+  toolchains that cannot link a shared-memory `wasm32-unknown-unknown`
+  standard library. Full Rust-side parsing and a public `locateWasm` option are
   not implemented yet.
 
 #### Text Extraction
@@ -142,4 +146,6 @@ fixtures:
 - Keep CPU fallback as the correctness baseline. WebGPU and future WASM paths
   must preserve Markdown, IR, source-map, asset, warning, and diagnostic shapes.
 - Use `@pdf-2-llm/pdf2md/wasm` only for explicit WASM preflight loading until
-  the full Rust parser path is promoted.
+  the full Rust parser path is promoted. Threaded WASM sources must be supplied
+  explicitly and are selected only when `SharedArrayBuffer`, cross-origin
+  isolation, and WebAssembly shared memory support are available.
