@@ -128,6 +128,125 @@ function createGovernmentFormPdf() {
   return createPdfFromObjects(objects);
 }
 
+function createUnicodeTextEncoder(values) {
+  const codeByChar = new Map();
+  for (const value of values) {
+    for (const char of value) {
+      if (!codeByChar.has(char)) {
+        const code = codeByChar.size + 1;
+        if (code > 255) {
+          throw new Error("generated Unicode fixture exceeded one-byte CMap capacity");
+        }
+        codeByChar.set(char, code);
+      }
+    }
+  }
+
+  return {
+    cmap: createToUnicodeCMap(codeByChar),
+    hex(value) {
+      return [...value]
+        .map((char) => codeByChar.get(char).toString(16).padStart(2, "0").toUpperCase())
+        .join("");
+    }
+  };
+}
+
+function createToUnicodeCMap(codeByChar) {
+  const mappings = [...codeByChar.entries()]
+    .map(
+      ([char, code]) =>
+        `<${code.toString(16).padStart(2, "0").toUpperCase()}> <${utf16BeHex(char)}>`
+    )
+    .join("\n");
+  return [
+    "/CIDInit /ProcSet findresource begin",
+    "12 dict begin",
+    "begincmap",
+    "1 begincodespacerange",
+    "<00> <FF>",
+    "endcodespacerange",
+    `${codeByChar.size} beginbfchar`,
+    mappings,
+    "endbfchar",
+    "endcmap",
+    "CMapName currentdict /CMap defineresource pop",
+    "end",
+    "end"
+  ].join("\n");
+}
+
+function utf16BeHex(value) {
+  let hex = "";
+  for (let index = 0; index < value.length; index += 1) {
+    hex += value.charCodeAt(index).toString(16).padStart(4, "0").toUpperCase();
+  }
+  return hex;
+}
+
+function unicodeText(x, y, size, value, encoder) {
+  return `BT /F2 ${size} Tf ${x} ${y} Td <${encoder.hex(value)}> Tj ET`;
+}
+
+function verticalUnicodeText(x, y, size, value, encoder) {
+  return `BT /F2 ${size} Tf 0 1 -1 0 ${x} ${y} Tm <${encoder.hex(value)}> Tj ET`;
+}
+
+function createUnicodeTextPdf(operations, encoder) {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 7 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /SyntheticUnicode /Encoding /CustomEncoding /ToUnicode 6 0 R >>",
+    streamObject(encoder.cmap),
+    streamObject(`${operations.join("\n")}\n`)
+  ];
+  return createPdfFromObjects(objects);
+}
+
+function createRtlTextPdf() {
+  const encoder = createUnicodeTextEncoder([rtlLeftFragment, rtlRightFragment]);
+  return createUnicodeTextPdf(
+    [
+      text(72, 720, 22, "Synthetic RTL Text"),
+      unicodeText(260, 680, 12, rtlLeftFragment, encoder),
+      unicodeText(320, 680, 12, rtlRightFragment, encoder)
+    ],
+    encoder
+  );
+}
+
+function createCjkTextPdf() {
+  const encoder = createUnicodeTextEncoder([cjkFirstLine, cjkSecondLine]);
+  return createUnicodeTextPdf(
+    [
+      text(72, 720, 22, "Synthetic CJK Text"),
+      unicodeText(72, 680, 12, cjkFirstLine, encoder),
+      unicodeText(72, 666, 12, cjkSecondLine, encoder)
+    ],
+    encoder
+  );
+}
+
+function createVerticalWritingPdf() {
+  const encoder = createUnicodeTextEncoder([
+    verticalRightTop,
+    verticalRightBottom,
+    verticalLeftTop,
+    verticalLeftBottom
+  ]);
+  return createUnicodeTextPdf(
+    [
+      verticalUnicodeText(260, 666, 12, verticalLeftBottom, encoder),
+      verticalUnicodeText(320, 666, 12, verticalRightBottom, encoder),
+      verticalUnicodeText(260, 680, 12, verticalLeftTop, encoder),
+      verticalUnicodeText(320, 680, 12, verticalRightTop, encoder)
+    ],
+    encoder
+  );
+}
+
 function createImagePdf({ pages }) {
   const objects = new Map();
   const catalogId = 1;
@@ -502,6 +621,15 @@ function manifestEntry(fixture, pdfBytes) {
     notes: fixture.description
   };
 }
+
+const rtlRightFragment = "\u05d0\u05d1\u05d2";
+const rtlLeftFragment = "\u05d3\u05d4\u05d5";
+const cjkFirstLine = "\u3053\u308c\u306f\u4e00\u884c\u76ee";
+const cjkSecondLine = "\u3067\u3059\u7d9a\u304d";
+const verticalRightTop = "\u7e26";
+const verticalRightBottom = "\u66f8\u304d";
+const verticalLeftTop = "\u5217";
+const verticalLeftBottom = "\u4e8c";
 
 const fixtures = [
   {
@@ -1195,6 +1323,78 @@ const fixtures = [
       }
     ],
     createPdf: createGovernmentFormPdf,
+    pages: [
+      {
+        operations: []
+      }
+    ]
+  },
+  {
+    id: "synthetic-rtl-text",
+    kind: "rtl",
+    gate: "advanced-v1",
+    features: ["born-digital", "to-unicode", "rtl", "bidi"],
+    description: "Right-to-left text fixture with ToUnicode font mappings and row-order checks.",
+    minTextCoverage: 1,
+    must: ["extract_rtl_text", "preserve_rtl_reading_order", "emit_bidi_markup"],
+    mustNot: ["drop_bidi_markup", "reverse_rtl_fragments"],
+    structures: ["heading_level_1", "rtl_paragraph", "bidi_markup"],
+    snippets: [
+      { page: 1, contains: "Synthetic RTL Text" },
+      { page: 1, contains: rtlRightFragment }
+    ],
+    reviewNotes:
+      "Generated ToUnicode fixture requires exact RTL row ordering and dir=rtl paragraph output.",
+    expectedMarkdown: `# Synthetic RTL Text\n\n<p dir="rtl">${rtlRightFragment} ${rtlLeftFragment}</p>\n`,
+    createPdf: createRtlTextPdf,
+    pages: [
+      {
+        operations: []
+      }
+    ]
+  },
+  {
+    id: "synthetic-cjk-text",
+    kind: "cjk",
+    gate: "advanced-v1",
+    features: ["born-digital", "to-unicode", "cjk", "wrapped-lines"],
+    description: "CJK text fixture with ToUnicode mappings and wrapped-line paragraph joining.",
+    minTextCoverage: 1,
+    must: ["extract_cjk_text", "join_cjk_wrapped_lines_without_spaces"],
+    mustNot: ["insert_synthetic_cjk_spaces", "split_wrapped_cjk_paragraph"],
+    structures: ["heading_level_1", "cjk_paragraph"],
+    snippets: [
+      { page: 1, contains: "Synthetic CJK Text" },
+      { page: 1, contains: cjkFirstLine }
+    ],
+    reviewNotes:
+      "Generated ToUnicode fixture requires exact CJK text extraction without inserted spaces across wrapped lines.",
+    expectedMarkdown: `# Synthetic CJK Text\n\n${cjkFirstLine}${cjkSecondLine}\n`,
+    createPdf: createCjkTextPdf,
+    pages: [
+      {
+        operations: []
+      }
+    ]
+  },
+  {
+    id: "synthetic-vertical-writing",
+    kind: "vertical-writing",
+    gate: "advanced-v1",
+    features: ["born-digital", "to-unicode", "cjk", "vertical-writing"],
+    description: "Vertical writing fixture with ToUnicode mappings and vertical-rl column ordering.",
+    minTextCoverage: 1,
+    must: ["extract_vertical_text", "preserve_vertical_column_order", "emit_vertical_writing_markup"],
+    mustNot: ["flatten_vertical_columns", "drop_vertical_writing_markup"],
+    structures: ["vertical_writing", "vertical_rl_markup"],
+    snippets: [
+      { page: 1, contains: verticalRightTop },
+      { page: 1, contains: verticalLeftTop }
+    ],
+    reviewNotes:
+      "Generated ToUnicode fixture requires right-to-left vertical column order and writing-mode markup.",
+    expectedMarkdown: `<p style="writing-mode: vertical-rl">${verticalRightTop}${verticalRightBottom}</p>\n\n<p style="writing-mode: vertical-rl">${verticalLeftTop}${verticalLeftBottom}</p>\n`,
+    createPdf: createVerticalWritingPdf,
     pages: [
       {
         operations: []

@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace @pdf-2-llm/pdf2md",
-    "check": "npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze && npm run corpus:oracles && npm run corpus:previews && npm run corpus:acceptance && npm run corpus:run && npm run corpus:run:all && npm run corpus:run:text && npm run corpus:run:tables && npm run corpus:run:layout && npm run qa:diff-html && npm run qa:diff-html-tables && npm run qa:public-tables && npm run qa:rendered-html && npm run qa:compare-oracles && npm run qa:reading-order && npm run qa:running-content && npm run qa:tagged-structure && npm run qa:layout-overlay:smoke && npm run qa:benchmark:smoke && npm run qa:benchmark:long-memory && npm run qa:malformed && npm run fuzz:smoke && npm run build && npm run test:api",
+    "check": "npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze && npm run corpus:oracles && npm run corpus:previews && npm run corpus:acceptance && npm run corpus:run && npm run corpus:run:all && npm run corpus:run:text && npm run corpus:run:tables && npm run corpus:run:layout && npm run corpus:run:multilingual && npm run qa:diff-html && npm run qa:diff-html-tables && npm run qa:public-tables && npm run qa:rendered-html && npm run qa:compare-oracles && npm run qa:reading-order && npm run qa:running-content && npm run qa:tagged-structure && npm run qa:layout-overlay:smoke && npm run qa:benchmark:smoke && npm run qa:benchmark:long-memory && npm run qa:malformed && npm run fuzz:smoke && npm run build && npm run test:api",
     "corpus:acceptance": "node scripts/corpus/validate-acceptance.mjs --all --allow-empty",
     "corpus:analyze": "node scripts/corpus/analyze.mjs --all --dry-run",
     "corpus:candidates": "node scripts/corpus/retrieve.mjs --all --dry-run",
@@ -18,6 +18,7 @@
     "corpus:run": "node scripts/qa/run-corpus.mjs --list",
     "corpus:run:all": "node scripts/qa/run-corpus.mjs --all",
     "corpus:run:layout": "node scripts/qa/run-corpus.mjs --id synthetic-two-column --id synthetic-scientific-two-column --id synthetic-header-footer --id synthetic-footnote --assert-markdown",
+    "corpus:run:multilingual": "node scripts/qa/run-corpus.mjs --id synthetic-rtl-text --id synthetic-cjk-text --id synthetic-vertical-writing --assert-markdown",
     "corpus:run:tables": "node scripts/qa/run-corpus.mjs --gate tables-v1 --assert-markdown",
     "corpus:run:text": "node scripts/qa/run-corpus.mjs --gate text-mvp --assert-markdown",
     "corpus:validate": "node scripts/corpus/validate-manifest.mjs",

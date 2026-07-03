@@ -684,7 +684,7 @@ Gate 7 acceptance:
 - [x] Figure fixtures preserve captions and asset links.
 - [x] Government form fixtures extract fields and values.
 - [x] Annotation and attachment fixtures produce expected sidecars.
-- [ ] RTL, CJK, and vertical fixtures meet script-specific acceptance criteria.
+- [x] RTL, CJK, and vertical fixtures meet script-specific acceptance criteria.
 
 ## Phase 9: Gate 8 - Hardening, Security, And Release
 

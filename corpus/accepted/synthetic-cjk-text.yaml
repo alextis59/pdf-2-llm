@@ -1,0 +1,33 @@
+id: synthetic-cjk-text
+gate: advanced-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_cjk_text
+  - join_cjk_wrapped_lines_without_spaces
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - insert_synthetic_cjk_spaces
+  - split_wrapped_cjk_paragraph
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Synthetic CJK Text"
+  - page: 1
+    contains: "これは一行目"
+structure:
+  expected:
+    - heading_level_1
+    - cjk_paragraph
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Generated ToUnicode fixture requires exact CJK text extraction without inserted spaces across wrapped lines."

@@ -856,6 +856,90 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-government-form.yaml",
       "notes": "Government-style AcroForm fixture with filled text, checkbox, and radio fields."
+    },
+    {
+      "id": "synthetic-rtl-text",
+      "kind": "rtl",
+      "path": "corpus/generated/synthetic-rtl-text.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Right-to-left text fixture with ToUnicode font mappings and row-order checks.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "fcb5cf826d1c33c8504efcd24bcf6b36b28ab74b98d66204afcabbc0b944efc9",
+      "bytes": 1211,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "to-unicode",
+        "rtl",
+        "bidi"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-rtl-text.yaml",
+      "notes": "Right-to-left text fixture with ToUnicode font mappings and row-order checks."
+    },
+    {
+      "id": "synthetic-cjk-text",
+      "kind": "cjk",
+      "path": "corpus/generated/synthetic-cjk-text.pdf",
+      "source": {
+        "type": "generated",
+        "description": "CJK text fixture with ToUnicode mappings and wrapped-line paragraph joining.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "6b46c52c1099955970c723ae5a10fb8c1dd2cba0550b9fccd0a2ec18578b43fb",
+      "bytes": 1267,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "to-unicode",
+        "cjk",
+        "wrapped-lines"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-cjk-text.yaml",
+      "notes": "CJK text fixture with ToUnicode mappings and wrapped-line paragraph joining."
+    },
+    {
+      "id": "synthetic-vertical-writing",
+      "kind": "vertical-writing",
+      "path": "corpus/generated/synthetic-vertical-writing.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Vertical writing fixture with ToUnicode mappings and vertical-rl column ordering.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "f9ca3b21b10ab781adbcdd5a1cd4b564c34ebb4b3b511a20eb1234f686af5748",
+      "bytes": 1250,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "to-unicode",
+        "cjk",
+        "vertical-writing"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-vertical-writing.yaml",
+      "notes": "Vertical writing fixture with ToUnicode mappings and vertical-rl column ordering."
     }
   ]
 }

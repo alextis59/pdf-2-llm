@@ -405,6 +405,36 @@ test("extractContentStreamTextLines applies ToUnicode font maps to string bytes"
   assert.equal(lines[0].confidence, 0.95);
 });
 
+test("extractContentStreamTextLines marks decoded RTL script text", () => {
+  const rtlResources = {
+    ...resources,
+    fonts: {
+      ...resources.fonts,
+      F3: {
+        subtype: "Type1",
+        baseFont: "CustomHebrew",
+        encoding: "CustomEncoding",
+        hasToUnicode: true,
+        toUnicode: {
+          entries: 2,
+          codespaces: [{ start: "00", end: "FF", length: 1 }],
+          map: new Map([
+            ["01", "\u05d0"],
+            ["02", "\u05d1"]
+          ])
+        }
+      }
+    }
+  };
+  const lines = extractContentStreamTextLines("BT /F3 12 Tf 10 20 Td <0102> Tj ET", {
+    resources: rtlResources
+  });
+
+  assert.equal(lines[0].text, "\u05d0\u05d1");
+  assert.equal(lines[0].direction, "rtl");
+  assert.equal(lines[0].spans[0].direction, "rtl");
+});
+
 test("extractContentStreamTextLines records invisible text rendering mode", () => {
   const lines = extractContentStreamTextLines(
     [

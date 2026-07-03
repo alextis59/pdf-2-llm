@@ -720,7 +720,7 @@ function emitText(text, context) {
 
   const position = currentTextPosition(context.state);
   const metrics = measureText(context.state, text, position);
-  const direction = textDirectionFromState(context.state);
+  const direction = textDirectionFromContent(context.state, text);
   const confidence = textConfidence(context.state.font);
   const structure = currentStructureSignal(context.state);
   const mergeKey = `${context.options.pageIndex ?? ""}:${context.options.streamIndex ?? ""}:${context.textObjectId}:${context.lineSerial}`;
@@ -861,6 +861,43 @@ function currentTextPosition(state) {
 function textDirectionFromState(state) {
   const matrix = multiplyMatrices(state.ctm, state.textMatrix);
   return Math.abs(matrix[1]) > Math.abs(matrix[0]) * 1.25 ? "vertical" : "ltr";
+}
+
+function textDirectionFromContent(state, text) {
+  const matrixDirection = textDirectionFromState(state);
+  if (matrixDirection === "vertical") {
+    return "vertical";
+  }
+  return scriptTextDirection(text) === "rtl" ? "rtl" : matrixDirection;
+}
+
+function scriptTextDirection(text) {
+  let rtl = 0;
+  let ltr = 0;
+  for (const char of text) {
+    const codePoint = char.codePointAt(0);
+    if (isRtlCodePoint(codePoint)) {
+      rtl += 1;
+    } else if (isLatinCodePoint(codePoint)) {
+      ltr += 1;
+    }
+  }
+  return rtl > ltr ? "rtl" : ltr > 0 ? "ltr" : "unknown";
+}
+
+function isRtlCodePoint(codePoint) {
+  return (
+    (codePoint >= 0x0590 && codePoint <= 0x08ff) ||
+    (codePoint >= 0xfb1d && codePoint <= 0xfdff) ||
+    (codePoint >= 0xfe70 && codePoint <= 0xfeff)
+  );
+}
+
+function isLatinCodePoint(codePoint) {
+  return (
+    (codePoint >= 0x0041 && codePoint <= 0x005a) ||
+    (codePoint >= 0x0061 && codePoint <= 0x007a)
+  );
 }
 
 function mergeTextDirection(left, right) {

@@ -1,0 +1,68 @@
+%PDF-1.4
+% pdf-2-llm generated fixture
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 7 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /SyntheticUnicode /Encoding /CustomEncoding /ToUnicode 6 0 R >>
+endobj
+6 0 obj
+<< /Length 317 >>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+10 beginbfchar
+<01> <3053>
+<02> <308C>
+<03> <306F>
+<04> <4E00>
+<05> <884C>
+<06> <76EE>
+<07> <3067>
+<08> <3059>
+<09> <7D9A>
+<0A> <304D>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+endstream
+endobj
+7 0 obj
+<< /Length 134 >>
+stream
+BT /F1 22 Tf 72 720 Td (Synthetic CJK Text) Tj ET
+BT /F2 12 Tf 72 680 Td <010203040506> Tj ET
+BT /F2 12 Tf 72 666 Td <0708090A> Tj ET
+
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f
+0000000039 00000 n
+0000000088 00000 n
+0000000145 00000 n
+0000000281 00000 n
+0000000378 00000 n
+0000000498 00000 n
+0000000866 00000 n
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+1051
+%%EOF
