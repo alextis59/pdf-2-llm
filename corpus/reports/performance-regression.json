@@ -1,0 +1,135 @@
+{
+  "generatedAt": "2026-07-03T03:29:43.290Z",
+  "budget": {
+    "minPagesPerSecondRatio": 0.02,
+    "minPagesPerSecond": 10,
+    "maxStartupMeanRatio": 8,
+    "maxStartupMeanMs": 250,
+    "maxMemoryPeakDeltaRatio": 2,
+    "maxMemoryPeakDeltaBytes": 268435456
+  },
+  "inputs": {
+    "currentText": "corpus/reports/text-throughput-benchmark.json",
+    "baselineText": "corpus/reports/text-throughput-benchmark.json",
+    "currentOcr": "corpus/reports/ocr-throughput-benchmark.json",
+    "baselineOcr": "corpus/reports/ocr-throughput-benchmark.json",
+    "currentStartup": "corpus/reports/startup-benchmark.json",
+    "baselineStartup": "corpus/reports/startup-benchmark.json",
+    "currentMemory": "corpus/reports/long-memory-profile.json",
+    "baselineMemory": "corpus/reports/long-memory-profile.json"
+  },
+  "checks": [
+    {
+      "profile": "text-throughput",
+      "id": "text-throughput",
+      "metric": "throughputProfile.passed",
+      "direction": "equals",
+      "actual": true,
+      "baseline": true,
+      "threshold": true,
+      "passed": true
+    },
+    {
+      "profile": "text-throughput",
+      "id": "synthetic-headings-lists",
+      "metric": "pagesPerSecond",
+      "direction": "at-least",
+      "actual": 619.8769110417744,
+      "baseline": 619.8769110417744,
+      "threshold": 12.397538220835488,
+      "passed": true
+    },
+    {
+      "profile": "text-throughput",
+      "id": "synthetic-simple-text",
+      "metric": "pagesPerSecond",
+      "direction": "at-least",
+      "actual": 833.2066164937438,
+      "baseline": 833.2066164937438,
+      "threshold": 16.664132329874878,
+      "passed": true
+    },
+    {
+      "profile": "ocr-throughput",
+      "id": "ocr-throughput",
+      "metric": "throughputProfile.passed",
+      "direction": "equals",
+      "actual": true,
+      "baseline": true,
+      "threshold": true,
+      "passed": true
+    },
+    {
+      "profile": "ocr-throughput",
+      "id": "synthetic-scanned-text",
+      "metric": "pagesPerSecond",
+      "direction": "at-least",
+      "actual": 596.4048121518667,
+      "baseline": 596.4048121518667,
+      "threshold": 11.928096243037334,
+      "passed": true
+    },
+    {
+      "profile": "ocr-throughput",
+      "id": "synthetic-searchable-scan-regions",
+      "metric": "pagesPerSecond",
+      "direction": "at-least",
+      "actual": 589.8822801427609,
+      "baseline": 589.8822801427609,
+      "threshold": 11.79764560285522,
+      "passed": true
+    },
+    {
+      "profile": "entrypoint-startup",
+      "id": "entrypoint-startup",
+      "metric": "startupProfile.passed",
+      "direction": "equals",
+      "actual": true,
+      "baseline": true,
+      "threshold": true,
+      "passed": true
+    },
+    {
+      "profile": "entrypoint-startup",
+      "id": "node-entrypoint",
+      "metric": "totalStartupMeanMs",
+      "direction": "at-most",
+      "actual": 25.312643333333337,
+      "baseline": 25.312643333333337,
+      "threshold": 202.5011466666667,
+      "passed": true
+    },
+    {
+      "profile": "entrypoint-startup",
+      "id": "browser-entrypoint",
+      "metric": "totalStartupMeanMs",
+      "direction": "at-most",
+      "actual": 25.417073333333335,
+      "baseline": 25.417073333333335,
+      "threshold": 203.33658666666668,
+      "passed": true
+    },
+    {
+      "profile": "long-memory",
+      "id": "long-memory",
+      "metric": "memoryProfile.passed",
+      "direction": "equals",
+      "actual": true,
+      "baseline": true,
+      "threshold": true,
+      "passed": true
+    },
+    {
+      "profile": "long-memory",
+      "id": "nist-sp800-63b-4",
+      "metric": "rssPeakDeltaBytes",
+      "direction": "at-most",
+      "actual": 151023616,
+      "baseline": 151023616,
+      "threshold": 268435456,
+      "passed": true
+    }
+  ],
+  "violations": [],
+  "passed": true
+}

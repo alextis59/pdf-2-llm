@@ -20,6 +20,10 @@ import {
   createModelSizeReport,
   evaluateModelSizeBudget
 } from "../../../scripts/qa/check-model-size.mjs";
+import {
+  createPerformanceRegressionReport,
+  evaluatePerformanceRegression
+} from "../../../scripts/qa/check-performance-regression.mjs";
 
 test("benchmark duration summary reports min max mean and median", () => {
   assert.deepEqual(summarizeDurations([9, 1, 5, 3]), {
@@ -388,6 +392,64 @@ test("model size report evaluates bundled and lazy model budgets", () => {
   assert.equal(report.passed, false);
 });
 
+test("performance regression report evaluates throughput startup and memory budgets", () => {
+  const currentReports = {
+    text: throughputReport("text-throughput", "text-a", 1),
+    ocr: throughputReport("ocr-throughput", "ocr-a", 40),
+    startup: startupReport("node-entrypoint", 90),
+    memory: memoryReport("manual-a", 120)
+  };
+  const baselineReports = {
+    text: throughputReport("text-throughput", "text-a", 100),
+    ocr: throughputReport("ocr-throughput", "ocr-a", 100),
+    startup: startupReport("node-entrypoint", 10),
+    memory: memoryReport("manual-a", 100)
+  };
+  const budget = {
+    minPagesPerSecondRatio: 0.2,
+    minPagesPerSecond: 5,
+    maxStartupMeanRatio: 5,
+    maxStartupMeanMs: 100,
+    maxMemoryPeakDeltaRatio: 2,
+    maxMemoryPeakDeltaBytes: 300
+  };
+
+  const checks = evaluatePerformanceRegression({ currentReports, baselineReports }, budget);
+  assert.deepEqual(
+    checks.filter((check) => !check.passed).map((check) => ({
+      profile: check.profile,
+      id: check.id,
+      metric: check.metric,
+      actual: check.actual,
+      threshold: check.threshold
+    })),
+    [
+      {
+        profile: "text-throughput",
+        id: "text-a",
+        metric: "pagesPerSecond",
+        actual: 1,
+        threshold: 20
+      },
+      {
+        profile: "entrypoint-startup",
+        id: "node-entrypoint",
+        metric: "totalStartupMeanMs",
+        actual: 90,
+        threshold: 50
+      }
+    ]
+  );
+
+  const report = createPerformanceRegressionReport(
+    { currentReports, baselineReports, inputs: { currentText: "current.json" } },
+    { budget }
+  );
+  assert.equal(report.passed, false);
+  assert.equal(report.violations.length, 2);
+  assert.equal(report.inputs.currentText, "current.json");
+});
+
 test("benchmark memory summary reports deltas", () => {
   assert.deepEqual(
     summarizeMemory(
@@ -422,6 +484,54 @@ test("benchmark peak memory summary reports absolute and delta peaks", () => {
     }
   );
 });
+
+function throughputReport(profileType, id, pagesPerSecond) {
+  return {
+    throughputProfile: {
+      profileType,
+      passed: true,
+      cases: [
+        {
+          id,
+          pagesPerSecond,
+          passed: true
+        }
+      ]
+    }
+  };
+}
+
+function startupReport(id, totalStartupMeanMs) {
+  return {
+    startupProfile: {
+      passed: true,
+      cases: [
+        {
+          id,
+          totalStartupMs: {
+            meanMs: totalStartupMeanMs
+          },
+          passed: true
+        }
+      ]
+    }
+  };
+}
+
+function memoryReport(id, rssPeakDeltaBytes) {
+  return {
+    memoryProfile: {
+      passed: true,
+      cases: [
+        {
+          id,
+          rssPeakDeltaBytes,
+          passed: true
+        }
+      ]
+    }
+  };
+}
 
 test("benchmark startup and throughput durations are tracked separately", () => {
   assert.deepEqual(splitStartupAndThroughputDurations([12, 8, 10]), {

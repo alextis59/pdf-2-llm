@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace @pdf-2-llm/pdf2md",
-    "check": "npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze && npm run corpus:oracles && npm run corpus:previews && npm run corpus:acceptance && npm run corpus:run && npm run corpus:run:all && npm run corpus:run:text && npm run corpus:run:tables && npm run corpus:run:layout && npm run corpus:run:multilingual && npm run qa:diff-html && npm run qa:diff-html-tables && npm run qa:public-tables && npm run qa:rendered-html && npm run qa:compare-oracles && npm run qa:reading-order && npm run qa:running-content && npm run qa:tagged-structure && npm run qa:layout-overlay:smoke && npm run qa:benchmark:smoke && npm run qa:benchmark:ocr-throughput && npm run qa:benchmark:startup && npm run qa:benchmark:long-memory && npm run qa:malformed && npm run qa:dependencies && npm run qa:package-size && npm run qa:model-size && npm run fuzz:smoke && npm run build && npm run test:api",
+    "check": "npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze && npm run corpus:oracles && npm run corpus:previews && npm run corpus:acceptance && npm run corpus:run && npm run corpus:run:all && npm run corpus:run:text && npm run corpus:run:tables && npm run corpus:run:layout && npm run corpus:run:multilingual && npm run qa:diff-html && npm run qa:diff-html-tables && npm run qa:public-tables && npm run qa:rendered-html && npm run qa:compare-oracles && npm run qa:reading-order && npm run qa:running-content && npm run qa:tagged-structure && npm run qa:layout-overlay:smoke && npm run qa:benchmark:smoke && npm run qa:benchmark:ocr-throughput && npm run qa:benchmark:startup && npm run qa:benchmark:long-memory && npm run qa:malformed && npm run qa:dependencies && npm run qa:package-size && npm run qa:model-size && npm run qa:performance-regression && npm run fuzz:smoke && npm run build && npm run test:api",
     "corpus:acceptance": "node scripts/corpus/validate-acceptance.mjs --all --allow-empty",
     "corpus:analyze": "node scripts/corpus/analyze.mjs --all --dry-run",
     "corpus:candidates": "node scripts/corpus/retrieve.mjs --all --dry-run",
@@ -46,6 +46,8 @@
     "qa:model-size:report": "node scripts/qa/check-model-size.mjs --benchmark-report corpus/reports/ocr-throughput-benchmark.json --benchmark-report corpus/reports/webgpu-benchmark.json --report corpus/reports/model-size-budget.json",
     "qa:package-size": "node scripts/qa/check-package-size.mjs --report .temp/qa/package-size-budget.json",
     "qa:package-size:report": "node scripts/qa/check-package-size.mjs --report corpus/reports/package-size-budget.json",
+    "qa:performance-regression": "node scripts/qa/check-performance-regression.mjs --report .temp/qa/performance-regression.json",
+    "qa:performance-regression:report": "node scripts/qa/check-performance-regression.mjs --current-text corpus/reports/text-throughput-benchmark.json --current-ocr corpus/reports/ocr-throughput-benchmark.json --current-startup corpus/reports/startup-benchmark.json --current-memory corpus/reports/long-memory-profile.json --report corpus/reports/performance-regression.json",
     "qa:reading-order": "node scripts/qa/compare-oracles.mjs --reading-order-gated",
     "qa:rendered-html": "node scripts/qa/check-rendered-html.mjs --rendered-html-gated",
     "qa:running-content": "node scripts/qa/compare-running-content.mjs --gate layout-v1",

@@ -714,7 +714,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Add startup benchmark for browser and Node.
 - [x] Add package-size budget.
 - [x] Add model-size budget.
-- [ ] Add performance regression threshold in CI.
+- [x] Add performance regression threshold in CI.
 
 ### 9.3 Developer Experience
 
