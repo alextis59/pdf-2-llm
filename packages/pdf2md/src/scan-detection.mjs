@@ -1,32 +1,55 @@
 const defaultImageCoverageThreshold = 0.5;
+const defaultMinTextLines = 3;
+const defaultMinTextAreaRatio = 0.01;
 
 export function createScanDetection(pages = [], options = {}) {
-  const textLinesByPage = countByPage(options.textLines ?? []);
+  const textLinesByPage = groupByPage(options.textLines ?? []);
   const imageDrawsByPage = groupByPage(options.imageDraws ?? []);
   const imageCoverageThreshold =
     Number.isFinite(options.imageCoverageThreshold) && options.imageCoverageThreshold > 0
       ? options.imageCoverageThreshold
       : defaultImageCoverageThreshold;
+  const minTextLines =
+    Number.isInteger(options.minTextLines) && options.minTextLines >= 0
+      ? options.minTextLines
+      : defaultMinTextLines;
+  const minTextAreaRatio =
+    Number.isFinite(options.minTextAreaRatio) && options.minTextAreaRatio >= 0
+      ? options.minTextAreaRatio
+      : defaultMinTextAreaRatio;
 
   const pageDiagnostics = pages.map((page) =>
     createPageScanDiagnostics(page, {
       imageCoverageThreshold,
       imageDraws: imageDrawsByPage.get(page.pageIndex) ?? [],
-      textLineCount: textLinesByPage.get(page.pageIndex) ?? 0
+      minTextAreaRatio,
+      minTextLines,
+      textLines: textLinesByPage.get(page.pageIndex) ?? []
     })
   );
 
   return {
     thresholds: {
-      imageCoverageRatio: imageCoverageThreshold
+      imageCoverageRatio: imageCoverageThreshold,
+      minTextLines,
+      minTextAreaRatio
     },
     imageDominantPages: pageDiagnostics.filter((page) => page.imageDominant).length,
+    littleOrNoTextPages: pageDiagnostics.filter((page) => page.littleOrNoText).length,
     pages: pageDiagnostics
   };
 }
 
 function createPageScanDiagnostics(page, options) {
   const imageDraws = options.imageDraws.filter((image) => Number.isFinite(image.area) && image.area > 0);
+  const textLines = options.textLines.filter(
+    (line) => Number.isFinite(line.width) && Number.isFinite(line.height)
+  );
+  const textLineCount = options.textLines.length;
+  const textArea = textLines.reduce(
+    (total, line) => total + Math.max(0, line.width) * Math.max(0, line.height),
+    0
+  );
   const totalImageArea = imageDraws.reduce((total, image) => total + image.area, 0);
   const maxImageArea = imageDraws.reduce((max, image) => Math.max(max, image.area), 0);
   const pageArea =
@@ -39,10 +62,23 @@ function createPageScanDiagnostics(page, options) {
     pageArea && pageArea > 0 ? normalizeRatio(Math.min(maxImageArea / pageArea, 1)) : null;
   const imageDominant =
     imageCoverageRatio !== null && imageCoverageRatio >= options.imageCoverageThreshold;
+  const textAreaRatio =
+    pageArea && pageArea > 0 ? normalizeRatio(Math.min(textArea / pageArea, 1)) : null;
+  const noText = textLineCount === 0;
+  const littleText =
+    !noText &&
+    textLineCount < options.minTextLines &&
+    (textAreaRatio === null || textAreaRatio < options.minTextAreaRatio);
+  const littleOrNoText = noText || littleText;
 
   return {
     pageIndex: page.pageIndex,
-    textLineCount: options.textLineCount,
+    textLineCount,
+    textArea: normalizeNullableNumber(textArea),
+    textAreaRatio,
+    noText,
+    littleText,
+    littleOrNoText,
     imageResourceCount: countImageResources(page),
     imageDrawCount: imageDraws.length,
     pageArea: normalizeNullableNumber(pageArea),
@@ -58,15 +94,6 @@ function createPageScanDiagnostics(page, options) {
     }),
     imageDraws: imageDraws.map(summarizeImageDraw)
   };
-}
-
-function countByPage(items) {
-  const counts = new Map();
-  for (const item of items) {
-    const pageIndex = item.pageIndex ?? null;
-    counts.set(pageIndex, (counts.get(pageIndex) ?? 0) + 1);
-  }
-  return counts;
 }
 
 function groupByPage(items) {

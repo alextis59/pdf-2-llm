@@ -202,10 +202,18 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
   );
 
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.imageCoverageRatio, 0.5);
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextLines, 3);
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextAreaRatio, 0.01);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.imageDominantPages, 1);
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.littleOrNoTextPages, 1);
   assert.deepEqual(fullPage.diagnostics.extraction.scanDetection.pages[0], {
     pageIndex: 0,
     textLineCount: 0,
+    textArea: 0,
+    textAreaRatio: 0,
+    noText: true,
+    littleText: false,
+    littleOrNoText: true,
     imageResourceCount: 1,
     imageDrawCount: 1,
     pageArea: 484704,
@@ -235,6 +243,25 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
   assert.equal(smallImage.diagnostics.extraction.scanDetection.imageDominantPages, 0);
   assert.equal(smallImage.diagnostics.extraction.scanDetection.pages[0].imageDominant, false);
   assert.equal(smallImage.diagnostics.extraction.scanDetection.pages[0].imageCoverageRatio, 0.010695);
+});
+
+test("convertPdfToMarkdown reports little and no-text scan detection diagnostics", async () => {
+  const tinyText = await convertPdfToMarkdown(
+    createSinglePageTextPdf([textOperation(72, 720, 12, "Tiny")])
+  );
+  const normalText = await convertPdfToMarkdown(fixturePath.pathname);
+
+  assert.equal(tinyText.diagnostics.extraction.scanDetection.littleOrNoTextPages, 1);
+  assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].textLineCount, 1);
+  assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].textArea, 288);
+  assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].textAreaRatio, 0.000594);
+  assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].noText, false);
+  assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].littleText, true);
+  assert.equal(tinyText.diagnostics.extraction.scanDetection.pages[0].littleOrNoText, true);
+  assert.equal(normalText.diagnostics.extraction.scanDetection.littleOrNoTextPages, 0);
+  assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].noText, false);
+  assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].littleText, false);
+  assert.equal(normalText.diagnostics.extraction.scanDetection.pages[0].littleOrNoText, false);
 });
 
 test("CLI emits JSON scaffold output", () => {

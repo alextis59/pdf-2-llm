@@ -164,14 +164,22 @@ export type RasterTargetDiagnostics = {
 export type ScanDetectionDiagnostics = {
   thresholds: {
     imageCoverageRatio: number;
+    minTextLines: number;
+    minTextAreaRatio: number;
   };
   imageDominantPages: number;
+  littleOrNoTextPages: number;
   pages: ScanDetectionPageDiagnostics[];
 };
 
 export type ScanDetectionPageDiagnostics = {
   pageIndex: number;
   textLineCount: number;
+  textArea: number | null;
+  textAreaRatio: number | null;
+  noText: boolean;
+  littleText: boolean;
+  littleOrNoText: boolean;
   imageResourceCount: number;
   imageDrawCount: number;
   pageArea: number | null;
