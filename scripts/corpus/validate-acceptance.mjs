@@ -348,6 +348,8 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
 
   for (const metricName of [
     "maxReadingOrderDistance",
+    "maxOcrCharacterErrorRate",
+    "maxOcrWordErrorRate",
     "minTableCellAdjacency",
     "minTableCsvCellTextAccuracy",
     "minTableSpanAccuracy"

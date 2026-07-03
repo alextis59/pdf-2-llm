@@ -149,6 +149,9 @@
         "acceptanceFile": {
           "type": "string"
         },
+        "ocrResultsFile": {
+          "type": "string"
+        },
         "notes": {
           "type": "string"
         }

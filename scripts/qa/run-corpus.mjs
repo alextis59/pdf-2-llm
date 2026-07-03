@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { convertPdfToMarkdown } from "../../packages/pdf2md/src/index.mjs";
+import { compareOcrAccuracy } from "./ocr-accuracy.mjs";
 import { compareTableCellAdjacency } from "./table-adjacency.mjs";
 import { compareTableCsvCellTextAccuracy } from "./table-csv-accuracy.mjs";
 import { compareTableSpanAccuracy } from "./table-span-accuracy.mjs";
@@ -116,6 +117,8 @@ async function loadAcceptance(entry) {
     sourceType: scalars.get("sourceType"),
     expectedMode: scalars.get("expectedMode"),
     gating: scalars.get("gating") === "true",
+    maxOcrCharacterErrorRate: readNumber(metrics.get("maxOcrCharacterErrorRate")),
+    maxOcrWordErrorRate: readNumber(metrics.get("maxOcrWordErrorRate")),
     minTableCellAdjacency: readNumber(metrics.get("minTableCellAdjacency")),
     minTableCsvCellTextAccuracy: readNumber(metrics.get("minTableCsvCellTextAccuracy")),
     minTableSpanAccuracy: readNumber(metrics.get("minTableSpanAccuracy")),
@@ -197,8 +200,9 @@ function printCase(prefix, corpusCase) {
 
 async function runCase(corpusCase) {
   const { entry, acceptance } = corpusCase;
+  const ocrResults = entry.ocrResultsFile ? await readOcrResults(entry) : null;
   const result = await convertPdfToMarkdown(path.join(repoRoot, entry.path), {
-    ocr: { enabled: false }
+    ocr: ocrResults ? { results: ocrResults } : { enabled: false }
   });
   const errors = [];
   const details = [];
@@ -220,6 +224,8 @@ async function runCase(corpusCase) {
 
   if (
     assertMarkdown ||
+    acceptance.maxOcrCharacterErrorRate !== null ||
+    acceptance.maxOcrWordErrorRate !== null ||
     acceptance.minTableCellAdjacency !== null ||
     acceptance.minTableCsvCellTextAccuracy !== null ||
     acceptance.minTableSpanAccuracy !== null
@@ -233,6 +239,40 @@ async function runCase(corpusCase) {
     } else {
       details.push("markdown=match");
     }
+  }
+
+  if (acceptance.maxOcrCharacterErrorRate !== null || acceptance.maxOcrWordErrorRate !== null) {
+    const ocrAccuracy = compareOcrAccuracy(expected, result.markdown);
+    if (
+      acceptance.maxOcrCharacterErrorRate !== null &&
+      ocrAccuracy.characterErrorRate - Number.EPSILON > acceptance.maxOcrCharacterErrorRate
+    ) {
+      errors.push(
+        `OCR character error rate ${formatNumber(ocrAccuracy.characterErrorRate)} above ${formatNumber(
+          acceptance.maxOcrCharacterErrorRate
+        )} (${ocrAccuracy.characterEdits}/${ocrAccuracy.expectedCharacters} expected characters edited)`
+      );
+    }
+    if (
+      acceptance.maxOcrWordErrorRate !== null &&
+      ocrAccuracy.wordErrorRate - Number.EPSILON > acceptance.maxOcrWordErrorRate
+    ) {
+      errors.push(
+        `OCR word error rate ${formatNumber(ocrAccuracy.wordErrorRate)} above ${formatNumber(
+          acceptance.maxOcrWordErrorRate
+        )} (${ocrAccuracy.wordEdits}/${ocrAccuracy.expectedWords} expected words edited)`
+      );
+    }
+    details.push(
+      `ocrCER=${formatNumber(ocrAccuracy.characterErrorRate)} max=${formatNumber(
+        acceptance.maxOcrCharacterErrorRate
+      )} edits=${ocrAccuracy.characterEdits}/${ocrAccuracy.expectedCharacters}`
+    );
+    details.push(
+      `ocrWER=${formatNumber(ocrAccuracy.wordErrorRate)} max=${formatNumber(
+        acceptance.maxOcrWordErrorRate
+      )} edits=${ocrAccuracy.wordEdits}/${ocrAccuracy.expectedWords}`
+    );
   }
 
   if (acceptance.minTableCellAdjacency !== null) {
@@ -300,6 +340,22 @@ async function readExpectedMarkdown(entry) {
     return await readFile(expectedPath, "utf8");
   } catch (error) {
     throw new Error(`${entry.id}: expected Markdown is not readable at ${expectedPath}: ${error.message}`);
+  }
+}
+
+async function readOcrResults(entry) {
+  const ocrPath = path.join(repoRoot, entry.ocrResultsFile);
+  try {
+    const payload = JSON.parse(await readFile(ocrPath, "utf8"));
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (Array.isArray(payload.results)) {
+      return payload.results;
+    }
+    throw new Error("expected a JSON array or an object with a results array");
+  } catch (error) {
+    throw new Error(`${entry.id}: OCR results are not readable at ${ocrPath}: ${error.message}`);
   }
 }
 

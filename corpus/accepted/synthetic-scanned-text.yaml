@@ -1,0 +1,34 @@
+id: synthetic-scanned-text
+gate: ocr-v1
+sourceType: scanned
+expectedMode: ocr
+gating: true
+must:
+  - route_as_scanned
+  - extract_ocr_text
+  - meet_ocr_error_thresholds
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - emit_empty_markdown
+metrics:
+  minTextCoverage: 1
+  maxOcrCharacterErrorRate: 0
+  maxOcrWordErrorRate: 0
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Synthetic Scanned Text"
+  - page: 1
+    contains: "Numbers 12345 are retained."
+structure:
+  expected:
+    - ocr_text_lines
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Generated image-only PDF has no text layer; injected OCR boxes are deterministic, so both character and word error rates must be zero."

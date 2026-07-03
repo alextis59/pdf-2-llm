@@ -771,6 +771,34 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-complex-spanned-table.yaml",
       "notes": "Visible ruled table fixture with a merged header cell requiring HTML output."
+    },
+    {
+      "id": "synthetic-scanned-text",
+      "kind": "scanned",
+      "path": "corpus/generated/synthetic-scanned-text.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Image-only scanned page fixture with injected OCR boxes for accuracy gating.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "440455e37d18dd2ec8eadbb0be3ba2377cb8b24d3837780f1c8fbbd366ed7967",
+      "bytes": 828,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "scanned",
+        "image-dominant",
+        "ocr-results"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-scanned-text.yaml",
+      "ocrResultsFile": "corpus/ocr/synthetic-scanned-text.json",
+      "notes": "Image-only scanned page fixture with injected OCR boxes for accuracy gating."
     }
   ]
 }

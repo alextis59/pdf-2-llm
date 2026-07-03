@@ -88,6 +88,73 @@ function createPdf({ pages }) {
   return Buffer.from(body, "binary");
 }
 
+function createImagePdf({ pages }) {
+  const objects = new Map();
+  const catalogId = 1;
+  const pagesId = 2;
+  const fontId = 3;
+  const imageId = 4;
+  const pageIds = [];
+
+  objects.set(
+    fontId,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"
+  );
+  objects.set(
+    imageId,
+    streamObject(
+      "abc",
+      "/Type /XObject /Subtype /Image /Width 2550 /Height 3300 /ColorSpace /DeviceRGB /BitsPerComponent 8"
+    )
+  );
+
+  pages.forEach((page, index) => {
+    const pageId = 5 + index * 2;
+    const contentId = pageId + 1;
+    pageIds.push(pageId);
+    const content = `${page.operations.join("\n")}\n`;
+    objects.set(contentId, streamObject(content));
+
+    const mediaBox = page.mediaBox ?? [0, 0, 612, 792];
+    const cropBox = page.cropBox ? `/CropBox [${page.cropBox.join(" ")}] ` : "";
+    const rotate = page.rotate ? `/Rotate ${page.rotate} ` : "";
+    objects.set(
+      pageId,
+      `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [${mediaBox.join(" ")}] ${cropBox}${rotate}/Resources << /Font << /F1 ${fontId} 0 R >> /XObject << /ImScan ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`
+    );
+  });
+
+  objects.set(
+    pagesId,
+    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`
+  );
+  objects.set(catalogId, `<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+
+  const maxObjectId = Math.max(...objects.keys());
+  let body = "%PDF-1.4\n% pdf-2-llm generated fixture\n";
+  const offsets = Array(maxObjectId + 1).fill(0);
+
+  for (let objectId = 1; objectId <= maxObjectId; objectId += 1) {
+    const objectBody = objects.get(objectId);
+    if (!objectBody) {
+      continue;
+    }
+    offsets[objectId] = Buffer.byteLength(body, "binary");
+    body += `${objectId} 0 obj\n${objectBody}\nendobj\n`;
+  }
+
+  const xrefOffset = Buffer.byteLength(body, "binary");
+  body += `xref\n0 ${maxObjectId + 1}\n`;
+  body += "0000000000 65535 f\n";
+  for (let objectId = 1; objectId <= maxObjectId; objectId += 1) {
+    body += `${String(offsets[objectId]).padStart(10, "0")} 00000 n\n`;
+  }
+  body += `trailer\n<< /Size ${maxObjectId + 1} /Root ${catalogId} 0 R >>\n`;
+  body += `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  return Buffer.from(body, "binary");
+}
+
 function createXrefStreamPdf({ pages }) {
   const objects = new Map();
   const catalogId = 1;
@@ -290,11 +357,19 @@ function acceptanceYaml(fixture) {
     fixture.minTableCsvCellTextAccuracy == null
       ? ""
       : `  minTableCsvCellTextAccuracy: ${fixture.minTableCsvCellTextAccuracy}\n`;
+  const ocrCharacterMetric =
+    fixture.maxOcrCharacterErrorRate == null
+      ? ""
+      : `  maxOcrCharacterErrorRate: ${fixture.maxOcrCharacterErrorRate}\n`;
+  const ocrWordMetric =
+    fixture.maxOcrWordErrorRate == null
+      ? ""
+      : `  maxOcrWordErrorRate: ${fixture.maxOcrWordErrorRate}\n`;
 
   return `id: ${fixture.id}
 gate: ${fixture.gate}
-sourceType: digital
-expectedMode: pdf-text
+sourceType: ${fixture.sourceType ?? "digital"}
+expectedMode: ${fixture.expectedMode ?? "pdf-text"}
 gating: true
 must:
 ${yamlList(fixture.must)}
@@ -307,6 +382,8 @@ ${yamlList([
 metrics:
   minTextCoverage: ${fixture.minTextCoverage}
 ${readingOrderMetric}\
+${ocrCharacterMetric}\
+${ocrWordMetric}\
 ${renderedHtmlTextMetric}\
 ${renderedHtmlHeadingMetric}\
 ${renderedHtmlParagraphMetric}\
@@ -353,6 +430,7 @@ function manifestEntry(fixture, pdfBytes) {
     pdfVersion: fixture.pdfVersion ?? "1.4",
     features: fixture.features,
     acceptanceFile: `corpus/accepted/${fixture.id}.yaml`,
+    ...(fixture.ocrResults ? { ocrResultsFile: `corpus/ocr/${fixture.id}.json` } : {}),
     notes: fixture.description
   };
 }
@@ -743,6 +821,68 @@ const fixtures = [
     ]
   },
   {
+    id: "synthetic-scanned-text",
+    kind: "scanned",
+    gate: "ocr-v1",
+    sourceType: "scanned",
+    expectedMode: "ocr",
+    createPdf: createImagePdf,
+    features: ["scanned", "image-dominant", "ocr-results"],
+    description: "Image-only scanned page fixture with injected OCR boxes for accuracy gating.",
+    minTextCoverage: 1,
+    maxOcrCharacterErrorRate: 0,
+    maxOcrWordErrorRate: 0,
+    must: ["route_as_scanned", "extract_ocr_text", "meet_ocr_error_thresholds"],
+    mustNot: ["emit_empty_markdown"],
+    structures: ["ocr_text_lines"],
+    snippets: [
+      { page: 1, contains: "Synthetic Scanned Text" },
+      { page: 1, contains: "Numbers 12345 are retained." }
+    ],
+    reviewNotes:
+      "Generated image-only PDF has no text layer; injected OCR boxes are deterministic, so both character and word error rates must be zero.",
+    expectedMarkdown:
+      "# Synthetic Scanned Text\n\nOCR fixture body text.\n\nNumbers 12345 are retained.\n",
+    ocrResults: [
+      {
+        pageIndex: 0,
+        language: "eng",
+        coordinateSpace: "page",
+        lines: [
+          {
+            text: "Synthetic Scanned Text",
+            confidence: 99,
+            x: 72,
+            y: 720,
+            width: 240,
+            height: 22
+          },
+          {
+            text: "OCR fixture body text.",
+            confidence: 98,
+            x: 72,
+            y: 680,
+            width: 180,
+            height: 12
+          },
+          {
+            text: "Numbers 12345 are retained.",
+            confidence: 97,
+            x: 72,
+            y: 650,
+            width: 210,
+            height: 12
+          }
+        ]
+      }
+    ],
+    pages: [
+      {
+        operations: ["q 612 0 0 792 0 0 cm /ImScan Do Q"]
+      }
+    ]
+  },
+  {
     id: "synthetic-xref-stream",
     kind: "pdf-feature",
     gate: "robust-parser",
@@ -902,6 +1042,20 @@ async function writeFixtureFiles(fixture) {
     path.join(repoRoot, "corpus", "accepted", `${fixture.id}.yaml`),
     acceptanceYaml(fixture)
   );
+  if (fixture.ocrResults) {
+    await writeFile(
+      path.join(repoRoot, "corpus", "ocr", `${fixture.id}.json`),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          source: "generated-fixture",
+          results: fixture.ocrResults
+        },
+        null,
+        2
+      )}\n`
+    );
+  }
   return manifestEntry(fixture, pdfBytes);
 }
 
@@ -930,6 +1084,7 @@ async function main() {
   await mkdir(path.join(repoRoot, "corpus", "generated"), { recursive: true });
   await mkdir(path.join(repoRoot, "corpus", "expected"), { recursive: true });
   await mkdir(path.join(repoRoot, "corpus", "accepted"), { recursive: true });
+  await mkdir(path.join(repoRoot, "corpus", "ocr"), { recursive: true });
 
   const entries = [];
   for (const fixture of fixtures) {

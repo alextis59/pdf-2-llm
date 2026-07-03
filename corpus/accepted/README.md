@@ -51,6 +51,11 @@ expected behavior has been written here.
   normalized reading-order edit distance from 0 to 1. Reviewed expected
   Markdown is preferred as the reading-order oracle when available because
   external text tools can interleave multi-column pages.
+- If `metrics.maxOcrCharacterErrorRate` or `metrics.maxOcrWordErrorRate` is
+  present, the corpus runner compares expected Markdown with OCR-produced
+  Markdown after Markdown syntax normalization. Character error rate catches
+  small glyph mistakes; word error rate catches substitutions, insertions, and
+  omissions at token level.
 - If `metrics.maxRssDeltaBytes` or `metrics.maxHeapUsedDeltaBytes` is present,
   the benchmark harness enforces conversion memory deltas in bytes. Run these
   gates with `node --expose-gc` so before/after snapshots measure retained

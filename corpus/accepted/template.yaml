@@ -12,6 +12,8 @@ mustNot:
   - emit_binary_garbage
 metrics:
   minTextCoverage: 0.98
+  maxOcrCharacterErrorRate: 0.02
+  maxOcrWordErrorRate: 0.05
   minRunningContentPrecision: 1
   minRunningContentRecall: 1
   maxUnexpectedWarnings: 0

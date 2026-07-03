@@ -596,7 +596,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 
 Gate 5 acceptance:
 
-- [ ] Scanned text fixtures meet OCR character/word error thresholds.
+- [x] Scanned text fixtures meet OCR character/word error thresholds.
 - [ ] Searchable scan fixtures choose reliable text per region.
 - [x] Bad OCR overlay fixtures do not blindly trust hidden text.
 - [x] OCR can be disabled and produces a clear warning.

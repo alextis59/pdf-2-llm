@@ -209,6 +209,7 @@ async function validateEntry(entry, index, ids) {
       "pdfVersion",
       "features",
       "acceptanceFile",
+      "ocrResultsFile",
       "notes"
     ]),
     location
@@ -242,6 +243,10 @@ async function validateEntry(entry, index, ids) {
 
   const acceptanceFile = expectString(entry, "acceptanceFile", location);
   validatePathSafety(acceptanceFile, `${location}.acceptanceFile`);
+  if (entry.ocrResultsFile !== undefined) {
+    expectString(entry, "ocrResultsFile", location);
+    validatePathSafety(entry.ocrResultsFile, `${location}.ocrResultsFile`);
+  }
   expectString(entry, "notes", location);
 
   if (redistributable === false && relativePath && !relativePath.startsWith("corpus/raw/local-only/")) {
@@ -278,6 +283,20 @@ async function validateEntry(entry, index, ids) {
       }
     } catch (error) {
       addError(`${location}.acceptanceFile`, `file is not readable: ${error.message}`);
+    }
+  }
+
+  if (entry.ocrResultsFile) {
+    try {
+      const ocrResultsPath = path.join(repoRoot, entry.ocrResultsFile);
+      const ocrResultsStat = await stat(ocrResultsPath);
+      if (!ocrResultsStat.isFile()) {
+        addError(`${location}.ocrResultsFile`, "ocrResultsFile does not point to a file");
+      } else {
+        JSON.parse(await readFile(ocrResultsPath, "utf8"));
+      }
+    } catch (error) {
+      addError(`${location}.ocrResultsFile`, `file is not readable: ${error.message}`);
     }
   }
 }

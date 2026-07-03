@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "source": "generated-fixture",
+  "results": [
+    {
+      "pageIndex": 0,
+      "language": "eng",
+      "coordinateSpace": "page",
+      "lines": [
+        {
+          "text": "Synthetic Scanned Text",
+          "confidence": 99,
+          "x": 72,
+          "y": 720,
+          "width": 240,
+          "height": 22
+        },
+        {
+          "text": "OCR fixture body text.",
+          "confidence": 98,
+          "x": 72,
+          "y": 680,
+          "width": 180,
+          "height": 12
+        },
+        {
+          "text": "Numbers 12345 are retained.",
+          "confidence": 97,
+          "x": 72,
+          "y": 650,
+          "width": 210,
+          "height": 12
+        }
+      ]
+    }
+  ]
+}
