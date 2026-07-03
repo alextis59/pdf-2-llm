@@ -100,8 +100,10 @@ test("extractContentStreamTextLines interprets text showing operators", () => {
   assert.equal(lines[0].y, 20);
   assert.equal(lines[0].width, 72);
   assert.equal(lines[0].height, 12);
+  assert.equal(lines[0].direction, "ltr");
   assert.equal(lines[0].spans.length, 2);
   assert.equal(lines[0].spans[0].text, "Hello");
+  assert.equal(lines[0].spans[0].direction, "ltr");
   assert.equal(lines[0].spans[1].text, ", world");
   assert.equal(lines[0].glyphs.length, 12);
   assert.deepEqual(
@@ -117,6 +119,26 @@ test("extractContentStreamTextLines interprets text showing operators", () => {
   assert.equal(lines[1].y, 6);
   assert.equal(lines[2].text, "quoted");
   assert.equal(lines[2].y, -8);
+});
+
+test("extractContentStreamTextLines marks vertical text matrices", () => {
+  const lines = extractContentStreamTextLines(
+    [
+      "BT",
+      "/F1 12 Tf",
+      "0 1 -1 0 300 700 Tm",
+      "(AB) Tj",
+      "ET"
+    ].join("\n"),
+    { resources, pageIndex: 0, streamIndex: 0 }
+  );
+
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].text, "AB");
+  assert.equal(lines[0].x, 300);
+  assert.equal(lines[0].y, 700);
+  assert.equal(lines[0].direction, "vertical");
+  assert.equal(lines[0].spans[0].direction, "vertical");
 });
 
 test("extractContentStreamRulingLines detects stroked axis-aligned paths", () => {

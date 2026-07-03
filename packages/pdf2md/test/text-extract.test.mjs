@@ -560,6 +560,24 @@ test("linesToMarkdown treats CJK terminal punctuation as a paragraph boundary", 
   assert.equal(markdown, `# CJK Boundary Fixture\n\n${first}\n\n${second}\n`);
 });
 
+test("linesToMarkdown orders vertical writing columns and emits writing mode markup", () => {
+  const rightTop = "\u7e26";
+  const rightBottom = "\u66f8\u304d";
+  const leftTop = "\u5217";
+  const leftBottom = "\u4e8c";
+  const markdown = linesToMarkdown([
+    { text: leftBottom, fontSize: 12, direction: "vertical", x: 260, y: 666, width: 12, height: 12, pageIndex: 0 },
+    { text: rightBottom, fontSize: 12, direction: "vertical", x: 320, y: 666, width: 12, height: 12, pageIndex: 0 },
+    { text: leftTop, fontSize: 12, direction: "vertical", x: 260, y: 680, width: 12, height: 12, pageIndex: 0 },
+    { text: rightTop, fontSize: 12, direction: "vertical", x: 320, y: 680, width: 12, height: 12, pageIndex: 0 }
+  ]);
+
+  assert.equal(
+    markdown,
+    `<p style="writing-mode: vertical-rl">${rightTop}${rightBottom}</p>\n\n<p style="writing-mode: vertical-rl">${leftTop}${leftBottom}</p>\n`
+  );
+});
+
 test("linesToMarkdown orders interleaved two-column lines by geometry", () => {
   const markdown = linesToMarkdown([
     { text: "Layout Fixture", fontSize: 22, x: 72, y: 720, pageIndex: 0 },

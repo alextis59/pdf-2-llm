@@ -949,7 +949,11 @@ function escapeMarkdownParagraph(value) {
 }
 
 function formatParagraphMarkdown(paragraph) {
-  if (paragraphDirection(paragraph.sourceLines) === "rtl") {
+  const direction = paragraphDirection(paragraph.sourceLines);
+  if (direction === "vertical") {
+    return `<p style="writing-mode: vertical-rl">${escapeHtml(paragraph.text)}</p>`;
+  }
+  if (direction === "rtl") {
     return `<p dir="rtl">${escapeHtml(paragraph.text)}</p>`;
   }
   return escapeMarkdownParagraph(paragraph.text);
@@ -1279,6 +1283,10 @@ function orderPageLinesForReading(indexedLines) {
     return indexedLines.map((item) => item.line);
   }
 
+  if (indexedLines.length > 0 && pageDirection(indexedLines) === "vertical") {
+    return orderVerticalPageLines(indexedLines);
+  }
+
   const rows = groupLinesIntoRows(indexedLines);
   const blocks = segmentRowsIntoReadingBlocks(rows);
   return blocks.flatMap((block) => block.rows.flatMap((row) => row.items.map((item) => item.line)));
@@ -1286,6 +1294,53 @@ function orderPageLinesForReading(indexedLines) {
 
 function hasLineGeometry(line) {
   return Number.isFinite(line.x) && Number.isFinite(line.y);
+}
+
+function pageDirection(indexedLines) {
+  return dominantDirection(indexedLines.map((item) => item.line));
+}
+
+function orderVerticalPageLines(indexedLines) {
+  return groupLinesIntoVerticalColumns(indexedLines).flatMap((column) =>
+    column.items
+      .sort(
+        (left, right) =>
+          right.line.y - left.line.y ||
+          lineVerticalAxis(right.line) - lineVerticalAxis(left.line) ||
+          left.index - right.index
+      )
+      .map((item) => item.line)
+  );
+}
+
+function groupLinesIntoVerticalColumns(indexedLines) {
+  const columns = [];
+  const sorted = [...indexedLines].sort(
+    (left, right) =>
+      lineVerticalAxis(right.line) - lineVerticalAxis(left.line) ||
+      right.line.y - left.line.y ||
+      left.index - right.index
+  );
+
+  for (const item of sorted) {
+    const axis = lineVerticalAxis(item.line);
+    const tolerance = verticalColumnTolerance(item.line);
+    const current = columns[columns.length - 1];
+    if (current && Math.abs(current.x - axis) <= Math.max(current.tolerance, tolerance)) {
+      current.items.push(item);
+      current.x = average(current.items.map((columnItem) => lineVerticalAxis(columnItem.line)));
+      current.tolerance = Math.max(current.tolerance, tolerance);
+      continue;
+    }
+
+    columns.push({
+      items: [item],
+      x: axis,
+      tolerance
+    });
+  }
+
+  return columns;
 }
 
 function groupLinesIntoRows(indexedLines) {
@@ -1365,15 +1420,21 @@ function paragraphDirection(lines) {
 }
 
 function dominantDirection(lines) {
+  let vertical = 0;
   let rtl = 0;
   let ltr = 0;
   for (const line of lines) {
     const direction = lineDirection(line);
-    if (direction === "rtl") {
+    if (direction === "vertical") {
+      vertical += 1;
+    } else if (direction === "rtl") {
       rtl += 1;
     } else if (direction === "ltr") {
       ltr += 1;
     }
+  }
+  if (vertical > rtl && vertical > ltr) {
+    return "vertical";
   }
   return rtl > ltr ? "rtl" : ltr > 0 ? "ltr" : "unknown";
 }
@@ -1464,6 +1525,18 @@ function lineRightEdge(line) {
   }
   const estimatedGlyphWidth = Math.max(4, line.fontSize ?? 10) * 0.5;
   return line.x + Math.max(1, normalizeText(line.text ?? "").length * estimatedGlyphWidth);
+}
+
+function lineVerticalAxis(line) {
+  if (Number.isFinite(line.width) && line.width > 0) {
+    return line.x + line.width / 2;
+  }
+  return line.x;
+}
+
+function verticalColumnTolerance(line) {
+  const width = Number.isFinite(line.width) && line.width > 0 ? line.width : line.fontSize;
+  return Math.max(4, (width ?? 10) * 0.75);
 }
 
 function lineRowTolerance(line) {

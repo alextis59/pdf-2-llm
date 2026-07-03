@@ -720,15 +720,17 @@ function emitText(text, context) {
 
   const position = currentTextPosition(context.state);
   const metrics = measureText(context.state, text, position);
+  const direction = textDirectionFromState(context.state);
   const confidence = textConfidence(context.state.font);
   const structure = currentStructureSignal(context.state);
   const mergeKey = `${context.options.pageIndex ?? ""}:${context.options.streamIndex ?? ""}:${context.textObjectId}:${context.lineSerial}`;
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
-    const span = createSpan(text, context.state, position, metrics, confidence, structure);
+    const span = createSpan(text, context.state, position, metrics, confidence, structure, direction);
     lastLine.text += text;
     lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
     lastLine.height = Math.max(lastLine.height, metrics.height);
+    lastLine.direction = mergeTextDirection(lastLine.direction, direction);
     lastLine.spans.push(span);
     lastLine.glyphs.push(...metrics.glyphs);
     mergeLineVisibility(lastLine, span);
@@ -737,7 +739,7 @@ function emitText(text, context) {
     return;
   }
 
-  const span = createSpan(text, context.state, position, metrics, confidence, structure);
+  const span = createSpan(text, context.state, position, metrics, confidence, structure, direction);
   context.lines.push({
     text,
     fontSize: context.state.fontSize,
@@ -753,6 +755,7 @@ function emitText(text, context) {
     streamIndex: context.options.streamIndex ?? null,
     source: "content-stream",
     confidence,
+    direction,
     textRenderMode: context.state.textRenderMode,
     textRenderModes: [context.state.textRenderMode],
     hidden: context.state.textRenderMode === 3,
@@ -855,6 +858,15 @@ function currentTextPosition(state) {
   return transformPoint(matrix, 0, state.textRise);
 }
 
+function textDirectionFromState(state) {
+  const matrix = multiplyMatrices(state.ctm, state.textMatrix);
+  return Math.abs(matrix[1]) > Math.abs(matrix[0]) * 1.25 ? "vertical" : "ltr";
+}
+
+function mergeTextDirection(left, right) {
+  return left === right ? left : "unknown";
+}
+
 function advanceTextPosition(state, text) {
   const width = measureTextWidth(state, text);
   state.textMatrix = multiplyMatrices(state.textMatrix, [1, 0, 0, 1, width, 0]);
@@ -888,7 +900,7 @@ function measureText(state, text, position) {
   };
 }
 
-function createSpan(text, state, position, metrics, confidence, structure = null) {
+function createSpan(text, state, position, metrics, confidence, structure = null, direction = "ltr") {
   return {
     text,
     fontName: state.fontName,
@@ -898,6 +910,7 @@ function createSpan(text, state, position, metrics, confidence, structure = null
     width: metrics.width,
     height: metrics.height,
     confidence,
+    direction,
     textRenderMode: state.textRenderMode,
     hidden: state.textRenderMode === 3,
     source: structure?.role ? "tagged-pdf" : "pdf-text",
