@@ -193,6 +193,50 @@ test("convertPdfToMarkdown raster diagnostics cover rotated and cropped generate
   });
 });
 
+test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", async () => {
+  const fullPage = await convertPdfToMarkdown(
+    createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 })
+  );
+  const smallImage = await convertPdfToMarkdown(
+    createSinglePageImagePdf({ x: 72, y: 600, widthPt: 72, heightPt: 72 })
+  );
+
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.imageCoverageRatio, 0.5);
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.imageDominantPages, 1);
+  assert.deepEqual(fullPage.diagnostics.extraction.scanDetection.pages[0], {
+    pageIndex: 0,
+    textLineCount: 0,
+    imageResourceCount: 1,
+    imageDrawCount: 1,
+    pageArea: 484704,
+    totalImageArea: 484704,
+    maxImageArea: 484704,
+    imageCoverageRatio: 1,
+    maxImageCoverageRatio: 1,
+    imageDominant: true,
+    imageDominanceConfidence: 0.95,
+    imageDraws: [
+      {
+        name: "ImScan",
+        objectNumber: 6,
+        x: 0,
+        y: 0,
+        width: 612,
+        height: 792,
+        area: 484704,
+        imageWidth: 2550,
+        imageHeight: 3300,
+        imagePixels: 8415000,
+        streamIndex: 0,
+        source: "xobject-do"
+      }
+    ]
+  });
+  assert.equal(smallImage.diagnostics.extraction.scanDetection.imageDominantPages, 0);
+  assert.equal(smallImage.diagnostics.extraction.scanDetection.pages[0].imageDominant, false);
+  assert.equal(smallImage.diagnostics.extraction.scanDetection.pages[0].imageCoverageRatio, 0.010695);
+});
+
 test("CLI emits JSON scaffold output", () => {
   const cliPath = new URL("../src/cli.mjs", import.meta.url);
   const run = spawnSync(process.execPath, [cliPath.pathname, fixturePath.pathname, "--json"], {
@@ -429,9 +473,10 @@ function textOperation(x, y, size, value) {
   return `BT /F1 ${size} Tf ${x} ${y} Td (${pdfString(value)}) Tj ET`;
 }
 
-function streamObject(content) {
+function streamObject(content, dictionary = "") {
   const bytes = Buffer.from(content, "binary");
-  return `<< /Length ${bytes.byteLength} >>\nstream\n${bytes.toString("binary")}\nendstream`;
+  const prefix = dictionary ? `${dictionary} ` : "";
+  return `<< ${prefix}/Length ${bytes.byteLength} >>\nstream\n${bytes.toString("binary")}\nendstream`;
 }
 
 function createSinglePageTextPdf(operations) {
@@ -442,6 +487,25 @@ function createSinglePageTextPdf(operations) {
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>",
     streamObject(`${operations.join("\n")}\n`)
   ];
+  return createPdf(objects);
+}
+
+function createSinglePageImagePdf({ x, y, widthPt, heightPt }) {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> /XObject << /ImScan 6 0 R >> >> /Contents 5 0 R >>",
+    streamObject(`q ${widthPt} 0 0 ${heightPt} ${x} ${y} cm /ImScan Do Q\n`),
+    streamObject(
+      "abc",
+      "/Type /XObject /Subtype /Image /Width 2550 /Height 3300 /ColorSpace /DeviceRGB /BitsPerComponent 8"
+    )
+  ];
+  return createPdf(objects);
+}
+
+function createPdf(objects) {
   let body = "%PDF-1.4\n% pdf-2-llm test fixture\n";
   const offsets = [0];
 

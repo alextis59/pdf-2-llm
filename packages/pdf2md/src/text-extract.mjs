@@ -1,4 +1,5 @@
 import {
+  extractContentStreamImageDraws,
   extractContentStreamRulingLines,
   extractContentStreamTextLines,
   mergeRulingLines
@@ -25,6 +26,16 @@ export function extractRulingLines(bytes, { document = null } = {}) {
     findStreamTextsByScan(bytes).flatMap((stream, streamIndex) =>
       extractContentStreamRulingLines(stream, { streamIndex })
     )
+  );
+}
+
+export function extractImageDraws(bytes, { document = null } = {}) {
+  if (document) {
+    return documentImageDraws(document);
+  }
+
+  return findStreamTextsByScan(bytes).flatMap((stream, streamIndex) =>
+    extractContentStreamImageDraws(stream, { streamIndex })
   );
 }
 
@@ -76,6 +87,24 @@ function documentRulingLines(document) {
     document.streams.flatMap((stream, streamIndex) =>
       extractContentStreamRulingLines(stream.text, { streamIndex })
     )
+  );
+}
+
+function documentImageDraws(document) {
+  if (document.pages?.length > 0) {
+    return document.pages.flatMap((page) =>
+      page.contentStreams.flatMap((stream, streamIndex) =>
+        extractContentStreamImageDraws(stream.text, {
+          pageIndex: page.pageIndex,
+          resources: page.resources,
+          streamIndex
+        })
+      )
+    );
+  }
+
+  return document.streams.flatMap((stream, streamIndex) =>
+    extractContentStreamImageDraws(stream.text, { streamIndex })
   );
 }
 

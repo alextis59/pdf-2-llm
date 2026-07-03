@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  extractContentStreamImageDraws,
   extractContentStreamRulingLines,
   extractContentStreamTextLines,
   mergeRulingLines,
@@ -29,6 +30,24 @@ const resources = {
           ["02", "B"]
         ])
       }
+    }
+  },
+  xobjects: {
+    ImScan: {
+      objectNumber: 8,
+      subtype: "Image",
+      width: 20,
+      height: 10
+    },
+    ImRot: {
+      objectNumber: 9,
+      subtype: "Image",
+      width: 4,
+      height: 8
+    },
+    Form1: {
+      objectNumber: 10,
+      subtype: "Form"
     }
   }
 };
@@ -132,6 +151,52 @@ test("extractContentStreamRulingLines detects stroked axis-aligned paths", () =>
   assert.deepEqual([...new Set(lines.map((line) => line.pageIndex))], [3]);
   assert.deepEqual([...new Set(lines.map((line) => line.streamIndex))], [2]);
   assert.deepEqual([...new Set(lines.map((line) => line.source))], ["path-operator"]);
+});
+
+test("extractContentStreamImageDraws detects transformed image XObjects", () => {
+  const images = extractContentStreamImageDraws(
+    [
+      "q 200 0 0 100 10 20 cm /ImScan Do Q",
+      "q 0 50 -25 0 80 90 cm /ImRot Do Q",
+      "/Form1 Do"
+    ].join("\n"),
+    { resources, pageIndex: 3, streamIndex: 2 }
+  );
+
+  assert.deepEqual(images, [
+    {
+      type: "image-draw",
+      name: "ImScan",
+      objectNumber: 8,
+      x: 10,
+      y: 20,
+      width: 200,
+      height: 100,
+      area: 20000,
+      imageWidth: 20,
+      imageHeight: 10,
+      imagePixels: 200,
+      pageIndex: 3,
+      streamIndex: 2,
+      source: "xobject-do"
+    },
+    {
+      type: "image-draw",
+      name: "ImRot",
+      objectNumber: 9,
+      x: 55,
+      y: 90,
+      width: 25,
+      height: 50,
+      area: 1250,
+      imageWidth: 4,
+      imageHeight: 8,
+      imagePixels: 32,
+      pageIndex: 3,
+      streamIndex: 2,
+      source: "xobject-do"
+    }
+  ]);
 });
 
 test("extractContentStreamRulingLines merges near-collinear path fragments", () => {

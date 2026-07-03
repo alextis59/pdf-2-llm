@@ -100,6 +100,7 @@ export type Diagnostics = {
     taggedStructureConflicts: number;
     layout: LayoutDiagnostics;
     raster: RasterDiagnostics;
+    scanDetection: ScanDetectionDiagnostics;
     parser: Record<string, unknown>;
   };
   pages: PageDiagnostics[];
@@ -158,6 +159,44 @@ export type RasterTargetDiagnostics = {
   pixelCount: number | null;
   maxPixels: number;
   exceedsPixelLimit: boolean;
+};
+
+export type ScanDetectionDiagnostics = {
+  thresholds: {
+    imageCoverageRatio: number;
+  };
+  imageDominantPages: number;
+  pages: ScanDetectionPageDiagnostics[];
+};
+
+export type ScanDetectionPageDiagnostics = {
+  pageIndex: number;
+  textLineCount: number;
+  imageResourceCount: number;
+  imageDrawCount: number;
+  pageArea: number | null;
+  totalImageArea: number | null;
+  maxImageArea: number | null;
+  imageCoverageRatio: number | null;
+  maxImageCoverageRatio: number | null;
+  imageDominant: boolean;
+  imageDominanceConfidence: number;
+  imageDraws: ImageDrawDiagnostics[];
+};
+
+export type ImageDrawDiagnostics = {
+  name: string;
+  objectNumber: number | null;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  area: number;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  imagePixels: number | null;
+  streamIndex: number | null;
+  source: "xobject-do";
 };
 
 export type OutlineDiagnostics = {
@@ -220,6 +259,21 @@ export type PageDiagnostics = {
   cropBox: number[] | null;
   contentStreams: number;
   fonts: string[];
+  images: PageImageDiagnostics[];
+};
+
+export type PageImageDiagnostics = {
+  name: string;
+  objectNumber: number | null;
+  width: number | null;
+  height: number | null;
+  bitsPerComponent: number | null;
+  colorSpace: string | null;
+  filters: string[];
+  skippedFilters: string[];
+  mediaType: string;
+  rawLength: number | null;
+  decodedLength: number | null;
 };
 
 export type Confidence = {

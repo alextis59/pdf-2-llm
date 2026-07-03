@@ -63,6 +63,32 @@ export function extractContentStreamRulingLines(streamText, options = {}) {
   return options.mergeRulingLines === false ? lines : mergeRulingLines(lines, options);
 }
 
+export function extractContentStreamImageDraws(streamText, options = {}) {
+  const tokens = tokenizeContentStream(streamText);
+  const state = createInitialImageState(options.resources);
+  const stack = [];
+  const operands = [];
+  const images = [];
+
+  for (const token of tokens) {
+    if (token.type !== "word") {
+      operands.push(token);
+      continue;
+    }
+
+    executeImageOperator(token.value, {
+      images,
+      operands,
+      options,
+      stack,
+      state
+    });
+    operands.length = 0;
+  }
+
+  return images;
+}
+
 export function mergeRulingLines(rulingLines, options = {}) {
   const coordinateTolerance = options.mergeCoordinateTolerance ?? 0.5;
   const gapTolerance = options.mergeGapTolerance ?? 1;
@@ -443,6 +469,87 @@ function clonePathGraphicsState(state) {
   };
 }
 
+function executeImageOperator(operator, context) {
+  const { operands, state } = context;
+
+  if (operator === "q") {
+    context.stack.push(cloneImageGraphicsState(state));
+    return;
+  }
+  if (operator === "Q") {
+    const restored = context.stack.pop();
+    if (restored) {
+      state.ctm = restored.ctm;
+    }
+    return;
+  }
+  if (operator === "cm") {
+    const [a, b, c, d, e, f] = lastNumbers(operands, 6);
+    if ([a, b, c, d, e, f].every(Number.isFinite)) {
+      state.ctm = multiplyMatrices(state.ctm, [a, b, c, d, e, f]);
+    }
+    return;
+  }
+  if (operator === "Do") {
+    emitImageDraw(context);
+  }
+}
+
+function emitImageDraw(context) {
+  const name = tokenName(context.operands.at(-1));
+  const image = name ? context.state.resources?.xobjects?.[name] : null;
+  if (!name || image?.subtype !== "Image") {
+    return;
+  }
+
+  const points = [
+    transformPoint(context.state.ctm, 0, 0),
+    transformPoint(context.state.ctm, 1, 0),
+    transformPoint(context.state.ctm, 1, 1),
+    transformPoint(context.state.ctm, 0, 1)
+  ];
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  const width = Math.max(...xs) - x;
+  const height = Math.max(...ys) - y;
+  const pixels =
+    Number.isFinite(image.width) && Number.isFinite(image.height)
+      ? image.width * image.height
+      : null;
+
+  context.images.push({
+    type: "image-draw",
+    name,
+    objectNumber: image.objectNumber ?? null,
+    x: normalizeCoordinate(x),
+    y: normalizeCoordinate(y),
+    width: normalizeCoordinate(width),
+    height: normalizeCoordinate(height),
+    area: normalizeCoordinate(polygonArea(points)),
+    imageWidth: image.width ?? null,
+    imageHeight: image.height ?? null,
+    imagePixels: pixels,
+    pageIndex: context.options.pageIndex ?? null,
+    streamIndex: context.options.streamIndex ?? null,
+    source: "xobject-do"
+  });
+}
+
+function createInitialImageState(resources = null) {
+  return {
+    ctm: [...identityMatrix],
+    resources
+  };
+}
+
+function cloneImageGraphicsState(state) {
+  return {
+    ctm: [...state.ctm]
+  };
+}
+
 function executeOperator(operator, context) {
   const { operands, state } = context;
 
@@ -773,6 +880,16 @@ function transformPoint(matrix, x, y) {
     x: matrix[0] * x + matrix[2] * y + matrix[4],
     y: matrix[1] * x + matrix[3] * y + matrix[5]
   };
+}
+
+function polygonArea(points) {
+  let area = 0;
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    area += current.x * next.y - next.x * current.y;
+  }
+  return Math.abs(area) / 2;
 }
 
 function normalizeCoordinate(value) {

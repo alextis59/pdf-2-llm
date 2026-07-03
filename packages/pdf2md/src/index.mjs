@@ -13,6 +13,7 @@ import {
 } from "./schema.mjs";
 import { isTrustedSimpleEncoding } from "./font-encoding.mjs";
 import {
+  extractImageDraws,
   extractRulingLines,
   extractTextLines,
   linesToMarkdownWithSourceMap
@@ -24,6 +25,7 @@ import {
 } from "./table-grid.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 import { createRasterPlan } from "./raster-plan.mjs";
+import { createScanDetection } from "./scan-detection.mjs";
 
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
@@ -145,6 +147,10 @@ export async function convertPdfToMarkdown(input, options = {}) {
     pdfVersion && !encryptedWithoutText
       ? extractRulingLines(normalized.bytes, { document: pdfDocument })
       : [];
+  const imageDraws =
+    pdfVersion && !encryptedWithoutText
+      ? extractImageDraws(normalized.bytes, { document: pdfDocument })
+      : [];
   const rulingGrids = inferRulingGrids(rulingLines);
   const rulingTables = detectTableCellSpans(
     assignTextLinesToGridCells(rulingGrids, textLines),
@@ -156,6 +162,10 @@ export async function convertPdfToMarkdown(input, options = {}) {
     dpi: options.raster?.dpi,
     thumbnailDpi: options.raster?.thumbnailDpi,
     maxPixels: security.maxImagePixels
+  });
+  const scanDetection = createScanDetection(pdfDocument?.pages ?? [], {
+    textLines,
+    imageDraws
   });
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
     enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
@@ -248,6 +258,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         tables: markdownResult.tables,
         lowConfidenceTables: markdownResult.lowConfidenceTables,
         raster: rasterPlan,
+        scanDetection,
         rulingLines: summarizeRulingLines(rulingLines),
         rulingGrids: summarizeRulingGrids(rulingGrids),
         rulingTables: summarizeRulingTables(rulingTables, tableCsvSidecars.byTable),

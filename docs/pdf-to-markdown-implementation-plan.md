@@ -576,7 +576,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 
 ### 6.2 Scan Detection
 
-- [ ] Detect image-dominant pages.
+- [x] Detect image-dominant pages.
 - [ ] Detect pages with little or no text.
 - [ ] Detect hidden OCR text overlays.
 - [ ] Detect mismatch between hidden text and visible image.
