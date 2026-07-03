@@ -9,6 +9,7 @@
 - [WASM loading for bundlers](docs/wasm-loading.md)
 - [OCR model loading](docs/ocr-model-loading.md)
 - [WebGPU behavior and fallback](docs/webgpu-behavior.md)
+- [Security limits](docs/security-limits.md)
 
 ## Current package scaffold
 
