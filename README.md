@@ -11,6 +11,7 @@
 - [WebGPU behavior and fallback](docs/webgpu-behavior.md)
 - [Security limits](docs/security-limits.md)
 - [Warnings and confidence scores](docs/warnings-confidence.md)
+- [Release notes](docs/release-notes.md)
 
 ## Current package scaffold
 

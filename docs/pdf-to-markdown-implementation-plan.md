@@ -740,7 +740,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Verify package exports.
 - [x] Verify source maps and TypeScript declarations.
 - [x] Verify README examples.
-- [ ] Produce release notes with known limitations.
+- [x] Produce release notes with known limitations.
 
 Gate 8 acceptance:
 
@@ -807,24 +807,24 @@ Core metrics:
 
 Minimum release bars for a first public alpha:
 
-- [ ] Text MVP accepted corpus passes.
-- [ ] Robust parser corpus has zero panics.
-- [ ] At least one browser example and one Node example work.
-- [ ] CLI converts a local PDF to Markdown.
-- [ ] Warnings and confidence are visible in API and CLI output.
-- [ ] Non-supported scanned PDFs do not silently produce empty success output.
-- [ ] Security limits are enabled by default.
-- [ ] Package exports and TypeScript declarations are verified.
+- [x] Text MVP accepted corpus passes.
+- [x] Robust parser corpus has zero panics.
+- [x] At least one browser example and one Node example work.
+- [x] CLI converts a local PDF to Markdown.
+- [x] Warnings and confidence are visible in API and CLI output.
+- [x] Non-supported scanned PDFs do not silently produce empty success output.
+- [x] Security limits are enabled by default.
+- [x] Package exports and TypeScript declarations are verified.
 
 Minimum release bars for a serious beta:
 
-- [ ] Layout V1 accepted corpus passes.
-- [ ] Tables V1 accepted corpus passes for simple and visible-border tables.
-- [ ] OCR V1 accepted corpus passes for selected scanned and hybrid PDFs.
+- [x] Layout V1 accepted corpus passes.
+- [x] Tables V1 accepted corpus passes for simple and visible-border tables.
+- [x] OCR V1 accepted corpus passes for selected scanned and hybrid PDFs.
 - [ ] Full corpus reports are generated in CI or release CI.
-- [ ] Performance budgets are enforced.
-- [ ] Browser fallback behavior is documented and tested.
-- [ ] Known limitations are described with concrete warning codes.
+- [x] Performance budgets are enforced.
+- [x] Browser fallback behavior is documented and tested.
+- [x] Known limitations are described with concrete warning codes.
 
 ## Immediate Next Actions
 
