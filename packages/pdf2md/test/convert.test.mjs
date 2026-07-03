@@ -126,6 +126,16 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
         node: "adapter-default-filesystem"
       }
     },
+    preprocessing: {
+      enabled: true,
+      status: "no-routed-pages",
+      strategy: "metadata-first",
+      thresholds: {
+        minDeskewDegrees: 0.25,
+        maxDeskewDegrees: 15
+      },
+      pages: []
+    },
     textBoxes: {
       enabled: true,
       status: "no-routed-pages",
@@ -532,6 +542,43 @@ test("convertPdfToMarkdown emits OCR text boxes with confidence for routed scan 
   ]);
 });
 
+test("convertPdfToMarkdown records OCR preprocessing for rotated scan pages", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792, rotation: 90 }),
+    {
+      raster: {
+        enabled: true,
+        dpi: 144
+      }
+    }
+  );
+
+  assert.equal(result.ir.sourceType, "scanned");
+  assert.deepEqual(result.diagnostics.extraction.ocr.preprocessing, {
+    enabled: true,
+    status: "planned",
+    strategy: "metadata-first",
+    thresholds: {
+      minDeskewDegrees: 0.25,
+      maxDeskewDegrees: 15
+    },
+    pages: [
+      {
+        pageIndex: 0,
+        sourceType: "scanned",
+        status: "planned",
+        rasterStatus: "planned",
+        pageRotationDegrees: 90,
+        rotationCorrectionDegrees: 270,
+        deskewDegrees: 0,
+        deskewConfidence: 0,
+        operations: ["normalize-page-rotation", "estimate-deskew", "binarize", "denoise"],
+        deferredOperations: []
+      }
+    ]
+  });
+});
+
 test("CLI emits JSON scaffold output", () => {
   const cliPath = new URL("../src/cli.mjs", import.meta.url);
   const run = spawnSync(process.execPath, [cliPath.pathname, fixturePath.pathname, "--json"], {
@@ -789,16 +836,17 @@ function createSinglePageTextPdf(operations) {
   return createPdf(objects);
 }
 
-function createSinglePageImagePdf({ x, y, widthPt, heightPt, textOperations = [] }) {
+function createSinglePageImagePdf({ x, y, widthPt, heightPt, rotation = 0, textOperations = [] }) {
   const operations = [
     `q ${widthPt} 0 0 ${heightPt} ${x} ${y} cm /ImScan Do Q`,
     ...textOperations
   ];
+  const rotationEntry = rotation ? `/Rotate ${rotation} ` : "";
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> /XObject << /ImScan 6 0 R >> >> /Contents 5 0 R >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ${rotationEntry}/Resources << /Font << /F1 3 0 R >> /XObject << /ImScan 6 0 R >> >> /Contents 5 0 R >>`,
     streamObject(`${operations.join("\n")}\n`),
     streamObject(
       "abc",

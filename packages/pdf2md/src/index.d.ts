@@ -40,6 +40,14 @@ export type ConvertOptions = {
     languages?: string[];
     modelBaseUrl?: string;
     results?: OcrPageResult[];
+    preprocessing?: {
+      enabled?: boolean;
+      deskew?: boolean;
+      minDeskewDegrees?: number;
+      maxDeskewDegrees?: number;
+      binarize?: boolean;
+      denoise?: boolean;
+    };
     cache?: {
       enabled?: boolean;
       strategy?: "adapter-default" | "none";
@@ -121,6 +129,7 @@ export type OcrDiagnostics = {
   status: "disabled" | "selected" | "unsupported";
   languages: string[];
   modelLoading: OcrModelLoadingDiagnostics;
+  preprocessing: OcrPreprocessingDiagnostics;
   textBoxes: OcrTextBoxDiagnostics;
   adapter: OcrAdapterDiagnostics | null;
 };
@@ -185,6 +194,36 @@ export type OcrTextBoxPageDiagnostics = {
   language: string | null;
   boxes: number;
   averageConfidence: number | null;
+};
+
+export type OcrPreprocessingDiagnostics = {
+  enabled: boolean;
+  status:
+    | "disabled"
+    | "unsupported"
+    | "no-routed-pages"
+    | "metadata-only"
+    | "planned"
+    | "skipped";
+  strategy: "metadata-first";
+  thresholds: {
+    minDeskewDegrees: number;
+    maxDeskewDegrees: number;
+  };
+  pages: OcrPreprocessingPageDiagnostics[];
+};
+
+export type OcrPreprocessingPageDiagnostics = {
+  pageIndex: number;
+  sourceType: "scanned" | "hybrid";
+  status: "metadata-only" | "planned" | "skipped-pixel-limit";
+  rasterStatus: "not-planned" | "planned" | "skipped-pixel-limit" | "missing";
+  pageRotationDegrees: number;
+  rotationCorrectionDegrees: number;
+  deskewDegrees: number;
+  deskewConfidence: number;
+  operations: Array<"normalize-page-rotation" | "estimate-deskew" | "binarize" | "denoise">;
+  deferredOperations: Array<"estimate-deskew" | "binarize" | "denoise">;
 };
 
 export type OcrModelLoadingDiagnostics = {

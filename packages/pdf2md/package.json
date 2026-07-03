@@ -32,7 +32,7 @@
     }
   },
   "scripts": {
-    "build": "node --check src/index.mjs && node --check src/pdf-parser.mjs && node --check src/stream-filters.mjs && node --check src/content-stream.mjs && node --check src/font-encoding.mjs && node --check src/text-extract.mjs && node --check src/raster-plan.mjs && node --check src/scan-detection.mjs && node --check src/ocr-adapter.mjs && node --check src/ocr-text.mjs && node --check src/node.mjs && node --check src/browser.mjs && node --check src/worker.mjs && node --check src/cli.mjs && node --check src/schema.mjs && node --check fuzz/run-smoke.mjs && node --check fuzz/utils.mjs && node --check fuzz/targets/pdf-value-parser.mjs && node --check fuzz/targets/stream-filters.mjs && node --check fuzz/targets/content-stream.mjs",
+    "build": "node --check src/index.mjs && node --check src/pdf-parser.mjs && node --check src/stream-filters.mjs && node --check src/content-stream.mjs && node --check src/font-encoding.mjs && node --check src/text-extract.mjs && node --check src/raster-plan.mjs && node --check src/scan-detection.mjs && node --check src/ocr-adapter.mjs && node --check src/ocr-preprocess.mjs && node --check src/ocr-text.mjs && node --check src/node.mjs && node --check src/browser.mjs && node --check src/worker.mjs && node --check src/cli.mjs && node --check src/schema.mjs && node --check fuzz/run-smoke.mjs && node --check fuzz/utils.mjs && node --check fuzz/targets/pdf-value-parser.mjs && node --check fuzz/targets/stream-filters.mjs && node --check fuzz/targets/content-stream.mjs",
     "fuzz:smoke": "node fuzz/run-smoke.mjs --iterations 100",
     "test": "node --test test/*.test.mjs"
   }
