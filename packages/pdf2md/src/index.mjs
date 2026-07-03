@@ -29,6 +29,7 @@ const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
   maxPages: 5000,
   maxObjects: 100000,
+  maxImagePixels: 100_000_000,
   timeoutMs: 120000
 });
 
@@ -152,7 +153,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
   const rasterPlan = createRasterPlan(pdfDocument?.pages ?? [], {
     enabled: options.raster?.enabled === true,
     renderer: options.raster?.renderer,
-    dpi: options.raster?.dpi
+    dpi: options.raster?.dpi,
+    maxPixels: security.maxImagePixels
   });
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
     enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
@@ -173,6 +175,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   warnings.push(...textOrderingWarnings(textLines));
   warnings.push(...taggedStructureConflictWarnings(markdownResult.taggedStructureConflicts));
   warnings.push(...lowConfidenceTableWarnings(markdownResult.lowConfidenceTables));
+  warnings.push(...rasterPixelLimitWarnings(rasterPlan));
 
   if (textLines.length > 0) {
     warnings.push(
@@ -727,8 +730,32 @@ function summarizeOptions(options, rasterPlan) {
     rasterEnabled: options.raster?.enabled === true,
     rasterRenderer: options.raster?.renderer ?? "internal-page-geometry",
     rasterDpi: rasterPlan.dpi,
+    maxImagePixels: rasterPlan.maxPixels,
     assetsEnabled: options.assets?.enabled ?? null
   };
+}
+
+function rasterPixelLimitWarnings(rasterPlan) {
+  if (!rasterPlan.enabled || rasterPlan.limitedPages === 0) {
+    return [];
+  }
+
+  return rasterPlan.pages
+    .filter((page) => page.exceedsPixelLimit)
+    .map((page) =>
+      createWarning(
+        warningCodes.ImagePixelsExceeded,
+        "Page raster target exceeds configured maxImagePixels and was skipped.",
+        {
+          pageIndex: page.pageIndex,
+          widthPx: page.widthPx,
+          heightPx: page.heightPx,
+          pixelCount: page.pixelCount,
+          maxImagePixels: page.maxPixels,
+          dpi: page.dpi
+        }
+      )
+    );
 }
 
 function createParseWarning(error, extraDetails = {}) {

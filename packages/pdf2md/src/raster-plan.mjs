@@ -10,6 +10,7 @@ const internalRasterRenderer = Object.freeze({
 });
 
 export const defaultRasterDpi = 300;
+export const defaultMaxImagePixels = 100_000_000;
 
 export function selectRasterRenderer(options = {}) {
   const requested = options.renderer ?? internalRasterRenderer.id;
@@ -31,16 +32,20 @@ export function createRasterPlan(pages = [], options = {}) {
   const enabled = options.enabled === true;
   const renderer = selectRasterRenderer(options);
   const dpi = normalizeDpi(options.dpi ?? defaultRasterDpi);
+  const maxPixels = normalizeMaxPixels(options.maxPixels ?? defaultMaxImagePixels);
+  const plannedPages = enabled ? pages.map((page) => createRasterPagePlan(page, dpi, maxPixels)) : [];
 
   return {
     enabled,
     dpi,
+    maxPixels,
     renderer,
-    pages: enabled ? pages.map((page) => createRasterPagePlan(page, dpi)) : []
+    limitedPages: plannedPages.filter((page) => page.exceedsPixelLimit).length,
+    pages: plannedPages
   };
 }
 
-function createRasterPagePlan(page, dpi) {
+function createRasterPagePlan(page, dpi, maxPixels) {
   const sourceBox = page.cropBox ? "cropBox" : page.mediaBox ? "mediaBox" : "unknown";
   const boxPt = page.cropBox ?? page.mediaBox ?? null;
   const sourceWidthPt = page.widthPt ?? null;
@@ -52,9 +57,11 @@ function createRasterPagePlan(page, dpi) {
   const scale = dpi / 72;
   const widthPx = pointsToPixels(widthPt, dpi);
   const heightPx = pointsToPixels(heightPt, dpi);
+  const pixelCount = widthPx === null || heightPx === null ? null : widthPx * heightPx;
+  const exceedsPixelLimit = pixelCount !== null && pixelCount > maxPixels;
   return {
     pageIndex: page.pageIndex,
-    status: "planned",
+    status: exceedsPixelLimit ? "skipped-pixel-limit" : "planned",
     sourceBox,
     boxPt,
     sourceWidthPt,
@@ -65,7 +72,9 @@ function createRasterPagePlan(page, dpi) {
     scale,
     widthPx,
     heightPx,
-    pixelCount: widthPx === null || heightPx === null ? null : widthPx * heightPx,
+    pixelCount,
+    maxPixels,
+    exceedsPixelLimit,
     rotation,
     quarterTurn,
     userUnit: page.userUnit ?? 1
@@ -78,6 +87,14 @@ function normalizeDpi(value) {
     throw new RangeError("raster dpi must be a positive finite number");
   }
   return dpi;
+}
+
+function normalizeMaxPixels(value) {
+  const maxPixels = Number(value);
+  if (!Number.isFinite(maxPixels) || maxPixels < 1) {
+    throw new RangeError("security.maxImagePixels must be a positive finite number");
+  }
+  return Math.floor(maxPixels);
 }
 
 function pointsToPixels(points, dpi) {

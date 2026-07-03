@@ -570,7 +570,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 - [x] Select rendering dependency or implement scoped rasterization path.
 - [x] Render pages at configurable DPI.
 - [x] Respect page boxes and rotation.
-- [ ] Enforce image pixel limits.
+- [x] Enforce image pixel limits.
 - [ ] Add thumbnail render path for previews and layout models.
 - [ ] Add tests for rotated and cropped pages.
 

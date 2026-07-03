@@ -98,8 +98,11 @@ test("convertPdfToMarkdown exposes the selected scoped raster path when enabled"
   assert.equal(result.diagnostics.options.rasterEnabled, true);
   assert.equal(result.diagnostics.options.rasterRenderer, "internal-page-geometry");
   assert.equal(result.diagnostics.options.rasterDpi, 144);
+  assert.equal(result.diagnostics.options.maxImagePixels, 100_000_000);
   assert.equal(result.diagnostics.extraction.raster.enabled, true);
   assert.equal(result.diagnostics.extraction.raster.dpi, 144);
+  assert.equal(result.diagnostics.extraction.raster.maxPixels, 100_000_000);
+  assert.equal(result.diagnostics.extraction.raster.limitedPages, 0);
   assert.equal(result.diagnostics.extraction.raster.renderer.id, "internal-page-geometry");
   assert.equal(result.diagnostics.extraction.raster.renderer.dependency, null);
   assert.equal(result.diagnostics.extraction.raster.renderer.status, "selected");
@@ -118,6 +121,8 @@ test("convertPdfToMarkdown exposes the selected scoped raster path when enabled"
       widthPx: 1224,
       heightPx: 1584,
       pixelCount: 1938816,
+      maxPixels: 100_000_000,
+      exceedsPixelLimit: false,
       rotation: 0,
       quarterTurn: false,
       userUnit: 1

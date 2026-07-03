@@ -31,6 +31,7 @@ export type ConvertOptions = {
     maxBytes?: number;
     maxPages?: number;
     maxObjects?: number;
+    maxImagePixels?: number;
     timeoutMs?: number;
   };
   ocr?: {
@@ -106,6 +107,8 @@ export type Diagnostics = {
 export type RasterDiagnostics = {
   enabled: boolean;
   dpi: number;
+  maxPixels: number;
+  limitedPages: number;
   renderer: RasterRendererDiagnostics;
   pages: RasterPageDiagnostics[];
 };
@@ -123,7 +126,7 @@ export type RasterRendererDiagnostics = {
 
 export type RasterPageDiagnostics = {
   pageIndex: number;
-  status: "planned";
+  status: "planned" | "skipped-pixel-limit";
   sourceBox: "cropBox" | "mediaBox" | "unknown";
   boxPt: number[] | null;
   sourceWidthPt: number | null;
@@ -135,6 +138,8 @@ export type RasterPageDiagnostics = {
   widthPx: number | null;
   heightPx: number | null;
   pixelCount: number | null;
+  maxPixels: number;
+  exceedsPixelLimit: boolean;
   rotation: number;
   quarterTurn: boolean;
   userUnit: number;

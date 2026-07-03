@@ -30,6 +30,26 @@ test("converter reports maxObjects violations without panicking", async () => {
   assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
 });
 
+test("converter enforces maxImagePixels for raster page targets", async () => {
+  const bytes = await readFile(fixturePath);
+  const result = await convertPdfToMarkdown(bytes, {
+    ocr: { enabled: false },
+    raster: { enabled: true, dpi: 144 },
+    security: { maxImagePixels: 1000 }
+  });
+  const warning = result.warnings.find(
+    (item) => item.code === warningCodes.ImagePixelsExceeded
+  );
+
+  assert.equal(result.diagnostics.options.maxImagePixels, 1000);
+  assert.equal(result.diagnostics.extraction.raster.limitedPages, 1);
+  assert.equal(result.diagnostics.extraction.raster.pages[0].status, "skipped-pixel-limit");
+  assert.equal(result.diagnostics.extraction.raster.pages[0].pixelCount, 1938816);
+  assert.equal(warning?.details.pageIndex, 0);
+  assert.equal(warning?.details.pixelCount, 1938816);
+  assert.equal(warning?.details.maxImagePixels, 1000);
+});
+
 test("converter rejects a pre-aborted signal", async () => {
   const bytes = await readFile(fixturePath);
   const controller = new AbortController();

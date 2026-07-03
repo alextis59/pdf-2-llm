@@ -31,6 +31,8 @@ test("createRasterPlan records parser-backed page plans when enabled", () => {
 
   assert.equal(plan.enabled, true);
   assert.equal(plan.dpi, 300);
+  assert.equal(plan.maxPixels, 100_000_000);
+  assert.equal(plan.limitedPages, 0);
   assert.equal(plan.renderer.status, "selected");
   assert.deepEqual(plan.pages, [
     {
@@ -47,6 +49,8 @@ test("createRasterPlan records parser-backed page plans when enabled", () => {
       widthPx: 2700,
       heightPx: 1950,
       pixelCount: 5265000,
+      maxPixels: 100_000_000,
+      exceedsPixelLimit: false,
       rotation: 90,
       quarterTurn: true,
       userUnit: 1
@@ -68,11 +72,15 @@ test("createRasterPlan honors configured DPI", () => {
   );
 
   assert.equal(plan.dpi, 144);
+  assert.equal(plan.maxPixels, 100_000_000);
+  assert.equal(plan.limitedPages, 0);
   assert.equal(plan.pages[0].dpi, 144);
   assert.equal(plan.pages[0].scale, 2);
   assert.equal(plan.pages[0].widthPx, 1224);
   assert.equal(plan.pages[0].heightPx, 1584);
   assert.equal(plan.pages[0].pixelCount, 1938816);
+  assert.equal(plan.pages[0].maxPixels, 100_000_000);
+  assert.equal(plan.pages[0].exceedsPixelLimit, false);
   assert.equal(plan.pages[0].sourceBox, "mediaBox");
   assert.deepEqual(plan.pages[0].boxPt, [0, 0, 612, 792]);
   assert.equal(plan.pages[0].quarterTurn, false);
@@ -102,9 +110,35 @@ test("createRasterPlan normalizes rotation before computing render dimensions", 
   assert.equal(plan.pages[0].heightPx, 200);
 });
 
+test("createRasterPlan skips pages that exceed the configured pixel limit", () => {
+  const plan = createRasterPlan(
+    [
+      {
+        pageIndex: 0,
+        mediaBox: [0, 0, 612, 792],
+        widthPt: 612,
+        heightPt: 792
+      }
+    ],
+    { enabled: true, dpi: 144, maxPixels: 1000 }
+  );
+
+  assert.equal(plan.maxPixels, 1000);
+  assert.equal(plan.limitedPages, 1);
+  assert.equal(plan.pages[0].status, "skipped-pixel-limit");
+  assert.equal(plan.pages[0].pixelCount, 1938816);
+  assert.equal(plan.pages[0].maxPixels, 1000);
+  assert.equal(plan.pages[0].exceedsPixelLimit, true);
+});
+
 test("createRasterPlan rejects invalid DPI values", () => {
   assert.throws(() => createRasterPlan([], { dpi: 0 }), /positive finite number/);
   assert.throws(() => createRasterPlan([], { dpi: Number.POSITIVE_INFINITY }), /positive finite number/);
+});
+
+test("createRasterPlan rejects invalid pixel limits", () => {
+  assert.throws(() => createRasterPlan([], { maxPixels: 0 }), /maxImagePixels/);
+  assert.throws(() => createRasterPlan([], { maxPixels: Number.POSITIVE_INFINITY }), /maxImagePixels/);
 });
 
 test("createRasterPlan keeps pages empty while raster planning is disabled", () => {
@@ -112,6 +146,8 @@ test("createRasterPlan keeps pages empty while raster planning is disabled", () 
 
   assert.equal(plan.enabled, false);
   assert.equal(plan.dpi, 300);
+  assert.equal(plan.maxPixels, 100_000_000);
+  assert.equal(plan.limitedPages, 0);
   assert.equal(plan.renderer.status, "selected");
   assert.deepEqual(plan.pages, []);
 });

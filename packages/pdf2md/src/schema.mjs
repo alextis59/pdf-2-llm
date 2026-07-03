@@ -6,6 +6,7 @@ export const warningCodes = Object.freeze({
   ConversionNotImplemented: "conversion.not_implemented",
   InvalidPdfHeader: "pdf.invalid_header",
   InputTooLarge: "security.input_too_large",
+  ImagePixelsExceeded: "security.image_pixels_exceeded",
   PasswordRequired: "security.password_required",
   PasswordIncorrect: "security.password_incorrect",
   UnsupportedEncryption: "security.unsupported_encryption",
