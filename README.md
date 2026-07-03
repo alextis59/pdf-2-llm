@@ -7,6 +7,7 @@
 - [API reference](docs/api.md)
 - [CLI reference](docs/cli.md)
 - [WASM loading for bundlers](docs/wasm-loading.md)
+- [OCR model loading](docs/ocr-model-loading.md)
 
 ## Current package scaffold
 

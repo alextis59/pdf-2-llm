@@ -724,7 +724,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Write Node example.
 - [x] Write worker example.
 - [x] Document WASM loading for bundlers.
-- [ ] Document OCR model loading.
+- [x] Document OCR model loading.
 - [ ] Document WebGPU behavior and fallback.
 - [ ] Document security limits.
 - [ ] Document warnings and confidence scores.
