@@ -6,6 +6,7 @@
 - [PDF-to-Markdown implementation plan](docs/pdf-to-markdown-implementation-plan.md)
 - [API reference](docs/api.md)
 - [CLI reference](docs/cli.md)
+- [WASM loading for bundlers](docs/wasm-loading.md)
 
 ## Current package scaffold
 
