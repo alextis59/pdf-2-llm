@@ -744,12 +744,12 @@ Goal: make the package safe and predictable enough for real use.
 
 Gate 8 acceptance:
 
-- [ ] No accepted corpus regressions.
-- [ ] No known panics on malformed corpus.
-- [ ] Security limits are documented and tested.
-- [ ] Performance reports exist for representative text, table, long, scanned,
+- [x] No accepted corpus regressions.
+- [x] No known panics on malformed corpus.
+- [x] Security limits are documented and tested.
+- [x] Performance reports exist for representative text, table, long, scanned,
   and hybrid PDFs.
-- [ ] Package can be installed and used as an npm dependency.
+- [x] Package can be installed and used as an npm dependency.
 
 ## Agent Workstream Map
 

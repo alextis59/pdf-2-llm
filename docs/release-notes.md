@@ -29,6 +29,8 @@ fixtures:
   and 221 API tests.
 - Full accepted corpus passed with 31 converted entries and 2 documented skips.
 - Fuzz smoke passed 4 targets with 100 iterations each.
+- Representative performance reports exist for text, table, long-document, and
+  scanned/hybrid OCR workloads.
 - Clean checkout build passed.
 - Packed package install passed in a separate fixture project.
 - Browser smoke passed in Chromium and Firefox against

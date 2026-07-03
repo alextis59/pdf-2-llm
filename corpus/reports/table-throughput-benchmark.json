@@ -1,0 +1,630 @@
+{
+  "generatedAt": "2026-07-03T04:22:43.588Z",
+  "iterations": 3,
+  "warmup": 1,
+  "providerModes": [
+    "cpu"
+  ],
+  "comparisons": [],
+  "throughputProfile": {
+    "profileType": "tables-v1-throughput",
+    "scope": "gate:tables-v1",
+    "resultCount": 5,
+    "passed": true,
+    "totals": {
+      "pages": 6,
+      "bytes": 5791,
+      "outputChars": 823,
+      "textLines": 54
+    },
+    "rates": {
+      "pagesPerSecond": {
+        "min": 483.1038066889115,
+        "max": 1107.3780167745645,
+        "mean": 775.3354870731887,
+        "median": 725.4769739049574
+      },
+      "outputCharsPerSecond": {
+        "min": 54590.730155847,
+        "max": 258019.07790847353,
+        "mean": 118880.17147140516,
+        "median": 104100.2290952175
+      },
+      "inputBytesPerSecond": {
+        "min": 471509.3153283776,
+        "max": 929090.1560738597,
+        "mean": 743292.6064703029,
+        "median": 843004.2436775605
+      }
+    },
+    "cases": [
+      {
+        "id": "synthetic-borderless-table",
+        "gate": "tables-v1",
+        "kind": "borderless-table",
+        "features": [
+          "born-digital",
+          "borderless-table",
+          "aligned-columns"
+        ],
+        "workload": "conversion",
+        "providerMode": "cpu",
+        "pages": 1,
+        "bytes": 976,
+        "outputChars": 113,
+        "textLines": 10,
+        "iterations": 3,
+        "warmup": 1,
+        "startupMs": 2.5561149999999984,
+        "throughputIterations": 2,
+        "throughputMeanMs": 2.0699484999999953,
+        "throughputMedianMs": 2.0699484999999953,
+        "pagesPerSecond": 483.1038066889115,
+        "outputCharsPerSecond": 54590.730155847,
+        "inputBytesPerSecond": 471509.3153283776,
+        "passed": true
+      },
+      {
+        "id": "synthetic-visible-table",
+        "gate": "tables-v1",
+        "kind": "visible-table",
+        "features": [
+          "born-digital",
+          "visible-table",
+          "ruling-lines"
+        ],
+        "workload": "conversion",
+        "providerMode": "cpu",
+        "pages": 1,
+        "bytes": 1072,
+        "outputChars": 104,
+        "textLines": 10,
+        "iterations": 3,
+        "warmup": 1,
+        "startupMs": 2.282907999999992,
+        "throughputIterations": 2,
+        "throughputMeanMs": 1.7713405000000009,
+        "throughputMedianMs": 1.7713405000000009,
+        "pagesPerSecond": 564.5441968949501,
+        "outputCharsPerSecond": 58712.59647707482,
+        "inputBytesPerSecond": 605191.3790713866,
+        "passed": true
+      },
+      {
+        "id": "synthetic-split-across-page-table",
+        "gate": "tables-v1",
+        "kind": "visible-table",
+        "features": [
+          "born-digital",
+          "visible-table",
+          "ruling-lines",
+          "multi-page",
+          "split-table"
+        ],
+        "workload": "conversion",
+        "providerMode": "cpu",
+        "pages": 2,
+        "bytes": 1742,
+        "outputChars": 209,
+        "textLines": 19,
+        "iterations": 3,
+        "warmup": 1,
+        "startupMs": 2.9151970000000063,
+        "throughputIterations": 2,
+        "throughputMeanMs": 2.007680499999992,
+        "throughputMedianMs": 2.007680499999992,
+        "pagesPerSecond": 996.1744411025597,
+        "outputCharsPerSecond": 104100.2290952175,
+        "inputBytesPerSecond": 867667.9382003295,
+        "passed": true
+      },
+      {
+        "id": "synthetic-table-with-note",
+        "gate": "tables-v1",
+        "kind": "visible-table",
+        "features": [
+          "born-digital",
+          "visible-table",
+          "ruling-lines",
+          "table-note"
+        ],
+        "workload": "conversion",
+        "providerMode": "cpu",
+        "pages": 1,
+        "bytes": 1162,
+        "outputChars": 164,
+        "textLines": 11,
+        "iterations": 3,
+        "warmup": 1,
+        "startupMs": 1.7781340000000085,
+        "throughputIterations": 2,
+        "throughputMeanMs": 1.3784034999999975,
+        "throughputMedianMs": 1.3784034999999975,
+        "pagesPerSecond": 725.4769739049574,
+        "outputCharsPerSecond": 118978.223720413,
+        "inputBytesPerSecond": 843004.2436775605,
+        "passed": true
+      },
+      {
+        "id": "synthetic-complex-spanned-table",
+        "gate": "tables-v1",
+        "kind": "complex-table",
+        "features": [
+          "born-digital",
+          "visible-table",
+          "ruling-lines",
+          "column-span",
+          "html-table"
+        ],
+        "workload": "conversion",
+        "providerMode": "cpu",
+        "pages": 1,
+        "bytes": 839,
+        "outputChars": 233,
+        "textLines": 4,
+        "iterations": 3,
+        "warmup": 1,
+        "startupMs": 1.003526000000008,
+        "throughputIterations": 2,
+        "throughputMeanMs": 0.9030339999999981,
+        "throughputMedianMs": 0.9030339999999981,
+        "pagesPerSecond": 1107.3780167745645,
+        "outputCharsPerSecond": 258019.07790847353,
+        "inputBytesPerSecond": 929090.1560738597,
+        "passed": true
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "synthetic-borderless-table",
+      "gate": "tables-v1",
+      "kind": "borderless-table",
+      "features": [
+        "born-digital",
+        "borderless-table",
+        "aligned-columns"
+      ],
+      "workload": "conversion",
+      "providerMode": "cpu",
+      "bytes": 976,
+      "pdfVersion": "1.4",
+      "iterations": 3,
+      "warmup": 1,
+      "pages": 1,
+      "outputChars": 113,
+      "textLines": 10,
+      "warnings": [
+        "ocr.disabled",
+        "text.heuristic_content_stream"
+      ],
+      "minMs": 1.9727399999999946,
+      "maxMs": 2.5561149999999984,
+      "meanMs": 2.2320039999999963,
+      "medianMs": 2.167156999999996,
+      "startup": {
+        "durationMs": 2.5561149999999984
+      },
+      "modelLoad": {
+        "durationMs": 0,
+        "measured": false,
+        "reason": "ocr-disabled-or-lazy",
+        "strategy": "lazy",
+        "source": "adapter-default",
+        "languages": [
+          "eng"
+        ],
+        "modelFiles": [
+          "eng.traineddata"
+        ]
+      },
+      "throughput": {
+        "iterations": 2,
+        "minMs": 1.9727399999999946,
+        "maxMs": 2.167156999999996,
+        "meanMs": 2.0699484999999953,
+        "medianMs": 2.0699484999999953,
+        "pagesPerSecond": 483.1038066889115
+      },
+      "pagesPerSecond": 483.1038066889115,
+      "acceleration": {
+        "requested": "disabled",
+        "selectedProvider": "cpu",
+        "fallbackReason": "not-requested",
+        "runtime": "node",
+        "executionProvider": "cpu",
+        "executionStatus": "no-routed-pages"
+      },
+      "memory": {
+        "rssDeltaBytes": 1441792,
+        "heapUsedDeltaBytes": -1359904,
+        "externalDeltaBytes": -32197,
+        "arrayBuffersDeltaBytes": -42493
+      },
+      "peakMemory": {
+        "rssPeakBytes": 60555264,
+        "heapUsedPeakBytes": 8413384,
+        "externalPeakBytes": 2008663,
+        "arrayBuffersPeakBytes": 60384,
+        "rssPeakDeltaBytes": 1441792,
+        "heapUsedPeakDeltaBytes": 0
+      },
+      "gpuMemory": {
+        "provider": "cpu",
+        "source": "webgpu-execution-plan",
+        "estimatedBytes": 0,
+        "maxBatchEstimatedBytes": 0,
+        "limitBytes": 268435456,
+        "plannedPages": 0,
+        "skippedPages": 0
+      },
+      "memoryLimits": {
+        "maxRssDeltaBytes": null,
+        "maxHeapUsedDeltaBytes": null
+      },
+      "memoryLimitViolations": [],
+      "passed": true
+    },
+    {
+      "id": "synthetic-visible-table",
+      "gate": "tables-v1",
+      "kind": "visible-table",
+      "features": [
+        "born-digital",
+        "visible-table",
+        "ruling-lines"
+      ],
+      "workload": "conversion",
+      "providerMode": "cpu",
+      "bytes": 1072,
+      "pdfVersion": "1.4",
+      "iterations": 3,
+      "warmup": 1,
+      "pages": 1,
+      "outputChars": 104,
+      "textLines": 10,
+      "warnings": [
+        "ocr.disabled",
+        "text.heuristic_content_stream"
+      ],
+      "minMs": 1.6504790000000042,
+      "maxMs": 2.282907999999992,
+      "meanMs": 1.941862999999998,
+      "medianMs": 1.8922019999999975,
+      "startup": {
+        "durationMs": 2.282907999999992
+      },
+      "modelLoad": {
+        "durationMs": 0,
+        "measured": false,
+        "reason": "ocr-disabled-or-lazy",
+        "strategy": "lazy",
+        "source": "adapter-default",
+        "languages": [
+          "eng"
+        ],
+        "modelFiles": [
+          "eng.traineddata"
+        ]
+      },
+      "throughput": {
+        "iterations": 2,
+        "minMs": 1.6504790000000042,
+        "maxMs": 1.8922019999999975,
+        "meanMs": 1.7713405000000009,
+        "medianMs": 1.7713405000000009,
+        "pagesPerSecond": 564.5441968949501
+      },
+      "pagesPerSecond": 564.5441968949501,
+      "acceleration": {
+        "requested": "disabled",
+        "selectedProvider": "cpu",
+        "fallbackReason": "not-requested",
+        "runtime": "node",
+        "executionProvider": "cpu",
+        "executionStatus": "no-routed-pages"
+      },
+      "memory": {
+        "rssDeltaBytes": 262144,
+        "heapUsedDeltaBytes": 719200,
+        "externalDeltaBytes": 4092,
+        "arrayBuffersDeltaBytes": 4092
+      },
+      "peakMemory": {
+        "rssPeakBytes": 61210624,
+        "heapUsedPeakBytes": 8899528,
+        "externalPeakBytes": 1975434,
+        "arrayBuffersPeakBytes": 25979,
+        "rssPeakDeltaBytes": 262144,
+        "heapUsedPeakDeltaBytes": 839440
+      },
+      "gpuMemory": {
+        "provider": "cpu",
+        "source": "webgpu-execution-plan",
+        "estimatedBytes": 0,
+        "maxBatchEstimatedBytes": 0,
+        "limitBytes": 268435456,
+        "plannedPages": 0,
+        "skippedPages": 0
+      },
+      "memoryLimits": {
+        "maxRssDeltaBytes": null,
+        "maxHeapUsedDeltaBytes": null
+      },
+      "memoryLimitViolations": [],
+      "passed": true
+    },
+    {
+      "id": "synthetic-split-across-page-table",
+      "gate": "tables-v1",
+      "kind": "visible-table",
+      "features": [
+        "born-digital",
+        "visible-table",
+        "ruling-lines",
+        "multi-page",
+        "split-table"
+      ],
+      "workload": "conversion",
+      "providerMode": "cpu",
+      "bytes": 1742,
+      "pdfVersion": "1.4",
+      "iterations": 3,
+      "warmup": 1,
+      "pages": 2,
+      "outputChars": 209,
+      "textLines": 19,
+      "warnings": [
+        "ocr.disabled",
+        "text.heuristic_content_stream"
+      ],
+      "minMs": 1.9827949999999959,
+      "maxMs": 2.9151970000000063,
+      "meanMs": 2.3101859999999967,
+      "medianMs": 2.0325659999999885,
+      "startup": {
+        "durationMs": 2.9151970000000063
+      },
+      "modelLoad": {
+        "durationMs": 0,
+        "measured": false,
+        "reason": "ocr-disabled-or-lazy",
+        "strategy": "lazy",
+        "source": "adapter-default",
+        "languages": [
+          "eng"
+        ],
+        "modelFiles": [
+          "eng.traineddata"
+        ]
+      },
+      "throughput": {
+        "iterations": 2,
+        "minMs": 1.9827949999999959,
+        "maxMs": 2.0325659999999885,
+        "meanMs": 2.007680499999992,
+        "medianMs": 2.007680499999992,
+        "pagesPerSecond": 996.1744411025597
+      },
+      "pagesPerSecond": 996.1744411025597,
+      "acceleration": {
+        "requested": "disabled",
+        "selectedProvider": "cpu",
+        "fallbackReason": "not-requested",
+        "runtime": "node",
+        "executionProvider": "cpu",
+        "executionStatus": "no-routed-pages"
+      },
+      "memory": {
+        "rssDeltaBytes": 32768,
+        "heapUsedDeltaBytes": 38416,
+        "externalDeltaBytes": 50,
+        "arrayBuffersDeltaBytes": 50
+      },
+      "peakMemory": {
+        "rssPeakBytes": 63438848,
+        "heapUsedPeakBytes": 9169392,
+        "externalPeakBytes": 1974530,
+        "arrayBuffersPeakBytes": 24859,
+        "rssPeakDeltaBytes": 917504,
+        "heapUsedPeakDeltaBytes": 726768
+      },
+      "gpuMemory": {
+        "provider": "cpu",
+        "source": "webgpu-execution-plan",
+        "estimatedBytes": 0,
+        "maxBatchEstimatedBytes": 0,
+        "limitBytes": 268435456,
+        "plannedPages": 0,
+        "skippedPages": 0
+      },
+      "memoryLimits": {
+        "maxRssDeltaBytes": null,
+        "maxHeapUsedDeltaBytes": null
+      },
+      "memoryLimitViolations": [],
+      "passed": true
+    },
+    {
+      "id": "synthetic-table-with-note",
+      "gate": "tables-v1",
+      "kind": "visible-table",
+      "features": [
+        "born-digital",
+        "visible-table",
+        "ruling-lines",
+        "table-note"
+      ],
+      "workload": "conversion",
+      "providerMode": "cpu",
+      "bytes": 1162,
+      "pdfVersion": "1.4",
+      "iterations": 3,
+      "warmup": 1,
+      "pages": 1,
+      "outputChars": 164,
+      "textLines": 11,
+      "warnings": [
+        "ocr.disabled",
+        "text.heuristic_content_stream"
+      ],
+      "minMs": 1.2016639999999938,
+      "maxMs": 1.7781340000000085,
+      "meanMs": 1.511647000000001,
+      "medianMs": 1.555143000000001,
+      "startup": {
+        "durationMs": 1.7781340000000085
+      },
+      "modelLoad": {
+        "durationMs": 0,
+        "measured": false,
+        "reason": "ocr-disabled-or-lazy",
+        "strategy": "lazy",
+        "source": "adapter-default",
+        "languages": [
+          "eng"
+        ],
+        "modelFiles": [
+          "eng.traineddata"
+        ]
+      },
+      "throughput": {
+        "iterations": 2,
+        "minMs": 1.2016639999999938,
+        "maxMs": 1.555143000000001,
+        "meanMs": 1.3784034999999975,
+        "medianMs": 1.3784034999999975,
+        "pagesPerSecond": 725.4769739049574
+      },
+      "pagesPerSecond": 725.4769739049574,
+      "acceleration": {
+        "requested": "disabled",
+        "selectedProvider": "cpu",
+        "fallbackReason": "not-requested",
+        "runtime": "node",
+        "executionProvider": "cpu",
+        "executionStatus": "no-routed-pages"
+      },
+      "memory": {
+        "rssDeltaBytes": 131072,
+        "heapUsedDeltaBytes": -916656,
+        "externalDeltaBytes": -2008,
+        "arrayBuffersDeltaBytes": -2008
+      },
+      "peakMemory": {
+        "rssPeakBytes": 62685184,
+        "heapUsedPeakBytes": 9405656,
+        "externalPeakBytes": 1975366,
+        "arrayBuffersPeakBytes": 25911,
+        "rssPeakDeltaBytes": 131072,
+        "heapUsedPeakDeltaBytes": 0
+      },
+      "gpuMemory": {
+        "provider": "cpu",
+        "source": "webgpu-execution-plan",
+        "estimatedBytes": 0,
+        "maxBatchEstimatedBytes": 0,
+        "limitBytes": 268435456,
+        "plannedPages": 0,
+        "skippedPages": 0
+      },
+      "memoryLimits": {
+        "maxRssDeltaBytes": null,
+        "maxHeapUsedDeltaBytes": null
+      },
+      "memoryLimitViolations": [],
+      "passed": true
+    },
+    {
+      "id": "synthetic-complex-spanned-table",
+      "gate": "tables-v1",
+      "kind": "complex-table",
+      "features": [
+        "born-digital",
+        "visible-table",
+        "ruling-lines",
+        "column-span",
+        "html-table"
+      ],
+      "workload": "conversion",
+      "providerMode": "cpu",
+      "bytes": 839,
+      "pdfVersion": "1.4",
+      "iterations": 3,
+      "warmup": 1,
+      "pages": 1,
+      "outputChars": 233,
+      "textLines": 4,
+      "warnings": [
+        "ocr.disabled",
+        "text.heuristic_content_stream"
+      ],
+      "minMs": 0.8605850000000004,
+      "maxMs": 1.003526000000008,
+      "meanMs": 0.9365313333333347,
+      "medianMs": 0.9454829999999959,
+      "startup": {
+        "durationMs": 1.003526000000008
+      },
+      "modelLoad": {
+        "durationMs": 0,
+        "measured": false,
+        "reason": "ocr-disabled-or-lazy",
+        "strategy": "lazy",
+        "source": "adapter-default",
+        "languages": [
+          "eng"
+        ],
+        "modelFiles": [
+          "eng.traineddata"
+        ]
+      },
+      "throughput": {
+        "iterations": 2,
+        "minMs": 0.8605850000000004,
+        "maxMs": 0.9454829999999959,
+        "meanMs": 0.9030339999999981,
+        "medianMs": 0.9030339999999981,
+        "pagesPerSecond": 1107.3780167745645
+      },
+      "pagesPerSecond": 1107.3780167745645,
+      "acceleration": {
+        "requested": "disabled",
+        "selectedProvider": "cpu",
+        "fallbackReason": "not-requested",
+        "runtime": "node",
+        "executionProvider": "cpu",
+        "executionStatus": "no-routed-pages"
+      },
+      "memory": {
+        "rssDeltaBytes": 0,
+        "heapUsedDeltaBytes": -377688,
+        "externalDeltaBytes": -1173,
+        "arrayBuffersDeltaBytes": -1173
+      },
+      "peakMemory": {
+        "rssPeakBytes": 62685184,
+        "heapUsedPeakBytes": 9451016,
+        "externalPeakBytes": 1977518,
+        "arrayBuffersPeakBytes": 28063,
+        "rssPeakDeltaBytes": 0,
+        "heapUsedPeakDeltaBytes": 474752
+      },
+      "gpuMemory": {
+        "provider": "cpu",
+        "source": "webgpu-execution-plan",
+        "estimatedBytes": 0,
+        "maxBatchEstimatedBytes": 0,
+        "limitBytes": 268435456,
+        "plannedPages": 0,
+        "skippedPages": 0
+      },
+      "memoryLimits": {
+        "maxRssDeltaBytes": null,
+        "maxHeapUsedDeltaBytes": null
+      },
+      "memoryLimitViolations": [],
+      "passed": true
+    }
+  ]
+}
