@@ -37,14 +37,18 @@ test("createRasterPlan records parser-backed page plans when enabled", () => {
       pageIndex: 0,
       status: "planned",
       sourceBox: "cropBox",
-      widthPt: 468,
-      heightPt: 648,
+      boxPt: [72, 72, 540, 720],
+      sourceWidthPt: 468,
+      sourceHeightPt: 648,
+      widthPt: 648,
+      heightPt: 468,
       dpi: 300,
       scale: 300 / 72,
-      widthPx: 1950,
-      heightPx: 2700,
+      widthPx: 2700,
+      heightPx: 1950,
       pixelCount: 5265000,
       rotation: 90,
+      quarterTurn: true,
       userUnit: 1
     }
   ]);
@@ -69,6 +73,33 @@ test("createRasterPlan honors configured DPI", () => {
   assert.equal(plan.pages[0].widthPx, 1224);
   assert.equal(plan.pages[0].heightPx, 1584);
   assert.equal(plan.pages[0].pixelCount, 1938816);
+  assert.equal(plan.pages[0].sourceBox, "mediaBox");
+  assert.deepEqual(plan.pages[0].boxPt, [0, 0, 612, 792]);
+  assert.equal(plan.pages[0].quarterTurn, false);
+});
+
+test("createRasterPlan normalizes rotation before computing render dimensions", () => {
+  const plan = createRasterPlan(
+    [
+      {
+        pageIndex: 0,
+        mediaBox: [0, 0, 200, 100],
+        widthPt: 200,
+        heightPt: 100,
+        rotation: -90
+      }
+    ],
+    { enabled: true, dpi: 72 }
+  );
+
+  assert.equal(plan.pages[0].rotation, 270);
+  assert.equal(plan.pages[0].quarterTurn, true);
+  assert.equal(plan.pages[0].sourceWidthPt, 200);
+  assert.equal(plan.pages[0].sourceHeightPt, 100);
+  assert.equal(plan.pages[0].widthPt, 100);
+  assert.equal(plan.pages[0].heightPt, 200);
+  assert.equal(plan.pages[0].widthPx, 100);
+  assert.equal(plan.pages[0].heightPx, 200);
 });
 
 test("createRasterPlan rejects invalid DPI values", () => {

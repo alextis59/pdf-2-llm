@@ -125,6 +125,9 @@ export type RasterPageDiagnostics = {
   pageIndex: number;
   status: "planned";
   sourceBox: "cropBox" | "mediaBox" | "unknown";
+  boxPt: number[] | null;
+  sourceWidthPt: number | null;
+  sourceHeightPt: number | null;
   widthPt: number | null;
   heightPt: number | null;
   dpi: number;
@@ -133,6 +136,7 @@ export type RasterPageDiagnostics = {
   heightPx: number | null;
   pixelCount: number | null;
   rotation: number;
+  quarterTurn: boolean;
   userUnit: number;
 };
 

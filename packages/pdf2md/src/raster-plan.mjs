@@ -42,21 +42,32 @@ export function createRasterPlan(pages = [], options = {}) {
 
 function createRasterPagePlan(page, dpi) {
   const sourceBox = page.cropBox ? "cropBox" : page.mediaBox ? "mediaBox" : "unknown";
+  const boxPt = page.cropBox ?? page.mediaBox ?? null;
+  const sourceWidthPt = page.widthPt ?? null;
+  const sourceHeightPt = page.heightPt ?? null;
+  const rotation = normalizeRotation(page.rotation);
+  const quarterTurn = rotation === 90 || rotation === 270;
+  const widthPt = quarterTurn ? sourceHeightPt : sourceWidthPt;
+  const heightPt = quarterTurn ? sourceWidthPt : sourceHeightPt;
   const scale = dpi / 72;
-  const widthPx = pointsToPixels(page.widthPt, dpi);
-  const heightPx = pointsToPixels(page.heightPt, dpi);
+  const widthPx = pointsToPixels(widthPt, dpi);
+  const heightPx = pointsToPixels(heightPt, dpi);
   return {
     pageIndex: page.pageIndex,
     status: "planned",
     sourceBox,
-    widthPt: page.widthPt ?? null,
-    heightPt: page.heightPt ?? null,
+    boxPt,
+    sourceWidthPt,
+    sourceHeightPt,
+    widthPt,
+    heightPt,
     dpi,
     scale,
     widthPx,
     heightPx,
     pixelCount: widthPx === null || heightPx === null ? null : widthPx * heightPx,
-    rotation: page.rotation ?? 0,
+    rotation,
+    quarterTurn,
     userUnit: page.userUnit ?? 1
   };
 }
@@ -74,4 +85,12 @@ function pointsToPixels(points, dpi) {
     return null;
   }
   return Math.max(1, Math.ceil((points * dpi) / 72 - 1e-9));
+}
+
+function normalizeRotation(value) {
+  const rotation = Number(value ?? 0);
+  if (!Number.isFinite(rotation)) {
+    return 0;
+  }
+  return ((rotation % 360) + 360) % 360;
 }

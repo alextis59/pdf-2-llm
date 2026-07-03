@@ -108,6 +108,9 @@ test("convertPdfToMarkdown exposes the selected scoped raster path when enabled"
       pageIndex: 0,
       status: "planned",
       sourceBox: "mediaBox",
+      boxPt: [0, 0, 612, 792],
+      sourceWidthPt: 612,
+      sourceHeightPt: 792,
       widthPt: 612,
       heightPt: 792,
       dpi: 144,
@@ -116,6 +119,7 @@ test("convertPdfToMarkdown exposes the selected scoped raster path when enabled"
       heightPx: 1584,
       pixelCount: 1938816,
       rotation: 0,
+      quarterTurn: false,
       userUnit: 1
     }
   ]);
