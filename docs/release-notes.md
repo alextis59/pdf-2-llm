@@ -30,6 +30,8 @@ fixtures:
 - Full accepted corpus passed with 31 converted entries and 2 documented skips.
 - Extracted text character error rate is gated for exact generated fixtures with
   reviewed Markdown oracles.
+- Warning-code precision and recall are checked for representative generated
+  no-warning, heuristic text, ordering, and figure-warning cases.
 - Fuzz smoke passed 4 targets with 100 iterations each.
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.

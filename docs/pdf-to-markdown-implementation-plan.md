@@ -796,7 +796,7 @@ Core metrics:
 - [ ] Markdown AST diff.
 - [x] Rendered HTML semantic diff.
 - [ ] Asset link validity.
-- [ ] Warning-code accuracy.
+- [x] Warning-code accuracy.
 - [x] Pages per second.
 - [x] Peak memory.
 - [x] Browser startup time.
