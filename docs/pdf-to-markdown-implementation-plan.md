@@ -718,7 +718,7 @@ Goal: make the package safe and predictable enough for real use.
 
 ### 9.3 Developer Experience
 
-- [ ] Write API documentation.
+- [x] Write API documentation.
 - [ ] Write CLI documentation.
 - [ ] Write browser example.
 - [ ] Write Node example.
