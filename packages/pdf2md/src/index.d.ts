@@ -39,6 +39,7 @@ export type ConvertOptions = {
     adapter?: "tesseract.js";
     languages?: string[];
     modelBaseUrl?: string;
+    results?: OcrPageResult[];
     cache?: {
       enabled?: boolean;
       strategy?: "adapter-default" | "none";
@@ -120,7 +121,70 @@ export type OcrDiagnostics = {
   status: "disabled" | "selected" | "unsupported";
   languages: string[];
   modelLoading: OcrModelLoadingDiagnostics;
+  textBoxes: OcrTextBoxDiagnostics;
   adapter: OcrAdapterDiagnostics | null;
+};
+
+export type OcrPageResult = {
+  pageIndex: number;
+  language?: string;
+  coordinateSpace?: "page" | "raster";
+  widthPx?: number;
+  heightPx?: number;
+  boxes?: OcrTextBoxInput[];
+  lines?: OcrTextBoxInput[];
+  words?: OcrTextBoxInput[];
+};
+
+export type OcrTextBoxInput = {
+  text: string;
+  confidence?: number;
+  direction?: "ltr" | "rtl" | "vertical" | "unknown";
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  bbox?: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    left?: number;
+    top?: number;
+    right?: number;
+    bottom?: number;
+    x0?: number;
+    y0?: number;
+    x1?: number;
+    y1?: number;
+  };
+};
+
+export type OcrTextBoxDiagnostics = {
+  enabled: boolean;
+  status:
+    | "disabled"
+    | "unsupported"
+    | "no-routed-pages"
+    | "pending"
+    | "partial"
+    | "completed";
+  source: "none" | "options.ocr.results";
+  routedPages: number;
+  completedPages: number;
+  totalBoxes: number;
+  averageConfidence: number | null;
+  pages: OcrTextBoxPageDiagnostics[];
+};
+
+export type OcrTextBoxPageDiagnostics = {
+  pageIndex: number;
+  sourceType: "scanned" | "hybrid";
+  status: "pending" | "completed" | "empty";
+  coordinateSpace: "page" | "raster" | null;
+  language: string | null;
+  boxes: number;
+  averageConfidence: number | null;
 };
 
 export type OcrModelLoadingDiagnostics = {

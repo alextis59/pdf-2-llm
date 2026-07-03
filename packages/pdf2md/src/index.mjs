@@ -25,6 +25,7 @@ import {
 } from "./table-grid.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
 import { selectOcrAdapter } from "./ocr-adapter.mjs";
+import { createOcrTextExtraction } from "./ocr-text.mjs";
 import { createRasterPlan } from "./raster-plan.mjs";
 import { createScanDetection } from "./scan-detection.mjs";
 
@@ -169,12 +170,20 @@ export async function convertPdfToMarkdown(input, options = {}) {
     textLines,
     imageDraws
   });
+  const ocrTextExtraction = createOcrTextExtraction({
+    adapter: ocrAdapter,
+    options: options.ocr ?? {},
+    pages: pdfDocument?.pages ?? [],
+    rasterPlan,
+    scanDetection
+  });
+  const markdownTextLines = [...textLines, ...ocrTextExtraction.lines];
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
     enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
   });
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
-  const markdownResult = linesToMarkdownWithSourceMap(textLines, {
+  const markdownResult = linesToMarkdownWithSourceMap(markdownTextLines, {
     pageAnchors: options.markdown?.pageAnchors === true,
     preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
     rulingTables,
@@ -185,7 +194,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   warnings.push(...unicodeMappingWarnings(textLines));
-  warnings.push(...textOrderingWarnings(textLines));
+  warnings.push(...textOrderingWarnings(markdownTextLines));
   warnings.push(...taggedStructureConflictWarnings(markdownResult.taggedStructureConflicts));
   warnings.push(...lowConfidenceTableWarnings(markdownResult.lowConfidenceTables));
   warnings.push(...rasterPixelLimitWarnings(rasterPlan));
@@ -199,7 +208,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
           : "Text was extracted with the fallback uncompressed-stream scanner."
       )
     );
-  } else {
+  } else if (ocrTextExtraction.lines.length === 0) {
     warnings.push(
       createWarning(
         warningCodes.ConversionNotImplemented,
@@ -226,7 +235,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         heightPt: page.heightPt,
         rotation: page.rotation,
         sourceType: scanPagesByIndex.get(page.pageIndex)?.sourceType ?? "unknown",
-        elements: []
+        elements: ocrTextExtraction.elementsByPage.get(page.pageIndex) ?? []
       })
     );
   }
@@ -255,18 +264,16 @@ export async function convertPdfToMarkdown(input, options = {}) {
         elapsedMs
       },
       extraction: {
-        textLines: textLines.length,
-        mode:
-          textLines.length > 0
-            ? pdfDocument
-              ? "parsed-content-streams"
-              : "fallback-uncompressed-stream-scan"
-            : "none",
+        textLines: markdownTextLines.length,
+        mode: extractionMode({ ocrTextLines: ocrTextExtraction.lines, pdfDocument, textLines }),
         outlines: pdfDocument?.outlines ?? [],
         structure: summarizeStructure(pdfDocument?.structure),
         taggedStructureConflicts: markdownResult.taggedStructureConflicts.length,
         layout: markdownResult.layout,
-        ocr: ocrAdapter,
+        ocr: {
+          ...ocrAdapter,
+          textBoxes: ocrTextExtraction.diagnostics
+        },
         tables: markdownResult.tables,
         lowConfidenceTables: markdownResult.lowConfidenceTables,
         raster: rasterPlan,
@@ -306,8 +313,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
         : []
     },
     confidence: {
-      overall: textLines.length > 0 ? 0.25 : 0,
-      text: textLines.length > 0 ? 0.4 : 0,
+      overall: markdownTextLines.length > 0 ? 0.25 : 0,
+      text: textConfidence({ ocrTextExtraction, textLines }),
       layout: markdownResult.layout.pages.length > 0 ? 0.35 : 0,
       tables: tableConfidence(markdownResult.tables)
     }
@@ -761,6 +768,23 @@ function summarizeOptions(options, rasterPlan, ocrAdapter) {
     maxImagePixels: rasterPlan.maxPixels,
     assetsEnabled: options.assets?.enabled ?? null
   };
+}
+
+function extractionMode({ ocrTextLines, pdfDocument, textLines }) {
+  if (textLines.length > 0 && ocrTextLines.length > 0) {
+    return pdfDocument ? "parsed-content-streams+ocr" : "fallback-uncompressed-stream-scan+ocr";
+  }
+  if (textLines.length > 0) {
+    return pdfDocument ? "parsed-content-streams" : "fallback-uncompressed-stream-scan";
+  }
+  return ocrTextLines.length > 0 ? "ocr" : "none";
+}
+
+function textConfidence({ ocrTextExtraction, textLines }) {
+  if (textLines.length > 0) {
+    return 0.4;
+  }
+  return ocrTextExtraction.diagnostics.averageConfidence ?? 0;
 }
 
 function rasterPixelLimitWarnings(rasterPlan) {

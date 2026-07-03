@@ -587,7 +587,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 
 - [x] Select CPU OCR adapter.
 - [x] Define OCR model loading and cache behavior.
-- [ ] Implement OCR text boxes with confidence.
+- [x] Implement OCR text boxes with confidence.
 - [ ] Implement deskew/preprocessing where practical.
 - [ ] Reconcile PDF text layer and OCR text for hybrid pages.
 - [ ] Prefer PDF text only when it aligns with visible geometry.

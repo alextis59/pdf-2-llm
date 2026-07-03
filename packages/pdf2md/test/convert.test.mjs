@@ -126,6 +126,16 @@ test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
         node: "adapter-default-filesystem"
       }
     },
+    textBoxes: {
+      enabled: true,
+      status: "no-routed-pages",
+      source: "none",
+      routedPages: 0,
+      completedPages: 0,
+      totalBoxes: 0,
+      averageConfidence: null,
+      pages: []
+    },
     adapter: {
       id: "tesseract.js",
       kind: "cpu",
@@ -426,6 +436,100 @@ test("convertPdfToMarkdown reports hidden text and visible image geometry mismat
   assert.equal(page.hiddenOcrOverlayLikely, true);
   assert.equal(page.hiddenTextImageMismatchLineCount, 1);
   assert.equal(page.hiddenTextImageMismatchLikely, true);
+});
+
+test("convertPdfToMarkdown emits OCR text boxes with confidence for routed scan pages", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 }),
+    {
+      ocr: {
+        adapter: "tesseract.js",
+        results: [
+          {
+            pageIndex: 0,
+            language: "eng",
+            coordinateSpace: "page",
+            lines: [
+              {
+                text: "Scanned OCR line",
+                confidence: 93,
+                x: 72,
+                y: 700,
+                width: 180,
+                height: 12
+              },
+              {
+                text: "OCR body text",
+                confidence: 0.82,
+                x: 72,
+                y: 680,
+                width: 128,
+                height: 12
+              }
+            ]
+          }
+        ]
+      }
+    }
+  );
+
+  assert.equal(result.ir.sourceType, "scanned");
+  assert.equal(result.diagnostics.extraction.mode, "ocr");
+  assert.equal(result.diagnostics.extraction.textLines, 2);
+  assert.deepEqual(result.diagnostics.extraction.ocr.textBoxes, {
+    enabled: true,
+    status: "completed",
+    source: "options.ocr.results",
+    routedPages: 1,
+    completedPages: 1,
+    totalBoxes: 2,
+    averageConfidence: 0.875,
+    pages: [
+      {
+        pageIndex: 0,
+        sourceType: "scanned",
+        status: "completed",
+        coordinateSpace: "page",
+        language: "eng",
+        boxes: 2,
+        averageConfidence: 0.875
+      }
+    ]
+  });
+  assert.match(result.markdown, /Scanned OCR line/);
+  assert.equal(result.sourceMap.entries[0].regions[0].source, "ocr");
+  assert.deepEqual(result.ir.pages[0].elements, [
+    {
+      type: "text",
+      spans: [
+        {
+          text: "Scanned OCR line",
+          x: 72,
+          y: 700,
+          width: 180,
+          height: 12,
+          direction: "ltr",
+          confidence: 0.93,
+          source: "ocr"
+        }
+      ]
+    },
+    {
+      type: "text",
+      spans: [
+        {
+          text: "OCR body text",
+          x: 72,
+          y: 680,
+          width: 128,
+          height: 12,
+          direction: "ltr",
+          confidence: 0.82,
+          source: "ocr"
+        }
+      ]
+    }
+  ]);
 });
 
 test("CLI emits JSON scaffold output", () => {
