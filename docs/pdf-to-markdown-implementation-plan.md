@@ -692,7 +692,7 @@ Goal: make the package safe and predictable enough for real use.
 
 ### 9.1 Security
 
-- [ ] Enforce max file size.
+- [x] Enforce max file size.
 - [ ] Enforce max page count.
 - [ ] Enforce max decoded stream size.
 - [ ] Enforce max image pixels.
