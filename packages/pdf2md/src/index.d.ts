@@ -23,6 +23,9 @@ export type ConvertOptions = {
     pageAnchors?: boolean;
     preserveRunningTitles?: boolean;
   };
+  equations?: {
+    imageFallbackConfidence?: number;
+  };
   parser?: {
     mode?: "strict" | "tolerant";
   };
@@ -649,6 +652,8 @@ export type FigureRegionDiagnostics = {
   visualElements: number;
   pageWidthPt: number | null;
   pageHeightPt: number | null;
+  altText?: string;
+  altTextSource?: string;
 };
 
 export type EquationDiagnostics = {
@@ -669,6 +674,13 @@ export type EquationRegionDiagnostics = {
   source: "pdf-text" | "content-stream" | "ocr" | "image";
   text: string;
   latex: string | null;
+  output?: "image";
+  assetId?: string;
+  assetPath?: string;
+  assetMediaType?: "image/png";
+  confidence?: number;
+  fallbackReason?: "low-ocr-confidence";
+  fallbackThreshold?: number;
   lineCount: number;
   containsUnicodeMath: boolean;
   x: number | null;
@@ -918,6 +930,8 @@ export type FigureBlock = {
   type: "figure";
   caption?: string;
   assetId?: string;
+  altText?: string;
+  altTextSource?: string;
   x?: number;
   y?: number;
   width?: number;
@@ -973,6 +987,8 @@ export type AssetResult = {
   kind?: string;
   content?: string;
   encoding?: "base64" | "utf8";
+  altText?: string;
+  altTextSource?: string;
   pageIndex?: number | null;
   tableIndex?: number;
 };

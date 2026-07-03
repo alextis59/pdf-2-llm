@@ -6,6 +6,7 @@ import {
 } from "./content-stream.mjs";
 
 const linkPattern = /(https?:\/\/[^\s<>()\[\]{}]+|www\.[^\s<>()\[\]{}]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+const defaultEquationImageFallbackConfidence = 0.75;
 
 export function extractTextLines(bytes, { document = null } = {}) {
   if (document) {
@@ -147,6 +148,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const lowConfidenceTables = [];
   const lowConfidenceTableLines = new Set();
   const blocks = [];
+  const equationImageCountsByPage = new Map();
   let previousWasList = false;
   const anchoredPages = new Set();
 
@@ -213,10 +215,15 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       rulingTableExports
     );
     if (equationBlock) {
+      const imageFallback = equationImageFallbackForLines(
+        equationBlock.sourceLines,
+        options.equations ?? {},
+        equationImageCountsByPage
+      );
       previousWasList = false;
       blocks.push(
-        createMarkdownBlock(formatEquationBlock(equationBlock.sourceLines), "equation", equationBlock.sourceLines, {
-          equation: equationMetadata(equationBlock.sourceLines)
+        createMarkdownBlock(equationMarkdown(equationBlock.sourceLines, imageFallback), "equation", equationBlock.sourceLines, {
+          equation: equationMetadata(equationBlock.sourceLines, imageFallback)
         })
       );
       index = equationBlock.endIndex - 1;
@@ -603,10 +610,17 @@ function formatEquationBlock(lines) {
   return `$$\n${body}\n$$`;
 }
 
-function equationMetadata(lines) {
+function equationMarkdown(lines, imageFallback) {
+  if (imageFallback) {
+    return `![Equation ${imageFallback.equationNumber}](${imageFallback.assetPath})`;
+  }
+  return formatEquationBlock(lines);
+}
+
+function equationMetadata(lines, imageFallback = null) {
   const bounds = boundsForLines(lines);
   const text = lines.map((line) => normalizeText(line.text ?? "")).join("\n");
-  return {
+  const metadata = {
     source: lines.find((line) => typeof line.source === "string")?.source ?? "pdf-text",
     text,
     latex: null,
@@ -614,6 +628,71 @@ function equationMetadata(lines) {
     containsUnicodeMath: lines.some((line) => hasStrongMathSymbol(normalizeText(line.text ?? ""))),
     ...bounds
   };
+  return imageFallback
+    ? {
+        ...metadata,
+        output: "image",
+        assetId: imageFallback.assetId,
+        assetPath: imageFallback.assetPath,
+        assetMediaType: imageFallback.assetMediaType,
+        confidence: imageFallback.confidence,
+        fallbackReason: imageFallback.fallbackReason,
+        fallbackThreshold: imageFallback.fallbackThreshold
+      }
+    : metadata;
+}
+
+function equationImageFallbackForLines(lines, options, countsByPage) {
+  const confidence = equationOcrConfidence(lines);
+  const threshold = equationImageFallbackConfidence(options);
+  if (confidence === null || confidence >= threshold) {
+    return null;
+  }
+  const pageIndex = lines.find((line) => Number.isInteger(line.pageIndex))?.pageIndex ?? null;
+  const pageKey = Number.isInteger(pageIndex) ? pageIndex : "unknown";
+  const equationNumber = (countsByPage.get(pageKey) ?? 0) + 1;
+  countsByPage.set(pageKey, equationNumber);
+  const assetPrefix = slugifyAssetPrefix(options.assetIdPrefix ?? "document");
+  const pageLabel = Number.isInteger(pageIndex) ? `page-${pageIndex + 1}` : "page-unknown";
+  const assetId = `${assetPrefix}-${pageLabel}-equation-${equationNumber}`;
+  return {
+    equationNumber,
+    assetId,
+    assetPath: `assets/${assetId}.png`,
+    assetMediaType: "image/png",
+    confidence,
+    fallbackReason: "low-ocr-confidence",
+    fallbackThreshold: threshold
+  };
+}
+
+function equationOcrConfidence(lines) {
+  if (!lines.some((line) => line.source === "ocr")) {
+    return null;
+  }
+  const confidenceValues = lines
+    .map((line) => Number(line.confidence))
+    .filter(Number.isFinite);
+  if (confidenceValues.length === 0) {
+    return null;
+  }
+  return roundNumber(average(confidenceValues));
+}
+
+function equationImageFallbackConfidence(options) {
+  const threshold = Number(options.imageFallbackConfidence);
+  if (Number.isFinite(threshold) && threshold >= 0 && threshold <= 1) {
+    return threshold;
+  }
+  return defaultEquationImageFallbackConfidence;
+}
+
+function slugifyAssetPrefix(value) {
+  const slug = String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "document";
 }
 
 function createHeadingModel(lines, { outlines = [] } = {}) {
@@ -1306,8 +1385,8 @@ function equationDiagnosticsFromBlocks(blocks) {
   return {
     total: equations.length,
     unicodeEquations: equations.filter((equation) => equation.containsUnicodeMath).length,
-    textEquations: equations.length,
-    imageEquations: 0,
+    textEquations: equations.filter((equation) => equation.output !== "image").length,
+    imageEquations: equations.filter((equation) => equation.output === "image").length,
     formulaOcr: {
       enabled: false,
       status: "not-configured"

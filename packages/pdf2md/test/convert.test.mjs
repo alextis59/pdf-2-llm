@@ -1189,6 +1189,134 @@ test("convertPdfToMarkdown emits equation blocks with diagnostics and source map
   ]);
 });
 
+test("convertPdfToMarkdown preserves low-confidence OCR equations as image assets", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 }),
+    {
+      ocr: {
+        adapter: "tesseract.js",
+        results: [
+          {
+            pageIndex: 0,
+            language: "eng",
+            coordinateSpace: "page",
+            lines: [
+              {
+                text: "Equation Scan Fixture",
+                confidence: 93,
+                x: 72,
+                y: 720,
+                width: 210,
+                height: 22
+              },
+              {
+                text: "A short lead-in.",
+                confidence: 91,
+                x: 72,
+                y: 690,
+                width: 120,
+                height: 12
+              },
+              {
+                text: "E = m c^2",
+                confidence: 42,
+                x: 168,
+                y: 660,
+                width: 170,
+                height: 12
+              },
+              {
+                text: "After the equation.",
+                confidence: 94,
+                x: 72,
+                y: 620,
+                width: 130,
+                height: 12
+              }
+            ]
+          }
+        ]
+      },
+      equations: {
+        imageFallbackConfidence: 0.75
+      }
+    }
+  );
+
+  assert.equal(
+    result.markdown,
+    "# Equation Scan Fixture\n\nA short lead-in.\n\n![Equation 1](assets/document-page-1-equation-1.png)\n\nAfter the equation.\n"
+  );
+  assert.deepEqual(result.assets, [
+    {
+      id: "document-page-1-equation-1",
+      kind: "equation-preview",
+      path: "assets/document-page-1-equation-1.png",
+      mediaType: "image/png",
+      pageIndex: 0
+    }
+  ]);
+  assert.deepEqual(result.diagnostics.extraction.equations, {
+    total: 1,
+    unicodeEquations: 0,
+    textEquations: 0,
+    imageEquations: 1,
+    formulaOcr: {
+      enabled: false,
+      status: "not-configured"
+    },
+    equations: [
+      {
+        equationIndex: 0,
+        pageIndex: 0,
+        source: "ocr",
+        text: "E = m c^2",
+        latex: null,
+        lineCount: 1,
+        containsUnicodeMath: false,
+        x: 168,
+        y: 660,
+        width: 170,
+        height: 12,
+        output: "image",
+        assetId: "document-page-1-equation-1",
+        assetPath: "assets/document-page-1-equation-1.png",
+        assetMediaType: "image/png",
+        confidence: 0.42,
+        fallbackReason: "low-ocr-confidence",
+        fallbackThreshold: 0.75
+      }
+    ]
+  });
+  assert.deepEqual(
+    result.warnings.find((warning) => warning.code === warningCodes.EquationLowOcrConfidence),
+    {
+      code: warningCodes.EquationLowOcrConfidence,
+      message: "Equation OCR confidence was low; the equation was preserved as an image asset.",
+      details: {
+        equationIndex: 0,
+        pageIndex: 0,
+        assetId: "document-page-1-equation-1",
+        confidence: 0.42,
+        threshold: 0.75,
+        reason: "low-ocr-confidence"
+      }
+    }
+  );
+  assert.deepEqual(
+    result.ir.pages[0].elements.find((element) => element.type === "equation"),
+    {
+      type: "equation",
+      text: "E = m c^2",
+      assetId: "document-page-1-equation-1",
+      x: 168,
+      y: 660,
+      width: 170,
+      height: 12
+    }
+  );
+});
+
 test("convertPdfToMarkdown reports figure caption layout regions", async () => {
   const result = await convertPdfToMarkdown(vectorFigureFixturePath.pathname);
   const page = result.diagnostics.extraction.layout.pages[0];

@@ -232,7 +232,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
     pageAnchors: options.markdown?.pageAnchors === true,
     preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
     rulingTables,
-    outlines: pdfDocument?.outlines ?? []
+    outlines: pdfDocument?.outlines ?? [],
+    equations: {
+      imageFallbackConfidence: options.equations?.imageFallbackConfidence,
+      assetIdPrefix: assetSlugFromSource(normalized.source)
+    }
   });
   const figureDetections = createFigureDetections({
     imageDraws,
@@ -243,6 +247,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   });
   markdownResult = insertFigureMarkdown(markdownResult, figureDetections.figures);
   const figureAssets = createFigureAssets(figureDetections.figures);
+  const equationAssets = createEquationAssets(markdownResult.equations?.equations ?? []);
   const figureElements = figureElementsByPage(figureDetections.figures);
   const equationElements = equationElementsByPage(markdownResult.equations?.equations ?? []);
   const documentInteractions = extractDocumentInteractions(pdfDocument, {
@@ -251,6 +256,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   const assets = [
     ...tableCsvSidecars.assets,
     ...ocrDebugSidecars.assets,
+    ...equationAssets,
     ...figureAssets,
     ...documentInteractions.assets
   ];
@@ -262,6 +268,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   warnings.push(...textOrderingWarnings(markdownTextLines));
   warnings.push(...taggedStructureConflictWarnings(markdownResult.taggedStructureConflicts));
   warnings.push(...lowConfidenceTableWarnings(markdownResult.lowConfidenceTables));
+  warnings.push(...equationImageFallbackWarnings(markdownResult.equations?.equations ?? []));
   warnings.push(...lowSemanticFigureWarnings(figureDetections.figures));
   warnings.push(...rasterPixelLimitWarnings(rasterPlan));
 
@@ -444,7 +451,7 @@ function equationElementsByPage(equations) {
       type: "equation",
       text: equation.text
     };
-    for (const key of ["latex", "x", "y", "width", "height"]) {
+    for (const key of ["latex", "assetId", "x", "y", "width", "height"]) {
       if (equation[key] != null) {
         element[key] = equation[key];
       }
@@ -453,6 +460,18 @@ function equationElementsByPage(equations) {
     byPage.set(equation.pageIndex, elements);
   }
   return byPage;
+}
+
+function createEquationAssets(equations) {
+  return equations
+    .filter((equation) => equation.output === "image" && equation.assetId && equation.assetPath)
+    .map((equation) => ({
+      id: equation.assetId,
+      kind: "equation-preview",
+      path: equation.assetPath,
+      mediaType: equation.assetMediaType ?? "image/png",
+      pageIndex: equation.pageIndex
+    }));
 }
 
 function summarizeRulingLines(rulingLines) {
@@ -800,6 +819,25 @@ function lowConfidenceTableWarnings(tables) {
   );
 }
 
+function equationImageFallbackWarnings(equations) {
+  return equations
+    .filter((equation) => equation.output === "image")
+    .map((equation) =>
+      createWarning(
+        warningCodes.EquationLowOcrConfidence,
+        "Equation OCR confidence was low; the equation was preserved as an image asset.",
+        {
+          equationIndex: equation.equationIndex,
+          pageIndex: equation.pageIndex,
+          assetId: equation.assetId,
+          confidence: equation.confidence,
+          threshold: equation.fallbackThreshold,
+          reason: equation.fallbackReason
+        }
+      )
+    );
+}
+
 function lowSemanticFigureWarnings(figures) {
   return figures.map((figure) =>
     createWarning(
@@ -815,6 +853,22 @@ function lowSemanticFigureWarnings(figures) {
       }
     )
   );
+}
+
+function assetSlugFromSource(source) {
+  if (source?.type === "path" && typeof source.value === "string") {
+    const basename = source.value.split(/[\\/]/).pop() ?? "document";
+    return slugifyAssetPrefix(basename.replace(/\.pdf$/i, ""));
+  }
+  return "document";
+}
+
+function slugifyAssetPrefix(value) {
+  const slug = String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "document";
 }
 
 function samePage(left, right) {

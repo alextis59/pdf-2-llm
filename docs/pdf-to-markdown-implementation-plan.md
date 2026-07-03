@@ -647,7 +647,7 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 - [x] Detect equation-like regions.
 - [x] Preserve Unicode equations when text extraction is reliable.
 - [ ] Add optional formula OCR to LaTeX.
-- [ ] Preserve equation images when OCR confidence is low.
+- [x] Preserve equation images when OCR confidence is low.
 - [x] Add source maps for equation regions.
 
 ### 8.2 Figures, Charts, And Diagrams

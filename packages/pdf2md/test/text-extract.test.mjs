@@ -143,6 +143,79 @@ test("linesToMarkdownWithSourceMap preserves display equations", () => {
   });
 });
 
+test("linesToMarkdownWithSourceMap preserves low-confidence OCR equations as images", () => {
+  const result = linesToMarkdownWithSourceMap(
+    [
+      textLine("Equation Fixture", 72, 720, 160, 22),
+      textLine("A short lead-in.", 72, 690, 120, 12),
+      {
+        ...textLine("E = m c^2", 168, 660, 170, 12),
+        source: "ocr",
+        confidence: 0.42
+      },
+      textLine("After the equation.", 72, 620, 130, 12)
+    ],
+    {
+      equations: {
+        imageFallbackConfidence: 0.75,
+        assetIdPrefix: "scan-equations"
+      }
+    }
+  );
+
+  assert.equal(
+    result.markdown,
+    "# Equation Fixture\n\nA short lead-in.\n\n![Equation 1](assets/scan-equations-page-1-equation-1.png)\n\nAfter the equation.\n"
+  );
+  assert.deepEqual(result.sourceMap.entries[2], {
+    markdownStart: 38,
+    markdownEnd: 96,
+    kind: "equation",
+    regions: [
+      {
+        pageIndex: 0,
+        x: 168,
+        y: 660,
+        width: 170,
+        height: 12,
+        source: "ocr"
+      }
+    ]
+  });
+  assert.deepEqual(result.equations, {
+    total: 1,
+    unicodeEquations: 0,
+    textEquations: 0,
+    imageEquations: 1,
+    formulaOcr: {
+      enabled: false,
+      status: "not-configured"
+    },
+    equations: [
+      {
+        equationIndex: 0,
+        pageIndex: 0,
+        source: "ocr",
+        text: "E = m c^2",
+        latex: null,
+        lineCount: 1,
+        containsUnicodeMath: false,
+        x: 168,
+        y: 660,
+        width: 170,
+        height: 12,
+        output: "image",
+        assetId: "scan-equations-page-1-equation-1",
+        assetPath: "assets/scan-equations-page-1-equation-1.png",
+        assetMediaType: "image/png",
+        confidence: 0.42,
+        fallbackReason: "low-ocr-confidence",
+        fallbackThreshold: 0.75
+      }
+    ]
+  });
+});
+
 test("linesToMarkdown infers heading levels across the document", () => {
   const markdown = linesToMarkdown([
     { text: "Document Title", fontSize: 24, x: 72, y: 720, pageIndex: 0 },
