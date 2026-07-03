@@ -21,3 +21,4 @@
 - Browser example: `packages/pdf2md/examples/browser-basic.html`
 - Node example: `node packages/pdf2md/examples/node-basic.mjs`
 - Worker example: `node packages/pdf2md/examples/worker-basic.mjs`
+- WASM preflight export: `@pdf-2-llm/pdf2md/wasm`

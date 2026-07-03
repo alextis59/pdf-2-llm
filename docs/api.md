@@ -473,6 +473,22 @@ The package exports:
 The repository tests serialize conversion outputs against these schemas, so
 callers can use the same schemas to validate persisted IR/source-map payloads.
 
+## WASM Preflight
+
+The optional `@pdf-2-llm/pdf2md/wasm` entrypoint loads the packaged
+single-threaded Rust/WebAssembly preflight module:
+
+```js
+import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+
+const core = await loadPdf2mdCoreWasm();
+const looksLikePdf = core.hasPdfHeader(bytes);
+```
+
+This module currently exposes version reporting and PDF header preflight only.
+Conversion output still comes from the JavaScript parser and extraction
+pipeline.
+
 ## Operational Notes
 
 - PDFs are attacker-controlled binary inputs. Keep security limits enabled.

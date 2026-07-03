@@ -24,6 +24,10 @@ import {
   createPerformanceRegressionReport,
   evaluatePerformanceRegression
 } from "../../../scripts/qa/check-performance-regression.mjs";
+import {
+  createWasmSizeReport,
+  evaluateWasmSizeBudget
+} from "../../../scripts/qa/check-wasm-size.mjs";
 
 test("benchmark duration summary reports min max mean and median", () => {
   assert.deepEqual(summarizeDurations([9, 1, 5, 3]), {
@@ -323,6 +327,30 @@ test("package size report evaluates packed size budgets", () => {
     { path: "src/worker.mjs", bytes: 500 },
     { path: "package.json", bytes: 300 }
   ]);
+});
+
+test("WASM size report evaluates artifact byte budgets", () => {
+  const wasmInfo = {
+    path: "packages/pdf2md/src/wasm/pdf2md_core.wasm",
+    bytes: 270000
+  };
+  const budget = {
+    maxBytes: 262144
+  };
+
+  assert.deepEqual(evaluateWasmSizeBudget(wasmInfo, budget), [
+    {
+      metric: "maxBytes",
+      actualMetric: "bytes",
+      actual: 270000,
+      limit: 262144
+    }
+  ]);
+
+  const report = createWasmSizeReport(wasmInfo, { budget });
+  assert.equal(report.passed, false);
+  assert.deepEqual(report.wasm, wasmInfo);
+  assert.deepEqual(report.budget, budget);
 });
 
 test("model size report evaluates bundled and lazy model budgets", () => {

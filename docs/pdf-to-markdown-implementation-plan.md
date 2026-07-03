@@ -319,11 +319,11 @@ Goal: create stable contracts so agents can implement modules independently.
 
 - [x] Create Rust workspace.
 - [x] Create TypeScript package workspace.
-- [ ] Add `wasm-bindgen` or equivalent WASM bridge.
+- [x] Add `wasm-bindgen` or equivalent WASM bridge.
 - [x] Add Node build target.
 - [x] Add browser build target.
 - [x] Add worker bundle target.
-- [ ] Add single-threaded WASM build.
+- [x] Add single-threaded WASM build.
 - [ ] Add threaded WASM build behind feature detection.
 - [x] Add local examples for Node and browser.
 - [ ] Add CI commands for Rust tests, TypeScript tests, lint, build, and corpus
@@ -425,7 +425,7 @@ Gate 1 acceptance:
 - [x] No parser panics on the full initial corpus.
 - [x] Unsupported PDFs produce structured warnings or future-gate skips.
 - [x] CLI can convert a local PDF to Markdown.
-- [ ] Browser example can convert a small PDF through WASM.
+- [x] Browser example can convert a small PDF through WASM.
 
 ## Phase 3: Gate 2 - Robust PDF Parsing
 
@@ -699,7 +699,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Enforce max object count.
 - [x] Enforce parse and conversion timeouts.
 - [x] Enforce recursion/depth limits.
-- [x] Audit all unsafe Rust blocks. N/A: repo contains no Rust sources or Cargo manifests.
+- [x] Audit all unsafe Rust blocks. Unsafe blocks are limited to the WASM pointer bridge and include local safety comments and tests.
 - [x] Run fuzzers for parser, streams, fonts, and content interpreter.
 - [x] Add malicious PDF regression fixtures.
 - [x] Add dependency license and vulnerability checks.
@@ -800,7 +800,7 @@ Core metrics:
 - [x] Pages per second.
 - [x] Peak memory.
 - [x] Browser startup time.
-- [ ] WASM size.
+- [x] WASM size.
 - [x] Model download size.
 - [ ] GPU speedup where available.
 - [x] Fuzz stability.

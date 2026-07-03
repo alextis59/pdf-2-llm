@@ -31,14 +31,15 @@ fixtures:
 - Fuzz smoke passed 4 targets with 100 iterations each.
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.
+- WASM size is budgeted and reported for the packaged preflight module.
 - CI runs `npm run check` and uploads generated QA/report artifacts.
 - Clean checkout build passed.
 - Packed package install passed in a separate fixture project.
 - Browser smoke passed in Chromium and Firefox against
   `packages/pdf2md/examples/browser-basic.html?fixture=1`.
 - Node API and CLI smoke passed on Node 22.23.1, 24.18.0, and 26.4.0.
-- Package exports were verified for `.`, `./node`, `./browser`, `./worker`, and
-  `./schema`, including a negative internal-path export check.
+- Package exports were verified for `.`, `./node`, `./browser`, `./worker`,
+  `./schema`, and `./wasm`, including a negative internal-path export check.
 - Source-map output was verified against a real conversion, and TypeScript
   declarations were verified from a packed consumer project.
 - README examples were run as documented.
@@ -49,8 +50,10 @@ fixtures:
 
 - The package is private and unlicensed for npm publishing until the manifest is
   intentionally changed.
-- The current package ships JavaScript sources only. There is no packaged
-  `.wasm` artifact, `./wasm-*` export, or `locateWasm` option yet.
+- The package includes a small single-threaded `./wasm` preflight bridge, but
+  the full parser and extraction pipeline still run through JavaScript.
+- Threaded WASM, full Rust-side parsing, and a public `locateWasm` option are
+  not implemented yet.
 
 #### Text Extraction
 
@@ -120,3 +123,5 @@ fixtures:
   confidence scores.
 - Keep CPU fallback as the correctness baseline. WebGPU and future WASM paths
   must preserve Markdown, IR, source-map, asset, warning, and diagnostic shapes.
+- Use `@pdf-2-llm/pdf2md/wasm` only for explicit WASM preflight loading until
+  the full Rust parser path is promoted.

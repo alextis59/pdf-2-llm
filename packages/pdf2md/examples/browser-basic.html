@@ -326,6 +326,7 @@
 
     <script type="module">
       import { convertPdfToMarkdown } from "../src/browser.mjs";
+      import { loadPdf2mdCoreWasm } from "../src/wasm-loader.mjs";
 
       const sampleUrl = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
       const fileInput = document.querySelector("#file");
@@ -349,6 +350,7 @@
       let selectedFile = null;
       let selectedBuffer = null;
       let abortController = null;
+      let wasmCorePromise = null;
 
       fileInput.addEventListener("change", () => {
         const [file] = fileInput.files ?? [];
@@ -396,6 +398,11 @@
         clearOutput();
         try {
           const input = selectedBuffer ? selectedBuffer.slice(0) : await selectedFile.arrayBuffer();
+          status.textContent = "Loading WASM";
+          const wasmCore = await loadWasmCore();
+          if (!wasmCore.hasPdfHeader(input)) {
+            throw new Error("WASM PDF preflight rejected the input header.");
+          }
           const result = await convertPdfToMarkdown(input, {
             signal: abortController.signal,
             markdown: {
@@ -424,6 +431,11 @@
           abortController = null;
           setIdleState(status.textContent);
         }
+      }
+
+      function loadWasmCore() {
+        wasmCorePromise ??= loadPdf2mdCoreWasm();
+        return wasmCorePromise;
       }
 
       function renderResult(result) {

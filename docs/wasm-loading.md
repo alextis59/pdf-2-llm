@@ -1,12 +1,13 @@
 # WASM Loading for Bundlers
 
-This package currently ships JavaScript sources only. There is no packaged
-`.wasm` artifact, no `./wasm-*` package export, and no public `locateWasm`
-option yet. The current browser, worker, Node, and CLI entrypoints all run the
-JavaScript parser and extraction pipeline.
+This package ships a small single-threaded Rust/WebAssembly preflight core at
+`@pdf-2-llm/pdf2md/wasm`. The current browser, worker, Node, and CLI
+conversion entrypoints still run the JavaScript parser and extraction pipeline;
+the WASM module is a separately loaded bridge used for low-level PDF byte
+preflight.
 
-This document defines the bundler contract to keep examples and application
-integration stable while the Rust/WebAssembly bridge is added later.
+This document defines the bundler contract for the packaged WASM asset and the
+future full Rust/WebAssembly parser path.
 
 ## Entrypoints
 
@@ -31,10 +32,21 @@ Bundlers should prefer `@pdf-2-llm/pdf2md/browser` in browser UI code and
 The root export also has conditional `node` and `browser` targets, but explicit
 subpath imports make application bundles easier to audit.
 
+The WASM preflight export is:
+
+```js
+import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+
+const core = await loadPdf2mdCoreWasm();
+const looksLikePdf = core.hasPdfHeader(await file.arrayBuffer());
+```
+
 ## Browser Bundles Today
 
-No special WASM loader configuration is required today because no `.wasm` file
-is imported by the package.
+No special WASM loader configuration is required for the main browser
+conversion entrypoint because it does not import the `.wasm` file directly.
+Applications that import `@pdf-2-llm/pdf2md/wasm` must let the bundler emit the
+package-relative `.wasm` asset.
 
 Use normal ESM bundling:
 
@@ -64,41 +76,40 @@ The repository examples show the same message-passing pattern:
 - `packages/pdf2md/examples/browser-basic.html`
 - `packages/pdf2md/examples/worker-basic.mjs`
 
-## Planned WASM Asset Contract
+## WASM Asset Contract
 
-When the WASM bridge is implemented, the package should preserve these
-integration rules:
+The package preserves these integration rules:
 
 - Single-threaded WASM is the default browser build.
 - Threaded WASM is selected only when the runtime is cross-origin isolated.
 - WASM assets are loaded as external files, not inlined into JavaScript.
 - The loader resolves package-relative assets with `new URL(..., import.meta.url)`.
-- Applications can override asset resolution with an explicit locator option
-  once that option exists.
+- Applications can override the source with `loadPdf2mdCoreWasm({ source })`.
 - Bundlers must copy emitted `.wasm` assets to the final build output.
 - Servers must serve `.wasm` files with `Content-Type: application/wasm`.
 
-Expected future artifact names from the study are:
+The current packaged artifact is:
 
 ```txt
-pdf2md_single.wasm
-pdf2md_threads.wasm
+src/wasm/pdf2md_core.wasm
 ```
 
-These files are not present in the package yet.
+Future full-parser artifact names from the study are still expected to be split
+into single-threaded and threaded modules.
 
 ## Vite
-
-Current package state:
 
 ```js
 import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/browser";
 ```
 
-No Vite WASM configuration is required until the package imports a `.wasm`
-asset.
+```js
+import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+```
 
-Future WASM bridge expectations:
+Vite should rewrite the loader's package-relative asset URL automatically.
+Verify that the production build emits `pdf2md_core.wasm` as an external asset
+rather than inlining it.
 
 - Keep worker files as ESM module workers.
 - Let Vite rewrite `new URL("./asset.wasm", import.meta.url)` references.
@@ -108,9 +119,8 @@ Future WASM bridge expectations:
 
 ## Webpack 5
 
-Current package state requires no Webpack WASM experiment.
-
-Future WASM bridge expectations:
+The preflight loader fetches the `.wasm` asset as a URL, so projects can handle
+the artifact as a resource:
 
 ```js
 export default {
@@ -133,10 +143,6 @@ rules. The important requirements are external `.wasm` emission, stable public
 URLs, and `application/wasm` serving.
 
 ## Rollup
-
-Current package state requires no Rollup WASM plugin.
-
-Future WASM bridge expectations:
 
 - Preserve ESM output for browser and worker bundles.
 - Emit `.wasm` files as assets.
@@ -168,16 +174,25 @@ Node scripts should use:
 import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/node";
 ```
 
-If a future deployment bundles Node code into a single file, copy the package's
-external `.wasm` files next to the bundle or configure the future locator option
-to point at deployed assets.
+Node applications can load the preflight module from bytes or from a fetchable
+URL:
+
+```js
+import { readFile } from "node:fs/promises";
+import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+
+const wasm = await readFile(new URL("./pdf2md_core.wasm", import.meta.url));
+const core = await loadPdf2mdCoreWasm(wasm);
+```
+
+If a deployment bundles Node code into a single file, copy the package's
+external `.wasm` file next to the bundle or pass an explicit `source`.
 
 ## Verification Checklist
 
 - Build the production bundle.
-- Confirm no `.wasm` request exists for the current package version.
-- Once WASM ships, confirm exactly one baseline `.wasm` file is requested for a
-  simple conversion.
+- When importing `@pdf-2-llm/pdf2md/wasm`, confirm exactly one baseline `.wasm`
+  file is requested.
 - Confirm the response has HTTP 200 and `Content-Type: application/wasm`.
 - Confirm worker bundles load through `new Worker(new URL(...), { type: "module" })`.
 - Confirm non-isolated browsers use the single-threaded build.

@@ -8,3 +8,4 @@ publish = false
 [lib]
 name = "pdf2md_core"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
