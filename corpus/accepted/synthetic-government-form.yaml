@@ -1,0 +1,49 @@
+id: synthetic-government-form
+gate: forms-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_acroform_fields
+  - preserve_field_values
+  - preserve_button_states
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - invent_missing_form_values
+  - drop_checked_state
+metrics:
+  minTextCoverage: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Synthetic Government Form"
+structure:
+  expected:
+    - heading_level_1
+    - acroform_fields
+  forms:
+    - name: "full_name"
+      label: "Full name"
+      fieldType: "text"
+      value: "Ada Lovelace"
+    - name: "subscribe"
+      label: "Subscribe to updates"
+      fieldType: "button"
+      buttonType: "checkbox"
+      value: "Yes"
+      checked: true
+    - name: "plan"
+      label: "Plan choice"
+      fieldType: "button"
+      buttonType: "radio"
+      value: "pro"
+      selectedValue: "pro"
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "Generated AcroForm fixture requires exact field names, labels, values, and button states in diagnostics."

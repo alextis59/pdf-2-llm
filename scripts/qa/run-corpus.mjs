@@ -102,6 +102,57 @@ function readNamedBlockScalars(text, blockName) {
   return values;
 }
 
+function readStructureForms(text) {
+  const forms = [];
+  let inStructure = false;
+  let inForms = false;
+  let current = null;
+
+  for (const line of text.split(/\r?\n/)) {
+    if (!inStructure) {
+      inStructure = line.trim() === "structure:";
+      continue;
+    }
+    if (/^\S/.test(line)) {
+      break;
+    }
+    if (!inForms) {
+      const formsMatch = line.match(/^  forms:(?:\s*(\[\])\s*)?$/);
+      if (formsMatch) {
+        inForms = !formsMatch[1];
+      }
+      continue;
+    }
+
+    const itemMatch = line.match(/^    -\s+([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+    if (itemMatch) {
+      current = {
+        [itemMatch[1]]: readAcceptanceValue(itemMatch[2])
+      };
+      forms.push(current);
+      continue;
+    }
+
+    const propertyMatch = line.match(/^      ([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+    if (propertyMatch && current) {
+      current[propertyMatch[1]] = readAcceptanceValue(propertyMatch[2]);
+    }
+  }
+
+  return forms;
+}
+
+function readAcceptanceValue(value) {
+  const normalized = normalizeScalar(value ?? "");
+  if (normalized === "true") {
+    return true;
+  }
+  if (normalized === "false") {
+    return false;
+  }
+  return normalized;
+}
+
 function readNumber(value, fallback = null) {
   const parsed = Number.parseFloat(value ?? "");
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -122,6 +173,7 @@ async function loadAcceptance(entry) {
     minTableCellAdjacency: readNumber(metrics.get("minTableCellAdjacency")),
     minTableCsvCellTextAccuracy: readNumber(metrics.get("minTableCsvCellTextAccuracy")),
     minTableSpanAccuracy: readNumber(metrics.get("minTableSpanAccuracy")),
+    forms: readStructureForms(text),
     skipReason: scalars.get("skipReason") ?? ""
   };
 }
@@ -321,6 +373,35 @@ async function runCase(corpusCase) {
         acceptance.minTableCsvCellTextAccuracy
       )} matched=${csvAccuracy.matchedCells}/${csvAccuracy.expectedCells}`
     );
+  }
+
+  if (acceptance.forms.length > 0) {
+    const fieldsByName = new Map(
+      result.diagnostics.extraction.forms.fields.map((field) => [field.name, field])
+    );
+    let matchedForms = 0;
+    for (const expectedForm of acceptance.forms) {
+      const actual = fieldsByName.get(expectedForm.name);
+      if (!actual) {
+        errors.push(`missing form field ${expectedForm.name}`);
+        continue;
+      }
+      let matched = true;
+      for (const [key, expectedValue] of Object.entries(expectedForm)) {
+        if (actual[key] !== expectedValue) {
+          errors.push(
+            `form field ${expectedForm.name}.${key} expected ${JSON.stringify(
+              expectedValue
+            )}, got ${JSON.stringify(actual[key])}`
+          );
+          matched = false;
+        }
+      }
+      if (matched) {
+        matchedForms += 1;
+      }
+    }
+    details.push(`forms=${matchedForms}/${acceptance.forms.length}`);
   }
 
   if (errors.length > 0) {

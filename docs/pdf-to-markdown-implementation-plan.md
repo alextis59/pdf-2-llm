@@ -682,7 +682,7 @@ Gate 7 acceptance:
 
 - [x] Equation fixtures preserve useful math representation or assets.
 - [x] Figure fixtures preserve captions and asset links.
-- [ ] Government form fixtures extract fields and values.
+- [x] Government form fixtures extract fields and values.
 - [x] Annotation and attachment fixtures produce expected sidecars.
 - [ ] RTL, CJK, and vertical fixtures meet script-specific acceptance criteria.
 

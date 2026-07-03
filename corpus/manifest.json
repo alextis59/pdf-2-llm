@@ -827,6 +827,35 @@
       "acceptanceFile": "corpus/accepted/synthetic-searchable-scan-regions.yaml",
       "ocrResultsFile": "corpus/ocr/synthetic-searchable-scan-regions.json",
       "notes": "Searchable scan fixture with one aligned hidden text region and one bad hidden text region."
+    },
+    {
+      "id": "synthetic-government-form",
+      "kind": "form",
+      "path": "corpus/generated/synthetic-government-form.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Government-style AcroForm fixture with filled text, checkbox, and radio fields.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "38dc2c41a780c0991cdcac568f7750fc5b0a922d82628fdfa74a0f2c8200cbfa",
+      "bytes": 1260,
+      "pages": 1,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "acroform",
+        "government-form",
+        "checkbox",
+        "radio"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-government-form.yaml",
+      "notes": "Government-style AcroForm fixture with filled text, checkbox, and radio fields."
     }
   ]
 }

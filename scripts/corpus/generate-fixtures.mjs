@@ -92,6 +92,42 @@ function createPdf({ pages }) {
   return Buffer.from(body, "binary");
 }
 
+function createPdfFromObjects(objects, pdfVersion = "1.4") {
+  let body = `%PDF-${pdfVersion}\n% pdf-2-llm generated fixture\n`;
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    offsets[index + 1] = Buffer.byteLength(body, "binary");
+    body += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = Buffer.byteLength(body, "binary");
+  body += `xref\n0 ${objects.length + 1}\n`;
+  body += "0000000000 65535 f\n";
+  for (let index = 1; index <= objects.length; index += 1) {
+    body += `${String(offsets[index]).padStart(10, "0")} 00000 n\n`;
+  }
+  body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
+  body += `startxref\n${xrefOffset}\n%%EOF\n`;
+
+  return Buffer.from(body, "binary");
+}
+
+function createGovernmentFormPdf() {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R /AcroForm 6 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R /Annots [7 0 R 8 0 R 9 0 R] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject(`${text(72, 720, 22, "Synthetic Government Form")}\n`),
+    "<< /Fields [7 0 R 8 0 R 9 0 R] >>",
+    "<< /Type /Annot /Subtype /Widget /FT /Tx /T (full_name) /TU (Full name) /V (Ada Lovelace) /Rect [72 650 300 670] /P 3 0 R >>",
+    "<< /Type /Annot /Subtype /Widget /FT /Btn /T (subscribe) /TU (Subscribe to updates) /V /Yes /AS /Yes /Rect [72 610 92 630] /P 3 0 R >>",
+    "<< /Type /Annot /Subtype /Widget /FT /Btn /Ff 32768 /T (plan) /TU (Plan choice) /V /pro /AS /pro /Rect [72 570 92 590] /P 3 0 R >>"
+  ];
+  return createPdfFromObjects(objects);
+}
+
 function createImagePdf({ pages }) {
   const objects = new Map();
   const catalogId = 1;
@@ -322,6 +358,29 @@ function yamlQuoted(value) {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
+function yamlScalar(value) {
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+  if (typeof value === "number") {
+    return String(value);
+  }
+  return yamlQuoted(String(value));
+}
+
+function yamlForms(forms = []) {
+  return forms
+    .map((form) => {
+      const [firstKey, ...restKeys] = Object.keys(form);
+      const lines = [`    - ${firstKey}: ${yamlScalar(form[firstKey])}`];
+      for (const key of restKeys) {
+        lines.push(`      ${key}: ${yamlScalar(form[key])}`);
+      }
+      return lines.join("\n");
+    })
+    .join("\n");
+}
+
 function acceptanceYaml(fixture) {
   const snippets = fixture.snippets
     .map((snippet) => `  - page: ${snippet.page}\n    contains: ${yamlQuoted(snippet.contains)}`)
@@ -329,6 +388,10 @@ function acceptanceYaml(fixture) {
   const structures = fixture.structures
     .map((item) => `    - ${item}`)
     .join("\n");
+  const forms = fixture.forms?.length ? `  forms:\n${yamlForms(fixture.forms)}\n` : "";
+  const allowedWarnings = fixture.allowedWarnings?.length
+    ? `  allowed:\n${yamlList(fixture.allowedWarnings).replace(/^/gm, "  ")}`
+    : "  allowed: []";
   const readingOrderMetric =
     fixture.maxReadingOrderDistance == null
       ? ""
@@ -401,8 +464,9 @@ ${snippets}
 structure:
   expected:
 ${structures}
+${forms}\
 warnings:
-  allowed: []
+${allowedWarnings}
 assets:
   required: []
 review:
@@ -1072,6 +1136,7 @@ const fixtures = [
     must: ["detect_vector_figure_region", "preserve_caption"],
     mustNot: ["invent_chart_data"],
     structures: ["figure", "caption", "vector_paths"],
+    allowedWarnings: ["figure.low_semantic_content"],
     snippets: [
       { page: 1, contains: "Figure 1. A generated vector box." },
       { page: 1, contains: "Vector Figure Fixture" }
@@ -1088,6 +1153,51 @@ const fixtures = [
           line(120, 640, 360, 520),
           text(120, 490, 11, "Figure 1. A generated vector box.")
         ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-government-form",
+    kind: "form",
+    gate: "forms-v1",
+    features: ["born-digital", "acroform", "government-form", "checkbox", "radio"],
+    description: "Government-style AcroForm fixture with filled text, checkbox, and radio fields.",
+    minTextCoverage: 1,
+    must: ["extract_acroform_fields", "preserve_field_values", "preserve_button_states"],
+    mustNot: ["invent_missing_form_values", "drop_checked_state"],
+    structures: ["heading_level_1", "acroform_fields"],
+    snippets: [{ page: 1, contains: "Synthetic Government Form" }],
+    reviewNotes:
+      "Generated AcroForm fixture requires exact field names, labels, values, and button states in diagnostics.",
+    expectedMarkdown: "# Synthetic Government Form\n",
+    forms: [
+      {
+        name: "full_name",
+        label: "Full name",
+        fieldType: "text",
+        value: "Ada Lovelace"
+      },
+      {
+        name: "subscribe",
+        label: "Subscribe to updates",
+        fieldType: "button",
+        buttonType: "checkbox",
+        value: "Yes",
+        checked: true
+      },
+      {
+        name: "plan",
+        label: "Plan choice",
+        fieldType: "button",
+        buttonType: "radio",
+        value: "pro",
+        selectedValue: "pro"
+      }
+    ],
+    createPdf: createGovernmentFormPdf,
+    pages: [
+      {
+        operations: []
       }
     ]
   }
