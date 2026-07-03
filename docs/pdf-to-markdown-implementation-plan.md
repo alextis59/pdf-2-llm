@@ -795,7 +795,7 @@ Core metrics:
 - [x] CSV cell text accuracy.
 - [ ] Markdown AST diff.
 - [x] Rendered HTML semantic diff.
-- [ ] Asset link validity.
+- [x] Asset link validity.
 - [x] Warning-code accuracy.
 - [x] Pages per second.
 - [x] Peak memory.

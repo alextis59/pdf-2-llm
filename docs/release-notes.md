@@ -32,6 +32,8 @@ fixtures:
   reviewed Markdown oracles.
 - Warning-code precision and recall are checked for representative generated
   no-warning, heuristic text, ordering, and figure-warning cases.
+- Asset path validity and Markdown asset-link resolution are checked for
+  figure, table sidecar, complex table, and OCR-backed generated fixtures.
 - Fuzz smoke passed 4 targets with 100 iterations each.
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.
