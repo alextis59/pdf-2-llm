@@ -74,6 +74,9 @@ export type ConvertOptions = {
     htmlFallback?: boolean;
     csvSidecars?: boolean;
   };
+  attachments?: {
+    extract?: boolean;
+  };
   assets?: {
     enabled?: boolean;
     outputDir?: string;
@@ -128,6 +131,10 @@ export type Diagnostics = {
     scanDetection: ScanDetectionDiagnostics;
     parser: Record<string, unknown>;
     figures: FigureDiagnostics;
+    forms: FormsDiagnostics;
+    annotations: AnnotationDiagnostics;
+    attachments: AttachmentDiagnostics;
+    signatures: SignatureDiagnostics;
   };
   pages: PageDiagnostics[];
 };
@@ -643,6 +650,127 @@ export type FigureRegionDiagnostics = {
   pageHeightPt: number | null;
 };
 
+export type FormsDiagnostics = {
+  present: boolean;
+  total: number;
+  filled: number;
+  checkboxes: number;
+  radioButtons: number;
+  fields: FormFieldDiagnostics[];
+  xfa: {
+    present: boolean;
+    status: "absent" | "unsupported";
+    reason: string | null;
+  };
+};
+
+export type FormFieldDiagnostics = {
+  fieldIndex: number;
+  objectNumber: number | null;
+  generationNumber: number | null;
+  name: string;
+  label: string | null;
+  fieldType: "text" | "button" | "choice" | "signature" | "unknown" | string;
+  rawFieldType: string | null;
+  value: string | null;
+  valueSource: "V" | "none";
+  defaultValue: string | null;
+  flags: number;
+  readOnly: boolean;
+  required: boolean;
+  noExport: boolean;
+  pageIndex: number | null;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  buttonType?: "checkbox" | "radio" | "pushbutton";
+  state?: string | null;
+  checked?: boolean;
+  selectedValue?: string | null;
+  signature?: SignatureValueDiagnostics | null;
+};
+
+export type AnnotationDiagnostics = {
+  total: number;
+  links: number;
+  texts: number;
+  annotations: AnnotationItemDiagnostics[];
+  pages: AnnotationPageDiagnostics[];
+};
+
+export type AnnotationItemDiagnostics = {
+  annotationIndex: number;
+  pageIndex: number;
+  objectNumber: number | null;
+  generationNumber: number | null;
+  subtype: string;
+  contents?: string | null;
+  title?: string | null;
+  uri?: string | null;
+  actionType?: string | null;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+};
+
+export type AnnotationPageDiagnostics = {
+  pageIndex: number;
+  total: number;
+  links: number;
+  texts: number;
+};
+
+export type AttachmentDiagnostics = {
+  total: number;
+  extractedSidecars: number;
+  files: AttachmentFileDiagnostics[];
+};
+
+export type AttachmentFileDiagnostics = {
+  attachmentIndex: number;
+  name: string;
+  fileName: string;
+  description?: string | null;
+  objectNumber: number | null;
+  generationNumber: number | null;
+  embeddedFileObjectNumber: number | null;
+  embeddedFileGenerationNumber: number | null;
+  size: number | null;
+  mediaType: string;
+  assetId: string | null;
+  assetPath: string | null;
+  extracted: boolean;
+};
+
+export type SignatureDiagnostics = {
+  total: number;
+  validationStatus: "not-validated";
+  signatures: SignatureFieldDiagnostics[];
+};
+
+export type SignatureFieldDiagnostics = {
+  signatureIndex: number;
+  fieldName: string;
+  label: string | null;
+  objectNumber: number | null;
+  generationNumber: number | null;
+  pageIndex: number | null;
+  validationStatus: "not-validated";
+} & SignatureValueDiagnostics;
+
+export type SignatureValueDiagnostics = {
+  valueObjectNumber?: number | null;
+  valueGenerationNumber?: number | null;
+  filter?: string | null;
+  subFilter?: string | null;
+  name?: string | null;
+  reason?: string | null;
+  date?: string | null;
+  byteRange?: number[] | null;
+};
+
 export type PageDiagnostics = {
   pageIndex: number;
   objectNumber: number;
@@ -780,13 +908,26 @@ export type FormFieldBlock = {
   type: "form-field";
   name: string;
   value?: string;
+  label?: string | null;
   fieldType?: string;
+  buttonType?: string;
+  checked?: boolean;
+  selectedValue?: string | null;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 };
 
 export type AnnotationBlock = {
   type: "annotation";
   subtype: string;
   contents?: string;
+  uri?: string;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 };
 
 export type AssetReferenceBlock = {
@@ -800,6 +941,7 @@ export type AssetResult = {
   mediaType: string;
   kind?: string;
   content?: string;
+  encoding?: "base64" | "utf8";
   pageIndex?: number | null;
   tableIndex?: number;
 };

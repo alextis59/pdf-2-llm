@@ -47,6 +47,23 @@ test("document IR JSON schema accepts table CSV sidecar assets", async () => {
   assert.deepEqual(validateJsonSchema(documentIrJsonSchema, JSON.parse(JSON.stringify(result.ir))), []);
 });
 
+test("document IR JSON schema accepts encoded attachment sidecar assets", () => {
+  const ir = createDocumentIr({ sourceType: "digital" });
+  ir.assets = [
+    {
+      id: "attachment-1-report-txt",
+      kind: "attachment",
+      path: "assets/attachments/report.txt",
+      mediaType: "text/plain",
+      content: "YXR0YWNoZWQgcmVwb3J0Cg==",
+      encoding: "base64",
+      pageIndex: null
+    }
+  ];
+
+  assert.deepEqual(validateJsonSchema(documentIrJsonSchema, ir), []);
+});
+
 function validateJsonSchema(schema, value, path = "$") {
   const errors = [];
 

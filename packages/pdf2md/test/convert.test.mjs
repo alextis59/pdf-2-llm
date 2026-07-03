@@ -1205,6 +1205,246 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
   });
 });
 
+test("convertPdfToMarkdown extracts form, annotation, attachment, and signature metadata", async () => {
+  const result = await convertPdfToMarkdown(createInteractiveDocumentPdf(), {
+    attachments: {
+      extract: true
+    }
+  });
+
+  assert.match(result.markdown, /^# Interactive Document Fixture/);
+  assert.equal(result.diagnostics.extraction.forms.present, true);
+  assert.equal(result.diagnostics.extraction.forms.total, 4);
+  assert.equal(result.diagnostics.extraction.forms.filled, 3);
+  assert.equal(result.diagnostics.extraction.forms.checkboxes, 1);
+  assert.equal(result.diagnostics.extraction.forms.radioButtons, 1);
+  assert.deepEqual(result.diagnostics.extraction.forms.xfa, {
+    present: true,
+    status: "unsupported",
+    reason: "XFA packets are detected but not parsed."
+  });
+
+  const fields = Object.fromEntries(
+    result.diagnostics.extraction.forms.fields.map((field) => [field.name, field])
+  );
+  assert.deepEqual(pickFormField(fields.full_name), {
+    name: "full_name",
+    label: "Full name",
+    fieldType: "text",
+    rawFieldType: "Tx",
+    value: "Ada Lovelace",
+    valueSource: "V",
+    pageIndex: 0,
+    x: 72,
+    y: 650,
+    width: 228,
+    height: 20
+  });
+  assert.deepEqual(pickFormField(fields.subscribe), {
+    name: "subscribe",
+    label: "Subscribe to updates",
+    fieldType: "button",
+    rawFieldType: "Btn",
+    value: "Yes",
+    valueSource: "V",
+    pageIndex: 0,
+    x: 72,
+    y: 610,
+    width: 20,
+    height: 20,
+    buttonType: "checkbox",
+    state: "Yes",
+    checked: true
+  });
+  assert.deepEqual(pickFormField(fields.plan), {
+    name: "plan",
+    label: "Plan choice",
+    fieldType: "button",
+    rawFieldType: "Btn",
+    value: "pro",
+    valueSource: "V",
+    pageIndex: 0,
+    x: 72,
+    y: 570,
+    width: 20,
+    height: 20,
+    buttonType: "radio",
+    state: "pro",
+    selectedValue: "pro"
+  });
+
+  assert.equal(fields.approval_signature.fieldType, "signature");
+  assert.equal(fields.approval_signature.value, null);
+  assert.equal(fields.approval_signature.signature.name, "Signer One");
+  assert.equal(fields.approval_signature.signature.reason, "Approved");
+  assert.deepEqual(result.diagnostics.extraction.signatures, {
+    total: 1,
+    validationStatus: "not-validated",
+    signatures: [
+      {
+        signatureIndex: 0,
+        fieldName: "approval_signature",
+        label: "Approval signature",
+        objectNumber: 11,
+        generationNumber: 0,
+        pageIndex: 0,
+        validationStatus: "not-validated",
+        valueObjectNumber: 15,
+        valueGenerationNumber: 0,
+        filter: "Adobe.PPKLite",
+        subFilter: "adbe.pkcs7.detached",
+        name: "Signer One",
+        reason: "Approved",
+        date: "D:20260702000000+02'00'",
+        byteRange: null
+      }
+    ]
+  });
+
+  assert.deepEqual(result.diagnostics.extraction.annotations, {
+    total: 2,
+    links: 1,
+    texts: 1,
+    annotations: [
+      {
+        annotationIndex: 0,
+        pageIndex: 0,
+        objectNumber: 9,
+        generationNumber: 0,
+        subtype: "Link",
+        uri: "https://example.com/form",
+        actionType: "URI",
+        x: 72,
+        y: 520,
+        width: 160,
+        height: 20
+      },
+      {
+        annotationIndex: 1,
+        pageIndex: 0,
+        objectNumber: 10,
+        generationNumber: 0,
+        subtype: "Text",
+        contents: "Reviewer note",
+        title: "QA",
+        x: 72,
+        y: 480,
+        width: 20,
+        height: 20
+      }
+    ],
+    pages: [
+      {
+        pageIndex: 0,
+        total: 2,
+        links: 1,
+        texts: 1
+      }
+    ]
+  });
+
+  assert.deepEqual(result.diagnostics.extraction.attachments, {
+    total: 1,
+    extractedSidecars: 1,
+    files: [
+      {
+        attachmentIndex: 0,
+        name: "report.txt",
+        fileName: "report.txt",
+        description: "Report attachment",
+        objectNumber: 12,
+        generationNumber: 0,
+        embeddedFileObjectNumber: 16,
+        embeddedFileGenerationNumber: 0,
+        size: 16,
+        mediaType: "text/plain",
+        assetId: "attachment-1-report-txt",
+        assetPath: "assets/attachments/report.txt",
+        extracted: true
+      }
+    ]
+  });
+  assert.deepEqual(result.assets, [
+    {
+      id: "attachment-1-report-txt",
+      kind: "attachment",
+      path: "assets/attachments/report.txt",
+      mediaType: "text/plain",
+      content: "YXR0YWNoZWQgcmVwb3J0Cg==",
+      encoding: "base64",
+      pageIndex: null
+    }
+  ]);
+  assert.deepEqual(result.ir.pages[0].elements, [
+    {
+      type: "form-field",
+      name: "full_name",
+      label: "Full name",
+      value: "Ada Lovelace",
+      fieldType: "text",
+      x: 72,
+      y: 650,
+      width: 228,
+      height: 20
+    },
+    {
+      type: "form-field",
+      name: "subscribe",
+      label: "Subscribe to updates",
+      value: "Yes",
+      fieldType: "button",
+      buttonType: "checkbox",
+      checked: true,
+      x: 72,
+      y: 610,
+      width: 20,
+      height: 20
+    },
+    {
+      type: "form-field",
+      name: "plan",
+      label: "Plan choice",
+      value: "pro",
+      fieldType: "button",
+      buttonType: "radio",
+      selectedValue: "pro",
+      x: 72,
+      y: 570,
+      width: 20,
+      height: 20
+    },
+    {
+      type: "form-field",
+      name: "approval_signature",
+      label: "Approval signature",
+      fieldType: "signature",
+      x: 72,
+      y: 440,
+      width: 228,
+      height: 30
+    },
+    {
+      type: "annotation",
+      subtype: "Link",
+      contents: "https://example.com/form",
+      uri: "https://example.com/form",
+      x: 72,
+      y: 520,
+      width: 160,
+      height: 20
+    },
+    {
+      type: "annotation",
+      subtype: "Text",
+      contents: "Reviewer note",
+      x: 72,
+      y: 480,
+      width: 20,
+      height: 20
+    }
+  ]);
+});
+
 test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async () => {
   const result = await convertPdfToMarkdown(visibleTableFixturePath.pathname);
   const rulingLines = result.diagnostics.extraction.rulingLines;
@@ -1433,6 +1673,28 @@ function createSinglePageImagePdf({ x, y, widthPt, heightPt, rotation = 0, textO
   return createPdf(objects);
 }
 
+function createInteractiveDocumentPdf() {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R /AcroForm 6 0 R /Names << /EmbeddedFiles << /Names [(report.txt) 12 0 R] >> >> >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R /Annots [7 0 R 8 0 R 14 0 R 9 0 R 10 0 R 11 0 R] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject(`${textOperation(72, 720, 22, "Interactive Document Fixture")}\n`),
+    "<< /Fields [7 0 R 8 0 R 14 0 R 11 0 R] /XFA (xfa packet) >>",
+    "<< /Type /Annot /Subtype /Widget /FT /Tx /T (full_name) /TU (Full name) /V (Ada Lovelace) /Rect [72 650 300 670] /P 3 0 R >>",
+    "<< /Type /Annot /Subtype /Widget /FT /Btn /T (subscribe) /TU (Subscribe to updates) /V /Yes /AS /Yes /Rect [72 610 92 630] /P 3 0 R >>",
+    "<< /Type /Annot /Subtype /Link /Rect [72 520 232 540] /A << /S /URI /URI (https://example.com/form) >> >>",
+    "<< /Type /Annot /Subtype /Text /Rect [72 480 92 500] /T (QA) /Contents (Reviewer note) >>",
+    "<< /Type /Annot /Subtype /Widget /FT /Sig /T (approval_signature) /TU (Approval signature) /V 15 0 R /Rect [72 440 300 470] /P 3 0 R >>",
+    "<< /Type /Filespec /F (report.txt) /UF (report.txt) /Desc (Report attachment) /EF << /F 16 0 R >> >>",
+    "(xfa packet)",
+    "<< /Type /Annot /Subtype /Widget /FT /Btn /Ff 32768 /T (plan) /TU (Plan choice) /V /pro /AS /pro /Rect [72 570 92 590] /P 3 0 R >>",
+    "<< /Type /Sig /Filter /Adobe.PPKLite /SubFilter /adbe.pkcs7.detached /Name (Signer One) /Reason (Approved) /M (D:20260702000000+02'00') >>",
+    streamObject("attached report\n", "/Type /EmbeddedFile /Subtype /text#2Fplain /Params << /Size 16 >>")
+  ];
+  return createPdf(objects);
+}
+
 function createPdf(objects) {
   let body = "%PDF-1.4\n% pdf-2-llm test fixture\n";
   const offsets = [0];
@@ -1452,6 +1714,26 @@ function createPdf(objects) {
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
 
   return Buffer.from(body, "binary");
+}
+
+function pickFormField(field) {
+  return {
+    name: field.name,
+    label: field.label,
+    fieldType: field.fieldType,
+    rawFieldType: field.rawFieldType,
+    value: field.value,
+    valueSource: field.valueSource,
+    pageIndex: field.pageIndex,
+    x: field.x,
+    y: field.y,
+    width: field.width,
+    height: field.height,
+    ...(field.buttonType ? { buttonType: field.buttonType } : {}),
+    ...(field.state ? { state: field.state } : {}),
+    ...(field.checked !== undefined ? { checked: field.checked } : {}),
+    ...(field.selectedValue ? { selectedValue: field.selectedValue } : {})
+  };
 }
 
 function pickRasterFixtureFields(page) {

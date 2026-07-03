@@ -24,6 +24,7 @@ import {
   figureElementsByPage,
   insertFigureMarkdown
 } from "./figure-detection.mjs";
+import { extractDocumentInteractions } from "./document-interactions.mjs";
 import {
   assignTextLinesToGridCells,
   detectTableCellSpans,
@@ -243,7 +244,15 @@ export async function convertPdfToMarkdown(input, options = {}) {
   markdownResult = insertFigureMarkdown(markdownResult, figureDetections.figures);
   const figureAssets = createFigureAssets(figureDetections.figures);
   const figureElements = figureElementsByPage(figureDetections.figures);
-  const assets = [...tableCsvSidecars.assets, ...ocrDebugSidecars.assets, ...figureAssets];
+  const documentInteractions = extractDocumentInteractions(pdfDocument, {
+    extractAttachmentAssets: options.attachments?.extract === true
+  });
+  const assets = [
+    ...tableCsvSidecars.assets,
+    ...ocrDebugSidecars.assets,
+    ...figureAssets,
+    ...documentInteractions.assets
+  ];
   const markdown = markdownResult.markdown;
   const sourceMap = createMarkdownSourceMap(markdownResult.sourceMap);
   throwIfAborted(options.signal);
@@ -292,7 +301,8 @@ export async function convertPdfToMarkdown(input, options = {}) {
         sourceType: scanPagesByIndex.get(page.pageIndex)?.sourceType ?? "unknown",
         elements: [
           ...(ocrTextExtraction.elementsByPage.get(page.pageIndex) ?? []),
-          ...(figureElements.get(page.pageIndex) ?? [])
+          ...(figureElements.get(page.pageIndex) ?? []),
+          ...(documentInteractions.elementsByPage.get(page.pageIndex) ?? [])
         ]
       })
     );
@@ -354,6 +364,10 @@ export async function convertPdfToMarkdown(input, options = {}) {
         rulingGrids: summarizeRulingGrids(rulingGrids),
         rulingTables: summarizeRulingTables(rulingTables, tableCsvSidecars.byTable),
         figures: figureDetections,
+        forms: documentInteractions.forms,
+        annotations: documentInteractions.annotations,
+        attachments: documentInteractions.attachments,
+        signatures: documentInteractions.signatures,
         parser: pdfDocument
           ? {
               mode: pdfDocument.xrefMode,

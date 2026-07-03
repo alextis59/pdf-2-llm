@@ -1371,6 +1371,7 @@ function walkPageNode(object, inherited, getObject, pages) {
     rotation,
     userUnit,
     resources,
+    annotationsRef: dict.entries.Annots ?? null,
     contentStreams
   });
 }
@@ -1539,6 +1540,22 @@ function isDict(value) {
 
 function nameValue(value) {
   return value?.type === "name" ? value.value : null;
+}
+
+export function isPdfDictionary(value) {
+  return isDict(value);
+}
+
+export function pdfNameValue(value) {
+  return nameValue(value);
+}
+
+export function pdfTextStringValue(value) {
+  return pdfTextValue(value);
+}
+
+export function resolvePdfValue(value, getObject) {
+  return resolveValue(value, getObject);
 }
 
 function trimTrailingLineEnding(source, offset) {

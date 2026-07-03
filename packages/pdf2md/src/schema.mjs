@@ -86,6 +86,7 @@ export const assetJsonSchema = Object.freeze({
     mediaType: { type: "string" },
     kind: { type: "string" },
     content: { type: "string" },
+    encoding: { enum: ["base64", "utf8"] },
     pageIndex: { type: ["integer", "null"] },
     tableIndex: { type: "integer" }
   }

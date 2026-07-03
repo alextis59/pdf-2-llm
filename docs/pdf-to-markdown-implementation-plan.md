@@ -661,13 +661,13 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 
 ### 8.3 Forms, Annotations, Attachments, And Signatures
 
-- [ ] Extract AcroForm fields and values.
-- [ ] Extract checkboxes and radio button states.
-- [ ] Preserve field labels where discoverable.
-- [ ] Detect XFA and report supported/unsupported status.
-- [ ] Extract links and text annotations.
-- [ ] Extract attachment metadata and optional sidecar assets.
-- [ ] Report signature metadata without claiming cryptographic validation unless
+- [x] Extract AcroForm fields and values.
+- [x] Extract checkboxes and radio button states.
+- [x] Preserve field labels where discoverable.
+- [x] Detect XFA and report supported/unsupported status.
+- [x] Extract links and text annotations.
+- [x] Extract attachment metadata and optional sidecar assets.
+- [x] Report signature metadata without claiming cryptographic validation unless
   validation is actually implemented.
 
 ### 8.4 Multilingual Expansion
@@ -683,7 +683,7 @@ Gate 7 acceptance:
 - [ ] Equation fixtures preserve useful math representation or assets.
 - [x] Figure fixtures preserve captions and asset links.
 - [ ] Government form fixtures extract fields and values.
-- [ ] Annotation and attachment fixtures produce expected sidecars.
+- [x] Annotation and attachment fixtures produce expected sidecars.
 - [ ] RTL, CJK, and vertical fixtures meet script-specific acceptance criteria.
 
 ## Phase 9: Gate 8 - Hardening, Security, And Release
