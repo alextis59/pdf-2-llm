@@ -262,6 +262,22 @@ function acceptanceYaml(fixture) {
     fixture.maxReadingOrderDistance == null
       ? ""
       : `  maxReadingOrderDistance: ${fixture.maxReadingOrderDistance}\n`;
+  const renderedHtmlTextMetric =
+    fixture.minRenderedHtmlTextChars == null
+      ? ""
+      : `  minRenderedHtmlTextChars: ${fixture.minRenderedHtmlTextChars}\n`;
+  const renderedHtmlHeadingMetric =
+    fixture.minRenderedHtmlHeadings == null
+      ? ""
+      : `  minRenderedHtmlHeadings: ${fixture.minRenderedHtmlHeadings}\n`;
+  const renderedHtmlParagraphMetric =
+    fixture.minRenderedHtmlParagraphs == null
+      ? ""
+      : `  minRenderedHtmlParagraphs: ${fixture.minRenderedHtmlParagraphs}\n`;
+  const renderedHtmlParagraphLengthMetric =
+    fixture.maxRenderedHtmlParagraphChars == null
+      ? ""
+      : `  maxRenderedHtmlParagraphChars: ${fixture.maxRenderedHtmlParagraphChars}\n`;
   const tableAdjacencyMetric =
     fixture.minTableCellAdjacency == null
       ? ""
@@ -291,6 +307,10 @@ ${yamlList([
 metrics:
   minTextCoverage: ${fixture.minTextCoverage}
 ${readingOrderMetric}\
+${renderedHtmlTextMetric}\
+${renderedHtmlHeadingMetric}\
+${renderedHtmlParagraphMetric}\
+${renderedHtmlParagraphLengthMetric}\
 ${tableAdjacencyMetric}\
 ${tableCsvCellTextMetric}\
 ${tableSpanMetric}\
@@ -440,7 +460,11 @@ const fixtures = [
       { page: 1, contains: "Conclusion follows the discussion." }
     ],
     reviewNotes:
-      "Expected order is left column top-down, including the figure caption, then right column top-down; maxReadingOrderDistance is zero because the generated fixture has exact reviewed Markdown.",
+      "Expected order is left column top-down, including the figure caption, then right column top-down; maxReadingOrderDistance is zero because the generated fixture has exact reviewed Markdown. Rendered HTML thresholds confirm the paper fixture keeps a title and five readable paragraphs without paragraph collapse.",
+    minRenderedHtmlTextChars: 150,
+    minRenderedHtmlHeadings: 1,
+    minRenderedHtmlParagraphs: 5,
+    maxRenderedHtmlParagraphChars: 200,
     expectedMarkdown:
       "# Scientific Two Column Fixture\n\nAbstract result starts here.\n\nMethod detail continues here.\n\nFigure 1. Measured response.\n\nDiscussion starts on the right.\n\nConclusion follows the discussion.\n",
     pages: [
@@ -494,6 +518,66 @@ const fixtures = [
           text(82, 620, 11, "Q2"),
           text(202, 620, 11, "120"),
           text(322, 620, 11, "60")
+        ]
+      }
+    ]
+  },
+  {
+    id: "synthetic-split-across-page-table",
+    kind: "visible-table",
+    gate: "tables-v1",
+    features: ["born-digital", "visible-table", "ruling-lines", "multi-page", "split-table"],
+    description: "Two-page visible table fixture whose rows continue on the next page.",
+    minTextCoverage: 1,
+    minTableCellAdjacency: 1,
+    minTableSpanAccuracy: 1,
+    must: ["detect_visible_table", "preserve_table_cells", "preserve_continued_table_rows"],
+    mustNot: ["merge_rows_across_columns", "drop_continued_rows"],
+    structures: ["continued_table_parts", "three_columns", "six_rows"],
+    snippets: [
+      { page: 1, contains: "Alpha" },
+      { page: 2, contains: "Delta" }
+    ],
+    reviewNotes:
+      "The table is intentionally split across pages; current acceptance requires both page-local table parts to preserve their cells and row order.",
+    expectedMarkdown:
+      "# Split Across Page Table\n\n| Item | Count | Price |\n| --- | ---: | ---: |\n| Alpha | 10 | 1.50 |\n| Beta | 20 | 2.50 |\n\n| Item | Count | Price |\n| --- | ---: | ---: |\n| Gamma | 30 | 3.50 |\n| Delta | 40 | 4.50 |\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Split Across Page Table"),
+          rect(72, 570, 360, 90),
+          line(192, 570, 192, 660),
+          line(312, 570, 312, 660),
+          line(72, 630, 432, 630),
+          line(72, 600, 432, 600),
+          text(82, 640, 11, "Item"),
+          text(202, 640, 11, "Count"),
+          text(322, 640, 11, "Price"),
+          text(82, 610, 11, "Alpha"),
+          text(202, 610, 11, "10"),
+          text(322, 610, 11, "1.50"),
+          text(82, 580, 11, "Beta"),
+          text(202, 580, 11, "20"),
+          text(322, 580, 11, "2.50")
+        ]
+      },
+      {
+        operations: [
+          rect(72, 600, 360, 90),
+          line(192, 600, 192, 690),
+          line(312, 600, 312, 690),
+          line(72, 660, 432, 660),
+          line(72, 630, 432, 630),
+          text(82, 670, 11, "Item"),
+          text(202, 670, 11, "Count"),
+          text(322, 670, 11, "Price"),
+          text(82, 640, 11, "Gamma"),
+          text(202, 640, 11, "30"),
+          text(322, 640, 11, "3.50"),
+          text(82, 610, 11, "Delta"),
+          text(202, 610, 11, "40"),
+          text(322, 610, 11, "4.50")
         ]
       }
     ]

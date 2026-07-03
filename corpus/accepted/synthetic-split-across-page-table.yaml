@@ -1,0 +1,37 @@
+id: synthetic-split-across-page-table
+gate: tables-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - detect_visible_table
+  - preserve_table_cells
+  - preserve_continued_table_rows
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - merge_rows_across_columns
+  - drop_continued_rows
+metrics:
+  minTextCoverage: 1
+  minTableCellAdjacency: 1
+  minTableSpanAccuracy: 1
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Alpha"
+  - page: 2
+    contains: "Delta"
+structure:
+  expected:
+    - continued_table_parts
+    - three_columns
+    - six_rows
+warnings:
+  allowed: []
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-02"
+  notes: "The table is intentionally split across pages; current acceptance requires both page-local table parts to preserve their cells and row order."

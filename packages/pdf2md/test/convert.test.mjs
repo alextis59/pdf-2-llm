@@ -362,6 +362,7 @@ function createSinglePageTextPdf(operations) {
 test("table MVP matches expected markdown for generated table fixtures", async () => {
   const cases = [
     "synthetic-visible-table",
+    "synthetic-split-across-page-table",
     "synthetic-borderless-table"
   ];
 

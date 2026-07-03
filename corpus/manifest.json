@@ -685,6 +685,35 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-scientific-two-column.yaml",
       "notes": "Two-column scientific reading-order fixture."
+    },
+    {
+      "id": "synthetic-split-across-page-table",
+      "kind": "visible-table",
+      "path": "corpus/generated/synthetic-split-across-page-table.pdf",
+      "source": {
+        "type": "generated",
+        "description": "Two-page visible table fixture whose rows continue on the next page.",
+        "command": "npm run corpus:generate"
+      },
+      "retrievedAt": "2026-07-02",
+      "license": {
+        "name": "Generated test fixture",
+        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+      },
+      "redistributable": true,
+      "sha256": "e8c3a3a122b3a58f61d2f8098894a6f300ff29641b5c7f53e319ab04bdec3911",
+      "bytes": 1742,
+      "pages": 2,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "visible-table",
+        "ruling-lines",
+        "multi-page",
+        "split-table"
+      ],
+      "acceptanceFile": "corpus/accepted/synthetic-split-across-page-table.yaml",
+      "notes": "Two-page visible table fixture whose rows continue on the next page."
     }
   ]
 }

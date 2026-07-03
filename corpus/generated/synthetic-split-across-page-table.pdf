@@ -1,0 +1,73 @@
+%PDF-1.4
+% pdf-2-llm generated fixture
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 489 >>
+stream
+BT /F1 22 Tf 72 720 Td (Split Across Page Table) Tj ET
+72 570 360 90 re S
+192 570 m 192 660 l S
+312 570 m 312 660 l S
+72 630 m 432 630 l S
+72 600 m 432 600 l S
+BT /F1 11 Tf 82 640 Td (Item) Tj ET
+BT /F1 11 Tf 202 640 Td (Count) Tj ET
+BT /F1 11 Tf 322 640 Td (Price) Tj ET
+BT /F1 11 Tf 82 610 Td (Alpha) Tj ET
+BT /F1 11 Tf 202 610 Td (10) Tj ET
+BT /F1 11 Tf 322 610 Td (1.50) Tj ET
+BT /F1 11 Tf 82 580 Td (Beta) Tj ET
+BT /F1 11 Tf 202 580 Td (20) Tj ET
+BT /F1 11 Tf 322 580 Td (2.50) Tj ET
+
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 435 >>
+stream
+72 600 360 90 re S
+192 600 m 192 690 l S
+312 600 m 312 690 l S
+72 660 m 432 660 l S
+72 630 m 432 630 l S
+BT /F1 11 Tf 82 670 Td (Item) Tj ET
+BT /F1 11 Tf 202 670 Td (Count) Tj ET
+BT /F1 11 Tf 322 670 Td (Price) Tj ET
+BT /F1 11 Tf 82 640 Td (Gamma) Tj ET
+BT /F1 11 Tf 202 640 Td (30) Tj ET
+BT /F1 11 Tf 322 640 Td (3.50) Tj ET
+BT /F1 11 Tf 82 610 Td (Delta) Tj ET
+BT /F1 11 Tf 202 610 Td (40) Tj ET
+BT /F1 11 Tf 322 610 Td (4.50) Tj ET
+
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f
+0000000039 00000 n
+0000000088 00000 n
+0000000151 00000 n
+0000000248 00000 n
+0000000374 00000 n
+0000000914 00000 n
+0000001040 00000 n
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+1526
+%%EOF
