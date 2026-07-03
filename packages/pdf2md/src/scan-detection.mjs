@@ -2,6 +2,7 @@ const defaultImageCoverageThreshold = 0.5;
 const defaultMinTextLines = 3;
 const defaultMinTextAreaRatio = 0.01;
 const defaultMinHiddenTextLines = 1;
+const defaultMinHiddenTextImageOverlapRatio = 0.5;
 
 export function createScanDetection(pages = [], options = {}) {
   const textLinesByPage = groupByPage(options.textLines ?? []);
@@ -22,11 +23,17 @@ export function createScanDetection(pages = [], options = {}) {
     Number.isInteger(options.minHiddenTextLines) && options.minHiddenTextLines >= 0
       ? options.minHiddenTextLines
       : defaultMinHiddenTextLines;
+  const minHiddenTextImageOverlapRatio =
+    Number.isFinite(options.minHiddenTextImageOverlapRatio) &&
+    options.minHiddenTextImageOverlapRatio >= 0
+      ? options.minHiddenTextImageOverlapRatio
+      : defaultMinHiddenTextImageOverlapRatio;
 
   const pageDiagnostics = pages.map((page) =>
     createPageScanDiagnostics(page, {
       imageCoverageThreshold,
       imageDraws: imageDrawsByPage.get(page.pageIndex) ?? [],
+      minHiddenTextImageOverlapRatio,
       minHiddenTextLines,
       minTextAreaRatio,
       minTextLines,
@@ -39,11 +46,14 @@ export function createScanDetection(pages = [], options = {}) {
       imageCoverageRatio: imageCoverageThreshold,
       minTextLines,
       minTextAreaRatio,
-      minHiddenTextLines
+      minHiddenTextLines,
+      minHiddenTextImageOverlapRatio
     },
     imageDominantPages: pageDiagnostics.filter((page) => page.imageDominant).length,
     littleOrNoTextPages: pageDiagnostics.filter((page) => page.littleOrNoText).length,
     hiddenOcrOverlayPages: pageDiagnostics.filter((page) => page.hiddenOcrOverlayLikely).length,
+    hiddenTextImageMismatchPages: pageDiagnostics.filter((page) => page.hiddenTextImageMismatchLikely)
+      .length,
     pages: pageDiagnostics
   };
 }
@@ -90,6 +100,11 @@ function createPageScanDiagnostics(page, options) {
     pageArea && pageArea > 0 ? normalizeRatio(Math.min(hiddenTextArea / pageArea, 1)) : null;
   const hiddenOcrOverlayLikely =
     imageDominant && hiddenTextLines.length >= options.minHiddenTextLines;
+  const hiddenTextImageMismatchLineCount = hiddenTextLines.filter(
+    (line) => maxImageOverlapRatio(line, imageDraws) < options.minHiddenTextImageOverlapRatio
+  ).length;
+  const hiddenTextImageMismatchLikely =
+    hiddenOcrOverlayLikely && hiddenTextImageMismatchLineCount > 0;
 
   return {
     pageIndex: page.pageIndex,
@@ -103,6 +118,8 @@ function createPageScanDiagnostics(page, options) {
     hiddenTextArea: normalizeNullableNumber(hiddenTextArea),
     hiddenTextAreaRatio,
     hiddenOcrOverlayLikely,
+    hiddenTextImageMismatchLineCount,
+    hiddenTextImageMismatchLikely,
     imageResourceCount: countImageResources(page),
     imageDrawCount: imageDraws.length,
     pageArea: normalizeNullableNumber(pageArea),
@@ -125,6 +142,46 @@ function isHiddenTextLine(line) {
     return true;
   }
   return (line.spans ?? []).some((span) => span.hidden === true || span.textRenderMode === 3);
+}
+
+function maxImageOverlapRatio(line, imageDraws) {
+  const lineBox = lineBoundingBox(line);
+  if (!lineBox || imageDraws.length === 0) {
+    return 0;
+  }
+  const lineArea = lineBox.width * lineBox.height;
+  if (lineArea <= 0) {
+    return 0;
+  }
+
+  const maxOverlapArea = imageDraws.reduce(
+    (max, image) => Math.max(max, rectangleOverlapArea(lineBox, image)),
+    0
+  );
+  return normalizeRatio(Math.min(maxOverlapArea / lineArea, 1));
+}
+
+function lineBoundingBox(line) {
+  if (![line.x, line.y, line.width, line.height].every(Number.isFinite)) {
+    return null;
+  }
+  return {
+    x: line.x,
+    y: line.y,
+    width: Math.max(0, line.width),
+    height: Math.max(0, line.height)
+  };
+}
+
+function rectangleOverlapArea(left, right) {
+  if (![right.x, right.y, right.width, right.height].every(Number.isFinite)) {
+    return 0;
+  }
+  const x1 = Math.max(left.x, right.x);
+  const y1 = Math.max(left.y, right.y);
+  const x2 = Math.min(left.x + left.width, right.x + right.width);
+  const y2 = Math.min(left.y + left.height, right.y + right.height);
+  return Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
 }
 
 function groupByPage(items) {

@@ -579,7 +579,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 - [x] Detect image-dominant pages.
 - [x] Detect pages with little or no text.
 - [x] Detect hidden OCR text overlays.
-- [ ] Detect mismatch between hidden text and visible image.
+- [x] Detect mismatch between hidden text and visible image.
 - [ ] Route pages as digital, scanned, or hybrid.
 - [ ] Record routing decision and confidence in diagnostics.
 

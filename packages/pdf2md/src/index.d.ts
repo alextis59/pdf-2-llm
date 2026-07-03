@@ -167,10 +167,12 @@ export type ScanDetectionDiagnostics = {
     minTextLines: number;
     minTextAreaRatio: number;
     minHiddenTextLines: number;
+    minHiddenTextImageOverlapRatio: number;
   };
   imageDominantPages: number;
   littleOrNoTextPages: number;
   hiddenOcrOverlayPages: number;
+  hiddenTextImageMismatchPages: number;
   pages: ScanDetectionPageDiagnostics[];
 };
 
@@ -186,6 +188,8 @@ export type ScanDetectionPageDiagnostics = {
   hiddenTextArea: number | null;
   hiddenTextAreaRatio: number | null;
   hiddenOcrOverlayLikely: boolean;
+  hiddenTextImageMismatchLineCount: number;
+  hiddenTextImageMismatchLikely: boolean;
   imageResourceCount: number;
   imageDrawCount: number;
   pageArea: number | null;

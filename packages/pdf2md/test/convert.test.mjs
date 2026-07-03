@@ -205,9 +205,14 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextLines, 3);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minTextAreaRatio, 0.01);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.thresholds.minHiddenTextLines, 1);
+  assert.equal(
+    fullPage.diagnostics.extraction.scanDetection.thresholds.minHiddenTextImageOverlapRatio,
+    0.5
+  );
   assert.equal(fullPage.diagnostics.extraction.scanDetection.imageDominantPages, 1);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.littleOrNoTextPages, 1);
   assert.equal(fullPage.diagnostics.extraction.scanDetection.hiddenOcrOverlayPages, 0);
+  assert.equal(fullPage.diagnostics.extraction.scanDetection.hiddenTextImageMismatchPages, 0);
   assert.deepEqual(fullPage.diagnostics.extraction.scanDetection.pages[0], {
     pageIndex: 0,
     textLineCount: 0,
@@ -220,6 +225,8 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
     hiddenTextArea: 0,
     hiddenTextAreaRatio: 0,
     hiddenOcrOverlayLikely: false,
+    hiddenTextImageMismatchLineCount: 0,
+    hiddenTextImageMismatchLikely: false,
     imageResourceCount: 1,
     imageDrawCount: 1,
     pageArea: 484704,
@@ -298,9 +305,32 @@ test("convertPdfToMarkdown reports hidden OCR overlay scan diagnostics", async (
   assert.equal(hiddenPage.hiddenTextArea, 216);
   assert.equal(hiddenPage.hiddenTextAreaRatio, 0.000446);
   assert.equal(hiddenPage.hiddenOcrOverlayLikely, true);
+  assert.equal(hiddenPage.hiddenTextImageMismatchLineCount, 0);
+  assert.equal(hiddenPage.hiddenTextImageMismatchLikely, false);
   assert.equal(visibleOverlay.diagnostics.extraction.scanDetection.hiddenOcrOverlayPages, 0);
   assert.equal(visiblePage.hiddenTextLineCount, 0);
   assert.equal(visiblePage.hiddenOcrOverlayLikely, false);
+  assert.equal(visiblePage.hiddenTextImageMismatchLikely, false);
+});
+
+test("convertPdfToMarkdown reports hidden text and visible image geometry mismatches", async () => {
+  const mismatch = await convertPdfToMarkdown(
+    createSinglePageImagePdf({
+      x: 0,
+      y: 0,
+      widthPt: 400,
+      heightPt: 792,
+      textOperations: [invisibleTextOperation(500, 720, 12, "OCR")]
+    })
+  );
+  const page = mismatch.diagnostics.extraction.scanDetection.pages[0];
+
+  assert.equal(mismatch.diagnostics.extraction.scanDetection.hiddenTextImageMismatchPages, 1);
+  assert.equal(page.imageDominant, true);
+  assert.equal(page.imageCoverageRatio, 0.653595);
+  assert.equal(page.hiddenOcrOverlayLikely, true);
+  assert.equal(page.hiddenTextImageMismatchLineCount, 1);
+  assert.equal(page.hiddenTextImageMismatchLikely, true);
 });
 
 test("CLI emits JSON scaffold output", () => {
