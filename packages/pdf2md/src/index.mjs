@@ -24,6 +24,7 @@ import {
   inferRulingGrids
 } from "./table-grid.mjs";
 import { parsePdfDocument, PdfSyntaxError } from "./pdf-parser.mjs";
+import { selectOcrAdapter } from "./ocr-adapter.mjs";
 import { createRasterPlan } from "./raster-plan.mjs";
 import { createScanDetection } from "./scan-detection.mjs";
 
@@ -134,6 +135,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       )
     );
   }
+  const ocrAdapter = selectOcrAdapter(options.ocr ?? {});
 
   const encryptedWithoutText =
     parseWarning?.code === warningCodes.PasswordRequired ||
@@ -248,7 +250,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         source: normalized.source,
         pdfVersion
       },
-      options: summarizeOptions(options, rasterPlan),
+      options: summarizeOptions(options, rasterPlan, ocrAdapter),
       timing: {
         elapsedMs
       },
@@ -264,6 +266,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         structure: summarizeStructure(pdfDocument?.structure),
         taggedStructureConflicts: markdownResult.taggedStructureConflicts.length,
         layout: markdownResult.layout,
+        ocr: ocrAdapter,
         tables: markdownResult.tables,
         lowConfidenceTables: markdownResult.lowConfidenceTables,
         raster: rasterPlan,
@@ -735,7 +738,7 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function summarizeOptions(options, rasterPlan) {
+function summarizeOptions(options, rasterPlan, ocrAdapter) {
   return {
     pageRange: options.pageRange ?? null,
     output: options.output ?? "markdown",
@@ -743,7 +746,10 @@ function summarizeOptions(options, rasterPlan) {
     preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
     parserMode: options.parser?.mode ?? "strict",
     passwordProvided: options.password != null,
-    ocrEnabled: options.ocr?.enabled ?? null,
+    ocrEnabled: ocrAdapter.enabled,
+    ocrAdapter: ocrAdapter.adapter?.id ?? ocrAdapter.requested,
+    ocrAdapterStatus: ocrAdapter.status,
+    ocrLanguages: ocrAdapter.languages,
     webgpuRequired: options.webgpu?.required ?? false,
     tablesEnabled: options.tables?.enabled ?? null,
     tableCsvSidecars:

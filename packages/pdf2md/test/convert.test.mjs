@@ -65,6 +65,15 @@ test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", asyn
   assert.equal(result.diagnostics.input.bytes, bytes.byteLength);
   assert.equal(result.diagnostics.input.pdfVersion, "1.4");
   assert.equal(result.diagnostics.input.sha256, createHash("sha256").update(bytes).digest("hex"));
+  assert.equal(result.diagnostics.options.ocrEnabled, false);
+  assert.equal(result.diagnostics.options.ocrAdapter, "tesseract.js");
+  assert.equal(result.diagnostics.options.ocrAdapterStatus, "disabled");
+  assert.deepEqual(result.diagnostics.options.ocrLanguages, ["eng"]);
+  assert.equal(result.diagnostics.extraction.ocr.enabled, false);
+  assert.equal(result.diagnostics.extraction.ocr.status, "disabled");
+  assert.equal(result.diagnostics.extraction.ocr.adapter.id, "tesseract.js");
+  assert.equal(result.diagnostics.extraction.ocr.adapter.version, "7.0.0");
+  assert.equal(result.diagnostics.extraction.ocr.adapter.license, "Apache-2.0");
   assert.equal(result.diagnostics.extraction.layout.pages[0].kind, "single-column");
   assert.equal(result.confidence.layout, 0.35);
   assert.deepEqual(progress, ["start", "complete"]);
@@ -76,6 +85,33 @@ test("convertPdfToMarkdown supports path input", async () => {
   const result = await convertPdfToMarkdown(fixturePath.pathname);
   assert.equal(result.diagnostics.input.source.type, "path");
   assert.equal(result.diagnostics.input.pdfVersion, "1.4");
+});
+
+test("convertPdfToMarkdown selects the CPU OCR adapter", async () => {
+  const result = await convertPdfToMarkdown(fixturePath.pathname, {
+    ocr: { adapter: "tesseract.js", languages: ["eng", "fra"] }
+  });
+
+  assert.equal(result.diagnostics.options.ocrEnabled, true);
+  assert.equal(result.diagnostics.options.ocrAdapter, "tesseract.js");
+  assert.equal(result.diagnostics.options.ocrAdapterStatus, "selected");
+  assert.deepEqual(result.diagnostics.options.ocrLanguages, ["eng", "fra"]);
+  assert.deepEqual(result.diagnostics.extraction.ocr, {
+    enabled: true,
+    requested: "tesseract.js",
+    status: "selected",
+    languages: ["eng", "fra"],
+    adapter: {
+      id: "tesseract.js",
+      kind: "cpu",
+      packageName: "tesseract.js",
+      version: "7.0.0",
+      license: "Apache-2.0",
+      runtimes: ["browser", "node", "worker"],
+      output: "ocr-plan",
+      notes: "Selected CPU OCR adapter; model loading and recognition are wired in later OCR phases."
+    }
+  });
 });
 
 test("convertPdfToMarkdown can emit Markdown page anchors", async () => {

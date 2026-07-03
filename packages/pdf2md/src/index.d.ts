@@ -36,6 +36,7 @@ export type ConvertOptions = {
   };
   ocr?: {
     enabled?: boolean;
+    adapter?: "tesseract.js";
     languages?: string[];
   };
   raster?: {
@@ -99,11 +100,31 @@ export type Diagnostics = {
     structure: StructureDiagnostics;
     taggedStructureConflicts: number;
     layout: LayoutDiagnostics;
+    ocr: OcrDiagnostics;
     raster: RasterDiagnostics;
     scanDetection: ScanDetectionDiagnostics;
     parser: Record<string, unknown>;
   };
   pages: PageDiagnostics[];
+};
+
+export type OcrDiagnostics = {
+  enabled: boolean;
+  requested: string;
+  status: "disabled" | "selected" | "unsupported";
+  languages: string[];
+  adapter: OcrAdapterDiagnostics | null;
+};
+
+export type OcrAdapterDiagnostics = {
+  id: "tesseract.js";
+  kind: "cpu";
+  packageName: "tesseract.js";
+  version: string;
+  license: "Apache-2.0";
+  runtimes: Array<"browser" | "node" | "worker">;
+  output: "ocr-plan";
+  notes: string;
 };
 
 export type RasterDiagnostics = {

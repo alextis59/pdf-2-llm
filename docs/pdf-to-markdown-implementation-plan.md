@@ -585,7 +585,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 
 ### 6.3 OCR Integration
 
-- [ ] Select CPU OCR adapter.
+- [x] Select CPU OCR adapter.
 - [ ] Define OCR model loading and cache behavior.
 - [ ] Implement OCR text boxes with confidence.
 - [ ] Implement deskew/preprocessing where practical.
