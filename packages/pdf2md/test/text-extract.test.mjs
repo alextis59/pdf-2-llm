@@ -582,6 +582,15 @@ test("linesToMarkdown groups wrapped lines into paragraphs", () => {
   );
 });
 
+test("linesToMarkdown repairs line-end hyphenation inside paragraphs", () => {
+  const markdown = linesToMarkdown([
+    { text: "This paragraph validates hyphen-", fontSize: 12, x: 72, y: 680, pageIndex: 0 },
+    { text: "ation repair across a wrapped line.", fontSize: 12, x: 72, y: 666, pageIndex: 0 }
+  ]);
+
+  assert.equal(markdown, "This paragraph validates hyphenation repair across a wrapped line.\n");
+});
+
 test("linesToMarkdown orders RTL row fragments and emits bidi paragraph markup", () => {
   const right = "\u05d0\u05d1\u05d2";
   const left = "\u05d3\u05d4\u05d5";

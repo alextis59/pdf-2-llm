@@ -786,7 +786,7 @@ Core metrics:
 - [x] Word error rate for OCR text.
 - [x] Unicode mapping accuracy for born-digital text.
 - [x] Paragraph grouping F1.
-- [ ] Hyphenation repair accuracy.
+- [x] Hyphenation repair accuracy.
 - [x] Reading-order edit distance.
 - [x] Header/footer removal precision and recall.
 - [ ] Table detection precision and recall.

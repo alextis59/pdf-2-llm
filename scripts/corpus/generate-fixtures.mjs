@@ -698,6 +698,35 @@ const fixtures = [
     ]
   },
   {
+    id: "synthetic-hyphenated-line",
+    kind: "synthetic",
+    gate: "text-mvp",
+    features: ["born-digital", "paragraphs", "hyphenation"],
+    description: "Wrapped line fixture with a word split by an end-of-line hyphen.",
+    minTextCoverage: 1,
+    maxCharacterErrorRate: 0,
+    must: ["repair_line_end_hyphenation", "preserve_paragraph_order"],
+    mustNot: ["keep_unrepaired_line_end_hyphen"],
+    structures: ["heading_level_1", "paragraphs", "hyphenation_repair"],
+    snippets: [
+      { page: 1, contains: "Hyphenation Fixture" },
+      { page: 1, contains: "hyphenation repair" }
+    ],
+    reviewNotes:
+      "Exact-output generated fixture with one line-end split word; maxCharacterErrorRate is zero because expected Markdown is the reviewed oracle and the hyphenation repair should produce hyphenation.",
+    expectedMarkdown:
+      "# Hyphenation Fixture\n\nThis paragraph validates hyphenation repair across a wrapped line.\n",
+    pages: [
+      {
+        operations: [
+          text(72, 720, 22, "Hyphenation Fixture"),
+          text(72, 680, 12, "This paragraph validates hyphen-"),
+          text(72, 666, 12, "ation repair across a wrapped line.")
+        ]
+      }
+    ]
+  },
+  {
     id: "synthetic-two-column",
     kind: "synthetic",
     gate: "layout-v1",

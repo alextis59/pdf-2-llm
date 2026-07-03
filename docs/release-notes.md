@@ -40,6 +40,8 @@ fixtures:
   ToUnicode RTL, CJK, and vertical-writing fixtures.
 - Paragraph grouping precision, recall, and F1 are checked against reviewed
   Markdown paragraph boundaries across prose, layout, and script fixtures.
+- Line-end hyphenation repair is checked against a generated wrapped-line PDF
+  fixture with rejected unrepaired forms.
 - Fuzz smoke passed 4 targets with 100 iterations each.
 - Representative performance reports exist for text, table, long-document, and
   scanned/hybrid OCR workloads.

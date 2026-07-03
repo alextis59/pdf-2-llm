@@ -1047,10 +1047,21 @@ function joinParagraphParts(parts) {
 
   let text = parts[0];
   for (const part of parts.slice(1)) {
+    if (shouldRepairHyphenatedBreak(text, part)) {
+      text = text.replace(/-\s*$/, "");
+      text += part.trimStart();
+      continue;
+    }
     text += paragraphPartSeparator(text, part);
     text += part;
   }
   return text;
+}
+
+function shouldRepairHyphenatedBreak(previous, next) {
+  const previousText = String(previous ?? "").trimEnd();
+  const nextText = String(next ?? "").trimStart();
+  return /[A-Za-z]-$/.test(previousText) && /^[a-z]/.test(nextText);
 }
 
 function paragraphPartSeparator(previous, next) {
