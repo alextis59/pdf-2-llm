@@ -78,7 +78,12 @@ test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", asyn
   assert.equal(result.confidence.layout, 0.35);
   assert.deepEqual(progress, ["start", "complete"]);
   assert.ok(result.warnings.some((warning) => warning.code === warningCodes.HeuristicTextExtraction));
-  assert.ok(result.warnings.some((warning) => warning.code === warningCodes.OcrDisabled));
+  assert.ok(
+    result.warnings.some(
+      (warning) =>
+        warning.code === warningCodes.OcrDisabled && warning.message === "OCR is disabled by options."
+    )
+  );
 });
 
 test("convertPdfToMarkdown supports path input", async () => {

@@ -599,7 +599,7 @@ Gate 5 acceptance:
 - [ ] Scanned text fixtures meet OCR character/word error thresholds.
 - [ ] Searchable scan fixtures choose reliable text per region.
 - [ ] Bad OCR overlay fixtures do not blindly trust hidden text.
-- [ ] OCR can be disabled and produces a clear warning.
+- [x] OCR can be disabled and produces a clear warning.
 - [ ] Browser and Node paths both work for at least one scanned fixture.
 
 ## Phase 7: Gate 6 - WebGPU Acceleration
