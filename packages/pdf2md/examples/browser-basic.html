@@ -2,25 +2,522 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>pdf2md browser scaffold</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>pdf2md Browser Example</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --background: #f8f7f2;
+        --foreground: #202124;
+        --muted: #62666d;
+        --surface: #ffffff;
+        --surface-alt: #f0f3f1;
+        --border: #cfd6d2;
+        --accent: #146c5f;
+        --accent-strong: #0f4f46;
+        --danger: #a53a35;
+        --code: #14161a;
+        --code-fg: #f5f7fa;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: #151716;
+          --foreground: #f2f3f0;
+          --muted: #aab0ac;
+          --surface: #202321;
+          --surface-alt: #282c29;
+          --border: #3e4742;
+          --accent: #58c7b4;
+          --accent-strong: #8be0d0;
+          --danger: #ff8178;
+          --code: #0f1113;
+          --code-fg: #f5f7fa;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: var(--background);
+        color: var(--foreground);
+      }
+
+      main {
+        display: grid;
+        gap: 16px;
+        width: min(1180px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 24px 0;
+      }
+
+      header,
+      .toolbar,
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        padding: 18px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+        line-height: 1.2;
+      }
+
+      h2 {
+        font-size: 1rem;
+      }
+
+      .status {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(82px, 1fr));
+        gap: 8px;
+        min-width: min(100%, 520px);
+      }
+
+      .metric {
+        min-height: 62px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface-alt);
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 6px;
+        font-size: clamp(0.9rem, 2vw, 1.25rem);
+        line-height: 1.1;
+        overflow-wrap: anywhere;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) repeat(3, max-content);
+        gap: 12px;
+        align-items: end;
+        padding: 14px;
+      }
+
+      .file-control,
+      .option {
+        display: grid;
+        gap: 6px;
+        font-size: 0.92rem;
+      }
+
+      .file-name {
+        min-height: 22px;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+
+      input[type="file"] {
+        width: 100%;
+      }
+
+      button {
+        min-height: 38px;
+        padding: 0 14px;
+        border: 1px solid var(--accent);
+        border-radius: 6px;
+        background: var(--accent);
+        color: #ffffff;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--accent-strong);
+      }
+
+      button.danger {
+        border-color: var(--danger);
+        background: transparent;
+        color: var(--danger);
+      }
+
+      button:disabled,
+      input:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        grid-column: 1 / -1;
+      }
+
+      .option {
+        grid-auto-flow: column;
+        align-items: center;
+        color: var(--muted);
+      }
+
+      .outputs {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+        gap: 16px;
+      }
+
+      .panel {
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        min-height: 52px;
+        padding: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      pre {
+        min-height: 360px;
+        max-height: 68vh;
+        margin: 0;
+        padding: 14px;
+        overflow: auto;
+        background: var(--code);
+        color: var(--code-fg);
+        font: 0.88rem/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space: pre-wrap;
+      }
+
+      .warnings {
+        margin: 0;
+        padding: 14px 14px 0 32px;
+      }
+
+      .warnings li {
+        margin-bottom: 8px;
+        overflow-wrap: anywhere;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      @media (max-width: 860px) {
+        header,
+        .toolbar,
+        .outputs {
+          grid-template-columns: 1fr;
+        }
+
+        .summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          min-width: 0;
+        }
+      }
+    </style>
   </head>
   <body>
-    <input id="file" type="file" accept="application/pdf">
-    <pre id="output"></pre>
+    <main>
+      <header>
+        <div>
+          <h1>pdf2md Browser Example</h1>
+          <p id="status" class="status" role="status">Idle</p>
+        </div>
+        <div class="summary" aria-live="polite">
+          <div class="metric">
+            <span>Pages</span>
+            <strong id="pages">-</strong>
+          </div>
+          <div class="metric">
+            <span>Text Lines</span>
+            <strong id="text-lines">-</strong>
+          </div>
+          <div class="metric">
+            <span>Warnings</span>
+            <strong id="warning-count">-</strong>
+          </div>
+          <div class="metric">
+            <span>Provider</span>
+            <strong id="provider">-</strong>
+          </div>
+          <div class="metric">
+            <span>Confidence</span>
+            <strong id="confidence">-</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="toolbar" aria-label="Conversion controls">
+        <label class="file-control">
+          <span>PDF</span>
+          <input id="file" type="file" accept="application/pdf">
+          <span id="file-name" class="file-name">No file selected</span>
+        </label>
+        <button id="load-sample" class="secondary" type="button">Load Fixture</button>
+        <button id="convert" type="button" disabled>Convert</button>
+        <button id="abort" class="danger" type="button" disabled>Abort</button>
+        <div class="options">
+          <label class="option">
+            <input id="page-anchors" type="checkbox">
+            Page anchors
+          </label>
+          <label class="option">
+            <input id="csv-sidecars" type="checkbox" checked>
+            CSV sidecars
+          </label>
+          <label class="option">
+            <input id="webgpu-preferred" type="checkbox">
+            WebGPU preferred
+          </label>
+        </div>
+      </section>
+
+      <section class="outputs" aria-label="Conversion output">
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Markdown</h2>
+          </div>
+          <pre id="markdown" tabindex="0"></pre>
+        </article>
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Diagnostics</h2>
+          </div>
+          <ul id="warnings" class="warnings"></ul>
+          <pre id="diagnostics" tabindex="0"></pre>
+        </article>
+      </section>
+    </main>
+
     <script type="module">
       import { convertPdfToMarkdown } from "../src/browser.mjs";
 
-      const input = document.querySelector("#file");
-      const output = document.querySelector("#output");
+      const sampleUrl = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
+      const fileInput = document.querySelector("#file");
+      const fileName = document.querySelector("#file-name");
+      const loadSampleButton = document.querySelector("#load-sample");
+      const convertButton = document.querySelector("#convert");
+      const abortButton = document.querySelector("#abort");
+      const pageAnchorsInput = document.querySelector("#page-anchors");
+      const csvSidecarsInput = document.querySelector("#csv-sidecars");
+      const webgpuPreferredInput = document.querySelector("#webgpu-preferred");
+      const status = document.querySelector("#status");
+      const markdown = document.querySelector("#markdown");
+      const diagnostics = document.querySelector("#diagnostics");
+      const warnings = document.querySelector("#warnings");
+      const pages = document.querySelector("#pages");
+      const textLines = document.querySelector("#text-lines");
+      const warningCount = document.querySelector("#warning-count");
+      const provider = document.querySelector("#provider");
+      const confidence = document.querySelector("#confidence");
 
-      input.addEventListener("change", async () => {
-        const file = input.files[0];
-        if (!file) {
+      let selectedFile = null;
+      let selectedBuffer = null;
+      let abortController = null;
+
+      fileInput.addEventListener("change", () => {
+        const [file] = fileInput.files ?? [];
+        selectedFile = file ?? null;
+        selectedBuffer = null;
+        fileName.textContent = file ? `${file.name} (${formatBytes(file.size)})` : "No file selected";
+        setIdleState();
+      });
+
+      loadSampleButton.addEventListener("click", loadFixture);
+      convertButton.addEventListener("click", convertSelectedPdf);
+      abortButton.addEventListener("click", () => {
+        abortController?.abort();
+      });
+
+      if (new URLSearchParams(window.location.search).get("fixture") === "1") {
+        await loadFixture();
+        await convertSelectedPdf();
+      }
+
+      async function loadFixture() {
+        setBusyState("Loading fixture");
+        try {
+          const response = await fetch(sampleUrl);
+          if (!response.ok) {
+            throw new Error(`Fixture request failed with HTTP ${response.status}`);
+          }
+          selectedBuffer = await response.arrayBuffer();
+          selectedFile = null;
+          fileInput.value = "";
+          fileName.textContent = `synthetic-simple-text.pdf (${formatBytes(selectedBuffer.byteLength)})`;
+          setIdleState("Fixture loaded");
+        } catch (error) {
+          renderError(error);
+          setIdleState("Fixture load failed");
+        }
+      }
+
+      async function convertSelectedPdf() {
+        if (!selectedFile && !selectedBuffer) {
           return;
         }
-        const result = await convertPdfToMarkdown(await file.arrayBuffer());
-        output.textContent = JSON.stringify(result.diagnostics, null, 2);
-      });
+        abortController = new AbortController();
+        setBusyState("Converting");
+        clearOutput();
+        try {
+          const input = selectedBuffer ? selectedBuffer.slice(0) : await selectedFile.arrayBuffer();
+          const result = await convertPdfToMarkdown(input, {
+            signal: abortController.signal,
+            markdown: {
+              pageAnchors: pageAnchorsInput.checked
+            },
+            tables: {
+              csvSidecars: csvSidecarsInput.checked
+            },
+            webgpu: {
+              preferred: webgpuPreferredInput.checked
+            },
+            onProgress(event) {
+              status.textContent = `${titleCase(event.stage)} (${Math.round(event.progress * 100)}%)`;
+            }
+          });
+          renderResult(result);
+          setIdleState("Complete");
+        } catch (error) {
+          if (error.name === "AbortError") {
+            setIdleState("Aborted");
+          } else {
+            renderError(error);
+            setIdleState("Failed");
+          }
+        } finally {
+          abortController = null;
+          setIdleState(status.textContent);
+        }
+      }
+
+      function renderResult(result) {
+        markdown.textContent = result.markdown;
+        diagnostics.textContent = JSON.stringify(
+          {
+            input: result.diagnostics.input,
+            extraction: {
+              textLines: result.diagnostics.extraction.textLines,
+              mode: result.diagnostics.extraction.mode,
+              scanDetection: result.diagnostics.extraction.scanDetection,
+              ocr: result.diagnostics.extraction.ocr,
+              raster: result.diagnostics.extraction.raster
+            },
+            acceleration: result.diagnostics.acceleration,
+            timing: result.diagnostics.timing
+          },
+          null,
+          2
+        );
+        pages.textContent = String(result.diagnostics.pages.length);
+        textLines.textContent = String(result.diagnostics.extraction.textLines);
+        warningCount.textContent = String(result.warnings.length);
+        provider.textContent = result.diagnostics.acceleration.webgpu.selectedProvider;
+        confidence.textContent = percent(result.confidence.overall);
+        renderWarnings(result.warnings);
+      }
+
+      function renderWarnings(items) {
+        warnings.replaceChildren();
+        if (items.length === 0) {
+          const item = document.createElement("li");
+          item.className = "muted";
+          item.textContent = "No warnings";
+          warnings.append(item);
+          return;
+        }
+        for (const warning of items) {
+          const item = document.createElement("li");
+          item.textContent = `${warning.code}: ${warning.message}`;
+          warnings.append(item);
+        }
+      }
+
+      function renderError(error) {
+        markdown.textContent = "";
+        diagnostics.textContent = error.stack ?? `${error.name}: ${error.message}`;
+        warnings.replaceChildren();
+        pages.textContent = "-";
+        textLines.textContent = "-";
+        warningCount.textContent = "-";
+        provider.textContent = "-";
+        confidence.textContent = "-";
+      }
+
+      function clearOutput() {
+        markdown.textContent = "";
+        diagnostics.textContent = "";
+        warnings.replaceChildren();
+      }
+
+      function setBusyState(label) {
+        status.textContent = label;
+        fileInput.disabled = true;
+        loadSampleButton.disabled = true;
+        convertButton.disabled = true;
+        abortButton.disabled = false;
+      }
+
+      function setIdleState(label = "Idle") {
+        status.textContent = label;
+        fileInput.disabled = false;
+        loadSampleButton.disabled = false;
+        convertButton.disabled = !selectedFile && !selectedBuffer;
+        abortButton.disabled = true;
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) {
+          return `${bytes} B`;
+        }
+        if (bytes < 1024 * 1024) {
+          return `${(bytes / 1024).toFixed(1)} KiB`;
+        }
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+      }
+
+      function percent(value) {
+        return `${Math.round(value * 100)}%`;
+      }
+
+      function titleCase(value) {
+        return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+      }
     </script>
   </body>
 </html>

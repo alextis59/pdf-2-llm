@@ -1,4 +1,5 @@
 import { decodePdfStringWithFont } from "./font-encoding.mjs";
+import { bytesToLatin1 as runtimeBytesToLatin1 } from "./runtime.mjs";
 
 const whitespacePattern = /\s/;
 const delimiterChars = new Set(["(", ")", "<", ">", "[", "]", "{", "}", "/", "%"]);
@@ -132,7 +133,7 @@ export function mergeRulingLines(rulingLines, options = {}) {
 }
 
 export function tokenizeContentStream(streamText) {
-  const source = typeof streamText === "string" ? streamText : Buffer.from(streamText).toString("latin1");
+  const source = typeof streamText === "string" ? streamText : runtimeBytesToLatin1(streamText);
   const tokens = [];
   let offset = 0;
 
@@ -1293,7 +1294,7 @@ function readHexString(source, startOffset) {
 }
 
 function bytesToLatin1(bytes) {
-  return Buffer.from(bytes).toString("latin1");
+  return runtimeBytesToLatin1(bytes);
 }
 
 function readNumber(source, offset) {

@@ -1,3 +1,5 @@
+import { bytesToLatin1 as runtimeBytesToLatin1 } from "./runtime.mjs";
+
 export function parseToUnicodeCMap(cmapText) {
   const map = new Map();
   const codespaces = [];
@@ -187,7 +189,7 @@ function bytesToHex(bytes) {
 }
 
 function bytesToLatin1(bytes) {
-  return Buffer.from(bytes).toString("latin1");
+  return runtimeBytesToLatin1(bytes);
 }
 
 function latin1Bytes(value) {

@@ -720,7 +720,7 @@ Goal: make the package safe and predictable enough for real use.
 
 - [x] Write API documentation.
 - [x] Write CLI documentation.
-- [ ] Write browser example.
+- [x] Write browser example.
 - [ ] Write Node example.
 - [ ] Write worker example.
 - [ ] Document WASM loading for bundlers.

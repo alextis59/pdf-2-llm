@@ -1,5 +1,12 @@
-import { createHash } from "node:crypto";
 import { parseToUnicodeCMap } from "./font-encoding.mjs";
+import {
+  bytesToLatin1,
+  hexToBytes,
+  int32LittleEndianBytes,
+  latin1ToBytes,
+  md5Digest,
+  now
+} from "./runtime.mjs";
 import { PdfStreamDecodeError, decodeStreamBytes } from "./stream-filters.mjs";
 
 const standardPasswordPadding = Uint8Array.from([
@@ -58,7 +65,7 @@ export function parsePdfDocument(bytes, options = {}) {
   const maxObjects = readMaxObjects(options.maxObjects);
   const maxDepth = readMaxDepth(options.maxDepth);
   const mode = options.mode ?? options.parseMode ?? "strict";
-  const source = Buffer.from(reader.bytes).toString("latin1");
+  const source = bytesToLatin1(reader.bytes);
   const version = readPdfVersion(source);
   throwIfParserTimedOut(options.deadline);
   const xref = readXrefData(source, reader.bytes, {
@@ -226,12 +233,14 @@ function computeStandardRevision2FileKey(dictionary, trailer, password) {
     throwUnsupportedEncryption();
   }
 
-  const hash = createHash("md5");
-  hash.update(padPassword(password));
-  hash.update(ownerKey.subarray(0, 32));
-  hash.update(permissionBytes(permission));
-  hash.update(fileId);
-  const fileKey = hash.digest().subarray(0, lengthBits / 8);
+  const fileKey = md5Digest(
+    concatBytes(
+      padPassword(password),
+      ownerKey.subarray(0, 32),
+      permissionBytes(permission),
+      fileId
+    )
+  ).subarray(0, lengthBits / 8);
   const expectedUserKey = rc4(fileKey, standardPasswordPadding);
   if (!constantTimePrefixEquals(userKey, expectedUserKey, 32)) {
     throw new PdfSyntaxError("Encrypted PDF password is incorrect.", {
@@ -252,19 +261,29 @@ function throwUnsupportedEncryption() {
 }
 
 function padPassword(password) {
-  const passwordBytes = Buffer.from(password, "latin1").subarray(0, 32);
-  const padded = Buffer.alloc(32);
-  passwordBytes.copy(padded, 0);
-  Buffer.from(standardPasswordPadding)
-    .subarray(0, 32 - passwordBytes.byteLength)
-    .copy(padded, passwordBytes.byteLength);
+  const passwordBytes = latin1ToBytes(password).subarray(0, 32);
+  const padded = new Uint8Array(32);
+  padded.set(passwordBytes, 0);
+  padded.set(
+    standardPasswordPadding.subarray(0, 32 - passwordBytes.byteLength),
+    passwordBytes.byteLength
+  );
   return padded;
 }
 
 function permissionBytes(permission) {
-  const bytes = Buffer.alloc(4);
-  bytes.writeInt32LE(permission, 0);
-  return bytes;
+  return int32LittleEndianBytes(permission);
+}
+
+function concatBytes(...parts) {
+  const length = parts.reduce((total, part) => total + part.byteLength, 0);
+  const output = new Uint8Array(length);
+  let offset = 0;
+  for (const part of parts) {
+    output.set(part, offset);
+    offset += part.byteLength;
+  }
+  return output;
 }
 
 function firstTrailerFileId(trailer) {
@@ -277,7 +296,7 @@ function firstTrailerFileId(trailer) {
 
 function bytesFromPdfString(value) {
   if (typeof value === "string") {
-    return Buffer.from(value, "latin1");
+    return latin1ToBytes(value);
   }
 
   if (value?.type === "hex-string") {
@@ -285,24 +304,21 @@ function bytesFromPdfString(value) {
     if (!/^[0-9a-fA-F]*$/.test(hex)) {
       return null;
     }
-    return Buffer.from(hex, "hex");
+    return hexToBytes(hex);
   }
 
   return null;
 }
 
 function computeObjectRc4Key(fileKey, objectNumber, generationNumber) {
-  const seed = Buffer.alloc(fileKey.byteLength + 5);
-  Buffer.from(fileKey).copy(seed, 0);
+  const seed = new Uint8Array(fileKey.byteLength + 5);
+  seed.set(fileKey, 0);
   seed[fileKey.byteLength] = objectNumber & 0xff;
   seed[fileKey.byteLength + 1] = (objectNumber >> 8) & 0xff;
   seed[fileKey.byteLength + 2] = (objectNumber >> 16) & 0xff;
   seed[fileKey.byteLength + 3] = generationNumber & 0xff;
   seed[fileKey.byteLength + 4] = (generationNumber >> 8) & 0xff;
-  return createHash("md5")
-    .update(seed)
-    .digest()
-    .subarray(0, Math.min(fileKey.byteLength + 5, 16));
+  return md5Digest(seed).subarray(0, Math.min(fileKey.byteLength + 5, 16));
 }
 
 function rc4(key, input) {
@@ -313,7 +329,7 @@ function rc4(key, input) {
     swap(state, index, j);
   }
 
-  const output = Buffer.alloc(input.byteLength);
+  const output = new Uint8Array(input.byteLength);
   let i = 0;
   j = 0;
   for (let index = 0; index < input.byteLength; index += 1) {
@@ -376,7 +392,7 @@ export function parsePdfValue(input, offset = 0, options = {}) {
     options = offset;
     offset = 0;
   }
-  const source = typeof input === "string" ? input : Buffer.from(input).toString("latin1");
+  const source = typeof input === "string" ? input : bytesToLatin1(input);
   return new ObjectParser(source, offset, { maxDepth: readMaxDepth(options.maxDepth) }).parseValue();
 }
 
@@ -514,7 +530,7 @@ function enforceObjectLimit(count, maxObjects) {
 }
 
 function throwIfParserTimedOut(deadline) {
-  if (Number.isFinite(deadline) && performance.now() >= deadline) {
+  if (Number.isFinite(deadline) && now() >= deadline) {
     throw new DOMException("Operation timed out", "TimeoutError");
   }
 }
@@ -877,7 +893,7 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
       filters: decoded.filters,
       decodeParms: decoded.decodeParms,
       skippedFilters: decoded.skippedFilters,
-      text: Buffer.from(decoded.bytes).toString("latin1")
+      text: bytesToLatin1(decoded.bytes)
     };
 
     const endstreamOffset = source.indexOf("endstream", streamEnd);
@@ -1136,7 +1152,7 @@ function decodePdfTextBytes(bytes) {
   if (bytes.byteLength >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
     return decodeUtf16Bytes(bytes, 2, true);
   }
-  return bytes.toString("latin1");
+  return bytesToLatin1(bytes);
 }
 
 function decodeUtf16Bytes(bytes, startOffset, littleEndian) {

@@ -1,6 +1,3 @@
-import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { performance } from "node:perf_hooks";
 import {
   createDocumentIr,
   createMarkdownSourceMap,
@@ -38,6 +35,7 @@ import { createRasterPlan } from "./raster-plan.mjs";
 import { createScanDetection } from "./scan-detection.mjs";
 import { detectWebGpuCapabilities } from "./webgpu-capability.mjs";
 import { createWebGpuExecutionPlan } from "./webgpu-provider.mjs";
+import { bytesToAscii, now, readFileBytes, sha256Hex } from "./runtime.mjs";
 
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
@@ -52,7 +50,7 @@ const defaultSecurityLimits = Object.freeze({
 export { documentIrJsonSchema, markdownSourceMapJsonSchema, schemaVersion, warningCodes };
 
 export async function convertPdfToMarkdown(input, options = {}) {
-  const startedAt = performance.now();
+  const startedAt = now();
   const security = {
     ...defaultSecurityLimits,
     ...(options.security ?? {})
@@ -333,7 +331,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
 
-  const elapsedMs = performance.now() - startedAt;
+  const elapsedMs = now() - startedAt;
   const result = {
     markdown,
     sourceMap,
@@ -344,7 +342,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       schemaVersion,
       input: {
         bytes: normalized.bytes.byteLength,
-        sha256: sha256(normalized.bytes),
+        sha256: await sha256Hex(normalized.bytes),
         source: normalized.source,
         pdfVersion
       },
@@ -889,7 +887,7 @@ function samePage(left, right) {
 async function normalizeInput(input) {
   if (typeof input === "string") {
     return {
-      bytes: new Uint8Array(await readFile(input)),
+      bytes: new Uint8Array(await readFileBytes(input)),
       source: {
         type: "path",
         value: input
@@ -931,13 +929,9 @@ function readPdfVersion(bytes) {
   if (bytes.byteLength < 8) {
     return null;
   }
-  const header = Buffer.from(bytes.subarray(0, Math.min(bytes.byteLength, 32))).toString("ascii");
+  const header = bytesToAscii(bytes.subarray(0, Math.min(bytes.byteLength, 32)));
   const match = header.match(/^%PDF-(\d\.\d)/);
   return match ? match[1] : null;
-}
-
-function sha256(bytes) {
-  return createHash("sha256").update(bytes).digest("hex");
 }
 
 function summarizeOptions(options, rasterPlan, ocrAdapter, security) {
@@ -1228,7 +1222,7 @@ function createDeadline(timeoutMs, startedAt) {
 }
 
 function throwIfTimedOut(deadline) {
-  if (performance.now() >= deadline) {
+  if (now() >= deadline) {
     throw new DOMException("Operation timed out", "TimeoutError");
   }
 }

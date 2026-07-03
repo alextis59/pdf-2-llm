@@ -1,4 +1,4 @@
-import { inflateSync } from "node:zlib";
+import { bytesToLatin1, inflateFlateSync } from "./runtime.mjs";
 
 export class PdfStreamDecodeError extends Error {
   constructor(message, { code = "pdf.stream.decode", offset = null } = {}) {
@@ -73,7 +73,7 @@ function decodeOneFilter(bytes, filter, parms, maxBytes) {
   if (filter === "FlateDecode") {
     let inflated;
     try {
-      inflated = new Uint8Array(inflateSync(Buffer.from(bytes)));
+      inflated = inflateFlateSync(bytes);
     } catch (error) {
       throw new PdfStreamDecodeError(`FlateDecode failed: ${error.message}`, {
         code: "pdf.stream.flate_failed"
@@ -136,7 +136,7 @@ function readDecodeParms(dictionary, filterCount) {
 }
 
 function decodeAsciiHex(bytes, maxBytes) {
-  const text = Buffer.from(bytes).toString("latin1");
+  const text = bytesToLatin1(bytes);
   let hex = "";
 
   for (let index = 0; index < text.length; index += 1) {
@@ -168,7 +168,7 @@ function decodeAsciiHex(bytes, maxBytes) {
 }
 
 function decodeAscii85(bytes, maxBytes) {
-  const text = Buffer.from(bytes).toString("latin1");
+  const text = bytesToLatin1(bytes);
   const output = [];
   let group = "";
 

@@ -4,6 +4,7 @@ import {
   extractContentStreamTextLines,
   mergeRulingLines
 } from "./content-stream.mjs";
+import { bytesToLatin1 } from "./runtime.mjs";
 
 const linkPattern = /(https?:\/\/[^\s<>()\[\]{}]+|www\.[^\s<>()\[\]{}]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
 const defaultEquationImageFallbackConfidence = 0.75;
@@ -25,7 +26,7 @@ export function extractDocumentContent(bytes, { document = null } = {}) {
 }
 
 function findStreamTextsByScan(bytes) {
-  const source = Buffer.from(bytes).toString("latin1");
+  const source = bytesToLatin1(bytes);
   const streamTexts = [];
   const streamPattern = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   for (const streamMatch of source.matchAll(streamPattern)) {

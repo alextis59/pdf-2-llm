@@ -4,6 +4,7 @@ import {
   pdfTextStringValue,
   resolvePdfValue
 } from "./pdf-parser.mjs";
+import { bytesToBase64 } from "./runtime.mjs";
 
 const fieldFlagBits = Object.freeze({
   readOnly: 1,
@@ -610,7 +611,7 @@ function attachmentAsset(file, fileSpecValue, index, getObject) {
     kind: "attachment",
     path: `assets/attachments/${safeName}`,
     mediaType: file.mediaType ?? "application/octet-stream",
-    content: Buffer.from(embeddedFile.stream.decodedBytes).toString("base64"),
+    content: bytesToBase64(embeddedFile.stream.decodedBytes),
     encoding: "base64",
     pageIndex: null
   };
