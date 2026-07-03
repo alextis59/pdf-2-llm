@@ -1,0 +1,49 @@
+{
+  "generatedAt": "2026-07-03T03:26:37.973Z",
+  "budget": {
+    "maxPackagedModelBytes": 0,
+    "maxPackagedModelFiles": 0,
+    "maxRepositoryModelBytes": 0,
+    "maxRepositoryModelFiles": 0,
+    "maxDeclaredLazyModelFiles": 8
+  },
+  "package": {
+    "id": "@pdf-2-llm/pdf2md@0.0.0",
+    "name": "@pdf-2-llm/pdf2md",
+    "version": "0.0.0",
+    "filename": "pdf-2-llm-pdf2md-0.0.0.tgz",
+    "packagedModelBytes": 0,
+    "packagedModelFileCount": 0,
+    "modelFiles": []
+  },
+  "repository": {
+    "scannedRoots": [
+      "packages/pdf2md/models",
+      "packages/pdf2md/src/models",
+      "models",
+      "public/models"
+    ],
+    "modelBytes": 0,
+    "modelFileCount": 0,
+    "modelFiles": []
+  },
+  "declaredLazyModels": {
+    "reportPaths": [
+      "corpus/reports/ocr-throughput-benchmark.json",
+      "corpus/reports/webgpu-benchmark.json"
+    ],
+    "count": 1,
+    "modelFiles": [
+      {
+        "path": "eng.traineddata",
+        "bytes": null,
+        "sources": [
+          "corpus/reports/ocr-throughput-benchmark.json",
+          "corpus/reports/webgpu-benchmark.json"
+        ]
+      }
+    ]
+  },
+  "violations": [],
+  "passed": true
+}

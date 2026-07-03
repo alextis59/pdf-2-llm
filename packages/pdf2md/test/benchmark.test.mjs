@@ -16,6 +16,10 @@ import {
   createPackageSizeReport,
   evaluatePackageSizeBudget
 } from "../../../scripts/qa/check-package-size.mjs";
+import {
+  createModelSizeReport,
+  evaluateModelSizeBudget
+} from "../../../scripts/qa/check-model-size.mjs";
 
 test("benchmark duration summary reports min max mean and median", () => {
   assert.deepEqual(summarizeDurations([9, 1, 5, 3]), {
@@ -315,6 +319,73 @@ test("package size report evaluates packed size budgets", () => {
     { path: "src/worker.mjs", bytes: 500 },
     { path: "package.json", bytes: 300 }
   ]);
+});
+
+test("model size report evaluates bundled and lazy model budgets", () => {
+  const report = createModelSizeReport(
+    {
+      packageInfo: {
+        id: "@scope/pkg@1.0.0",
+        name: "@scope/pkg",
+        version: "1.0.0",
+        filename: "scope-pkg-1.0.0.tgz",
+        files: [
+          { path: "src/index.mjs", size: 500 },
+          { path: "src/models/layout.onnx", size: 2048 },
+          { path: "src/models/readme.txt", size: 50 }
+        ]
+      },
+      repositoryModelFiles: [
+        { path: "models/ocr/eng.traineddata", bytes: 1024 },
+        { path: "models/ocr/jpn.traineddata", bytes: 2048 }
+      ],
+      declaredLazyModelFiles: [
+        {
+          path: "eng.traineddata",
+          bytes: null,
+          sources: ["corpus/reports/ocr-throughput-benchmark.json"]
+        },
+        {
+          path: "jpn.traineddata",
+          bytes: null,
+          sources: ["corpus/reports/ocr-throughput-benchmark.json"]
+        }
+      ],
+      modelRoots: ["models"],
+      benchmarkReports: ["corpus/reports/ocr-throughput-benchmark.json"]
+    },
+    {
+      budget: {
+        maxPackagedModelBytes: 1024,
+        maxPackagedModelFiles: 1,
+        maxRepositoryModelBytes: 4096,
+        maxRepositoryModelFiles: 2,
+        maxDeclaredLazyModelFiles: 1
+      }
+    }
+  );
+
+  assert.equal(report.package.packagedModelBytes, 2048);
+  assert.equal(report.package.packagedModelFileCount, 1);
+  assert.deepEqual(report.package.modelFiles, [{ path: "src/models/layout.onnx", bytes: 2048 }]);
+  assert.equal(report.repository.modelBytes, 3072);
+  assert.equal(report.repository.modelFileCount, 2);
+  assert.equal(report.declaredLazyModels.count, 2);
+  assert.deepEqual(evaluateModelSizeBudget(report, report.budget), [
+    {
+      metric: "maxPackagedModelBytes",
+      actualMetric: "packagedModelBytes",
+      actual: 2048,
+      limit: 1024
+    },
+    {
+      metric: "maxDeclaredLazyModelFiles",
+      actualMetric: "declaredLazyModelFileCount",
+      actual: 2,
+      limit: 1
+    }
+  ]);
+  assert.equal(report.passed, false);
 });
 
 test("benchmark memory summary reports deltas", () => {
