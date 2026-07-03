@@ -26,6 +26,14 @@ const visibleTableFixturePath = new URL(
   "../../../corpus/generated/synthetic-visible-table.pdf",
   import.meta.url
 );
+const rotatedPageFixturePath = new URL(
+  "../../../corpus/generated/synthetic-rotated-page.pdf",
+  import.meta.url
+);
+const croppedPageFixturePath = new URL(
+  "../../../corpus/generated/synthetic-cropped-page.pdf",
+  import.meta.url
+);
 
 test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", async () => {
   const bytes = await readFile(fixturePath);
@@ -141,6 +149,48 @@ test("convertPdfToMarkdown exposes the selected scoped raster path when enabled"
       userUnit: 1
     }
   ]);
+});
+
+test("convertPdfToMarkdown raster diagnostics cover rotated and cropped generated pages", async () => {
+  const rotated = await convertPdfToMarkdown(rotatedPageFixturePath.pathname, {
+    raster: { enabled: true, dpi: 72 }
+  });
+  const cropped = await convertPdfToMarkdown(croppedPageFixturePath.pathname, {
+    raster: { enabled: true, dpi: 72 }
+  });
+
+  assert.deepEqual(pickRasterFixtureFields(rotated.diagnostics.extraction.raster.pages[0]), {
+    sourceBox: "mediaBox",
+    boxPt: [0, 0, 612, 792],
+    sourceWidthPt: 612,
+    sourceHeightPt: 792,
+    widthPt: 792,
+    heightPt: 612,
+    widthPx: 792,
+    heightPx: 612,
+    rotation: 90,
+    quarterTurn: true,
+    thumbnail: {
+      widthPx: 396,
+      heightPx: 306
+    }
+  });
+  assert.deepEqual(pickRasterFixtureFields(cropped.diagnostics.extraction.raster.pages[0]), {
+    sourceBox: "cropBox",
+    boxPt: [36, 300, 576, 756],
+    sourceWidthPt: 540,
+    sourceHeightPt: 456,
+    widthPt: 540,
+    heightPt: 456,
+    widthPx: 540,
+    heightPx: 456,
+    rotation: 0,
+    quarterTurn: false,
+    thumbnail: {
+      widthPx: 270,
+      heightPx: 228
+    }
+  });
 });
 
 test("CLI emits JSON scaffold output", () => {
@@ -410,6 +460,25 @@ function createSinglePageTextPdf(operations) {
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
 
   return Buffer.from(body, "binary");
+}
+
+function pickRasterFixtureFields(page) {
+  return {
+    sourceBox: page.sourceBox,
+    boxPt: page.boxPt,
+    sourceWidthPt: page.sourceWidthPt,
+    sourceHeightPt: page.sourceHeightPt,
+    widthPt: page.widthPt,
+    heightPt: page.heightPt,
+    widthPx: page.widthPx,
+    heightPx: page.heightPx,
+    rotation: page.rotation,
+    quarterTurn: page.quarterTurn,
+    thumbnail: {
+      widthPx: page.thumbnail.widthPx,
+      heightPx: page.thumbnail.heightPx
+    }
+  };
 }
 
 test("table MVP matches expected markdown for generated table fixtures", async () => {

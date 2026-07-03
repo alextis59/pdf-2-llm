@@ -572,7 +572,7 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 - [x] Respect page boxes and rotation.
 - [x] Enforce image pixel limits.
 - [x] Add thumbnail render path for previews and layout models.
-- [ ] Add tests for rotated and cropped pages.
+- [x] Add tests for rotated and cropped pages.
 
 ### 6.2 Scan Detection
 
