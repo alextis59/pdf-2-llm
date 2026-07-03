@@ -698,7 +698,7 @@ Goal: make the package safe and predictable enough for real use.
 - [x] Enforce max image pixels.
 - [x] Enforce max object count.
 - [x] Enforce parse and conversion timeouts.
-- [ ] Enforce recursion/depth limits.
+- [x] Enforce recursion/depth limits.
 - [ ] Audit all unsafe Rust blocks.
 - [ ] Run fuzzers for parser, streams, fonts, and content interpreter.
 - [ ] Add malicious PDF regression fixtures.

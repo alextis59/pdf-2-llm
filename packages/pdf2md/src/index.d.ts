@@ -39,6 +39,7 @@ export type ConvertOptions = {
     maxDecodedStreamBytes?: number;
     maxPages?: number;
     maxObjects?: number;
+    maxDepth?: number;
     maxImagePixels?: number;
     timeoutMs?: number;
   };

@@ -509,8 +509,28 @@ test("parser reports bounded byte-reader and syntax errors with codes and offset
   );
 
   assert.throws(
+    () => parsePdfValue("[[1]]", { maxDepth: 1 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.depth_limit_exceeded"
+  );
+
+  assert.throws(
     () => parsePdfDocument(bytes, { deadline: 0 }),
     (error) => error.name === "TimeoutError" && error.message === "Operation timed out"
+  );
+});
+
+test("parser enforces page tree depth limits", () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+    "<< /Type /Pages /Kids [5 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 4 0 R /MediaBox [0 0 300 400] >>"
+  ]);
+
+  assert.throws(
+    () => parsePdfDocument(bytes, { maxDepth: 2 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.depth_limit_exceeded"
   );
 });
 

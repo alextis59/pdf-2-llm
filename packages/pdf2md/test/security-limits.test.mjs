@@ -54,6 +54,21 @@ test("converter enforces maxDecodedStreamBytes before fallback extraction", asyn
   assert.equal(result.diagnostics.extraction.textLines, 0);
 });
 
+test("converter enforces maxDepth before fallback extraction", async () => {
+  const bytes = await readFile(fixturePath);
+  const result = await convertPdfToMarkdown(bytes, {
+    ocr: { enabled: false },
+    security: { maxDepth: 0 }
+  });
+  const parseFailure = result.warnings.find((warning) => warning.code === warningCodes.PdfParseFailed);
+
+  assert.equal(parseFailure?.details.code, "pdf.depth_limit_exceeded");
+  assert.equal(result.diagnostics.options.maxDepth, 0);
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.markdown, "");
+  assert.equal(result.diagnostics.extraction.textLines, 0);
+});
+
 test("converter reports maxObjects violations without panicking", async () => {
   const bytes = await readFile(fixturePath);
   const result = await convertPdfToMarkdown(bytes, {

@@ -56,6 +56,7 @@ export function parsePdfDocument(bytes, options = {}) {
   const reader = new ByteReader(bytes, options);
   const maxDecodedStreamBytes = options.maxDecodedStreamBytes ?? options.maxBytes ?? 50 * 1024 * 1024;
   const maxObjects = readMaxObjects(options.maxObjects);
+  const maxDepth = readMaxDepth(options.maxDepth);
   const mode = options.mode ?? options.parseMode ?? "strict";
   const source = Buffer.from(reader.bytes).toString("latin1");
   const version = readPdfVersion(source);
@@ -63,6 +64,7 @@ export function parsePdfDocument(bytes, options = {}) {
   const xref = readXrefData(source, reader.bytes, {
     maxDecodedStreamBytes,
     maxObjects,
+    maxDepth,
     deadline: options.deadline,
     mode
   });
@@ -83,6 +85,7 @@ export function parsePdfDocument(bytes, options = {}) {
     }
     const object = parseIndirectObjectAt(source, reader.bytes, entry.offset, {
       maxDecodedStreamBytes,
+      maxDepth,
       mode,
       encryption
     });
@@ -91,7 +94,7 @@ export function parsePdfDocument(bytes, options = {}) {
       streams.push(object.stream);
     }
   }
-  loadCompressedObjectStreams(objects, entries);
+  loadCompressedObjectStreams(objects, entries, { maxDepth });
 
   function getObject(referenceOrNumber, generationNumber = 0) {
     if (typeof referenceOrNumber === "object" && referenceOrNumber?.type === "ref") {
@@ -101,9 +104,9 @@ export function parsePdfDocument(bytes, options = {}) {
   }
 
   const catalog = resolveCatalog(trailer, getObject);
-  const outlines = resolveOutlines(catalog.outlinesRef, getObject);
-  const pages = resolvePages(catalog, getObject);
-  const structure = resolveStructureTree(catalog.structureTreeRootRef, getObject, pages);
+  const outlines = resolveOutlines(catalog.outlinesRef, getObject, maxDepth);
+  const pages = resolvePages(catalog, getObject, maxDepth);
+  const structure = resolveStructureTree(catalog.structureTreeRootRef, getObject, pages, maxDepth);
 
   return {
     version,
@@ -341,7 +344,7 @@ function constantTimePrefixEquals(left, right, length) {
   return diff === 0;
 }
 
-function loadCompressedObjectStreams(objects, entries) {
+function loadCompressedObjectStreams(objects, entries, options = {}) {
   const compressedEntries = entries.filter((entry) => entry.compressed);
   if (compressedEntries.length === 0) {
     return;
@@ -361,16 +364,20 @@ function loadCompressedObjectStreams(objects, entries) {
         code: "pdf.object_stream.missing"
       });
     }
-    const compressedObjects = parseObjectStream(objectStream, group);
+    const compressedObjects = parseObjectStream(objectStream, group, options);
     for (const object of compressedObjects) {
       objects.set(objectKey(object.objectNumber, object.generationNumber), object);
     }
   }
 }
 
-export function parsePdfValue(input, offset = 0) {
+export function parsePdfValue(input, offset = 0, options = {}) {
+  if (typeof offset === "object" && offset !== null) {
+    options = offset;
+    offset = 0;
+  }
   const source = typeof input === "string" ? input : Buffer.from(input).toString("latin1");
-  return new ObjectParser(source, offset).parseValue();
+  return new ObjectParser(source, offset, { maxDepth: readMaxDepth(options.maxDepth) }).parseValue();
 }
 
 function readXrefData(source, bytes, options = {}) {
@@ -427,7 +434,7 @@ function scanObjectsForRepair(source, bytes, options, cause) {
   const entries = [...entriesByKey.values()].sort(
     (left, right) => left.objectNumber - right.objectNumber || left.generationNumber - right.generationNumber
   );
-  const trailer = findLastTrailerDictionary(source);
+  const trailer = findLastTrailerDictionary(source, options);
   if (entries.length === 0 || !trailer) {
     throw new PdfSyntaxError("Unable to repair PDF object index from scanned objects.", {
       code: "pdf.repair.failed"
@@ -457,11 +464,11 @@ function isObjectHeaderBoundary(source, offset) {
   return offset === 0 || isWhitespace(source[offset - 1]) || source[offset - 1] === "%";
 }
 
-function findLastTrailerDictionary(source) {
+function findLastTrailerDictionary(source, options = {}) {
   let offset = source.lastIndexOf("trailer");
   while (offset !== -1) {
     try {
-      const parsed = parsePdfValue(source, offset + "trailer".length);
+      const parsed = parsePdfValue(source, offset + "trailer".length, { maxDepth: options.maxDepth });
       if (isDict(parsed.value)) {
         return parsed.value;
       }
@@ -479,6 +486,23 @@ function readMaxObjects(maxObjects) {
     throw new RangeError("maxObjects must be a non-negative integer");
   }
   return value;
+}
+
+function readMaxDepth(maxDepth) {
+  const value = maxDepth ?? 100;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new RangeError("maxDepth must be a non-negative integer");
+  }
+  return value;
+}
+
+function enforceDepthLimit(depth, maxDepth, offset) {
+  if (depth > maxDepth) {
+    throw new PdfSyntaxError("PDF nesting depth exceeds parser depth limit.", {
+      offset,
+      code: "pdf.depth_limit_exceeded"
+    });
+  }
 }
 
 function enforceObjectLimit(count, maxObjects) {
@@ -617,7 +641,7 @@ function parseHybridXrefSection(source, bytes, section, options = {}) {
   };
 }
 
-function parseClassicXref(source, offset, { mode = "strict" } = {}) {
+function parseClassicXref(source, offset, { mode = "strict", maxDepth = 100 } = {}) {
   let cursor = offset;
   if (!source.startsWith("xref", cursor)) {
     if (mode === "tolerant") {
@@ -641,7 +665,7 @@ function parseClassicXref(source, offset, { mode = "strict" } = {}) {
     cursor = skipWhitespaceAndComments(source, cursor);
     if (source.startsWith("trailer", cursor)) {
       cursor += "trailer".length;
-      const parsed = parsePdfValue(source, cursor);
+      const parsed = parsePdfValue(source, cursor, { maxDepth });
       return {
         entries,
         trailer: parsed.value,
@@ -800,7 +824,7 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
   const objectNumber = Number.parseInt(header[1], 10);
   const generationNumber = Number.parseInt(header[2], 10);
   let cursor = offset + header[0].length;
-  const parsed = parsePdfValue(source, cursor);
+  const parsed = parsePdfValue(source, cursor, { maxDepth: options.maxDepth });
   cursor = skipWhitespaceAndComments(source, parsed.offset);
 
   let stream = null;
@@ -884,7 +908,7 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
   };
 }
 
-function parseObjectStream(objectStream, requestedEntries) {
+function parseObjectStream(objectStream, requestedEntries, options = {}) {
   if (!isDict(objectStream.value) || nameValue(objectStream.value.entries.Type) !== "ObjStm" || !objectStream.stream) {
     throw new PdfSyntaxError("XRef stream entry references an invalid object stream.", {
       offset: objectStream.offset,
@@ -933,7 +957,7 @@ function parseObjectStream(objectStream, requestedEntries) {
         code: "pdf.object_stream.entry_offset_malformed"
       });
     }
-    const parsed = parsePdfValue(text, objectOffset);
+    const parsed = parsePdfValue(text, objectOffset, { maxDepth: options.maxDepth });
     objects.push({
       objectNumber: requested.objectNumber,
       generationNumber: 0,
@@ -1033,18 +1057,19 @@ function resolveCatalog(trailer, getObject) {
   };
 }
 
-function resolveOutlines(outlinesRef, getObject) {
+function resolveOutlines(outlinesRef, getObject, maxDepth = 100) {
   const root = resolveOutlineObject(outlinesRef, getObject);
   if (!root || !isDict(root.value)) {
     return [];
   }
 
   const outlines = [];
-  walkOutlineSiblings(root.value.entries.First, 1, getObject, outlines, new Set());
+  walkOutlineSiblings(root.value.entries.First, 1, getObject, outlines, new Set(), maxDepth);
   return outlines;
 }
 
-function walkOutlineSiblings(itemRef, depth, getObject, outlines, seen) {
+function walkOutlineSiblings(itemRef, depth, getObject, outlines, seen, maxDepth) {
+  enforceDepthLimit(depth, maxDepth, null);
   let currentRef = itemRef;
   while (currentRef) {
     const item = resolveOutlineObject(currentRef, getObject);
@@ -1066,7 +1091,7 @@ function walkOutlineSiblings(itemRef, depth, getObject, outlines, seen) {
       });
     }
     if (item.value.entries.First) {
-      walkOutlineSiblings(item.value.entries.First, depth + 1, getObject, outlines, seen);
+      walkOutlineSiblings(item.value.entries.First, depth + 1, getObject, outlines, seen, maxDepth);
     }
     currentRef = item.value.entries.Next ?? null;
   }
@@ -1129,7 +1154,7 @@ function normalizeOutlineTitle(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function resolveStructureTree(structureTreeRootRef, getObject, pages) {
+function resolveStructureTree(structureTreeRootRef, getObject, pages, maxDepth = 100) {
   const root = resolveStructureObject(structureTreeRootRef, getObject);
   const empty = {
     tagged: false,
@@ -1166,13 +1191,16 @@ function resolveStructureTree(structureTreeRootRef, getObject, pages) {
     pageRef: null,
     altText: null,
     actualText: null,
-    language: null
+    language: null,
+    maxDepth,
+    depth: 0
   });
 
   return structure;
 }
 
 function walkStructureItem(value, context) {
+  enforceDepthLimit(context.depth ?? 0, context.maxDepth, null);
   if (value == null) {
     return;
   }
@@ -1182,7 +1210,10 @@ function walkStructureItem(value, context) {
   }
   if (value.type === "array") {
     for (const item of value.items) {
-      walkStructureItem(item, context);
+      walkStructureItem(item, {
+        ...context,
+        depth: (context.depth ?? 0) + 1
+      });
     }
     return;
   }
@@ -1221,6 +1252,7 @@ function walkStructureItem(value, context) {
     });
     walkStructureItem(dict.entries.K, {
       ...context,
+      depth: (context.depth ?? 0) + 1,
       path,
       role,
       rawRole,
@@ -1234,6 +1266,7 @@ function walkStructureItem(value, context) {
 
   walkStructureItem(dict.entries.K, {
     ...context,
+    depth: (context.depth ?? 0) + 1,
     pageRef: dict.entries.Pg ?? context.pageRef
   });
 }
@@ -1330,7 +1363,7 @@ function mapStructureRole(role, roleMap) {
   return current;
 }
 
-function resolvePages(catalog, getObject) {
+function resolvePages(catalog, getObject, maxDepth = 100) {
   const rootPages = getObject(catalog.pagesRef);
   if (!rootPages || !isDict(rootPages.value)) {
     throw new PdfSyntaxError("Pages tree root is missing or invalid.", {
@@ -1339,14 +1372,19 @@ function resolvePages(catalog, getObject) {
   }
 
   const pages = [];
-  walkPageNode(rootPages, {}, getObject, pages);
+  walkPageNode(rootPages, {}, getObject, pages, {
+    depth: 0,
+    maxDepth,
+    seen: new Set()
+  });
   return pages.map((page, index) => ({
     ...page,
     pageIndex: index
   }));
 }
 
-function walkPageNode(object, inherited, getObject, pages) {
+function walkPageNode(object, inherited, getObject, pages, context) {
+  enforceDepthLimit(context.depth, context.maxDepth, object.offset);
   if (!isDict(object.value)) {
     throw new PdfSyntaxError("Page tree node is not a dictionary.", {
       offset: object.offset,
@@ -1355,6 +1393,18 @@ function walkPageNode(object, inherited, getObject, pages) {
   }
 
   const dict = object.value;
+  const key = Number.isInteger(object.objectNumber)
+    ? objectKey(object.objectNumber, object.generationNumber ?? 0)
+    : null;
+  if (key && context.seen.has(key)) {
+    throw new PdfSyntaxError("Pages tree contains a cycle.", {
+      offset: object.offset,
+      code: "pdf.pages.cycle"
+    });
+  }
+  if (key) {
+    context.seen.add(key);
+  }
   const type = nameValue(dict.entries.Type);
   const nextInherited = mergeInherited(inherited, dict, getObject);
 
@@ -1374,7 +1424,13 @@ function walkPageNode(object, inherited, getObject, pages) {
           code: "pdf.pages.kid_missing"
         });
       }
-      walkPageNode(kid, nextInherited, getObject, pages);
+      walkPageNode(kid, nextInherited, getObject, pages, {
+        ...context,
+        depth: context.depth + 1
+      });
+    }
+    if (key) {
+      context.seen.delete(key);
     }
     return;
   }
@@ -1407,6 +1463,9 @@ function walkPageNode(object, inherited, getObject, pages) {
     annotationsRef: dict.entries.Annots ?? null,
     contentStreams
   });
+  if (key) {
+    context.seen.delete(key);
+  }
 }
 
 function mergeInherited(inherited, dict, getObject) {
@@ -1602,12 +1661,14 @@ function trimTrailingLineEnding(source, offset) {
 }
 
 class ObjectParser {
-  constructor(source, offset = 0) {
+  constructor(source, offset = 0, { maxDepth = 100 } = {}) {
     this.source = source;
     this.offset = offset;
+    this.maxDepth = maxDepth;
   }
 
-  parseValue() {
+  parseValue(depth = 0) {
+    enforceDepthLimit(depth, this.maxDepth, this.offset);
     this.offset = skipWhitespaceAndComments(this.source, this.offset);
     const start = this.offset;
     const char = this.source[this.offset];
@@ -1620,10 +1681,10 @@ class ObjectParser {
     }
 
     if (char === "[" ) {
-      return this.parseArray();
+      return this.parseArray(depth);
     }
     if (char === "<" && this.source[this.offset + 1] === "<") {
-      return this.parseDictionary();
+      return this.parseDictionary(depth);
     }
     if (char === "<") {
       return this.parseHexString();
@@ -1655,7 +1716,7 @@ class ObjectParser {
     });
   }
 
-  parseArray() {
+  parseArray(depth) {
     const items = [];
     this.offset += 1;
     while (this.offset < this.source.length) {
@@ -1670,7 +1731,7 @@ class ObjectParser {
           offset: this.offset
         };
       }
-      const parsed = this.parseValue();
+      const parsed = this.parseValue(depth + 1);
       items.push(parsed.value);
       this.offset = parsed.offset;
     }
@@ -1680,7 +1741,7 @@ class ObjectParser {
     });
   }
 
-  parseDictionary() {
+  parseDictionary(depth) {
     const entries = {};
     this.offset += 2;
     while (this.offset < this.source.length) {
@@ -1697,7 +1758,7 @@ class ObjectParser {
       }
 
       const key = this.parseName().value.value;
-      const parsed = this.parseValue();
+      const parsed = this.parseValue(depth + 1);
       entries[key] = parsed.value;
       this.offset = parsed.offset;
     }
@@ -1801,7 +1862,7 @@ class ObjectParser {
 
     if (Number.isInteger(first.value)) {
       try {
-        const secondParser = new ObjectParser(this.source, refOffset);
+        const secondParser = new ObjectParser(this.source, refOffset, { maxDepth: this.maxDepth });
         const second = secondParser.readNumber();
         const afterSecond = skipWhitespaceAndComments(this.source, secondParser.offset);
         if (
