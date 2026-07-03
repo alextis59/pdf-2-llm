@@ -638,6 +638,19 @@ Gate 6 acceptance:
 - [x] Unsupported WebGPU environments pass the same corpus through CPU fallback.
 - [x] Device errors produce structured diagnostics.
 
+Speedup validation status, 2026-07-03:
+
+- `npm run qa:webgpu-comparison` passes parity for 3/3 comparisons, but reports
+  speedup as `not-applicable` because the WebGPU-preferred Node path selects CPU
+  with `node-stable-gpu-path-unavailable`.
+- Local Chrome 126 headless probes with `--enable-unsafe-webgpu` and
+  Vulkan/WebGPU feature flags report `navigator.gpu: false`; Vulkan
+  initialization fails before WebGPU can be selected.
+- The current implementation intentionally performs capability detection and
+  OCR batch planning only. This acceptance item remains open until real GPU
+  kernels are implemented and a run with a selected `webgpu` provider passes
+  `node scripts/qa/check-webgpu-comparison.mjs --report <report> --require-speedup`.
+
 ## Phase 8: Gate 7 - Advanced Document Intelligence
 
 Goal: expand high-value difficult content after the core pipeline is stable.

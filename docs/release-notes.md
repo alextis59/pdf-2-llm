@@ -114,6 +114,8 @@ fixtures:
   `node-stable-gpu-path-unavailable`.
 - WebGPU speedup reports are `not-applicable` in CPU-fallback environments and
   do not claim acceleration unless `selectedProvider` is `webgpu`.
+- The Gate 6 speedup acceptance item remains open until a real WebGPU execution
+  provider with GPU kernels passes the comparison gate with `--require-speedup`.
 - Browser WebGPU unavailability falls back to CPU. When `webgpu.required` is
   true, the user-visible warning is `webgpu.unavailable`.
 
