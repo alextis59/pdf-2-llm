@@ -429,6 +429,7 @@ function scanObjectsForRepair(source, bytes, options, cause) {
     try {
       const object = parseIndirectObjectAt(source, bytes, offset, {
         maxDecodedStreamBytes: options.maxDecodedStreamBytes,
+        maxDepth: options.maxDepth,
         mode: options.mode
       });
       entriesByKey.set(objectKey(object.objectNumber, object.generationNumber), {
@@ -538,7 +539,8 @@ function throwIfParserTimedOut(deadline) {
 function isRepairFatalError(error) {
   return (
     error instanceof DOMException ||
-    (error instanceof PdfSyntaxError && error.code === "pdf.object_limit_exceeded")
+    (error instanceof PdfSyntaxError &&
+      (error.code === "pdf.object_limit_exceeded" || error.code === "pdf.depth_limit_exceeded"))
   );
 }
 

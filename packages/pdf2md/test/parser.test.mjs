@@ -471,6 +471,20 @@ test("tolerant parser repairs damaged xref tables by scanning object headers", a
   assert.equal(result.diagnostics.extraction.parser.repairReason, "pdf.xref.entry_malformed");
 });
 
+test("tolerant object-scan repair enforces maxDepth while parsing discovered objects", () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R /Nested [[1]] >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 400] >>"
+  ]);
+  const damaged = corruptFirstXrefEntry(bytes);
+
+  assert.throws(
+    () => parsePdfDocument(damaged, { mode: "tolerant", maxDepth: 1 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.depth_limit_exceeded"
+  );
+});
+
 test("unrecoverable tolerant repair failures report structured parse warnings", async () => {
   const damaged = Buffer.from("%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n", "binary");
 
@@ -692,6 +706,13 @@ function createTestPdf(objects, { trailerEntries = "" } = {}) {
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${trailerEntries} >>\n`;
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
   return Buffer.from(body, "binary");
+}
+
+function corruptFirstXrefEntry(bytes) {
+  return Buffer.from(
+    bytes.toString("binary").replace("0000000000 65535 f", "xxxxxxxxxx 65535 f"),
+    "binary"
+  );
 }
 
 function createEncryptedTestPdf(label) {
