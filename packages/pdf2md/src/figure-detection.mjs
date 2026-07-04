@@ -92,10 +92,17 @@ export function insertFigureMarkdown(markdownResult, figures) {
     return markdownResult;
   }
 
-  const insertions = figures
-    .map((figure) => createFigureMarkdownInsertion(markdownResult.markdown, figure))
-    .filter(Boolean)
-    .sort((left, right) => left.index - right.index);
+  const usedCaptionRanges = [];
+  const insertions = [];
+  for (const figure of figures) {
+    const insertion = createFigureMarkdownInsertion(markdownResult, figure, usedCaptionRanges);
+    if (!insertion) {
+      continue;
+    }
+    usedCaptionRanges.push(insertion.captionRange);
+    insertions.push(insertion);
+  }
+  insertions.sort((left, right) => left.index - right.index);
   if (insertions.length === 0) {
     return markdownResult;
   }
@@ -143,19 +150,55 @@ export function insertFigureMarkdown(markdownResult, figures) {
   };
 }
 
-function createFigureMarkdownInsertion(markdown, figure) {
+function createFigureMarkdownInsertion(markdownResult, figure, usedCaptionRanges) {
   if (!figure.caption) {
     return null;
   }
-  const index = markdown.indexOf(figure.caption);
+  const index = findCaptionInsertionIndex(markdownResult, figure, usedCaptionRanges);
   if (index === -1) {
     return null;
   }
   return {
+    captionRange: {
+      start: index,
+      end: index + figure.caption.length
+    },
     figure,
     index,
     text: `![${markdownImageAltText(figure)}](${figure.assetPath})\n\n`
   };
+}
+
+function findCaptionInsertionIndex(markdownResult, figure, usedCaptionRanges) {
+  const markdown = markdownResult.markdown;
+  const entries = markdownResult.sourceMap?.entries ?? [];
+  let index = markdown.indexOf(figure.caption);
+  while (index !== -1) {
+    const end = index + figure.caption.length;
+    if (
+      !rangeWasUsed(index, end, usedCaptionRanges) &&
+      captionRangeMatchesFigurePage(entries, index, end, figure.pageIndex)
+    ) {
+      return index;
+    }
+    index = markdown.indexOf(figure.caption, index + 1);
+  }
+  return -1;
+}
+
+function rangeWasUsed(start, end, ranges) {
+  return ranges.some((range) => range.start === start && range.end === end);
+}
+
+function captionRangeMatchesFigurePage(entries, start, end, pageIndex) {
+  if (entries.length === 0 || pageIndex === null || pageIndex === undefined) {
+    return true;
+  }
+  return entries.some(
+    (entry) =>
+      rangesOverlap(start, end, entry.markdownStart, entry.markdownEnd) &&
+      entry.regions?.some((region) => region.pageIndex === pageIndex)
+  );
 }
 
 function shiftSourceMapEntries(sourceMap, insertionIndex, length) {
@@ -169,6 +212,10 @@ function shiftSourceMapEntries(sourceMap, insertionIndex, length) {
       markdownEnd: entry.markdownEnd + length
     };
   });
+}
+
+function rangesOverlap(leftStart, leftEnd, rightStart, rightEnd) {
+  return leftStart < rightEnd && rightStart < leftEnd;
 }
 
 function visualRegionAboveCaption(items, caption) {
