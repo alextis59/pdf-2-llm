@@ -315,6 +315,9 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
   if (gatingValue === "true") {
     const reviewer = readNestedScalar(text, "review", "humanReviewedBy");
     const reviewedAt = readNestedScalar(text, "review", "reviewedAt");
+    if (!metrics.has("minTextCoverage")) {
+      errors.push(`${relativePath}: gating files require metrics.minTextCoverage`);
+    }
     if (!reviewer) {
       errors.push(`${relativePath}: gating files require review.humanReviewedBy`);
     }
@@ -347,6 +350,7 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
   }
 
   for (const metricName of [
+    "minTextCoverage",
     "maxReadingOrderDistance",
     "maxCharacterErrorRate",
     "maxOcrCharacterErrorRate",
