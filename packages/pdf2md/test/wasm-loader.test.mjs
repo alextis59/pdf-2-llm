@@ -19,6 +19,13 @@ test("loadPdf2mdCoreWasm exposes version and PDF header preflight", async () => 
   assert.equal(core.hasPdfHeader(new TextEncoder().encode("not a pdf")), false);
 });
 
+test("loadPdf2mdCoreWasm loads the bundled file URL source by default", async () => {
+  const core = await loadPdf2mdCoreWasm();
+
+  assert.equal(core.version(), "0.0.0");
+  assert.equal(core.threading.selected, "single");
+});
+
 test("detectWasmThreadSupport reports missing browser isolation prerequisites", () => {
   const browserEnvironment = {
     WebAssembly,

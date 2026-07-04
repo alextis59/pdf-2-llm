@@ -105,11 +105,23 @@ async function instantiateWasm(source, imports) {
   if (isResponse(source)) {
     return instantiateResponse(source, imports);
   }
+  if (isFileUrlSource(source)) {
+    return instantiateFileUrl(source, imports);
+  }
   if (typeof fetch !== "function") {
     throw new TypeError("A URL or path source requires fetch support in this runtime.");
   }
   const response = await fetch(source);
   return instantiateResponse(response, imports);
+}
+
+async function instantiateFileUrl(source, imports) {
+  const [{ readFile }, { fileURLToPath }] = await Promise.all([
+    import("node:fs/promises"),
+    import("node:url")
+  ]);
+  const bytes = await readFile(fileURLToPath(source));
+  return (await WebAssembly.instantiate(bytes, imports)).instance;
 }
 
 async function instantiateResponse(response, imports) {
@@ -216,6 +228,13 @@ function isSourceLike(value) {
     value instanceof WebAssembly.Module ||
     isResponse(value)
   );
+}
+
+function isFileUrlSource(value) {
+  if (value instanceof URL) {
+    return value.protocol === "file:";
+  }
+  return typeof value === "string" && value.startsWith("file:");
 }
 
 function isResponse(value) {
