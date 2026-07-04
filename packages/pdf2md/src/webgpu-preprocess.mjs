@@ -243,43 +243,53 @@ export function createWebGpuBinarizeRgbaRunner({
         size,
         usage: usages.MAP_READ | usages.COPY_DST
       });
+      let readbackMapped = false;
 
-      device.queue.writeBuffer(inputBuffer, 0, inputWords);
-      device.queue.writeBuffer(
-        paramsBuffer,
-        0,
-        new Uint32Array([
-          inputWords.length,
-          normalizedThreshold,
-          dispatch.workgroupsPerRow,
-          0
-        ])
-      );
+      try {
+        device.queue.writeBuffer(inputBuffer, 0, inputWords);
+        device.queue.writeBuffer(
+          paramsBuffer,
+          0,
+          new Uint32Array([
+            inputWords.length,
+            normalizedThreshold,
+            dispatch.workgroupsPerRow,
+            0
+          ])
+        );
 
-      const bindGroup = device.createBindGroup({
-        label: `${label}-bind-group`,
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [
-          { binding: 0, resource: { buffer: inputBuffer } },
-          { binding: 1, resource: { buffer: outputBuffer } },
-          { binding: 2, resource: { buffer: paramsBuffer } }
-        ]
-      });
-      const encoder = device.createCommandEncoder({ label: `${label}-encoder` });
-      const pass = encoder.beginComputePass({ label: `${label}-pass` });
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, bindGroup);
-      pass.dispatchWorkgroups(dispatch.workgroupsPerRow, dispatch.rows);
-      pass.end();
-      encoder.copyBufferToBuffer(outputBuffer, 0, readbackBuffer, 0, size);
-      device.queue.submit([encoder.finish()]);
+        const bindGroup = device.createBindGroup({
+          label: `${label}-bind-group`,
+          layout: pipeline.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: { buffer: inputBuffer } },
+            { binding: 1, resource: { buffer: outputBuffer } },
+            { binding: 2, resource: { buffer: paramsBuffer } }
+          ]
+        });
+        const encoder = device.createCommandEncoder({ label: `${label}-encoder` });
+        const pass = encoder.beginComputePass({ label: `${label}-pass` });
+        pass.setPipeline(pipeline);
+        pass.setBindGroup(0, bindGroup);
+        pass.dispatchWorkgroups(dispatch.workgroupsPerRow, dispatch.rows);
+        pass.end();
+        encoder.copyBufferToBuffer(outputBuffer, 0, readbackBuffer, 0, size);
+        device.queue.submit([encoder.finish()]);
 
-      await readbackBuffer.mapAsync(mapModes.READ);
-      const mapped = readbackBuffer.getMappedRange();
-      const outputWords = new Uint32Array(mapped.slice(0));
-      readbackBuffer.unmap();
-      destroyBuffers([inputBuffer, outputBuffer, paramsBuffer, readbackBuffer]);
-      return unpackRgbaWords(outputWords, input.length);
+        await readbackBuffer.mapAsync(mapModes.READ);
+        readbackMapped = true;
+        const mapped = readbackBuffer.getMappedRange();
+        const outputWords = new Uint32Array(mapped.slice(0));
+        return unpackRgbaWords(outputWords, input.length);
+      } finally {
+        try {
+          if (readbackMapped) {
+            readbackBuffer.unmap();
+          }
+        } finally {
+          destroyBuffers([inputBuffer, outputBuffer, paramsBuffer, readbackBuffer]);
+        }
+      }
     }
   };
 }
@@ -348,47 +358,57 @@ export function createWebGpuAdaptiveThresholdRgbaRunner({
         size,
         usage: usages.MAP_READ | usages.COPY_DST
       });
+      let readbackMapped = false;
 
-      device.queue.writeBuffer(inputBuffer, 0, inputWords);
-      device.queue.writeBuffer(
-        paramsBuffer,
-        0,
-        new Uint32Array([
-          inputWords.length,
-          geometry.width,
-          geometry.height,
-          normalizedRadius,
-          normalizedBias,
-          dispatch.workgroupsPerRow,
+      try {
+        device.queue.writeBuffer(inputBuffer, 0, inputWords);
+        device.queue.writeBuffer(
+          paramsBuffer,
           0,
-          0
-        ])
-      );
+          new Uint32Array([
+            inputWords.length,
+            geometry.width,
+            geometry.height,
+            normalizedRadius,
+            normalizedBias,
+            dispatch.workgroupsPerRow,
+            0,
+            0
+          ])
+        );
 
-      const bindGroup = device.createBindGroup({
-        label: `${label}-bind-group`,
-        layout: pipeline.getBindGroupLayout(0),
-        entries: [
-          { binding: 0, resource: { buffer: inputBuffer } },
-          { binding: 1, resource: { buffer: outputBuffer } },
-          { binding: 2, resource: { buffer: paramsBuffer } }
-        ]
-      });
-      const encoder = device.createCommandEncoder({ label: `${label}-encoder` });
-      const pass = encoder.beginComputePass({ label: `${label}-pass` });
-      pass.setPipeline(pipeline);
-      pass.setBindGroup(0, bindGroup);
-      pass.dispatchWorkgroups(dispatch.workgroupsPerRow, dispatch.rows);
-      pass.end();
-      encoder.copyBufferToBuffer(outputBuffer, 0, readbackBuffer, 0, size);
-      device.queue.submit([encoder.finish()]);
+        const bindGroup = device.createBindGroup({
+          label: `${label}-bind-group`,
+          layout: pipeline.getBindGroupLayout(0),
+          entries: [
+            { binding: 0, resource: { buffer: inputBuffer } },
+            { binding: 1, resource: { buffer: outputBuffer } },
+            { binding: 2, resource: { buffer: paramsBuffer } }
+          ]
+        });
+        const encoder = device.createCommandEncoder({ label: `${label}-encoder` });
+        const pass = encoder.beginComputePass({ label: `${label}-pass` });
+        pass.setPipeline(pipeline);
+        pass.setBindGroup(0, bindGroup);
+        pass.dispatchWorkgroups(dispatch.workgroupsPerRow, dispatch.rows);
+        pass.end();
+        encoder.copyBufferToBuffer(outputBuffer, 0, readbackBuffer, 0, size);
+        device.queue.submit([encoder.finish()]);
 
-      await readbackBuffer.mapAsync(mapModes.READ);
-      const mapped = readbackBuffer.getMappedRange();
-      const outputWords = new Uint32Array(mapped.slice(0));
-      readbackBuffer.unmap();
-      destroyBuffers([inputBuffer, outputBuffer, paramsBuffer, readbackBuffer]);
-      return unpackRgbaWords(outputWords, input.length);
+        await readbackBuffer.mapAsync(mapModes.READ);
+        readbackMapped = true;
+        const mapped = readbackBuffer.getMappedRange();
+        const outputWords = new Uint32Array(mapped.slice(0));
+        return unpackRgbaWords(outputWords, input.length);
+      } finally {
+        try {
+          if (readbackMapped) {
+            readbackBuffer.unmap();
+          }
+        } finally {
+          destroyBuffers([inputBuffer, outputBuffer, paramsBuffer, readbackBuffer]);
+        }
+      }
     }
   };
 }

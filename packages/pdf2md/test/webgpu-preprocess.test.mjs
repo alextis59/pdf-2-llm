@@ -5,6 +5,7 @@ import {
   binarizeRgbaCpu,
   createAdaptiveThresholdRgbaShaderSource,
   createBinarizeRgbaShaderSource,
+  createWebGpuAdaptiveThresholdRgbaRunner,
   createWebGpuPreprocessingDiagnostics,
   createWebGpuBinarizeRgbaRunner,
   packRgbaWords,
@@ -140,12 +141,102 @@ test("createWebGpuBinarizeRgbaRunner splits large work into two-dimensional disp
   assert.deepEqual(dispatches, [[2, 2]]);
 });
 
+test("WebGPU preprocessing runners destroy buffers when readback mapping fails", async () => {
+  for (const { createRunner, label, options } of [
+    {
+      createRunner: createWebGpuBinarizeRgbaRunner,
+      label: "binarize",
+      options: {}
+    },
+    {
+      createRunner: createWebGpuAdaptiveThresholdRgbaRunner,
+      label: "adaptive",
+      options: { height: 1, width: 1 }
+    }
+  ]) {
+    const destroyed = [];
+    const runner = createRunner({
+      device: createMapFailureDevice(destroyed),
+      label,
+      workgroupSize: 4
+    });
+
+    await assert.rejects(
+      () => runner.run(new Uint8Array(4), options),
+      /map failed/
+    );
+    assert.deepEqual(
+      destroyed.sort(),
+      [
+        `${label}-input`,
+        `${label}-output`,
+        `${label}-params`,
+        `${label}-readback`
+      ].sort()
+    );
+  }
+});
+
 test("binarizeRgbaCpu rejects non-RGBA input", () => {
   assert.throws(
     () => binarizeRgbaCpu(new Uint8Array([1, 2, 3])),
     /multiple of 4/
   );
 });
+
+function createMapFailureDevice(destroyed) {
+  return {
+    queue: {
+      writeBuffer() {},
+      submit() {}
+    },
+    createBindGroup() {
+      return {};
+    },
+    createBuffer({ label, size }) {
+      return {
+        destroy() {
+          destroyed.push(label);
+        },
+        getMappedRange() {
+          return new ArrayBuffer(size);
+        },
+        async mapAsync() {
+          if (label.endsWith("-readback")) {
+            throw new Error("map failed");
+          }
+        },
+        unmap() {}
+      };
+    },
+    createCommandEncoder() {
+      return {
+        beginComputePass() {
+          return {
+            dispatchWorkgroups() {},
+            end() {},
+            setBindGroup() {},
+            setPipeline() {}
+          };
+        },
+        copyBufferToBuffer() {},
+        finish() {
+          return {};
+        }
+      };
+    },
+    createComputePipeline() {
+      return {
+        getBindGroupLayout() {
+          return {};
+        }
+      };
+    },
+    createShaderModule() {
+      return {};
+    }
+  };
+}
 
 test("createWebGpuPreprocessingDiagnostics executes routed samples through a runner", async () => {
   const calls = [];
