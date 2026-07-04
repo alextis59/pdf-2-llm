@@ -1,10 +1,25 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   checkAcceptanceOutput,
   parseAcceptanceText
 } from "../../../scripts/qa/run-corpus.mjs";
 import { warningCodes } from "../src/index.mjs";
+
+const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
+const runCorpusPath = fileURLToPath(
+  new URL("../../../scripts/qa/run-corpus.mjs", import.meta.url)
+);
+
+function runCommand(file, args, options) {
+  return new Promise((resolve) => {
+    execFile(file, args, options, (error, stdout, stderr) => {
+      resolve({ code: error?.code ?? 0, stdout, stderr });
+    });
+  });
+}
 
 function fakeResult({ markdown = "Alpha\n\nBeta\n", warnings = [] } = {}) {
   return {
@@ -140,4 +155,17 @@ test("checkAcceptanceOutput rejects unknown behavior criteria instead of silentl
 
   const output = checkAcceptanceOutput(acceptance, fakeResult());
   assert.match(output.errors.join("\n"), /unsupported acceptance must criterion/);
+});
+
+test("run-corpus rejects reserved snapshot updates instead of silently continuing", async () => {
+  const result = await runCommand(
+    process.execPath,
+    [runCorpusPath, "--update-snapshots", "--id", "synthetic-simple-text"],
+    { cwd: repoRoot }
+  );
+
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /--update-snapshots is reserved/);
+  assert.match(result.stderr, /not implemented/);
 });

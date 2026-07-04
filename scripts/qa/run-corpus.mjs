@@ -174,7 +174,7 @@ Options:
   --manifest <path>          Manifest path. Defaults to corpus/manifest.json.
   --root <path>              Repository root. Defaults to cwd.
   --assert-markdown          Compare output with corpus/expected/<id>.md.
-  --update-snapshots         Reserved for future Markdown/IR snapshot updates.
+  --update-snapshots         Reserved; currently rejected to avoid no-op updates.
 `;
 }
 
@@ -785,6 +785,13 @@ async function main() {
     return;
   }
 
+  if (updateSnapshots) {
+    console.error(
+      "--update-snapshots is reserved; snapshot updates are not implemented. Update corpus fixtures through reviewed changes instead."
+    );
+    process.exit(1);
+  }
+
   if (!listOnly && !hasFlag("--all") && !selectedGate && selectedIds.length === 0) {
     console.error(usage());
     process.exit(1);
@@ -802,10 +809,6 @@ async function main() {
     }
     console.log(`Selected ${selected.length}; skipped ${skipped.length}.`);
     return;
-  }
-
-  if (updateSnapshots) {
-    console.log("Snapshot updates are not implemented in the scaffold runner yet.");
   }
 
   for (const corpusCase of selected) {

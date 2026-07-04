@@ -337,7 +337,7 @@ Goal: create stable contracts so agents can implement modules independently.
 - [x] Add snapshot testing for serialized IR.
 - [x] Add rendered HTML diff helper.
 - [x] Add oracle comparison helper.
-- [x] Add corpus runner with `--gate`, `--id`, and `--update-snapshots`.
+- [x] Add corpus runner with `--gate` and `--id`; keep `--update-snapshots` reserved until reviewed snapshot writes are implemented.
 - [x] Add performance benchmark harness.
 - [x] Add memory-limit and timeout tests.
 - [x] Add fuzz target skeletons.
