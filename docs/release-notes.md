@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.0.0 Alpha Readiness Snapshot
+## 1.0.0 Release Readiness Snapshot
 
 Date: 2026-07-03
 
@@ -8,6 +8,9 @@ This is a release-readiness snapshot for `pdf-2-llm`, not an npm publish event.
 The root package is publishable with public npm access, the implementation is
 kept in the `packages/pdf2md` workspace, and the source is licensed under
 `0BSD`.
+The nested `@pdf-2-llm/pdf2md` workspace remains versioned at `0.0.0` as an
+internal implementation package; the publishable root package declares
+`1.0.0`.
 
 ### Scope
 
