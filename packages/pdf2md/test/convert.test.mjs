@@ -1,6 +1,8 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
@@ -1180,6 +1182,37 @@ test("CLI emits JSON scaffold output", () => {
   assert.ok(
     result.warnings.some((warning) => warning.code === warningCodes.HeuristicTextExtraction)
   );
+});
+
+test("CLI consumes output path before selecting positional input", async () => {
+  const cliPath = new URL("../src/cli.mjs", import.meta.url);
+  const outputDir = await mkdtemp(join(tmpdir(), "pdf-2-llm-cli-"));
+  const outputPath = join(outputDir, "out.md");
+
+  try {
+    const run = spawnSync(
+      process.execPath,
+      [cliPath.pathname, "--output", outputPath, fixturePath.pathname],
+      {
+        encoding: "utf8"
+      }
+    );
+    assert.equal(run.status, 0, run.stderr);
+    assert.equal(run.stdout, "");
+    const markdown = await readFile(outputPath, "utf8");
+    assert.match(markdown, /^# Synthetic Simple Text/);
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI rejects missing output paths", () => {
+  const cliPath = new URL("../src/cli.mjs", import.meta.url);
+  const run = spawnSync(process.execPath, [cliPath.pathname, fixturePath.pathname, "--output"], {
+    encoding: "utf8"
+  });
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /--output requires a path/);
 });
 
 test("CLI help exits successfully with pdf-2-llm usage", () => {

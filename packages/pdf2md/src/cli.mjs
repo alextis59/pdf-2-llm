@@ -11,21 +11,49 @@ function usage() {
 `;
 }
 
-function readOption(name) {
-  const index = args.indexOf(name);
-  if (index === -1) {
-    return undefined;
-  }
-  return args[index + 1];
-}
+function parseArgs(argv) {
+  const parsed = {
+    inputPath: undefined,
+    outputPath: undefined,
+    json: false,
+    error: undefined
+  };
 
-const inputPath = args.find((arg) => !arg.startsWith("--"));
-const outputPath = readOption("--output");
-const json = args.includes("--json");
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--json") {
+      parsed.json = true;
+      continue;
+    }
+    if (arg === "--output") {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) {
+        parsed.error = "--output requires a path.";
+        return parsed;
+      }
+      parsed.outputPath = value;
+      index += 1;
+      continue;
+    }
+    if (!arg.startsWith("--") && !parsed.inputPath) {
+      parsed.inputPath = arg;
+    }
+  }
+
+  return parsed;
+}
 
 if (args.includes("--help") || args.includes("-h")) {
   console.log(usage());
   process.exit(0);
+}
+
+const { inputPath, outputPath, json, error } = parseArgs(args);
+
+if (error) {
+  console.error(error);
+  console.log(usage());
+  process.exit(1);
 }
 
 if (!inputPath) {
