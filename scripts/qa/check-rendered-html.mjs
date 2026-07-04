@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -353,7 +353,9 @@ async function main() {
   };
   const reportPath = readOption("--report");
   if (reportPath) {
-    await writeFile(path.resolve(reportPath), `${JSON.stringify(report, null, 2)}\n`);
+    const resolvedReportPath = path.resolve(reportPath);
+    await mkdir(path.dirname(resolvedReportPath), { recursive: true });
+    await writeFile(resolvedReportPath, `${JSON.stringify(report, null, 2)}\n`);
   }
 
   const failed = results.filter((result) => !result.passed);
