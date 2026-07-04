@@ -1,10 +1,18 @@
 export type Pdf2mdCoreWasm = {
   threading: WasmThreadingDiagnostics;
   version(): string;
-  hasPdfHeader(input: ArrayBuffer | Uint8Array): boolean;
+  hasPdfHeader(input: ArrayBuffer | ArrayBufferView): boolean;
 };
 
 export type WasmThreadingMode = boolean | "single" | "auto" | "required";
+
+export type WasmSource =
+  | string
+  | URL
+  | ArrayBuffer
+  | ArrayBufferView
+  | WebAssembly.Module
+  | Response;
 
 export type WasmThreadSupport = {
   supported: boolean;
@@ -26,14 +34,25 @@ export type WasmThreadingDiagnostics = {
 };
 
 export type LoadPdf2mdCoreWasmOptions = {
-  source?: string | URL | ArrayBuffer | Uint8Array | WebAssembly.Module | Response;
-  threadedSource?: string | URL | ArrayBuffer | Uint8Array | WebAssembly.Module | Response;
+  source?: WasmSource;
+  threadedSource?: WasmSource;
   threading?: WasmThreadingMode;
+  threadSupport?: WasmThreadSupport;
+  environment?: unknown;
   imports?: WebAssembly.Imports;
 };
 
+export type WasmLoadPlan = {
+  source: WasmSource;
+  threading: WasmThreadingDiagnostics;
+};
+
 export declare function loadPdf2mdCoreWasm(
-  options?: LoadPdf2mdCoreWasmOptions | LoadPdf2mdCoreWasmOptions["source"]
+  options?: LoadPdf2mdCoreWasmOptions | WasmSource
 ): Promise<Pdf2mdCoreWasm>;
 
 export declare function detectWasmThreadSupport(environment?: unknown): WasmThreadSupport;
+
+export declare function resolveWasmLoadPlan(
+  options?: LoadPdf2mdCoreWasmOptions | WasmSource
+): WasmLoadPlan;
