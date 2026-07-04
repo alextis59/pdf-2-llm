@@ -98,13 +98,14 @@ test("extractContentStreamTextLines interprets text showing operators", () => {
   assert.equal(lines[0].fontSize, 12);
   assert.equal(lines[0].x, 10);
   assert.equal(lines[0].y, 20);
-  assert.equal(lines[0].width, 72);
+  assert.equal(lines[0].width, 73.44);
   assert.equal(lines[0].height, 12);
   assert.equal(lines[0].direction, "ltr");
-  assert.equal(lines[0].spans.length, 2);
+  assert.equal(lines[0].spans.length, 3);
   assert.equal(lines[0].spans[0].text, "Hello");
   assert.equal(lines[0].spans[0].direction, "ltr");
-  assert.equal(lines[0].spans[1].text, ", world");
+  assert.equal(lines[0].spans[1].text, ", ");
+  assert.equal(lines[0].spans[2].text, "world");
   assert.equal(lines[0].glyphs.length, 12);
   assert.deepEqual(
     lines[0].glyphs.slice(0, 2).map((glyph) => [glyph.text, glyph.x, glyph.width]),
@@ -113,12 +114,38 @@ test("extractContentStreamTextLines interprets text showing operators", () => {
       ["e", 16, 6]
     ]
   );
+  assert.deepEqual(
+    lines[0].glyphs.slice(5, 8).map((glyph) => [glyph.text, glyph.x, glyph.width]),
+    [
+      [",", 40, 6],
+      [" ", 46, 6],
+      ["w", 53.44, 6]
+    ]
+  );
   assert.equal(lines[0].pageIndex, 2);
   assert.equal(lines[0].streamIndex, 1);
   assert.equal(lines[1].text, "next");
   assert.equal(lines[1].y, 6);
   assert.equal(lines[2].text, "quoted");
   assert.equal(lines[2].y, -8);
+});
+
+test("extractContentStreamTextLines inserts word spaces for large TJ gaps", () => {
+  const lines = extractContentStreamTextLines("BT /F1 12 Tf 10 20 Td [(Hello) -500 (world)] TJ ET", {
+    resources
+  });
+
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].text, "Hello world");
+  assert.equal(lines[0].width, 66);
+  assert.deepEqual(
+    lines[0].glyphs.slice(4, 7).map((glyph) => [glyph.text, glyph.x, glyph.width]),
+    [
+      ["o", 34, 6],
+      [" ", 40, 6],
+      ["w", 46, 6]
+    ]
+  );
 });
 
 test("extractContentStreamTextLines marks vertical text matrices", () => {

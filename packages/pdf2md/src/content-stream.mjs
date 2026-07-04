@@ -689,7 +689,7 @@ function executeOperator(operator, context) {
   if (operator === "TJ") {
     const array = operands.at(-1);
     if (array?.type === "array") {
-      emitText(array.items.map((item) => decodeStringToken(item, state.font)).join(""), context);
+      emitTextArray(array, context);
     }
     return;
   }
@@ -714,6 +714,24 @@ function executeOperator(operator, context) {
   }
 }
 
+function emitTextArray(array, context) {
+  for (let index = 0; index < array.items.length; index += 1) {
+    const item = array.items[index];
+    const adjustment = tokenNumber(item);
+    if (Number.isFinite(adjustment)) {
+      const delta = textAdjustmentDelta(context.state, adjustment);
+      const nextText = nextDecodedText(array.items, index + 1, context.state.font);
+      if (shouldInsertSyntheticWordSpace(context, delta, nextText)) {
+        emitSyntheticSpace(context, delta);
+      } else {
+        advanceTextPositionBy(context.state, delta);
+      }
+      continue;
+    }
+    emitText(decodeStringToken(item, context.state.font), context);
+  }
+}
+
 function emitText(text, context) {
   if (!context.state.inText || !text) {
     return;
@@ -724,7 +742,7 @@ function emitText(text, context) {
   const direction = textDirectionFromContent(context.state, text);
   const confidence = textConfidence(context.state.font);
   const structure = currentStructureSignal(context.state);
-  const mergeKey = `${context.options.pageIndex ?? ""}:${context.options.streamIndex ?? ""}:${context.textObjectId}:${context.lineSerial}`;
+  const mergeKey = currentMergeKey(context);
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
     const span = createSpan(text, context.state, position, metrics, confidence, structure, direction);
@@ -768,6 +786,75 @@ function emitText(text, context) {
     mergeKey
   });
   advanceTextPosition(context.state, text);
+}
+
+function emitSyntheticSpace(context, width) {
+  if (!context.state.inText || width <= 0) {
+    advanceTextPositionBy(context.state, width);
+    return;
+  }
+
+  const position = currentTextPosition(context.state);
+  const confidence = textConfidence(context.state.font);
+  const structure = currentStructureSignal(context.state);
+  const direction = textDirectionFromContent(context.state, " ");
+  const metrics = {
+    width,
+    height: context.state.fontSize,
+    xEnd: position.x + width,
+    glyphs: [
+      {
+        text: " ",
+        codePoint: 32,
+        x: position.x,
+        y: position.y,
+        width,
+        height: context.state.fontSize,
+        fontName: context.state.fontName,
+        fontSize: context.state.fontSize,
+        confidence
+      }
+    ]
+  };
+  const mergeKey = currentMergeKey(context);
+  const lastLine = context.lines.at(-1);
+  if (lastLine?.mergeKey === mergeKey) {
+    const span = createSpan(" ", context.state, position, metrics, confidence, structure, direction);
+    lastLine.text += " ";
+    lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
+    lastLine.height = Math.max(lastLine.height, metrics.height);
+    lastLine.direction = mergeTextDirection(lastLine.direction, direction);
+    lastLine.spans.push(span);
+    lastLine.glyphs.push(...metrics.glyphs);
+    mergeLineVisibility(lastLine, span);
+    mergeLineStructure(lastLine, structure);
+  }
+  advanceTextPositionBy(context.state, width);
+}
+
+function shouldInsertSyntheticWordSpace(context, delta, nextText) {
+  if (delta < wordGapThreshold(context.state) || !nextText) {
+    return false;
+  }
+  const lastLine = context.lines.at(-1);
+  if (!lastLine || lastLine.mergeKey !== currentMergeKey(context) || !lastLine.text) {
+    return false;
+  }
+  return !whitespacePattern.test(lastLine.text.at(-1)) && !whitespacePattern.test(nextText.at(0));
+}
+
+function nextDecodedText(items, startIndex, font) {
+  for (let index = startIndex; index < items.length; index += 1) {
+    const text = decodeStringToken(items[index], font);
+    if (text) {
+      return text;
+    }
+  }
+  return "";
+}
+
+function currentMergeKey(context) {
+  return `${context.options.pageIndex ?? ""}:${context.options.streamIndex ?? ""}:${context.textObjectId}:${context.lineSerial}`;
 }
 
 function readMarkedContent(operands, operator, options) {
@@ -907,7 +994,21 @@ function mergeTextDirection(left, right) {
 
 function advanceTextPosition(state, text) {
   const width = measureTextWidth(state, text);
+  advanceTextPositionBy(state, width);
+}
+
+function advanceTextPositionBy(state, width) {
   state.textMatrix = multiplyMatrices(state.textMatrix, [1, 0, 0, 1, width, 0]);
+}
+
+function textAdjustmentDelta(state, adjustment) {
+  const scale = (state.horizontalScaling || 100) / 100;
+  return (-adjustment / 1000) * state.fontSize * scale;
+}
+
+function wordGapThreshold(state) {
+  const scale = (state.horizontalScaling || 100) / 100;
+  return Math.max(state.fontSize * scale * 0.25, 0.5);
 }
 
 function measureText(state, text, position) {
