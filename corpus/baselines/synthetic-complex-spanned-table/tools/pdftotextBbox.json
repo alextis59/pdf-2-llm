@@ -1,0 +1,14 @@
+{
+  "available": true,
+  "command": "pdftotext",
+  "args": [
+    "-bbox",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-complex-spanned-table.pdf",
+    "-"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n</head>\n<body>\n<doc>\n  <page width=\"612.000000\" height=\"792.000000\">\n    <word xMin=\"72.000000\" yMin=\"56.204000\" xMax=\"158.790000\" yMax=\"76.554000\">Complex</word>\n    <word xMin=\"164.906000\" yMin=\"56.204000\" xMax=\"252.972000\" yMax=\"76.554000\">Spanned</word>\n    <word xMin=\"259.088000\" yMin=\"56.204000\" xMax=\"314.110000\" yMax=\"76.554000\">Table</word>\n    <word xMin=\"82.000000\" yMin=\"134.102000\" xMax=\"126.022000\" yMax=\"144.277000\">Revenue</word>\n    <word xMin=\"129.080000\" yMin=\"134.102000\" xMax=\"166.381000\" yMax=\"144.277000\">&lt;Total&gt;</word>\n    <word xMin=\"82.000000\" yMin=\"164.102000\" xMax=\"96.674000\" yMax=\"174.277000\">Q1</word>\n    <word xMin=\"99.732000\" yMin=\"164.102000\" xMax=\"107.069000\" yMax=\"174.277000\">&amp;</word>\n    <word xMin=\"110.127000\" yMin=\"164.102000\" xMax=\"124.801000\" yMax=\"174.277000\">Q2</word>\n    <word xMin=\"202.000000\" yMin=\"164.102000\" xMax=\"220.348000\" yMax=\"174.277000\">100</word>\n    <word xMin=\"223.406000\" yMin=\"164.102000\" xMax=\"246.506000\" yMax=\"174.277000\">&quot;net&quot;</word>\n  </page>\n</doc>\n</body>\n</html>\n",
+  "stderr": ""
+}

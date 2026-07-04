@@ -1,0 +1,119 @@
+{
+  "id": "synthetic-qpdf-object-stream",
+  "analyzedAt": "2026-07-04T06:19:32.609Z",
+  "path": "corpus/generated/synthetic-qpdf-object-stream.pdf",
+  "bytes": 814,
+  "sha256": "8efda216f1115f6d44a578975fdd805b10657786df0c277101a15eb45fe438f2",
+  "manifest": {
+    "kind": "pdf-feature",
+    "pages": 1,
+    "features": [
+      "born-digital",
+      "xref-stream",
+      "object-stream",
+      "qpdf-generated"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/synthetic-qpdf-object-stream.yaml"
+  },
+  "pdfVersion": "1.5",
+  "pages": {
+    "staticPageObjectCount": 0,
+    "manifest": 1,
+    "pdfinfo": 1
+  },
+  "header": {
+    "pdfVersion": "1.5",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 0,
+    "pageBoxes": [],
+    "rotations": [],
+    "classicXrefCount": 0,
+    "xrefStreamCount": 1,
+    "objectStreamCount": 1,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": false,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": false
+  },
+  "contentSignals": {
+    "beginTextOps": 0,
+    "endTextOps": 0,
+    "textShowOps": 0,
+    "imageXObjects": 0,
+    "pathOperators": 0,
+    "fontObjects": 0,
+    "cidFonts": 0,
+    "cidSystemInfo": 0,
+    "toUnicodeMaps": 0,
+    "encodings": 0,
+    "missingToUnicodeLikely": false,
+    "estimatedTextShowOpsPerPage": 0,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "ocrOverlaySignals": {
+    "toolBacked": true,
+    "hiddenOcrOverlayLikely": false,
+    "candidatePages": [],
+    "notes": [
+      "Candidates indicate image-heavy pages that also expose text boxes; human review should confirm whether the text layer is visible, OCR, or misleading."
+    ]
+  },
+  "externalTools": {
+    "pdfinfo": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdfimages": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdftotextBbox": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "qpdfJson": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    },
+    "mutoolInfo": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    }
+  },
+  "toolOutputs": {
+    "pdfinfo": "corpus/baselines/synthetic-qpdf-object-stream/tools/pdfinfo.json",
+    "pdfimages": "corpus/baselines/synthetic-qpdf-object-stream/tools/pdfimages.json",
+    "pdftotextBbox": "corpus/baselines/synthetic-qpdf-object-stream/tools/pdftotextBbox.json",
+    "qpdfJson": "corpus/baselines/synthetic-qpdf-object-stream/tools/qpdfJson.json",
+    "mutoolInfo": "corpus/baselines/synthetic-qpdf-object-stream/tools/mutoolInfo.json"
+  },
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "available": false,
+  "command": "mutool",
+  "args": [
+    "info",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-vertical-writing.pdf"
+  ],
+  "error": "not found"
+}

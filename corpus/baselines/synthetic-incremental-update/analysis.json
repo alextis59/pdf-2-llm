@@ -1,0 +1,137 @@
+{
+  "id": "synthetic-incremental-update",
+  "analyzedAt": "2026-07-04T06:19:32.609Z",
+  "path": "corpus/generated/synthetic-incremental-update.pdf",
+  "bytes": 1129,
+  "sha256": "06880e33ee2423cbe550003482bd573af8329de1fad6b553307c935f6ee31a62",
+  "manifest": {
+    "kind": "incremental-update",
+    "pages": 1,
+    "features": [
+      "born-digital",
+      "incremental-update",
+      "xref-prev"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/synthetic-incremental-update.yaml"
+  },
+  "pdfVersion": "1.4",
+  "pages": {
+    "staticPageObjectCount": 2,
+    "manifest": 1,
+    "pdfinfo": 1
+  },
+  "header": {
+    "pdfVersion": "1.4",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 2,
+    "pageBoxes": [
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          300,
+          400
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          300,
+          400
+        ]
+      }
+    ],
+    "rotations": [],
+    "classicXrefCount": 2,
+    "xrefStreamCount": 0,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": false,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": false
+  },
+  "contentSignals": {
+    "beginTextOps": 2,
+    "endTextOps": 2,
+    "textShowOps": 2,
+    "imageXObjects": 0,
+    "pathOperators": 10,
+    "fontObjects": 3,
+    "cidFonts": 0,
+    "cidSystemInfo": 0,
+    "toUnicodeMaps": 0,
+    "encodings": 1,
+    "missingToUnicodeLikely": true,
+    "estimatedTextShowOpsPerPage": 1,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "ocrOverlaySignals": {
+    "toolBacked": true,
+    "hiddenOcrOverlayLikely": false,
+    "candidatePages": [],
+    "notes": [
+      "Candidates indicate image-heavy pages that also expose text boxes; human review should confirm whether the text layer is visible, OCR, or misleading."
+    ]
+  },
+  "externalTools": {
+    "pdfinfo": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdfimages": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdftotextBbox": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "qpdfJson": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    },
+    "mutoolInfo": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    }
+  },
+  "toolOutputs": {
+    "pdfinfo": "corpus/baselines/synthetic-incremental-update/tools/pdfinfo.json",
+    "pdfimages": "corpus/baselines/synthetic-incremental-update/tools/pdfimages.json",
+    "pdftotextBbox": "corpus/baselines/synthetic-incremental-update/tools/pdftotextBbox.json",
+    "qpdfJson": "corpus/baselines/synthetic-incremental-update/tools/qpdfJson.json",
+    "mutoolInfo": "corpus/baselines/synthetic-incremental-update/tools/mutoolInfo.json"
+  },
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

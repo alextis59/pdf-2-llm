@@ -1,0 +1,128 @@
+{
+  "id": "synthetic-damaged-xref",
+  "analyzedAt": "2026-07-04T06:19:32.609Z",
+  "path": "corpus/generated/synthetic-damaged-xref.pdf",
+  "bytes": 800,
+  "sha256": "fa0fbdbfd99feabaac67f8853564d5e9f43e505d200c09a73eb2d2c1bdfaeb8e",
+  "manifest": {
+    "kind": "damaged",
+    "pages": 1,
+    "features": [
+      "born-digital",
+      "damaged-xref",
+      "repair-mode"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/synthetic-damaged-xref.yaml"
+  },
+  "pdfVersion": "1.4",
+  "pages": {
+    "staticPageObjectCount": 1,
+    "manifest": 1,
+    "pdfinfo": 1
+  },
+  "header": {
+    "pdfVersion": "1.4",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 1,
+    "pageBoxes": [
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [],
+    "classicXrefCount": 1,
+    "xrefStreamCount": 0,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": false,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": false
+  },
+  "contentSignals": {
+    "beginTextOps": 3,
+    "endTextOps": 3,
+    "textShowOps": 3,
+    "imageXObjects": 0,
+    "pathOperators": 6,
+    "fontObjects": 2,
+    "cidFonts": 0,
+    "cidSystemInfo": 0,
+    "toUnicodeMaps": 0,
+    "encodings": 1,
+    "missingToUnicodeLikely": true,
+    "estimatedTextShowOpsPerPage": 3,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "ocrOverlaySignals": {
+    "toolBacked": true,
+    "hiddenOcrOverlayLikely": false,
+    "candidatePages": [],
+    "notes": [
+      "Candidates indicate image-heavy pages that also expose text boxes; human review should confirm whether the text layer is visible, OCR, or misleading."
+    ]
+  },
+  "externalTools": {
+    "pdfinfo": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdfimages": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdftotextBbox": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "qpdfJson": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    },
+    "mutoolInfo": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    }
+  },
+  "toolOutputs": {
+    "pdfinfo": "corpus/baselines/synthetic-damaged-xref/tools/pdfinfo.json",
+    "pdfimages": "corpus/baselines/synthetic-damaged-xref/tools/pdfimages.json",
+    "pdftotextBbox": "corpus/baselines/synthetic-damaged-xref/tools/pdftotextBbox.json",
+    "qpdfJson": "corpus/baselines/synthetic-damaged-xref/tools/qpdfJson.json",
+    "mutoolInfo": "corpus/baselines/synthetic-damaged-xref/tools/mutoolInfo.json"
+  },
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

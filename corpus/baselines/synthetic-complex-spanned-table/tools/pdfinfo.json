@@ -1,0 +1,12 @@
+{
+  "available": true,
+  "command": "pdfinfo",
+  "args": [
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-complex-spanned-table.pdf"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "Custom Metadata: no\nMetadata Stream: no\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           1\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       839 bytes\nOptimized:       no\nPDF version:     1.4\n",
+  "stderr": ""
+}

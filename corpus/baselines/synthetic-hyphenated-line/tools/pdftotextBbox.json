@@ -1,0 +1,14 @@
+{
+  "available": true,
+  "command": "pdftotext",
+  "args": [
+    "-bbox",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-hyphenated-line.pdf",
+    "-"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n</head>\n<body>\n<doc>\n  <page width=\"612.000000\" height=\"792.000000\">\n    <word xMin=\"72.000000\" yMin=\"56.204000\" xMax=\"195.508000\" yMax=\"76.554000\">Hyphenation</word>\n    <word xMin=\"201.624000\" yMin=\"56.204000\" xMax=\"268.856000\" yMax=\"76.554000\">Fixture</word>\n    <word xMin=\"72.000000\" yMin=\"103.384000\" xMax=\"94.668000\" yMax=\"114.484000\">This</word>\n    <word xMin=\"98.004000\" yMin=\"103.384000\" xMax=\"152.700000\" yMax=\"114.484000\">paragraph</word>\n    <word xMin=\"156.036000\" yMin=\"103.384000\" xMax=\"203.388000\" yMax=\"114.484000\">validates</word>\n    <word xMin=\"206.724000\" yMin=\"103.384000\" xMax=\"250.080000\" yMax=\"114.484000\">hyphen-</word>\n    <word xMin=\"72.000000\" yMin=\"117.384000\" xMax=\"98.016000\" yMax=\"128.484000\">ation</word>\n    <word xMin=\"101.352000\" yMin=\"117.384000\" xMax=\"132.024000\" yMax=\"128.484000\">repair</word>\n    <word xMin=\"135.360000\" yMin=\"117.384000\" xMax=\"170.700000\" yMax=\"128.484000\">across</word>\n    <word xMin=\"174.036000\" yMin=\"117.384000\" xMax=\"180.708000\" yMax=\"128.484000\">a</word>\n    <word xMin=\"184.044000\" yMin=\"117.384000\" xMax=\"230.064000\" yMax=\"128.484000\">wrapped</word>\n    <word xMin=\"233.400000\" yMin=\"117.384000\" xMax=\"255.408000\" yMax=\"128.484000\">line.</word>\n  </page>\n</doc>\n</body>\n</html>\n",
+  "stderr": ""
+}

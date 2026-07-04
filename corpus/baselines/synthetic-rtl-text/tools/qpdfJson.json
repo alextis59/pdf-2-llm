@@ -1,0 +1,9 @@
+{
+  "available": false,
+  "command": "qpdf",
+  "args": [
+    "--json",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-rtl-text.pdf"
+  ],
+  "error": "not found"
+}

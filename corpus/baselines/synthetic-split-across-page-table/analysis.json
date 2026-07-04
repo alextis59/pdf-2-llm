@@ -1,0 +1,139 @@
+{
+  "id": "synthetic-split-across-page-table",
+  "analyzedAt": "2026-07-04T06:19:32.609Z",
+  "path": "corpus/generated/synthetic-split-across-page-table.pdf",
+  "bytes": 1742,
+  "sha256": "e8c3a3a122b3a58f61d2f8098894a6f300ff29641b5c7f53e319ab04bdec3911",
+  "manifest": {
+    "kind": "visible-table",
+    "pages": 2,
+    "features": [
+      "born-digital",
+      "visible-table",
+      "ruling-lines",
+      "multi-page",
+      "split-table"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/synthetic-split-across-page-table.yaml"
+  },
+  "pdfVersion": "1.4",
+  "pages": {
+    "staticPageObjectCount": 2,
+    "manifest": 2,
+    "pdfinfo": 2
+  },
+  "header": {
+    "pdfVersion": "1.4",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 2,
+    "pageBoxes": [
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [],
+    "classicXrefCount": 1,
+    "xrefStreamCount": 0,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": false,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": false
+  },
+  "contentSignals": {
+    "beginTextOps": 19,
+    "endTextOps": 19,
+    "textShowOps": 19,
+    "imageXObjects": 0,
+    "pathOperators": 26,
+    "fontObjects": 3,
+    "cidFonts": 0,
+    "cidSystemInfo": 0,
+    "toUnicodeMaps": 0,
+    "encodings": 1,
+    "missingToUnicodeLikely": true,
+    "estimatedTextShowOpsPerPage": 9.5,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "ocrOverlaySignals": {
+    "toolBacked": true,
+    "hiddenOcrOverlayLikely": false,
+    "candidatePages": [],
+    "notes": [
+      "Candidates indicate image-heavy pages that also expose text boxes; human review should confirm whether the text layer is visible, OCR, or misleading."
+    ]
+  },
+  "externalTools": {
+    "pdfinfo": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdfimages": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdftotextBbox": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "qpdfJson": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    },
+    "mutoolInfo": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    }
+  },
+  "toolOutputs": {
+    "pdfinfo": "corpus/baselines/synthetic-split-across-page-table/tools/pdfinfo.json",
+    "pdfimages": "corpus/baselines/synthetic-split-across-page-table/tools/pdfimages.json",
+    "pdftotextBbox": "corpus/baselines/synthetic-split-across-page-table/tools/pdftotextBbox.json",
+    "qpdfJson": "corpus/baselines/synthetic-split-across-page-table/tools/qpdfJson.json",
+    "mutoolInfo": "corpus/baselines/synthetic-split-across-page-table/tools/mutoolInfo.json"
+  },
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

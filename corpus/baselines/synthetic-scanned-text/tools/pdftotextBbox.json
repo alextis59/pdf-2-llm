@@ -1,0 +1,14 @@
+{
+  "available": true,
+  "command": "pdftotext",
+  "args": [
+    "-bbox",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-scanned-text.pdf",
+    "-"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"><html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n</head>\n<body>\n<doc>\n  <page width=\"612.000000\" height=\"792.000000\">\n  </page>\n</doc>\n</body>\n</html>\n",
+  "stderr": "no word list\n"
+}
