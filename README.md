@@ -13,9 +13,9 @@ are recorded.
 
 ## Current Status
 
-This repository is at a `0.0.0` alpha-readiness snapshot. The root `pdf-2-llm`
-package is configured for public npm publishing, with the implementation kept in
-the `packages/pdf2md` workspace. The project source is licensed under the
+The root `pdf-2-llm` package currently declares version `1.0.0` and is
+configured for public npm publishing, with the implementation kept in the
+`packages/pdf2md` workspace. The project source is licensed under the
 [Zero-Clause BSD license](LICENSE), so it can be used, copied, modified,
 distributed, and sold for any purpose, including commercial use.
 
