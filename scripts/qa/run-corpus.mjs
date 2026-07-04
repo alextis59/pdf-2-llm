@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { convertPdfToMarkdown } from "../../packages/pdf2md/src/index.mjs";
+import { pathToFileURL } from "node:url";
+import { convertPdfToMarkdown, warningCodes } from "../../packages/pdf2md/src/index.mjs";
 import { compareOcrAccuracy } from "./ocr-accuracy.mjs";
 import { compareTableCellAdjacency } from "./table-adjacency.mjs";
 import { compareTableCsvCellTextAccuracy } from "./table-csv-accuracy.mjs";
@@ -18,6 +19,126 @@ const updateSnapshots = hasFlag("--update-snapshots");
 const assertMarkdown = hasFlag("--assert-markdown");
 const selectedGate = readOption("--gate");
 const selectedIds = readOptions("--id");
+const runnerBaselineWarnings = new Set([
+  warningCodes.OcrDisabled,
+  warningCodes.HeuristicTextExtraction
+]);
+const supportedMustCriteria = new Set([
+  "decrypt_with_known_user_password",
+  "detect_borderless_table",
+  "detect_cell_span",
+  "detect_columns",
+  "detect_footnote_region",
+  "detect_repeated_footer",
+  "detect_repeated_header",
+  "detect_vector_figure_region",
+  "detect_visible_table",
+  "emit_bidi_markup",
+  "emit_csv_sidecar",
+  "emit_gfm_table",
+  "emit_html_table",
+  "emit_vertical_writing_markup",
+  "extract_acroform_fields",
+  "extract_bullet_list",
+  "extract_cjk_text",
+  "extract_headings",
+  "extract_main_text",
+  "extract_ocr_text",
+  "extract_rtl_text",
+  "extract_title",
+  "extract_updated_revision_text",
+  "extract_vertical_text",
+  "follow_prev_xref_chain",
+  "follow_xref_prev_chain",
+  "join_cjk_wrapped_lines_without_spaces",
+  "meet_ocr_error_thresholds",
+  "normalize_coordinates",
+  "prefer_aligned_hidden_text",
+  "prefer_newest_object_revision",
+  "preserve_appendices",
+  "preserve_body_text",
+  "preserve_button_states",
+  "preserve_caption",
+  "preserve_column_alignment",
+  "preserve_continued_table_rows",
+  "preserve_decrypted_text_order",
+  "preserve_field_values",
+  "preserve_footnote_text",
+  "preserve_heading",
+  "preserve_left_then_right_reading_order",
+  "preserve_list_order",
+  "preserve_lists",
+  "preserve_nist_publication_identifier",
+  "preserve_page_anchors",
+  "preserve_paragraph_order",
+  "preserve_references",
+  "preserve_rtl_reading_order",
+  "preserve_section_headings",
+  "preserve_table_cells",
+  "preserve_table_note",
+  "preserve_tables",
+  "preserve_tagged_pdf_signal",
+  "preserve_vertical_column_order",
+  "preserve_visible_crop_text",
+  "preserve_withdrawn_notice",
+  "read_rotated_page",
+  "repair_damaged_xref",
+  "repair_line_end_hyphenation",
+  "report_form_metadata",
+  "require_password_before_extraction",
+  "resolve_linearized_pdf",
+  "resolve_object_stream",
+  "resolve_qpdf_object_stream",
+  "resolve_qpdf_xref_stream",
+  "resolve_xref_stream",
+  "respect_crop_box",
+  "route_as_hybrid",
+  "route_as_scanned",
+  "scan_indirect_objects",
+  "use_ocr_for_bad_hidden_region"
+]);
+const supportedMustNotCriteria = new Set([
+  "bypass_encryption_without_password",
+  "drop_authenticator_requirement_tables",
+  "drop_bidi_markup",
+  "drop_checked_state",
+  "drop_compressed_page_objects",
+  "drop_continued_rows",
+  "drop_rotated_text",
+  "drop_spanned_header",
+  "drop_table_note",
+  "drop_title_page_metadata",
+  "drop_vertical_writing_markup",
+  "emit_bad_hidden_text",
+  "emit_binary_garbage",
+  "emit_broken_gfm_for_spans",
+  "emit_empty_markdown",
+  "emit_ocr_duplicate_text",
+  "fall_back_to_unstructured_binary_scan",
+  "flatten_all_sections_into_one_paragraph",
+  "flatten_table_to_unstructured_paragraph",
+  "flatten_vertical_columns",
+  "fold_note_into_table",
+  "ignore_newest_xref_revision",
+  "insert_synthetic_cjk_spaces",
+  "interleave_columns_line_by_line",
+  "interleave_footnote_inside_body_sentence",
+  "invent_chart_data",
+  "invent_missing_form_values",
+  "invent_missing_values",
+  "keep_unrepaired_line_end_hyphen",
+  "merge_adjacent_columns",
+  "merge_rows_across_columns",
+  "move_caption_before_body",
+  "omit_withdrawn_notice",
+  "prefer_hidden_media_box_content",
+  "repeat_running_header_in_body",
+  "reverse_rtl_fragments",
+  "split_wrapped_cjk_paragraph",
+  "treat_acroform_metadata_as_user_filled_values",
+  "trust_repaired_output_without_diagnostics",
+  "use_stale_page_tree"
+]);
 
 function hasFlag(name) {
   return args.includes(name);
@@ -102,6 +223,61 @@ function readNamedBlockScalars(text, blockName) {
   return values;
 }
 
+function readTopLevelList(text, blockName) {
+  const values = [];
+  const lines = text.split(/\r?\n/);
+  let inBlock = false;
+  for (const line of lines) {
+    if (!inBlock) {
+      const inlineEmptyList = line.match(new RegExp(`^${blockName}:\\s*\\[\\]\\s*$`));
+      if (inlineEmptyList) {
+        return values;
+      }
+      inBlock = line.trim() === `${blockName}:`;
+      continue;
+    }
+    if (/^\S/.test(line)) {
+      break;
+    }
+    const itemMatch = line.match(/^\s{2}-\s+(.*)$/);
+    if (itemMatch) {
+      values.push(normalizeScalar(itemMatch[1]));
+    }
+  }
+  return values;
+}
+
+function readNestedList(text, blockName, listName) {
+  const values = [];
+  const lines = text.split(/\r?\n/);
+  let inBlock = false;
+  let inList = false;
+  for (const line of lines) {
+    if (!inBlock) {
+      inBlock = line.trim() === `${blockName}:`;
+      continue;
+    }
+    if (/^\S/.test(line)) {
+      break;
+    }
+    if (!inList) {
+      const listMatch = line.match(new RegExp(`^\\s{2}${listName}:(?:\\s*(\\[\\])\\s*)?$`));
+      if (listMatch) {
+        if (listMatch[1]) {
+          return values;
+        }
+        inList = true;
+      }
+      continue;
+    }
+    const itemMatch = line.match(/^\s{4}-\s+(.*)$/);
+    if (itemMatch) {
+      values.push(normalizeScalar(itemMatch[1]));
+    }
+  }
+  return values;
+}
+
 function readStructureForms(text) {
   const forms = [];
   let inStructure = false;
@@ -142,6 +318,39 @@ function readStructureForms(text) {
   return forms;
 }
 
+function readSnippetAssertions(text) {
+  const snippets = [];
+  const lines = text.split(/\r?\n/);
+  let inBlock = false;
+  let current = null;
+
+  for (const line of lines) {
+    if (!inBlock) {
+      inBlock = line.trim() === "snippets:";
+      continue;
+    }
+    if (/^\S/.test(line)) {
+      break;
+    }
+
+    const itemMatch = line.match(/^\s{2}-\s+([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+    if (itemMatch) {
+      current = {
+        [itemMatch[1]]: readAcceptanceValue(itemMatch[2])
+      };
+      snippets.push(current);
+      continue;
+    }
+
+    const propertyMatch = line.match(/^\s{4}([A-Za-z][A-Za-z0-9]*):\s*(.*)$/);
+    if (propertyMatch && current) {
+      current[propertyMatch[1]] = readAcceptanceValue(propertyMatch[2]);
+    }
+  }
+
+  return snippets;
+}
+
 function readAcceptanceValue(value) {
   const normalized = normalizeScalar(value ?? "");
   if (normalized === "true") {
@@ -158,8 +367,7 @@ function readNumber(value, fallback = null) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-async function loadAcceptance(entry) {
-  const text = await readFile(path.join(repoRoot, entry.acceptanceFile), "utf8");
+export function parseAcceptanceText(text) {
   const scalars = readTopLevelScalars(text);
   const metrics = readNamedBlockScalars(text, "metrics");
   return {
@@ -168,14 +376,24 @@ async function loadAcceptance(entry) {
     sourceType: scalars.get("sourceType"),
     expectedMode: scalars.get("expectedMode"),
     gating: scalars.get("gating") === "true",
+    must: readTopLevelList(text, "must"),
+    mustNot: readTopLevelList(text, "mustNot"),
     maxOcrCharacterErrorRate: readNumber(metrics.get("maxOcrCharacterErrorRate")),
     maxOcrWordErrorRate: readNumber(metrics.get("maxOcrWordErrorRate")),
+    maxUnexpectedWarnings: readNumber(metrics.get("maxUnexpectedWarnings")),
     minTableCellAdjacency: readNumber(metrics.get("minTableCellAdjacency")),
     minTableCsvCellTextAccuracy: readNumber(metrics.get("minTableCsvCellTextAccuracy")),
     minTableSpanAccuracy: readNumber(metrics.get("minTableSpanAccuracy")),
+    snippets: readSnippetAssertions(text),
+    warningsAllowed: readNestedList(text, "warnings", "allowed"),
     forms: readStructureForms(text),
     skipReason: scalars.get("skipReason") ?? ""
   };
+}
+
+async function loadAcceptance(entry) {
+  const text = await readFile(path.join(repoRoot, entry.acceptanceFile), "utf8");
+  return parseAcceptanceText(text);
 }
 
 async function loadCases() {
@@ -375,6 +593,10 @@ async function runCase(corpusCase) {
     );
   }
 
+  const outputChecks = checkAcceptanceOutput(acceptance, result);
+  errors.push(...outputChecks.errors);
+  details.push(...outputChecks.details);
+
   if (acceptance.forms.length > 0) {
     const fieldsByName = new Map(
       result.diagnostics.extraction.forms.fields.map((field) => [field.name, field])
@@ -413,6 +635,119 @@ async function runCase(corpusCase) {
       details.length > 0 ? ` ${details.join(" ")}` : ""
     }`
   );
+}
+
+export function checkAcceptanceOutput(acceptance, result) {
+  const errors = [];
+  const details = [];
+  errors.push(...findUnsupportedCriteria(acceptance.must, supportedMustCriteria, "must"));
+  errors.push(...findUnsupportedCriteria(acceptance.mustNot, supportedMustNotCriteria, "mustNot"));
+
+  const snippetResult = checkSnippets(acceptance.snippets, result);
+  errors.push(...snippetResult.errors);
+  if (acceptance.snippets.length > 0) {
+    details.push(`snippets=${snippetResult.matched}/${acceptance.snippets.length}`);
+  }
+
+  const warningResult = checkWarnings(acceptance, result.warnings ?? []);
+  errors.push(...warningResult.errors);
+  if (acceptance.maxUnexpectedWarnings !== null || acceptance.warningsAllowed.length > 0) {
+    details.push(
+      `warnings=unexpected:${warningResult.unexpectedCount} allowed:${acceptance.warningsAllowed.length}`
+    );
+  }
+
+  if (acceptance.must.length > 0 || acceptance.mustNot.length > 0) {
+    details.push(`criteria=must:${acceptance.must.length} mustNot:${acceptance.mustNot.length}`);
+  }
+
+  return { errors, details };
+}
+
+function findUnsupportedCriteria(criteria, supported, blockName) {
+  return criteria
+    .filter((criterion) => !supported.has(criterion))
+    .map(
+      (criterion) =>
+        `unsupported acceptance ${blockName} criterion "${criterion}" without a corpus runner checker`
+    );
+}
+
+function checkSnippets(snippets, result) {
+  const errors = [];
+  let matched = 0;
+  for (const snippet of snippets) {
+    const contains = typeof snippet.contains === "string" ? snippet.contains : "";
+    const page = Number.parseInt(snippet.page, 10);
+    if (!contains) {
+      errors.push("snippet assertion is missing contains text");
+      continue;
+    }
+    if (!Number.isInteger(page) || page < 1) {
+      errors.push(`snippet "${contains}" has invalid page ${JSON.stringify(snippet.page)}`);
+      continue;
+    }
+    if (!result.markdown.includes(contains)) {
+      errors.push(`missing snippet on page ${page}: ${JSON.stringify(contains)}`);
+      continue;
+    }
+    if (!snippetAppearsOnPage(result, contains, page - 1)) {
+      errors.push(`snippet found on wrong or unmapped page ${page}: ${JSON.stringify(contains)}`);
+      continue;
+    }
+    matched += 1;
+  }
+  return { errors, matched };
+}
+
+function snippetAppearsOnPage(result, text, pageIndex) {
+  const entries = result.sourceMap?.entries ?? [];
+  if (entries.length === 0) {
+    return true;
+  }
+  let index = result.markdown.indexOf(text);
+  while (index !== -1) {
+    const end = index + text.length;
+    if (
+      entries.some(
+        (entry) =>
+          rangesOverlap(index, end, entry.markdownStart, entry.markdownEnd) &&
+          entry.regions?.some((region) => region.pageIndex === pageIndex)
+      )
+    ) {
+      return true;
+    }
+    index = result.markdown.indexOf(text, index + 1);
+  }
+  return false;
+}
+
+function rangesOverlap(leftStart, leftEnd, rightStart, rightEnd) {
+  return leftStart < rightEnd && rightStart < leftEnd;
+}
+
+function checkWarnings(acceptance, warnings) {
+  const allowed = new Set(acceptance.warningsAllowed);
+  const unexpected = warnings.filter(
+    (warning) => !runnerBaselineWarnings.has(warning.code) && !allowed.has(warning.code)
+  );
+  const errors = [];
+  if (
+    acceptance.maxUnexpectedWarnings !== null &&
+    unexpected.length > acceptance.maxUnexpectedWarnings
+  ) {
+    errors.push(
+      `unexpected warning count ${unexpected.length} above ${acceptance.maxUnexpectedWarnings}: ${[
+        ...new Set(unexpected.map((warning) => warning.code))
+      ]
+        .sort()
+        .join(", ")}`
+    );
+  }
+  return {
+    errors,
+    unexpectedCount: unexpected.length
+  };
 }
 
 async function readExpectedMarkdown(entry) {
@@ -479,4 +814,6 @@ async function main() {
   console.log(`Corpus run passed: ${selected.length}; skipped ${skipped.length}.`);
 }
 
-await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}
