@@ -1,0 +1,3 @@
+## Findings
+
+- [ ] packages/pdf2md/src/wasm-loader.d.ts:28 — WASM subpath declarations omit the exported `resolveWasmLoadPlan()` helper and runtime options such as `threadSupport` and `environment` — TypeScript consumers cannot use the documented/tested threaded-loading controls without type errors — add declarations for the runtime export and all accepted loader options
