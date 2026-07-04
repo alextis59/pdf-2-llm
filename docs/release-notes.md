@@ -54,9 +54,8 @@ fixtures:
 - CPU and WebGPU-preferred benchmark outputs are compared for accepted-output
   equivalence, and GPU speedup is gated when a real WebGPU provider is selected.
 - WASM size is budgeted and reported for the packaged preflight module.
-- CI runs explicit `ci:*` commands for Rust tests, lint, build, package tests,
-  and corpus smoke tests before the full `npm run check` gate, then uploads
-  generated QA/report artifacts.
+- CI runs the full `npm run check` gate once, then uploads generated QA/report
+  artifacts.
 - Agent coordination requirements are documented and checked by
   `npm run qa:agent-coordination`.
 - Clean checkout build passed.
