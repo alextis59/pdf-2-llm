@@ -47,10 +47,10 @@ type Confidence = {
 ## Warning Codes
 
 The package exports `warningCodes` from the main entrypoint and from
-`@pdf-2-llm/pdf2md/schema`.
+`pdf-2-llm/schema`.
 
 ```js
-import { warningCodes } from "@pdf-2-llm/pdf2md";
+import { warningCodes } from "pdf-2-llm";
 ```
 
 Current warning constants:
@@ -383,7 +383,7 @@ Warnings are concise. Pair them with diagnostics for decisions:
 ## Example Policy
 
 ```js
-import { warningCodes } from "@pdf-2-llm/pdf2md";
+import { warningCodes } from "pdf-2-llm";
 
 const hardBlockers = new Set([
   warningCodes.InputTooLarge,

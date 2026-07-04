@@ -296,11 +296,11 @@ intended for tests, audits, and fixture debugging.
 Browser and worker entrypoints support the same OCR options:
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/browser";
+import { convertPdfToMarkdown } from "pdf-2-llm/browser";
 ```
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/worker";
+import { convertPdfToMarkdown } from "pdf-2-llm/worker";
 ```
 
 Current browser behavior:
@@ -318,7 +318,7 @@ into JavaScript bundles.
 Node code should use the Node entrypoint:
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/node";
+import { convertPdfToMarkdown } from "pdf-2-llm/node";
 ```
 
 Current Node behavior mirrors browser behavior: OCR models are planned in

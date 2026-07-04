@@ -1,7 +1,7 @@
 # WASM Loading for Bundlers
 
 This package ships a small single-threaded Rust/WebAssembly preflight core at
-`@pdf-2-llm/pdf2md/wasm`. The current browser, worker, Node, and CLI
+`pdf-2-llm/wasm`. The current browser, worker, Node, and CLI
 conversion entrypoints still run the JavaScript parser and extraction pipeline;
 the WASM module is a separately loaded bridge used for low-level PDF byte
 preflight.
@@ -14,20 +14,20 @@ future full Rust/WebAssembly parser path.
 Use the most specific entrypoint for the runtime:
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/browser";
+import { convertPdfToMarkdown } from "pdf-2-llm/browser";
 ```
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/worker";
+import { convertPdfToMarkdown } from "pdf-2-llm/worker";
 ```
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/node";
+import { convertPdfToMarkdown } from "pdf-2-llm/node";
 ```
 
-Bundlers should prefer `@pdf-2-llm/pdf2md/browser` in browser UI code and
-`@pdf-2-llm/pdf2md/worker` inside module workers. Node scripts should use
-`@pdf-2-llm/pdf2md/node`.
+Bundlers should prefer `pdf-2-llm/browser` in browser UI code and
+`pdf-2-llm/worker` inside module workers. Node scripts should use
+`pdf-2-llm/node`.
 
 The root export also has conditional `node` and `browser` targets, but explicit
 subpath imports make application bundles easier to audit.
@@ -35,7 +35,7 @@ subpath imports make application bundles easier to audit.
 The WASM preflight export is:
 
 ```js
-import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+import { loadPdf2mdCoreWasm } from "pdf-2-llm/wasm";
 
 const core = await loadPdf2mdCoreWasm();
 const looksLikePdf = core.hasPdfHeader(await file.arrayBuffer());
@@ -45,13 +45,13 @@ const looksLikePdf = core.hasPdfHeader(await file.arrayBuffer());
 
 No special WASM loader configuration is required for the main browser
 conversion entrypoint because it does not import the `.wasm` file directly.
-Applications that import `@pdf-2-llm/pdf2md/wasm` must let the bundler emit the
+Applications that import `pdf-2-llm/wasm` must let the bundler emit the
 package-relative `.wasm` asset.
 
 Use normal ESM bundling:
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/browser";
+import { convertPdfToMarkdown } from "pdf-2-llm/browser";
 
 const result = await convertPdfToMarkdown(await file.arrayBuffer());
 ```
@@ -68,7 +68,7 @@ const worker = new Worker(new URL("./pdf-worker.mjs", import.meta.url), {
 Then import the worker entrypoint inside `pdf-worker.mjs`:
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/worker";
+import { convertPdfToMarkdown } from "pdf-2-llm/worker";
 ```
 
 The repository examples show the same message-passing pattern:
@@ -100,11 +100,11 @@ into single-threaded and threaded modules.
 ## Vite
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/browser";
+import { convertPdfToMarkdown } from "pdf-2-llm/browser";
 ```
 
 ```js
-import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+import { loadPdf2mdCoreWasm } from "pdf-2-llm/wasm";
 ```
 
 Vite should rewrite the loader's package-relative asset URL automatically.
@@ -171,7 +171,7 @@ iframes, cross-origin resources, analytics scripts, and document embedding.
 Node scripts should use:
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/node";
+import { convertPdfToMarkdown } from "pdf-2-llm/node";
 ```
 
 Node applications can load the preflight module from bytes or from a fetchable
@@ -179,7 +179,7 @@ URL:
 
 ```js
 import { readFile } from "node:fs/promises";
-import { loadPdf2mdCoreWasm } from "@pdf-2-llm/pdf2md/wasm";
+import { loadPdf2mdCoreWasm } from "pdf-2-llm/wasm";
 
 const wasm = await readFile(new URL("./pdf2md_core.wasm", import.meta.url));
 const core = await loadPdf2mdCoreWasm(wasm);
@@ -191,7 +191,7 @@ external `.wasm` file next to the bundle or pass an explicit `source`.
 ## Verification Checklist
 
 - Build the production bundle.
-- When importing `@pdf-2-llm/pdf2md/wasm`, confirm exactly one baseline `.wasm`
+- When importing `pdf-2-llm/wasm`, confirm exactly one baseline `.wasm`
   file is requested.
 - Confirm the response has HTTP 200 and `Content-Type: application/wasm`.
 - Confirm worker bundles load through `new Worker(new URL(...), { type: "module" })`.

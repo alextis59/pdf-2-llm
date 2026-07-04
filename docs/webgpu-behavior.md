@@ -275,11 +275,11 @@ falls back to CPU.
 Use the browser or worker entrypoints:
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/browser";
+import { convertPdfToMarkdown } from "pdf-2-llm/browser";
 ```
 
 ```js
-import { convertPdfToMarkdown } from "@pdf-2-llm/pdf2md/worker";
+import { convertPdfToMarkdown } from "pdf-2-llm/worker";
 ```
 
 Practical browser checks:
