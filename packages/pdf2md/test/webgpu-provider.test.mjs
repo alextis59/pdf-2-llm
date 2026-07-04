@@ -121,6 +121,40 @@ test("createWebGpuExecutionPlan skips pages that exceed memory limits", () => {
   ]);
 });
 
+test("createWebGpuExecutionPlan skips a single page that exceeds the batch pixel limit", () => {
+  const plan = createWebGpuExecutionPlan({
+    options: {
+      maxBatchPixels: 10_000,
+      maxMemoryBytes: 1_000_000
+    },
+    rasterPlan: {
+      pages: [{ pageIndex: 0, status: "planned", pixelCount: 12_000 }]
+    },
+    scanDetection: {
+      pages: [{ pageIndex: 0, sourceType: "scanned" }]
+    },
+    webgpu: {
+      selectedProvider: "webgpu"
+    }
+  });
+
+  assert.equal(plan.status, "skipped");
+  assert.equal(plan.plannedPages, 0);
+  assert.equal(plan.skippedPages, 1);
+  assert.equal(plan.totalEstimatedPixels, 0);
+  assert.deepEqual(plan.batches, []);
+  assert.deepEqual(plan.skipped, [
+    {
+      pageIndex: 0,
+      sourceType: "scanned",
+      rasterStatus: "planned",
+      pixelCount: 12_000,
+      estimatedBytes: 48_000,
+      status: "exceeds-batch-pixel-limit"
+    }
+  ]);
+});
+
 test("createWebGpuExecutionPlan keeps OCR output contracts provider-compatible", () => {
   const scanDetection = {
     pages: [{ pageIndex: 0, sourceType: "scanned" }]

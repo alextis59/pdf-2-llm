@@ -45,6 +45,8 @@ export function createWebGpuExecutionPlan({
     const status =
       pixelCount === null
         ? "missing-raster"
+        : pixelCount > maxBatchPixels
+          ? "exceeds-batch-pixel-limit"
         : estimatedBytes > maxMemoryBytes
           ? "exceeds-memory-limit"
           : "planned";
