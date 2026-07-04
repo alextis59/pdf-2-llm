@@ -297,7 +297,7 @@ Applications should log:
 Focused checks:
 
 ```sh
-node --test test/security-limits.test.mjs test/malicious-pdf.test.mjs
+node --test packages/pdf2md/test/security-limits.test.mjs packages/pdf2md/test/malicious-pdf.test.mjs
 ```
 
 ```sh
