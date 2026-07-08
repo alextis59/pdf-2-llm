@@ -14,7 +14,8 @@ import {
 import { createStartupProfile } from "../../../scripts/qa/startup-benchmark.mjs";
 import {
   createPackageSizeReport,
-  evaluatePackageSizeBudget
+  evaluatePackageSizeBudget,
+  findForbiddenPackageFiles
 } from "../../../scripts/qa/check-package-size.mjs";
 import {
   createModelSizeReport,
@@ -327,6 +328,40 @@ test("package size report evaluates packed size budgets", () => {
     { path: "src/worker.mjs", bytes: 500 },
     { path: "package.json", bytes: 300 }
   ]);
+});
+
+test("package size report rejects repository-only package paths", () => {
+  const packageInfo = {
+    id: "pdf-2-llm@1.0.0",
+    name: "pdf-2-llm",
+    version: "1.0.0",
+    filename: "pdf-2-llm-1.0.0.tgz",
+    size: 1000,
+    unpackedSize: 2000,
+    entryCount: 4,
+    files: [
+      { path: ".symphony/workflow.md", size: 100 },
+      { path: "docs/index.md", size: 200 },
+      { path: "packages/pdf2md/src/index.mjs", size: 300 },
+      { path: "package.json", size: 400 }
+    ]
+  };
+  const budget = {
+    maxPackedBytes: 2000,
+    maxUnpackedBytes: 3000,
+    maxEntryCount: 8
+  };
+
+  assert.deepEqual(findForbiddenPackageFiles(packageInfo), [
+    ".symphony/workflow.md",
+    "docs/index.md"
+  ]);
+
+  const report = createPackageSizeReport(packageInfo, { budget });
+  assert.equal(report.passed, false);
+  assert.deepEqual(report.violations, []);
+  assert.deepEqual(report.forbiddenPathPrefixes, ["docs/", ".symphony/"]);
+  assert.deepEqual(report.forbiddenFiles, [".symphony/workflow.md", "docs/index.md"]);
 });
 
 test("WASM size report evaluates artifact byte budgets", () => {

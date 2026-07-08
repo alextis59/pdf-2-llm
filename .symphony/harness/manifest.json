@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "project": "pdf-2-llm",
+  "workflow": "../workflow.md",
+  "roles": [
+    "../agents/developer.yaml",
+    "../agents/reviewer.yaml",
+    "../agents/product-owner.yaml"
+  ],
+  "generated_docs": [
+    "../../AGENTS.md",
+    "../../ARCHITECTURE.md",
+    "../../docs/index.md",
+    "../../docs/SECURITY.md",
+    "../../docs/QUALITY.md",
+    "../../docs/tech-debt-tracker.md",
+    "../../docs/exec-plans/template.md"
+  ]
+}

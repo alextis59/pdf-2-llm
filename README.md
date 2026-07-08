@@ -13,7 +13,7 @@ are recorded.
 
 ## Current Status
 
-The root `pdf-2-llm` package currently declares version `1.0.0` and is
+The root `pdf-2-llm` package currently declares version `1.1.0` and is
 configured for public npm publishing, with the implementation kept in the
 `packages/pdf2md` workspace. The project source is licensed under the
 [Zero-Clause BSD license](LICENSE), so it can be used, copied, modified,

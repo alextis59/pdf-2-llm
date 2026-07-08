@@ -1,0 +1,5 @@
+workspaces/
+runs/
+secrets/
+status.json
+*.sock

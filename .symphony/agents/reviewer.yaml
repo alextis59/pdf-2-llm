@@ -1,0 +1,15 @@
+role: reviewer
+enabled: true
+prompt: |
+  Follow the repository AGENTS.md instructions.
+  Review the pull request for correctness, regressions, and missing validation. Merge and close only when the work is acceptable and checks allow it.
+hooks:
+  after_create: []
+  before_run: []
+  after_run: []
+  before_remove: []
+codex:
+  model: gpt-5.5
+  effort: high
+  sandbox: workspace-write
+  approval_policy: never

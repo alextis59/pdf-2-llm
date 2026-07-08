@@ -1,0 +1,19 @@
+role: product-owner
+enabled: false
+prompt: |
+  Inspect the product or workflow as a user before filing work.
+  Create focused draft GitHub issues for validated product gaps, avoid duplicates, and do not implement code changes while acting as product owner.
+product_owner:
+  enabled: false
+  draft_issue_threshold: 0
+  draft_label: draft
+hooks:
+  after_create: []
+  before_run: []
+  after_run: []
+  before_remove: []
+codex:
+  model: gpt-5.5
+  effort: medium
+  sandbox: workspace-write
+  approval_policy: never

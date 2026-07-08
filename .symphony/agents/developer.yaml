@@ -1,0 +1,15 @@
+role: developer
+enabled: true
+prompt: |
+  Follow the repository AGENTS.md instructions.
+  Implement the requested issue, validate the change, push the issue branch, and leave the required Symphony developer completion comment.
+hooks:
+  after_create: []
+  before_run: []
+  after_run: []
+  before_remove: []
+codex:
+  model: gpt-5.5
+  effort: high
+  sandbox: workspace-write
+  approval_policy: never
