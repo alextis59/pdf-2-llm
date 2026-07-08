@@ -53,6 +53,21 @@ test("inferRulingGrids ignores single rectangles that cannot form a table grid",
   assert.deepEqual(grids, []);
 });
 
+test("inferRulingGrids accepts one-row multi-column ruled tables", () => {
+  const grids = inferRulingGrids([
+    horizontal(10, 10, 210, 10),
+    horizontal(10, 60, 210, 60),
+    vertical(10, 10, 10, 60),
+    vertical(150, 10, 150, 60),
+    vertical(210, 10, 210, 60)
+  ]);
+
+  assert.equal(grids.length, 1);
+  assert.equal(grids[0].rows, 1);
+  assert.equal(grids[0].columns, 2);
+  assert.equal(grids[0].complete, true);
+});
+
 test("inferRulingGrids marks grids incomplete when inferred crossings are missing", () => {
   const lines = [
     horizontal(72, 610, 432, 610),

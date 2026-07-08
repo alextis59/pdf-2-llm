@@ -151,7 +151,10 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
           }
         })
       );
-      index = rulingTable.endIndex - 1;
+      continue;
+    }
+    if (isRulingTableSourceLineAt(index, rulingTableExports)) {
+      previousWasList = false;
       continue;
     }
 
@@ -503,6 +506,7 @@ function readEquationAt(lines, startIndex, headingModel, equationModel, rulingTa
       parseListItem(text) ||
       startsWithMarkdownBlockMarker(text) ||
       readRulingTableAt(index, rulingTableExports) ||
+      isRulingTableSourceLineAt(index, rulingTableExports) ||
       readConfidentTableAt(lines, index) ||
       !isEquationLine(line, equationModel)
     ) {
@@ -1021,6 +1025,7 @@ function readParagraphAt(
       parseListItem(text) ||
       startsWithMarkdownBlockMarker(text) ||
       readRulingTableAt(index, rulingTableExports) ||
+      isRulingTableSourceLineAt(index, rulingTableExports) ||
       isEquationLine(line, equationModel) ||
       readConfidentTableAt(lines, index) ||
       !isParagraphContinuation(previous, line)
@@ -1868,12 +1873,15 @@ function endsWithParagraphTerminal(text) {
 function createRulingTableExports(lines, rulingTables) {
   const exportsByStart = new Map();
   if (!Array.isArray(rulingTables) || rulingTables.length === 0) {
-    return exportsByStart;
+    return {
+      byStart: exportsByStart,
+      sourceLineIndexes: new Set()
+    };
   }
 
   const lineIndexes = new Map(lines.map((line, index) => [line, index]));
   for (const table of rulingTables) {
-    const tableExport = createRulingTableExport(table, lines, lineIndexes);
+    const tableExport = createRulingTableExport(table, lineIndexes);
     if (!tableExport) {
       continue;
     }
@@ -1882,18 +1890,28 @@ function createRulingTableExports(lines, rulingTables) {
       exportsByStart.set(tableExport.startIndex, tableExport);
     }
   }
-  return exportsByStart;
+  const sourceLineIndexes = new Set();
+  for (const tableExport of exportsByStart.values()) {
+    for (const lineIndex of tableExport.sourceLineIndexes) {
+      sourceLineIndexes.add(lineIndex);
+    }
+  }
+  return {
+    byStart: exportsByStart,
+    sourceLineIndexes
+  };
 }
 
-function createRulingTableExport(table, lines, lineIndexes) {
+function createRulingTableExport(table, lineIndexes) {
   if (!isRulingTableExportable(table)) {
     return null;
   }
 
   const hasSpans = hasRulingTableSpans(table);
+  const outputAsHtml = hasSpans || table.rows === 1;
   const rows = rulingTableRows(table);
   if (
-    rows.length < 2 ||
+    rows.length < 1 ||
     rows.some((row) => row.length !== table.columns) ||
     rows.every((row) => row.every((cell) => cell.length === 0))
   ) {
@@ -1908,27 +1926,29 @@ function createRulingTableExport(table, lines, lineIndexes) {
     return null;
   }
 
-  const sourceLineSet = new Set(sourceLines);
   const lineIndices = sourceLines.map((line) => lineIndexes.get(line)).sort((left, right) => left - right);
   const startIndex = lineIndices[0];
   const endIndex = lineIndices.at(-1) + 1;
-  for (let index = startIndex; index < endIndex; index += 1) {
-    if (!sourceLineSet.has(lines[index])) {
-      return null;
-    }
-  }
+  const output = outputAsHtml
+    ? createHtmlRulingTableOutput(table, { header: table.rows > 1 })
+    : {
+        rows: table.rows,
+        columns: table.columns,
+        markdown: formatMarkdownTableCells(rows)
+      };
 
   return {
     startIndex,
     endIndex,
     pageIndex: table.pageIndex ?? sourceLines[0]?.pageIndex,
-    rows: table.rows,
-    columns: table.columns,
-    output: hasSpans ? "html" : "gfm",
+    rows: output.rows,
+    columns: output.columns,
+    output: outputAsHtml ? "html" : "gfm",
     confidence: rulingTableConfidence(hasSpans),
     hasSpans,
     numericColumns: numericColumnIndexes(rows),
-    markdown: hasSpans ? formatHtmlRulingTable(table) : formatMarkdownTableCells(rows),
+    markdown: output.markdown,
+    sourceLineIndexes: lineIndices,
     sourceLines: [...sourceLines].sort(
       (left, right) => lineIndexes.get(left) - lineIndexes.get(right)
     )
@@ -1943,7 +1963,7 @@ function isRulingTableExportable(table) {
   return (
     table &&
     Array.isArray(table.cells) &&
-    table.rows >= 2 &&
+    table.rows >= 1 &&
     table.columns >= 2
   );
 }
@@ -1979,38 +1999,153 @@ function rulingTableRows(table) {
   return rows;
 }
 
-function formatHtmlRulingTable(table) {
-  const rows = rulingTableCellRows(table);
-  const bodyRows = rows.slice(1);
-  return [
+function createHtmlRulingTableOutput(table, { header = true } = {}) {
+  const rows = expandedRulingTableCellRows(table);
+  const columns = rows.reduce((max, row) => Math.max(max, row.length), table.columns);
+  return {
+    rows: rows.length,
+    columns,
+    markdown: formatHtmlRulingTableRows(rows, { header })
+  };
+}
+
+function formatHtmlRulingTableRows(rows, { header = true } = {}) {
+  const bodyRows = header ? rows.slice(1) : rows;
+  const parts = [
     "<table>",
-    "  <thead>",
-    formatHtmlTableRow(rows[0], "th", "    "),
-    "  </thead>",
     "  <tbody>",
     ...bodyRows.map((row) => formatHtmlTableRow(row, "td", "    ")),
     "  </tbody>",
     "</table>"
-  ].join("\n");
+  ];
+  if (header) {
+    parts.splice(1, 0, "  <thead>", formatHtmlTableRow(rows[0], "th", "    "), "  </thead>");
+  }
+  return parts.join("\n");
 }
 
-function rulingTableCellRows(table) {
+function expandedRulingTableCellRows(table) {
   const cellsByPosition = new Map(
     table.cells.map((cell) => [`${cell.rowIndex}:${cell.columnIndex}`, cell])
   );
   const rows = [];
   for (let rowIndex = 0; rowIndex < table.rows; rowIndex += 1) {
-    const row = [];
+    const rowCells = [];
     for (let columnIndex = 0; columnIndex < table.columns; columnIndex += 1) {
       const cell = cellsByPosition.get(`${rowIndex}:${columnIndex}`);
       if (!cell || cell.coveredBy) {
         continue;
       }
-      row.push(cell);
+      rowCells.push(cell);
     }
-    rows.push(row);
+
+    const visualRows = virtualRowsForRulingCells(table, rowCells);
+    if (shouldUseVirtualRows(visualRows)) {
+      rows.push(...visualRows);
+    } else {
+      rows.push(rowCells);
+    }
   }
   return rows;
+}
+
+function shouldUseVirtualRows(visualRows) {
+  return (
+    visualRows.length > 1 &&
+    visualRows.some((row) => row.filter((cell) => normalizeText(cell.text).length > 0).length >= 2)
+  );
+}
+
+function virtualRowsForRulingCells(table, cells) {
+  const visualLineRows = visualLineRowsForRulingCells(cells);
+  return visualLineRows.map((visualRow) => createVirtualRulingTableRow(table, visualRow));
+}
+
+function visualLineRowsForRulingCells(cells) {
+  const items = [];
+  for (const cell of cells) {
+    for (const line of cell.lines ?? []) {
+      if (normalizeText(line.text ?? "").length === 0) {
+        continue;
+      }
+      items.push({ cell, line });
+    }
+  }
+  const rows = [];
+  for (const item of items.sort((left, right) => right.line.y - left.line.y || left.line.x - right.line.x)) {
+    const tolerance = lineRowTolerance(item.line);
+    const current = rows[rows.length - 1];
+    if (current && Math.abs(current.y - item.line.y) <= Math.max(current.tolerance, tolerance)) {
+      current.items.push(item);
+      current.y = average(current.items.map((rowItem) => rowItem.line.y));
+      current.tolerance = Math.max(current.tolerance, tolerance);
+      continue;
+    }
+    rows.push({
+      items: [item],
+      y: item.line.y,
+      tolerance
+    });
+  }
+  return rows;
+}
+
+function createVirtualRulingTableRow(table, visualRow) {
+  const columns = Array.from({ length: table.columns }, () => []);
+  const itemsByCell = new Map();
+  for (const item of visualRow.items) {
+    const cellItems = itemsByCell.get(item.cell) ?? [];
+    cellItems.push(item);
+    itemsByCell.set(item.cell, cellItems);
+  }
+
+  for (const [cell, items] of itemsByCell) {
+    const sortedItems = [...items].sort((left, right) => left.line.x - right.line.x);
+    const span = Math.max(1, cell.columnSpan ?? 1);
+    if (span === 1 && sortedItems.length > 1) {
+      for (let index = 0; index < sortedItems.length; index += 1) {
+        const columnIndex = Math.min(table.columns - 1, cell.columnIndex + index);
+        columns[columnIndex].push(normalizeText(sortedItems[index].line.text));
+      }
+      continue;
+    }
+
+    for (const item of sortedItems) {
+      const columnIndex = virtualColumnIndexForLine(table, cell, item.line);
+      columns[columnIndex].push(normalizeText(item.line.text));
+    }
+  }
+
+  return columns.map((parts) => ({
+    text: parts.filter(Boolean).join(" "),
+    rowSpan: 1,
+    columnSpan: 1,
+    coveredBy: null
+  }));
+}
+
+function virtualColumnIndexForLine(table, cell, line) {
+  const span = Math.max(1, cell.columnSpan ?? 1);
+  const firstColumn = cell.columnIndex;
+  const lastColumn = Math.min(table.columns - 1, firstColumn + span - 1);
+  const centerColumn = columnIndexForLineCenter(table, line);
+  if (centerColumn >= firstColumn && centerColumn <= lastColumn) {
+    return centerColumn;
+  }
+  return firstColumn;
+}
+
+function columnIndexForLineCenter(table, line) {
+  if (!Array.isArray(table.xEdges) || table.xEdges.length < 2) {
+    return 0;
+  }
+  const center = line.x + Math.max(0, line.width ?? 0) / 2;
+  for (let index = 0; index < table.xEdges.length - 1; index += 1) {
+    if (center >= table.xEdges[index] - 0.5 && center <= table.xEdges[index + 1] + 0.5) {
+      return index;
+    }
+  }
+  return center < table.xEdges[0] ? 0 : table.xEdges.length - 2;
 }
 
 function formatHtmlTableRow(cells, tagName, indent) {
@@ -2049,7 +2184,11 @@ function sourceLinesForRulingTable(table) {
 }
 
 function readRulingTableAt(index, rulingTableExports) {
-  return rulingTableExports.get(index) ?? null;
+  return rulingTableExports.byStart?.get(index) ?? rulingTableExports.get?.(index) ?? null;
+}
+
+function isRulingTableSourceLineAt(index, rulingTableExports) {
+  return rulingTableExports.sourceLineIndexes?.has(index) ?? false;
 }
 
 function readConfidentTableAt(lines, startIndex) {

@@ -1,6 +1,6 @@
 export function inferRulingGrids(rulingLines, options = {}) {
   const intersectionTolerance = options.intersectionTolerance ?? 1;
-  const minRows = options.minRows ?? 2;
+  const minRows = options.minRows ?? 1;
   const minColumns = options.minColumns ?? 2;
   const byPage = groupByPage(rulingLines);
   const grids = [];

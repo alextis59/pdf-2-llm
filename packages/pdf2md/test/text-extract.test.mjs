@@ -493,6 +493,59 @@ test("linesToMarkdownWithSourceMap exports no-span ruling tables as GFM", () => 
   ]);
 });
 
+test("linesToMarkdownWithSourceMap exports ruling tables with non-contiguous reading-order lines", () => {
+  const field = textLine("Long declaration field label", 12, 720, 125, 8);
+  const period = textLine("Another declaration field label", 12, 704, 130, 8);
+  const centeredTitle = textLine("Monthly Turnover Declaration", 180, 716, 170, 8);
+  const centeredSubtitle = textLine("Micro social scheme", 180, 700, 115, 8);
+  const receipt = textLine("D040133765", 520, 720, 46, 8);
+  const month = textLine("Avril 2025", 520, 704, 42, 8);
+
+  const result = linesToMarkdownWithSourceMap(
+    [field, period, centeredTitle, centeredSubtitle, receipt, month],
+    {
+      rulingTables: [
+        {
+          pageIndex: 0,
+          rows: 2,
+          columns: 2,
+          hasSpans: false,
+          rowSpans: 0,
+          columnSpans: 0,
+          coveredCells: 0,
+          cells: [
+            tableCell(0, 0, "Long declaration field label", [field]),
+            tableCell(0, 1, "D040133765", [receipt]),
+            tableCell(1, 0, "Another declaration field label", [period]),
+            tableCell(1, 1, "Avril 2025", [month])
+          ]
+        }
+      ]
+    }
+  );
+
+  assert.match(
+    result.markdown,
+    /^\| Long declaration field label \| D040133765 \|\n\| --- \| --- \|\n\| Another declaration field label \| Avril 2025 \|/u
+  );
+  assert.equal(result.markdown.match(/D040133765/g)?.length, 1);
+  assert.match(result.markdown, /Monthly Turnover Declaration/);
+  assert.deepEqual(result.tables, [
+    {
+      tableIndex: 0,
+      source: "ruling-grid",
+      pageIndex: 0,
+      rows: 2,
+      columns: 2,
+      output: "gfm",
+      confidence: 0.95,
+      hasSpans: false,
+      numericColumns: [],
+      sourceLines: 4
+    }
+  ]);
+});
+
 test("linesToMarkdownWithSourceMap exports span-bearing ruling tables as HTML", () => {
   const title = textLine("Spanned Table Fixture", 72, 720, 150, 22);
   const merged = textLine("Revenue <Total>", 82, 684, 80, 11);
@@ -528,6 +581,115 @@ test("linesToMarkdownWithSourceMap exports span-bearing ruling tables as HTML", 
   assert.equal(result.sourceMap.entries.length, 2);
   assert.equal(result.sourceMap.entries[1].kind, "table");
   assert.equal(result.sourceMap.entries[1].regions.length, 3);
+});
+
+test("linesToMarkdownWithSourceMap splits aligned visual rows inside merged ruled cells", () => {
+  const heading = textLine("Cotisations et contributions", 12, 432, 105, 8);
+  const service = textLine("144 - Prestations de services", 12, 420, 125, 8);
+  const serviceRate = textLine("10,60%", 374, 420, 26, 8);
+  const serviceAmount = textLine("557 ¤", 562, 420, 23, 8);
+  const sales = textLine("145 - Vente de marchandises", 12, 405, 118, 8);
+  const salesRate = textLine("6,20%", 378, 405, 23, 8);
+  const salesAmount = textLine("0 ¤", 571, 405, 15, 8);
+  const deduction = textLine("Déduction éventuelle", 12, 345, 75, 8);
+  const deductionAmount = textLine("0 ¤", 572, 345, 15, 8);
+
+  const result = linesToMarkdownWithSourceMap(
+    [heading, service, serviceRate, serviceAmount, sales, salesRate, salesAmount, deduction, deductionAmount],
+    {
+      rulingTables: [
+        {
+          pageIndex: 0,
+          rows: 2,
+          columns: 3,
+          xEdges: [11, 408, 498, 586],
+          hasSpans: true,
+          rowSpans: 0,
+          columnSpans: 1,
+          coveredCells: 1,
+          cells: [
+            tableCell(
+              0,
+              0,
+              "Cotisations et contributions 144 - Prestations de services 10,60% 145 - Vente de marchandises 6,20%",
+              [heading, service, serviceRate, sales, salesRate]
+            ),
+            tableCell(0, 1, "557 ¤ 0 ¤", [serviceAmount, salesAmount], { columnSpan: 2 }),
+            tableCell(0, 2, "", [], { coveredBy: { rowIndex: 0, columnIndex: 1 } }),
+            tableCell(1, 0, "Déduction éventuelle", [deduction]),
+            tableCell(1, 1, "", []),
+            tableCell(1, 2, "0 ¤", [deductionAmount])
+          ]
+        }
+      ]
+    }
+  );
+
+  assert.match(result.markdown, /<th>Cotisations et contributions<\/th>\n      <th><\/th>\n      <th><\/th>/);
+  assert.match(
+    result.markdown,
+    /<td>144 - Prestations de services<\/td>\n      <td>10,60%<\/td>\n      <td>557 ¤<\/td>/
+  );
+  assert.match(
+    result.markdown,
+    /<td>145 - Vente de marchandises<\/td>\n      <td>6,20%<\/td>\n      <td>0 ¤<\/td>/
+  );
+  assert.doesNotMatch(result.markdown, /144 - Prestations de services 10,60% 145 - Vente/);
+  assert.deepEqual(result.tables, [
+    {
+      tableIndex: 0,
+      source: "ruling-grid",
+      pageIndex: 0,
+      rows: 4,
+      columns: 3,
+      output: "html",
+      confidence: 0.9,
+      hasSpans: true,
+      numericColumns: [],
+      sourceLines: 9
+    }
+  ]);
+});
+
+test("linesToMarkdownWithSourceMap exports one-row ruling tables as body-only HTML", () => {
+  const payment = textLine("Télépaiement enregistré le 04/08/2025 *", 12, 280, 170, 8);
+  const amount = textLine("568 ¤", 562, 280, 23, 8);
+  const result = linesToMarkdownWithSourceMap([payment, amount], {
+    rulingTables: [
+      {
+        pageIndex: 0,
+        rows: 1,
+        columns: 2,
+        hasSpans: false,
+        rowSpans: 0,
+        columnSpans: 0,
+        coveredCells: 0,
+        cells: [
+          tableCell(0, 0, "Télépaiement enregistré le 04/08/2025 *", [payment]),
+          tableCell(0, 1, "568 ¤", [amount])
+        ]
+      }
+    ]
+  });
+
+  assert.equal(
+    result.markdown,
+    "<table>\n  <tbody>\n    <tr>\n      <td>Télépaiement enregistré le 04/08/2025 *</td>\n      <td>568 ¤</td>\n    </tr>\n  </tbody>\n</table>\n"
+  );
+  assert.deepEqual(result.tables, [
+    {
+      tableIndex: 0,
+      source: "ruling-grid",
+      pageIndex: 0,
+      rows: 1,
+      columns: 2,
+      output: "html",
+      confidence: 0.95,
+      hasSpans: false,
+      numericColumns: [],
+      sourceLines: 2
+    }
+  ]);
 });
 
 test("linesToMarkdown preserves URL and email links", () => {

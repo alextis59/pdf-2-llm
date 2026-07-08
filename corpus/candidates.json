@@ -213,7 +213,21 @@
       "minimumCount": 5,
       "strategy": "Combine generated tables with public financial or government tables.",
       "why": "Tests ruling-line table extraction.",
-      "candidates": []
+      "candidates": [
+        {
+          "id": "urssaf-declaration-avril-2025",
+          "sourceType": "url",
+          "url": "https://soj-shop.com/wp-content/uploads/2025/05/Declaration-Avril-2025.pdf",
+          "targetPath": "corpus/raw/local-only/urssaf-declaration-avril-2025.pdf",
+          "licenseName": "Public web PDF, redistribution pending review",
+          "licenseUrl": "https://soj-shop.com/",
+          "licenseNotes": "Retrieved from a public website, but no explicit redistribution license was found and the PDF contains declaration details; keep local-only until reviewed.",
+          "redistributable": false,
+          "disposition": "local-only",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id urssaf-declaration-avril-2025",
+          "notes": "URSSAF auto-entrepreneur monthly turnover declaration with ruled label/value tables and a cotisations table similar to the Athena table extraction failure case."
+        }
+      ]
     },
     {
       "id": "borderless-tables",
