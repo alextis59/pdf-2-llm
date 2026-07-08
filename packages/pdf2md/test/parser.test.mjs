@@ -91,6 +91,22 @@ test("parsePdfDocument resolves nested page trees and inherited resources", () =
   assert.equal(page.resources.fonts.F1.encoding, "WinAnsiEncoding");
 });
 
+test("parsePdfDocument exposes simple font width arrays", () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /FirstChar 65 /LastChar 67 /Widths [722 667 667] >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject("BT /F1 12 Tf 20 200 Td (ABC) Tj ET\n")
+  ]);
+  const document = parsePdfDocument(bytes);
+  const font = document.pages[0].resources.fonts.F1;
+
+  assert.equal(font.firstChar, 65);
+  assert.equal(font.lastChar, 67);
+  assert.deepEqual(font.widths, [722, 667, 667]);
+});
+
 test("parsePdfDocument resolves outlines and uses them as structure signals", async () => {
   const bytes = createTestPdf([
     "<< /Type /Catalog /Pages 2 0 R /Outlines 6 0 R >>",

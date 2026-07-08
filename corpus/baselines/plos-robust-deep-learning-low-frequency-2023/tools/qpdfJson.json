@@ -1,0 +1,9 @@
+{
+  "available": false,
+  "command": "qpdf",
+  "args": [
+    "--json",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/raw/public/plos-robust-deep-learning-low-frequency-2023.pdf"
+  ],
+  "error": "not found"
+}

@@ -1,0 +1,614 @@
+{
+  "id": "plos-metagenomic-ml-meta-analysis-2016",
+  "analyzedAt": "2026-07-08T19:15:45.449Z",
+  "path": "corpus/raw/public/plos-metagenomic-ml-meta-analysis-2016.pdf",
+  "bytes": 4232685,
+  "sha256": "c4a4f794173e03ddbbc3750742bb0373a75beb2324b5fd16ae138b8503bac29c",
+  "manifest": {
+    "kind": "scientific-paper",
+    "pages": 26,
+    "features": [
+      "born-digital",
+      "scientific-paper",
+      "two-column",
+      "visible-table",
+      "figures",
+      "references",
+      "untagged"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/plos-metagenomic-ml-meta-analysis-2016.yaml"
+  },
+  "pdfVersion": "1.4",
+  "pages": {
+    "staticPageObjectCount": 26,
+    "manifest": 26,
+    "pdfinfo": 26
+  },
+  "header": {
+    "pdfVersion": "1.4",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 26,
+    "pageBoxes": [
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [
+      0
+    ],
+    "classicXrefCount": 1,
+    "xrefStreamCount": 0,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": true,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": true
+  },
+  "contentSignals": {
+    "beginTextOps": 0,
+    "endTextOps": 0,
+    "textShowOps": 723,
+    "imageXObjects": 10,
+    "pathOperators": 919,
+    "fontObjects": 51,
+    "cidFonts": 0,
+    "cidSystemInfo": 0,
+    "toUnicodeMaps": 7,
+    "encodings": 33,
+    "missingToUnicodeLikely": false,
+    "estimatedTextShowOpsPerPage": 27.807692307692307,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "ocrOverlaySignals": {
+    "toolBacked": true,
+    "hiddenOcrOverlayLikely": true,
+    "candidatePages": [
+      {
+        "page": 8,
+        "imageCount": 2,
+        "totalImagePixels": 5107775,
+        "maxImagePixels": 5037980,
+        "imageAreaRatio": 0.6069569961881864,
+        "wordBoxes": 127,
+        "textAreaRatio": 0.04279877480589184,
+        "imageDominantLikely": true
+      },
+      {
+        "page": 11,
+        "imageCount": 2,
+        "totalImagePixels": 4985350,
+        "maxImagePixels": 4915555,
+        "imageAreaRatio": 0.5924085707574082,
+        "wordBoxes": 107,
+        "textAreaRatio": 0.035190501748641446,
+        "imageDominantLikely": true
+      }
+    ],
+    "notes": [
+      "Candidates indicate image-heavy pages that also expose text boxes; human review should confirm whether the text layer is visible, OCR, or misleading."
+    ]
+  },
+  "externalTools": {
+    "pdfinfo": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdfimages": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdftotextBbox": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "qpdfJson": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    },
+    "mutoolInfo": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    }
+  },
+  "toolOutputs": {
+    "pdfinfo": "corpus/baselines/plos-metagenomic-ml-meta-analysis-2016/tools/pdfinfo.json",
+    "pdfimages": "corpus/baselines/plos-metagenomic-ml-meta-analysis-2016/tools/pdfimages.json",
+    "pdftotextBbox": "corpus/baselines/plos-metagenomic-ml-meta-analysis-2016/tools/pdftotextBbox.json",
+    "qpdfJson": "corpus/baselines/plos-metagenomic-ml-meta-analysis-2016/tools/qpdfJson.json",
+    "mutoolInfo": "corpus/baselines/plos-metagenomic-ml-meta-analysis-2016/tools/mutoolInfo.json"
+  },
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

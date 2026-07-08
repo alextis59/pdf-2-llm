@@ -1,0 +1,12 @@
+{
+  "available": true,
+  "command": "pdfinfo",
+  "args": [
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/raw/public/plos-interpretable-ml-reliability-2023.pdf"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "Title:           Enabling interpretable machine learning for biological data with reliability scores\nAuthor:          K. D. Ahlquist, Lauren A. Sugden, Sohini Ramachandran\nCreator:         PTC Arbortext Layout Developer 12.1.6180/W-x64\nProducer:        PDFlib+PDI 9.3.1p2 (C++/Win64)\nCreationDate:    Thu Jun  1 07:58:21 2023 CEST\nModDate:         Thu Jun  1 07:58:21 2023 CEST\nCustom Metadata: yes\nMetadata Stream: yes\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           24\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       3038998 bytes\nOptimized:       no\nPDF version:     1.6\n",
+  "stderr": ""
+}

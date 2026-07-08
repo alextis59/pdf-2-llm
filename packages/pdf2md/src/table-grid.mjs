@@ -30,12 +30,26 @@ export function assignTextLinesToGridCells(rulingGrids, textLines, options = {})
         continue;
       }
       const center = lineCenter(line);
-      const columnIndex = intervalIndexForCoordinate(center.x, grid.xEdges, tolerance);
       const bottomRowIndex = intervalIndexForCoordinate(center.y, grid.yEdges, tolerance);
-      if (columnIndex === null || bottomRowIndex === null) {
+      if (bottomRowIndex === null) {
         continue;
       }
       const rowIndex = grid.rows - 1 - bottomRowIndex;
+      const fragments = splitLineIntoCellFragments(line, grid, rowIndex, tolerance);
+      if (fragments.length > 0) {
+        for (const fragment of fragments) {
+          const cell = byCellKey.get(`${rowIndex}:${fragment.columnIndex}`);
+          if (cell) {
+            cell.lines.push(fragment.line);
+          }
+        }
+        continue;
+      }
+
+      const columnIndex = intervalIndexForCoordinate(center.x, grid.xEdges, tolerance);
+      if (columnIndex === null) {
+        continue;
+      }
       const cell = byCellKey.get(`${rowIndex}:${columnIndex}`);
       if (cell) {
         cell.lines.push(line);
@@ -368,6 +382,80 @@ function lineCenter(line) {
   return {
     x: x + width / 2,
     y: y + height / 2
+  };
+}
+
+function splitLineIntoCellFragments(line, grid, rowIndex, tolerance) {
+  const spans = Array.isArray(line.spans) ? line.spans : [];
+  const fragments = [];
+  for (const span of spans) {
+    const text = normalizeText(span.text);
+    const center = lineCenter(span);
+    const columnIndex = columnIndexForTableFragment(center.x, grid.xEdges, tolerance);
+    if (columnIndex === null) {
+      continue;
+    }
+    const last = fragments.at(-1);
+    if (!text) {
+      if (last?.columnIndex === columnIndex) {
+        last.spans.push(span);
+      }
+      continue;
+    }
+    if (last?.columnIndex === columnIndex) {
+      last.spans.push(span);
+    } else {
+      fragments.push({
+        columnIndex,
+        spans: [span]
+      });
+    }
+  }
+
+  const distinctColumns = new Set(fragments.map((fragment) => fragment.columnIndex));
+  if (distinctColumns.size <= 1) {
+    return [];
+  }
+
+  return fragments
+    .filter((fragment) => fragment.columnIndex >= 0 && fragment.columnIndex < grid.columns)
+    .map((fragment) => ({
+      columnIndex: fragment.columnIndex,
+      line: createFragmentLine(line, fragment.spans)
+    }));
+}
+
+function columnIndexForTableFragment(x, edges, tolerance) {
+  const intervalIndex = intervalIndexForCoordinate(x, edges, tolerance);
+  if (intervalIndex !== null) {
+    return intervalIndex;
+  }
+  if (x < edges[0] - tolerance) {
+    return 0;
+  }
+  if (x > edges.at(-1) + tolerance) {
+    return edges.length - 2;
+  }
+  return null;
+}
+
+function createFragmentLine(line, spans) {
+  const x1 = Math.min(...spans.map((span) => span.x));
+  const x2 = Math.max(...spans.map((span) => span.x + span.width));
+  const y1 = Math.min(...spans.map((span) => span.y));
+  const y2 = Math.max(...spans.map((span) => span.y + span.height));
+  const fontSizes = spans.map((span) => span.fontSize).filter(Number.isFinite);
+  return {
+    ...line,
+    text: normalizeText(spans.map((span) => span.text).join("")),
+    x: x1,
+    y: y1,
+    width: x2 - x1,
+    height: y2 - y1,
+    fontSize: fontSizes.length > 0 ? Math.max(...fontSizes) : line.fontSize,
+    spans,
+    glyphs: spans.flatMap((span) => (Array.isArray(span.glyphs) ? span.glyphs : [])),
+    sourceLine: line
   };
 }
 

@@ -30,6 +30,15 @@ const resources = {
           ["02", "B"]
         ])
       }
+    },
+    FWidth: {
+      subtype: "Type1",
+      baseFont: "Helvetica",
+      encoding: "WinAnsiEncoding",
+      hasToUnicode: false,
+      toUnicode: null,
+      firstChar: 32,
+      widths: Array.from({ length: 95 }, () => 500)
     }
   },
   xobjects: {
@@ -553,4 +562,74 @@ test("extractContentStreamTextLines tracks text matrices and CTM graphics state"
       ["restored", 10, 20]
     ]
   );
+});
+
+test("extractContentStreamTextLines stores effective font metrics under scaled CTM", () => {
+  const lines = extractContentStreamTextLines(
+    [
+      "q",
+      "18 0 0 18 200 668 cm",
+      "BT",
+      "/F1 1 Tf",
+      "0 0 Td",
+      "(Enabling) Tj",
+      "4.1291 0 Td",
+      "(interpretable) Tj",
+      "ET",
+      "Q"
+    ].join("\n"),
+    { resources }
+  );
+
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].text, "Enabling interpretable");
+  assert.equal(lines[0].fontSize, 18);
+  assert.equal(lines[0].height, 18);
+  assert.equal(lines[0].x, 200);
+  assert.equal(lines[0].y, 668);
+  assert.equal(lines[0].width, 191.3238);
+  assert.deepEqual(
+    lines[0].glyphs.slice(0, 3).map((glyph) => [glyph.text, glyph.x, glyph.width, glyph.fontSize]),
+    [
+      ["E", 200, 9, 18],
+      ["n", 209, 9, 18],
+      ["a", 218, 9, 18]
+    ]
+  );
+});
+
+test("extractContentStreamTextLines spaces positioned one-letter words without splitting fragments", () => {
+  const spaced = extractContentStreamTextLines(
+    [
+      "BT",
+      "/FWidth 10 Tf",
+      "200 300 Td",
+      "(showed) Tj",
+      "32.2 0 Td",
+      "(a) Tj",
+      "7.1 0 Td",
+      "(result) Tj",
+      "ET"
+    ].join("\n"),
+    { resources }
+  );
+  const glued = extractContentStreamTextLines(
+    ["BT", "/FWidth 10 Tf", "200 300 Td", "(exampl) Tj", "30.4 0 Td", "(e) Tj", "ET"].join(
+      "\n"
+    ),
+    { resources }
+  );
+  const possessive = extractContentStreamTextLines(
+    ["BT", "/FWidth 10 Tf", "200 300 Td", "(brain's) Tj", "34.4 0 Td", "(inductive) Tj", "ET"].join(
+      "\n"
+    ),
+    { resources }
+  );
+
+  assert.equal(spaced.length, 1);
+  assert.equal(spaced[0].text, "showed a result");
+  assert.equal(glued.length, 1);
+  assert.equal(glued[0].text, "example");
+  assert.equal(possessive.length, 1);
+  assert.equal(possessive[0].text, "brain's inductive");
 });

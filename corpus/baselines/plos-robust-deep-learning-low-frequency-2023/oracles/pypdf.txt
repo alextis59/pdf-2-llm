@@ -1,0 +1,671 @@
+RESEA RCH ARTICL E
+Robust deep learning object recognition
+models relyonlowfrequency information in
+natural images
+ZheLiID
+1☯*,Josue Ortega Caro ID
+1☯,Evgenia Rusak ID
+2,Wieland Brendel2,
+Matthias Bethge2,Fabio Anselmi ID
+1,Ankit B.Patel ID
+1,3,4‡,Andreas S.Tolias ID
+1,3,4‡*,
+XaqPitkow1,3,4‡*
+1Department ofNeuroscience, Baylor College ofMedicine, Housto n,Texas, United States ofAmerica,
+2University ofTu¨bingen, Germany, 3Departmen tofElectrical andComp uterEngineering, Rice Univers ity,
+Houston ,Texas, United States ofAmerica, 4Center forNeuroscience andArtificial Intelligence, Baylor
+College ofMedicine, Houston, Texas, United States ofAmerica
+☯These authors contribu tedequally tothiswork.
+‡ABP, AST, andXPalsocontributed equally tothiswork.
+*zhel@bc m.edu (ZL); astolias@bcm .edu (AST); xaq@rice.ed u(XP)
+Abstract
+Machine learning models have difficulty generalizin gtodata outside ofthedistribution they
+were trained on.Inparticular, vision models areusually vulnerable toadversarial attacks or
+common corruptions, towhich thehuman visual system isrobust. Recent studies have
+found thatregularizing machine learning models tofavor brain-like representatio nscan
+improve model robustness, butitisunclear why. Wehypothesize thattheincreased model
+robustness ispartly duetothelowspatial frequency preference inherited from theneural
+representation. Wetested thissimple hypothesis withseveral frequency-oriented analyses,
+including thedesign anduseofhybrid images toprobe model frequency sensitivity directly.
+Wealsoexamined many other publicly available robust models thatwere trained onadver-
+sarial images orwithdata augmentation, andfound thatallthese robust models showed a
+greater preference tolowspatial frequency information .Weshow thatpreprocessing by
+blurring canserve asadefense mechanism against both adversarial attacks andcommon
+corruptions, further confirming ourhypothesis anddemonstrating theutility oflowspatial fre-
+quency information inrobust object recognition.
+Author summary
+Though artificial intelligence hasachieved high performance onvarious vision tasks, its
+ability togeneralize toout-of-distribution data islimited. Most remarkably, machine
+learning models areextremely sensitive toinput perturbations such asadversarial attacks
+and common corruptions. Previous studies have observed that imposing aninductive bias
+towards brain-like representations canimprove therobustness ofmodels, butthereasons
+underlying thisbenefit were leftunknown. Inthiswork, wepropose and testthehypothe-
+sisthat therobustness ofbrain-like models canbeaccounted forbyalowfrequency
+PLOS COMP UTATIONAL  BIOLOGY
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 1/15a1111111111
+a1111111111
+a1111111111
+a1111111111
+a1111111111
+OPEN ACCESS
+Citation: LiZ,Ortega Caro J,Rusak E,Brendel W,
+Bethge M,Anselmi F,etal.(2023) Robust deep
+learning object recognition models relyonlow
+frequency information innatural images. PLoS
+Comput Biol19(3): e1010932. https://do i.org/
+10.1371/ journal.pcbi.10 10932
+Editor: Xue-Xin Wei,Columbia University ,UNITED
+STATES
+Received: March 4,2022
+Accepted: February 6,2023
+Published: March 27,2023
+Peer Review History: PLOS recognize sthe
+benefits oftranspar ency inthepeer review
+process; therefore, weenable thepublication of
+allofthecontent ofpeer review andauthor
+response salongside final, published articles. The
+editorial history ofthisarticle isavailable here:
+https://doi.o rg/10.1371/jo urnal.pcbi .1010932
+Copyright: ©2023 Lietal.Thisisanopen access
+article distributed under theterms oftheCreative
+Commons Attributi onLicense, which permits
+unrestricted use,distribution ,andreproduction in
+anymedium, provide dtheoriginal author and
+source arecredited .
+Data Availabilit yStatement: Alldataand
+computationa lcodes arereleased inthepublic
+repository https://githu b.com/lizhe07/b lur-net.
+
+feature preference inherited from theneural representation. Wedesigned anovel machine
+learning task toprobe thefrequency bias ofdifferent models and observed astrong corre-
+lation between that and model robustness. Webelieve thiswork serves asafirst step
+towards understanding why biological visual systems generalize well toout-of-distribu-
+tion data and provides anexplanation fortherobustness ofstate-of-the-art machine
+learning models trained with various methods. Italso opens thedoor toapplying compu-
+tational principles ofthebrain inartificial intelligence, hence helping toovercome the
+fundamental difficulties faced bycurrent AImethods.
+Introduction
+Currently, deep neural networks arethestate-of-the-art models fornumerous computer vision
+tasks such asobject detection [1],image recognition [2],semantic segmentation [3],etc.How-
+ever, these models areoften notrobust, asdemonstrated bytheir inability togeneralize tonew
+data distributions. Forinstance, current neural networks arenotable togeneralize tocommon
+corruption noise such asImageNet-C [4],where network performance isstress tested against
+15different kinds ofimage corruption applied totheImageNet dataset. Furthermore, these
+models seem tobeextremely sensitive totargeted noise such asadversarial attacks [5].Incon-
+trast, thehuman visual system does notseem tosuffer from such problems: inparticular, rec-
+ognizing object identity islittle affected bythecommon corruptions [6],and adversarial
+perturbations that break machine learning models areimperceptible tohumans [5].This dif-
+ference inbehavior between thebrains and deep learning algorithms might beexplained by
+differences ininductive bias, i.e.they learn different features from data. Accordingly, natural
+vision hasaninductive bias, abias towards which fixed network arelearned bytheoptimiza-
+tion algorithm from aclass ofmodels given thesetoftraining data, towards robust features,
+which means insensitivity toperturbations that donotchange theperceptual relevant latent
+variables such asobject identities. How canweinstill thebrain’s inductive bias towards robust
+totargeted and random noise distortions tothese deep learning algorithms? Recent work has
+shown that machine learning models that areencouraged tolearn brain-like representations, a
+paradigm known asneural regularization, arealso more robust tocertain common corrup-
+tions such asGaussian noise and adversarial attacks [7,8].Furthermore, other work has
+shown that models that explain more variation inprimate primary visual cortical (V1)
+responses also tend tobemore robust toadversarial attacks [9].
+Much recent parallel work hasalso attempted toproduce models that arerobust tocom-
+mon corruptions (ANT [10], SIN [11], DeepAugment, AugMix [4]) and toadversarial attacks
+(PGD Training [12], TRADES [13]). These models achieve significant improvements upon
+baseline models byemploying several other methods, including data augmentation, adversarial
+training, and anti-aliasing [14]. AutoAugment, adata augmentation method forcommon cor-
+ruption robustness, hasproduced improvements mainly forhigh frequency common corrup-
+tion noises [15]. Consistent with thiswork, wehypothesize that oneofthereasons forthe
+success ofcurrent robustness methods forboth common corruption and adversarial attacks
+canbeexplained byasimple computational principle: models that arebiased torelyonlow
+spatial frequency information forobject recognition aremore robust. Here, wetested this
+hypothesis with several frequency-oriented analyses. Finally, weintroduced asimple prepro-
+cessing step based onthese principles that produced robust models with comparable perfor-
+mance tothese more sophisticated methods.
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 2/15Funding: Thiswork issupported bytheIntelligence
+Advanced Research Projects Activity (IARPA) via
+Department ofInterior/Inte riorBusiness Center
+(DoI/IBC) (D16PC000 03toASTandXP),National
+EyeInstitute oftheNational Institutes ofHealth
+(R01EY02 6927 toAST), NEI/NIH Core Grant for
+Vision Researc h(EY-002520- 37)andNeuroNex
+(1707400 toXPandAST). Thefunders hadnorole
+instudy design, datacollection andanalysis ,
+decision topublish, orpreparation ofthe
+manuscript.
+Competing interests :Theauthors have declared
+thatnocompeting interests exist.
+
+Results
+Neural regularization boosts model robustness
+There aremany ways tobias amachine learning model toward brain-like computations, such
+asarchitecture, learning rules, thetraining dataset ortask’s objective functions [16]. Among
+them, methods that useauxiliary lossfunctions tobias models towards brain-like representa-
+tions arecalled neural regularization. Wewillfocus ontwoparticular forms ofneural regulari-
+zation: neural similarity regularization [7,17]and neural response regularization [8].Both
+methods directly encourage amodel tolearn abrain-like representation ofthevisual stimuli.
+The neural responses ofnatural images arelocated onalowdimension manifold inthe
+response space [18]. Similarly, foranymachine learning model, features ofimages stimuli also
+form their own manifold embedded inmodel feature space. Neural similarity regularization
+adjusts themanifold inthemodel’s hidden layers sothat itisbiased towards thesame geome-
+tryasthemanifold intheneural response space (Fig 1),while performing benchmark tasks
+likeimage classification atthesame time. Lietal.[7]showed that aResNet18 model regular-
+ized toincentivize itsrepresentational similarity [19], which isthepair-wise cosine similarity
+between therepresentation forasetofimages, tobemore liketheonemeasured inmouse V1
+ismore robust against Gaussian noise and adversarial attacks. Another way toinduce brain-
+likerepresentations istorequest themodel topredict neural responses ofthevisual input asan
+auxiliary task. Safarani etal.[8]showed that aVGG19 model co-trained with monkey V1data,
+where theVGG19’s core wasused topredict neural responses directly, isable toimprove
+robustness against common corruptions onTiny ImageNet. Since theneural readout module
+isshallow, theVGG19 core hastoencode neural features tomake theco-training work.
+Inthisstudy, weexpanded both neural regularization, either using mouse’s representational
+similarity matrix orusing themonkey responses directly, bytesting model robustness against
+various common corruptions and adversarial attacks.
+Since neurally regularized models aretrained ongrayscale images, weused grayscale ver-
+sions oftheCIFAR10-C and TinyImageNet-C datasets forevaluation. Models regularized with
+either mouse ormonkey V1representations have higher accuracy atdifferent severity levels of
+common corruptions compared tobaseline models (Fig 2aand 2e),though their performance
+onclean images isslightly worse. Targeted gradient-based boundary attacks [20] were per-
+formed tofind theminimum perturbations needed tochange model predictions towrong cat-
+egories. The useofstrong attacks iscritical inevaluating adversarial robustness, asweak
+attacks such asFGSM only provide aloose upper bound ontheminimum adversarial
+Fig1.Schemat icofneural similarit yregulariz ation. Machine learning models aretrained sothat thestimuli manifold inthemodel feature space
+resembles themanifold intheneural response space. The most simple version considers only pairwise relationships among stimuli instances. Two
+images that areclose intheneural response space should also beclose inthemodel feature space.
+https://doi.o rg/10.1371/j ournal.pcbi. 1010932.g001
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 3/15
+
+perturbation size. Weverified theeffectiveness ofboundary attacks byextensive comparison
+between many off-the-shelf methods, and areconfident itcharacterizes theadversarial robust-
+ness ofmodels. Evaluation onthetesting setshowed that neurally regularized models need
+larger adversarial perturbations onaverage (Fig 2band 2f),i.e.they aremore robust against
+adversarial attacks. The attack sizethat gives 50% success rate is�=1.25/255 forthebaseline
+ResNet and�=2.89/255 forthemouse regularized one. Ifwelook atthedistribution ofmini-
+mum perturbation sizeneeded foreach image, themean and standard deviation is�=
+(1.34±0.70)/255 forthebaseline ResNet, and�=(3.09±1.61)/255 forthemouse regularized
+one. Similarly, theattack sizethat gives 50% success rate is�=1.84/255 forthebaseline VGG
+and�=2.46/255 forthemonkey regularized one. And theminimum perturbation sizeforall
+images is�=(1.93±0.89)/255 forthebaseline VGG, and�=(2.64±1.26)/255 forthemonkey
+regularized one. Inthefollowing text, weusethemean value ofminimum perturbation sizes
+tocharacterize adversarial robustness ofthemodel.
+Anatural question is:what does theneural regularization do?First, wedecided to
+explore thestructure oftheneural similarity matrix ofmouse V1responses with asimple
+decomposition analysis. Wecalculated theeigenvalues and eigenvectors ofthesimilarity
+matrix and computed thelinear approximation ofeach principal component with respect to
+theimage. Weobserved that geometry ofmouse V1representation iswell approximated by
+asmall number ofprincipal components, and thespatial tuning ofthem reveals lowfre-
+quency structure (Fig DinS1Appendix). This hasledustoaskifthebias towards lowfre-
+quency features isinherited byneurally regularized models. Wedivided the15common
+corruptions intheCIFAR10-C and TinyImageNet-C datasets [22] into three categories
+based ontheir frequency spectra (Table AinS1Appendix). Low-frequency corruptions:
+‘snow’, ‘frost’, ‘fog’, ‘brightness’, ‘contrast’; medium-frequen cycorruptions: ‘motion_blur’,
+‘zoom_blur’, ‘defocus_blur’, ‘glass_blur’, ‘elastic_transform’, ‘jpeg_compression’, ‘pixelate’;
+Fig2.Neural regularization boosts model robustness and makes itless sensitive tohigh frequency compon entoftheinput. AResNet18 model
+(orange ina-d) wastrained forgrayscale CIFAR 10with mouse neural similarity regularizati on[7],aVGG19 model (orange ine-h) wastrained for
+grayscale TinyImag eNet with monkey neural response regularizati on[8].(a)Grayscale CIFAR1 0classificati onaccuracy against commo ncorruptions at
+different severity levels. Average accuracy over allcorruptio nsarereported forabaseline ResNet model (black) andamouse regula rized model
+(orange). (b)Success rate oftargeted attacks atdifferent perturbatio nbudget�,using theboundary attack [20] with anL1metric. (c)Classificatio n
+accuracy against differe nttypes ofcorruptio ns,broken down into three groups based ontheir frequenc ycharacteristi cs(Table AinS1Appendix).
+Model performan ceisaveraged over allseverity levels. (d)Radial profile oftheFourier spectrum ofadversarial perturba tions. Wefound theminimal
+adversarial perturb ations ofalltesting images, andcalculated theaveraged Fourier spectrum thereof, where blue isminimum and redismaximum
+values ofeach heat map respectively (insets), alogarithm scale color map isused forbetter visualizati on.The portion ofpower under different
+frequency threshold sarecompared between baseline and neurally regularized models. The abscissa istheabsolute value ofthespatial frequenc y,
+normalized bysampling frequenc yfs.(e–h) Same asa–d, except comparing abaseline VGG model with amodel co-trained with monkey neural data on
+thegrayscale TinyImageN etdataset [21].
+https://doi.o rg/10.1371/j ournal.pcbi. 1010932.g002
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 4/15
+
+high-frequency corruptions: ‘gaussian_noise’, ‘shot_noise’, ‘impulse_noise’. Fourier spectra
+ofdifferent corruptions areshown inFigAinS1Appendix. The biggest performance boost
+inmodel classification accuracy comes from thecategory with thehigh-frequency corrup-
+tions (Fig 2cand 2g).
+Wealso compared theadversarial perturbations forbaseline models and neurally regular-
+ized ones. Weperformed aFourier analysis ontheminimal adversarial perturbation found
+through ourboundary attack [20], and calculated theaverage frequency spectrum fordifferent
+models (insets ofFig2dand 2h). Weobserved that themouse and monkey neurally regular-
+ized models contain relatively higher low-frequency components than thebaseline model. To
+quantify thisfrequency shift, wecharacterized thefrequency preference byaradial profile of
+thespectrum oftheadversarial perturbation, i.e.thepower ofallFourier components whose
+frequency issmaller than certain values. Wefound theradial profile oftheadversarial pertur-
+bation spectrum fortheneurally regularized model isshifted toward lower frequencies (Fig 2d
+and 2h). Furthermore, wecanquantify thisshift bythehalf power frequency f0.5,which isthe
+frequency where half oftheFourier power liesbelow (marked bythedashed lineinFig2dand
+2h).f0.5=0.316±0.015 formouse regularized ResNet andf0.5=0.442±0.009 forbaseline,
+with mean and standard deviation estimated from 1000 images (Fig 2d). Similarly, f0.5=0.306
+±0.020 formonkey regularized VGG andf0.5=0.316±0.034 forbaseline (Fig 2h). The half
+power frequency f0.5issmaller fortheneurally regularized model compared with baseline,
+though effect onthemonkey regularized model ismuch weaker than themouse regularized
+one.
+Hybrid image experiment
+Todirectly probe thefrequency bias ofmodels, wenext designed anew dataset ofhybrid
+images constructed bymixing thelow-frequency components and high-frequency compo-
+nents from twodifferent images [23]. Weselect twoimages belonging totwodifferent catego-
+ries, and examine whether themodel prediction onthemixed image isconsistent with either
+component. Foragiven mixing frequency fmix,wecombine theFourier components ofan
+image whose frequencies aresmaller thanfmixwith Fourier components ofanother image
+whose frequencies arelarger thanfmix,and then useaninverse Fourier transformation togeta
+hybrid image (Fig 3a,seeMethods formore details).
+Wedenote theprobability that ahybrid image isclassified asthelow-/high-frequency seed
+image class asplowandphighrespectively, and calculate theprobability difference plow−phighat
+different mixing frequency values. When themixing frequency isvery small, thehybrid image
+isclose tothehigh frequency seed image, therefore phighishigh foraproperly trained model.
+Likewise, when themixing frequency isbig,plowishigh. Weareinterested inthemixing fre-
+quency whenplow=phigh,asitcharacterizes thefrequency bias ofamodel. Weterm thisfre-
+quency thereversal frequency frev.The result shows thatfrevissmaller foramouse regularized
+model (0.371±0.0006, mean±standard deviation estimated from 4randomly permuted
+hybrid image datasets) than abaseline model (0.528±0.0009), indicating that theneurally reg-
+ularized model ismore likely toclassify thehybrid image astheclass ofthelow-frequency
+component (Fig 3b). This provides strong evidence that thereason behind therobustness gain
+bymouse neural regularization could beabias towards low-frequency features. The same
+experiments and analysis were done formonkey regularized models aswell, butthelow-fre-
+quency bias issmaller compared tomice.frevis0.376±0.003 and 0.426±0.002 formonkey
+regularized VGG19 and abaseline model, respectively (Fig BinS1Appendix).
+Since itappears theneural induced robustness canbelargely accounted forbyeffectively
+changing thesensitivity todifferent spatial frequency, itisstraightforward toimplement such
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 5/15
+
+principle viaasimple preprocessing ofimages. Wepropose twosimple methods forfiltering
+images and willdescribe them inthenext section.
+Frequency analysis onrobust models
+Wethen asked ifother models that arenotregularized with neural data, butengineered tobe
+robust tocommon corruptions and adversarial attacks also have thislowfrequency bias. To
+thisend, weanalyzed and compared several robust models trained onCIFAR10, most of
+which were downloaded from RobustBench [24]. Some ofthemodels aretrained foradversar-
+ialrobustness and some aretrained forcommon corruption robustness. Afulldescription of
+models islisted inTable BinS1Appendix. Since themouse regularized model inFig2was
+trained ongrayscale CIFAR10, itisnotincluded inthiscomparison.
+Two additional models were trained and included inthiscomparison. Both models were
+constructed byattaching apreprocessing layer before aResNet18 model. The parameters of
+thepreprocessing arenottrainable butfixed beforehand. One iscalled the‘blur’ model asthe
+preprocessing isaconvolution with aGaussian kernel ofstandard deviation σ.The other is
+called the‘PCA’ model asthepreprocessing keeps only thefirstKprincipal components (PCs)
+calculated from alltraining images.σandKarechosen such that theclassification accuracy on
+CIFAR10 ofboth models arearound 90%, similar toother robust models. More details are
+included intheMethods section.
+The ‘blur’ model directly biases themodel towards low-frequency features, because thehigh
+frequency features areattenuated during thepreprocessing step. The filtering offeatures based
+ontheir spatial frequency canbetreated asaspecial form ofreweighting ofinput principal
+components, since principal component analysis onnatural images with translation invariance
+recovers theFourier basis, and thevariance explained byafeature usually decreases monotoni-
+cally asfrequency increases. Hence a‘PCA’ model that explicitly projects theoriginal image
+onto alowdimensional space spanned bythefirst PCs isalso included inthecomparison. The
+hypothesis behind ‘PCA’ model isthat thedirections parallel tothedata manifold arerobust
+features, and perturbations that areorthogonal tothemanifold canbesafely removed. Since
+natural images have thegreatest variance inlowfrequencies, thedistance ofanydata point toa
+Fig3.Probing frequency sensitivity ofmouse regularize dmodel using hybrid images. (a)Examples ofhybrid images atdifferent mixing
+frequencies. Hybrid images areconstructe dbymixing thelow-freq uency compone ntofoneimage and thehigh-freq uency compone ntofanother,
+while thetwoseed images belong todifferent categories. The range ofmixing frequency’s values arenormalized bytheNyquist frequency .(b)Model
+predictions onhybrid images atdiffere ntmixing frequencies. Asmore low-frequen ciesfrom oneimage areincluded, theprobability that anetwork
+reports itslabelplowincreases .The reversal frequenc yfrevwhereplow=phighissmaller forthemouse regularized model (‘neural’) than forthebaseline
+model (‘base’).
+https://doi.o rg/10.1371/j ournal.pcbi. 1010932.g003
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 6/15
+
+class boundary arelongest along lowfrequency dimensions, and thus amodel that mainly uses
+these lowfrequencies should bethemore robust. Previous work also found that thiskind of
+PCA data preprocessing increases robustness toadversarial attacks [25].
+Similar totheanalysis done onneurally regularized models, wecalculated theFourier spec-
+trum ofminimum adversarial perturbations forallrobust models. Afixed setof1000 images
+were selected from testing set,and theincorrect class targets foreach image wasalso fixed. The
+adversarial perturbations forrobust models, including theones notspecifically trained for
+adversarial robustness, contained more lowspatial frequency components, while inthebase-
+linemodels, adversarial perturbations were dominated byhigh spatial frequency components
+(Fig 4a).Tobetter visualize thedifferences ofadversarial spectrum shape, weplotted theradial
+Fig4.Frequen cyanalysis ofadversaria lattacks onrobust models trained onCIFAR10 .(a)The Fourier spectrum oftheminima ladversar ial
+perturbatio nsofdifferent models, including sixbaseline models (‘base’), seven models trained foradversar ialrobustness (‘adv’), twomodels for
+corruption robustnes s(‘crp’), onemodel with preproce ssing byblurring (‘blur’), andonewith preprocessin gbyPCA compress ion(‘pca’). Model details
+arelisted inTable BinS1Appendix. The spectrum isaveraged over 1000 images, and color maps arenormalized separately foreach panel. (b)Radial
+profiles ofadversar ialperturbat ionspectra. Light thin lines represent each individual model, while thick lines aretheaverage within each group. The
+frequency where each linecrosses 50% isdenoted ashalfpower frequenc yf0.5.(c)Scatter plot ofminim umadversar ialperturbat ionsizeversusf0.5for
+allmodels.
+https://doi.o rg/10.1371/j ournal.pcbi. 1010932.g004
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 7/15
+
+spectrum foreach model. The portions ofthespectral power within different spatial frequen-
+ciesarecompared (Fig 4b), and thehalf power frequency f0.5ismarked bythedashed line.
+Compared with thebaseline model, allrobust models have smallerf0.5,indicating themini-
+mum adversarial perturbations forthem have lower frequencies. The sizeofaverage minimal
+perturbations areplotted againstf0.5inFig4c,revealing anegative correlation between adver-
+sarial robustness and thefrequency bias ofthemodel.
+Wenext tested model predictions onhybrid images. Hybrid images forRGB CIFAR10 are
+constructed similarly asinFig3a.The reversal frequencies frevforallmodels areplotted against
+theclassification accuracy ontheCIFAR10-C dataset (averaged over allcorruptions and sever-
+itylevels) inFig5b.The result shows that allmodels aremore robust tocommon corruptions
+than thebaseline, even those trained foradversarial robustness. They allhave alowfrequency
+bias characterized byfrev,which suggests that lowfrequency information ismore important to
+these models. However, oneinteresting observation isthat compared toadversarial attacks,
+common corruption robustness seems tocapinanspecificfrev.Forexample theadversarially
+robust models (blue) have smaller corruption accuracy compared totheother robust models.
+This seems toindicate atrade-off, where using toofewfrequencies ends upaffecting perfor-
+mance. Wedecided toexplore thisbyusing different ‘blur’ models with increasing blurring
+kernels’ size. InFig5b,weobserve that most models except theones trained forcommon cor-
+ruption robustness lieclose tothecurve (light green) fitto‘blur’ models (light green crosses).
+This isanindication that thedecrease inperformance asafunction offrevcanbepartly
+explained through thefrequency preference ofthemodels.
+Next weexplored thisrelationship between robustness and frequency bias onmodels
+trained forImageNet classification. Inaddition toabaseline model, weanalyzed twoadversa-
+rially trained models, sixmodels trained forrobustness tocommon corruption and amodel
+with blurring preprocessing layer (Table CinS1Appendix). InFig6a,weplot theminimum
+adversarial perturbation size�with respect tothehalf-power frequencies, f0.5,ofadversarial
+perturbation spectra. Wecanobserve that theminimum perturbation sizeisnegatively
+Fig5.Hybrid CIFAR10 image classificat ionperforma nceofrobust models. (a)Difference between probability ofchoosing thelowfrequenc ylabel
+vsthehigh frequenc ylabel ofhybrid images. AsinFig4,light thin lines represent each individual model and thick lines aretheaverage within each
+group. (b)Scatter plot ofmodel accuracy onCIFAR10-C dataset versus reversal frequency frevinhybrid image classificati on.The dashed green lineis
+theperforman ceofaseries of‘blur’ models, using different degree oflow-pass filtering. The leftendcorrespond stoσ=3pixels and theright end
+correspond stoσ=1pixel, while thegreen dotisthemodel withσ=1.5pixel listed inTable BinS1Appendix.
+https://doi.o rg/10.1371/j ournal.pcbi. 1010932.g005
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 8/15
+
+correlated with half-power frequencies, thisindicates that robustness toadversarial attacks is
+correlated with adversarial attacks that have more energy inlowfrequencies.
+Furthermore, Fig6bshows corruption accuracy versus thereverse frequency, frev,forthe
+ImageNet-C dataset. Here weobserve that thecommon corruption robust models aremore
+robust than thebaseline and have smallerfrev,consistent with ourfindings inCIFAR10 mod-
+els.However theadversarially robustness models arelessrobust than baseline even though
+they have smallerfrev.This isprobably because theclean performance ofadversarially robust
+models onthisdataset istoolow, therefore they arenotcomparable tobaseline (Table CinS1
+Appendix).
+Similar totheanalysis done forCIFAR10 models, wetrained aseries of‘blur’ models with
+different blurringσ(light green crosses inFig6b). Weobserve thesame ‘Goldilocks’ behavior
+inFig6b,that either toomuch ortoolittle blurring decreases model performance oncor-
+rupted images. Other models deviate from this‘blur’ model manifold more compared with the
+results forCIFAR10 dataset (Fig 5b), suggesting that asimple low-/high-frequency view onthe
+robustness islessaccurate formodels trained onlarger images. Forexample, perhaps some
+robust features insuch dataset arenotentirely low-frequency. While ‘blur’ models for
+CIFAR10 aretrained from scratch, ‘blur’ models forImageNet areinitialized byapre-trained
+baseline ResNet50 model (‘base’ inFig6)and fine-tuned after thefixed blurring layer isadded.
+This might induces some bias onthe‘blur’ models towards thebaseline model and affects the
+frequency tuning properties.
+Discussion
+Recent studies have linked brain-like representations torobustness ofdeep network models
+[7–9]. Byintroducing anovel hybrid image task, wewere able tostudy thefrequency prefer-
+ence ofaneural networks, and show that these brain-like models were more robust mainly
+through apreference towards lowspatial frequency features. This work follows inspirit the
+approach ofGeirhos etal.[11], where theauthors combined theshape ofaninput and thetex-
+ture ofanother onetoproduce aninput that hadfeatures with “conflicting information”
+Fig6.Frequen cyanalysis ofmodels trained onImageN et.One baseline model (‘base’) ,twomodels (‘adv’) trained foradversarial robustness ,
+and sixmodels (‘crp’) trained forcorruptio nrobustness arecompared .(a)Minimum adversarial perturbatio nsize�versus thehalf-power
+frequency f0.5calculate dfrom adversarial perturbatio nspectra. (b)Model accuracy onImageNet -Cdataset versus reverse frequency frev
+calculated from hybrid image experime nt.
+https://doi.org/10 .1371/journal.p cbi.1010932.g00 6
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 9/15
+
+towards different classes. This approach ofproducing cue-conflict style tasks seems tobeuseful
+forunderstanding themodel preference towards certain features and notothers.
+Furthermore, wehave shown that thisbias ispresent inanextensive group ofmachine
+learning models trained forrobustness: wefound that robustness tocommon corruptions and
+adversarial examples arecorrelated with thislowfrequency bias. However, there seems tobea
+difference between robust models onCIFAR10 vsImageNet. Adversarially robust models are
+more robust tocommon corruptions onCIFAR10 butnotonImageNet. Previous work has
+also shown that adversarially robust models arenotrobust tocommon corruptions [26]. How-
+ever, they attributed thisbehavior toboth perturbations having qualitative different properties.
+Inourcase, weargue that adversarial robustness inImageNet dataset ismore difficult to
+achieve, and therefore themodels weanalyzed cannot handle perturbations aslarge asthe
+ones incommon corruptions compared toCIFAR10 trained models. Allofthisseem toindi-
+cate that robustness todifferent datasets might beachieved through different methods but
+low-frequency preference seem tobeakeycomponent ofcurrent robust models.
+The mouse regularized model shows aclear bias towards lowspatial frequency compared
+with thebaseline (Figs 2dand 3b), which must beinherited from theneural representation of
+mouse V1.Wehence decomposed themouse V1manifold and looked atthespatial tuning of
+major components. Wefound that thedominant dimensions ofneural population responses
+canbeapproximately described bylinear receptive fields with lowspatial frequency (Fig Din
+S1Appendix), and that istheorigin oflowfrequency preference ofmouse regularized model.
+Although wedoobserve statistically significant effect oflowfrequency bias inmonkey regular-
+ized model, itismuch weaker than that inthemouse regularized one. Wespeculate itis
+because monkey V1representation encodes other robust features that arenotlowspatial fre-
+quency. Analysis inSafarani etal.[8]shows monkey regularized model emphasizes thesalient
+regions ofimages more than other control models, which suggests that therobustness isdueto
+more than justachange onfrequency sensitivity.
+Previous physiological experiments [27–29] have measured thetuning properties ofneu-
+rons inmouse and monkey visual cortices. Here wetake thevalues from Table 1ofVan den
+Bergh etal.[29] regarding thepreferred spatial frequency ofaneuron, which are0.04 cycles/
+degformouse V1and 2.43 cycles/deg formonkey V1.Wecansafely assume each natural
+image used intheneural regularization studies [7,8]contains oneobject, and treat theimage
+sizeasauniversal length unit. Inthemouse regularization work, each image used intheexper-
+iment isapproximately 67.5 visual degrees inheight, therefore thepreferred frequency ofV1
+neuron isabout 2.7cycles perimage. Inthemonkey regularization work, each image is
+approximately 6.7visual degrees, hence thepreferred frequency ofV1neuron isabout 16.3
+cycles perimage. The difference innormalized preferred spatial frequencies isalso consistent
+with theobservation that mouse regularized model shows more lowfrequency bias and robust-
+ness than themonkey regularized counterpart.
+Inaddition, wewere able tousethestrategy ofbiasing towards lowspatial frequencies and
+enforced itwith asimple preprocessing layer toproduce robustness onparwith thisgroup of
+robust machine learning methods. Previous work hasalso tried tousefrequency information
+toproduce robust models forImageNet [14, 30,31]. Forexample, antialising hasbeen shown
+toimprove robustness tocommon corruptions when introduced before orafter thenonlinear-
+ities ofdifferent models [14, 31]. However, thismethod seems tobehave differently than our
+preprocessing models. Forexample, these anti-aliasing models decrease inperformance asyou
+gointo thehigh frequency corruptions, similar tothebaseline models. This isincontrast to
+theother robust models that perform better onhigh frequency corruptions compared tolow
+frequency ones. Astheauthors explained intheir work, theanti-aliasing methods focus more
+onproducing shift-invariant models while preserving asmuch high frequency information as
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 10/15
+
+possible. This might bethereason why thismodel behaves differently than the‘blur’ or‘PCA’
+models which explicitly attenuate high frequency information from theinput, and why our
+models behave more similarly toneurally regularized and data augmented models. This indi-
+cates that there canbedifferent approaches toproducing robust models tocommon corrup-
+tions with focus ondifferent properties ofthefrequency spectrum.
+However, asprevious work hasshown, using lowfrequency bias hasitslimitations. For
+example, Yinetal.[15] have shown that training amodel onthe“Fog” common corruption
+only using thefrequency, butnotthespatial information isinsufficient togeneralize tothe
+same “Fog” common corruption during testing. This makes sense given that thecorruption
+hasavery specific spatial structure that does notdepend only onthefrequency. Inaddition, as
+weobserved inFigs 5band 6b,thebias towards lowfrequencies canbetoostrong, such that
+theperformance deteriorates. This suggests that toreduce thegapbetween humans and
+machine learning models inout-of-distribution generalization, wemust move beyond thislow
+frequency-based preference found incurrent robust machine learning models and find abetter
+and more principled inductive bias.
+One possibility toachieve thisgrand goal istouseideas from neuroscience. Asourand pre-
+vious work hassuggested, neuroscience hasprovided inspiration tomachine learning, butspe-
+cific paradigms todirectly translate biological scientific insights and data into aperformance
+improvement inmachine learning arelargely absent. The neural regularization approach isa
+demonstration that thisdirection canhelp engineer more intelligent algorithms tousher the
+new field ofNeuroAI. Furthermore, given that current machine learning models arestillnot
+robust toadversarial attacks and common corruptions, thiswork isjustthestart ofbridging
+thegapbetween natural and artificial intelligence.
+Besides making themodel representation bemore brain-like, recent research hasalso intro-
+duced other neural features into machine learning models tomake itmore robust, forexample
+using biologically-constra ined Gabor filters asthefirst layer and adding stochasticity tomimic
+thespiking responses inneural systems [9].The more biological Gabor filters functions much
+likeourblurring preprocessing layer, since they both gains Fourier components toenhance
+features incertain spatial frequency interval. Wedonotputtoomuch effort onthethestochas-
+ticity asthere have been evidence that such defense mechanism usually cause gradient masking
+asobfuscated gradients [32] and overestimated themodel robustness. When properly attacked,
+forexample computing theexpectation over instantiations ofrandomness, theappeared
+adversarial robustness isgone [32]. Evaluation ofstochastic models does notfollow thesame
+protocol asthat ofdeterministic ones [24], wetherefore focus only deterministic models as
+they gain therobustness through using different representation from that inbaseline models.
+One recent research [33] measured thepreferred spatial frequency ofindividual model
+units viain-silico electrophysiology experiments, and showed that representation ofrobust
+models aremore aligned with macaque V1neurons interms ofthedistribution ofpreferred
+spatial frequencies compared with non-robust models. Based ontheeigenspectrum analysis,
+they suggested that therobustness isduetosmaller portion ofhigh-frequency tuning units in
+therobust models. Our work iscomplementary totheir results asweanalyze themodel fre-
+quency preference onthebehavioral aspect instead ofindividual model units.
+Methods
+Hybrid images
+Werandomly select twoimagesIlowandIhighfrom twodifferent categories asseed images for
+low-frequency and high-frequency components respectively. The 2DFourier transform of
+these twoimages aredenoted as~Ilowand~Ihigh,and wedefine abinary mask onfrequency
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 11/15
+
+domain as
+MðfÞ¼1;kfk�fmix
+0:otherwise(
+ð1Þ
+The Fourier transform ofthehybrid image isthus thecombination of~Ilowand~IhighthroughM,
+according to~Ihybrid¼~Ilow�Mþ~Ihigh�ð1 MÞ,where�denotes anelement-wise product.
+The hybrid imageIhybrid iscalculated from ~Ihybridusing aninverse Fourier transform.
+Blur model
+Wedesigned ablur model toexplicitly implement afrequency bias. Our blur model issimply a
+ResNet model prepended with ablurring layer. The blurring layer isalinear convolutional
+layer whose kernel weight isfixed as
+wðDx; DyÞ¼1
+Zexp Dx2þDy2
+2s2��
+ð2Þ
+inwhichZisthenormalization factor. The blurring layer canpass agradient back totheinput
+image, sogradient-based adversarial attacks canbeperformed. Clean performance ofthe‘blur’
+model decreases asσincreases because more information isdiscarded. Wechoose thevalue of
+σsuch that thetrained model hasasimilar classification accuracy onCIFAR10 testing setcom-
+pared with other robust methods; σ=1.5pixel isselected.
+PCA model
+Similar totheblurring model, thePCA model isalso aResNet model with anon-trainable pre-
+processing layer. Treating theinput image asavectorxwhose dimension Nisthenumber of
+pixels, wefirst performed principal component analysis (PCA) onthetraining setand
+obtained theeigenvectors vi(1�i�N)sorted bytheir eigenvalues. Wetook thefirstKeigen-
+vectors, denoted byaK×NmatrixWK,and constructed thefiltering matrix
+W¼WK�WKT: ð3Þ
+The PCA preprocessing layer isalinear layer whose input and output dimensions arebothN,
+with itsweights given bythematrixW.This layer projects theoriginal image onto thesubspace
+spanned bythefirstKeigenvectors, and effectively denoises theimage. Similarly totheblur
+model, thePCA model allows gradient backward passes totheinput image, and canbe
+attacked with gradient-based adversarial attacks. The value ofKischosen sothat thetrained
+model hasasimilar clean performance compared with other models, andK=512wasselected
+fortheCIFAR10 dataset.
+Model training and evaluation
+The details about training mouse regularized models canbefound inLietal.[7].The details
+about training monkey regularized models canbefound inSafarani etal.[8].Models forstan-
+dard CIFAR10 and ImageNet tasks arefetched through RobustBench [24] except forthepre-
+processing ones.
+Toevaluate adversarial robustness ofmodels, weused Foolbox [34, 35]toperform targeted
+attacks using both gradient-based boundary attacks and projected gradient descent attacks
+(PGD) onafixed subset oftesting images. Foreach image, theattack target class ispredeter-
+mined inarandom way. Wegather allcandidates proposed bydifferent attack algorithms and
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 12/15
+
+random seeds foreach image, and pick theonewith minimum perturbation sizeasthefinal
+adversarial example.
+Codes fortraining ‘blur’ and ‘PCA’ models, robustness evaluation ofallmodels canbe
+found inhttps://github.com /lizhe07/blur-net.
+Disclaimer
+The U.S. Government isauthorized toreproduce and distribute reprints forGovernmental
+purposes notwithstanding anycopyright annotation thereon. The views and conclusions con-
+tained herein arethose oftheauthors and should notbeinterpreted asnecessarily representing
+theofficial policies orendorsements, either expressed orimplied, ofIARPA, DoI/IBC, orthe
+U.S. Government.
+Supporting information
+S1Appendix. Additional analysis and results.
+(PDF)
+Author Contributions
+Conceptualization: Zhe Li,Josue Ortega Caro, Ankit B.Patel, Andreas S.Tolias, Xaq Pitkow.
+Data curation: Zhe Li,Josue Ortega Caro.
+Formal analysis: Zhe Li,Josue Ortega Caro.
+Funding acquisition: Ankit B.Patel, Andreas S.Tolias, Xaq Pitkow.
+Resources: Evgenia Rusak, Wieland Brendel.
+Supervision: Ankit B.Patel, Andreas S.Tolias, Xaq Pitkow.
+Writing –original draft: Zhe Li,Josue Ortega Caro, Ankit B.Patel, Andreas S.Tolias, Xaq
+Pitkow.
+Writing –review &editing: Zhe Li,Josue Ortega Caro, Evgenia Rusak, Wieland Brendel,
+Matthias Bethge, Fabio Anselmi, Ankit B.Patel, Andreas S.Tolias, Xaq Pitkow.
+References
+1.Girshick R.Fast r-cnn. In:Proceedings oftheIEEE interna tional conferenc eoncomputer vision; 2015.
+p.1440–1448 .
+2.HeK,Zhang X,RenS,SunJ.Deep residual learning forimage recogni tion.In:Procee dings oftheIEEE
+conferen ceoncomputer vision andpattern recognition; 2016. p.770–778.
+3.HeK,Gkioxar iG,Dolla´rP,Girshick R.Mask r-cnn. In:Proceedings oftheIEEE internationa lconferenc e
+oncomputer vision; 2017. p.2961–2 969.
+4.Hendryck sD,MuN,Cubuk ED,Zoph B,Gilmer J,Lakshm inarayanan B.AugMix: ASimple Method to
+Improve Robustnes sandUncertainty under Data Shift. In:International Conferen ceonLearning Repre-
+sentations; 2020. Available from: https:// openreview .net/forum? id=S1gmrxH FvB.
+5.Szegedy C,Zaremba W,Sutskever I,Bruna J,Erhan D,Goodfellow I,etal.Intriguing properties ofneu-
+ralnetworks. arXiv preprint arXiv:13 126199. 2013;.
+6.Geirhos R,Janssen DH,Schu¨ttHH,Rauber J,Bethge M,Wichmann FA.Comparing deep neural net-
+works against humans: object recogni tionwhen thesignal getsweaker. arXiv e-prints. 2017;.
+7.LiZ,Brendel W,Walker E,Cobos E,Muhamm adT,Reimer J,etal.Learning from brains howtoregu-
+larize machines. In:Wallach H,Laroche lleH,Beygelzime rA,d’Alche ´-Buc F,FoxE,Garnett R,editors.
+Advances inNeural Information Processin gSystem s32.Curran Assoc iates, Inc.;2019. p.9525–9 535.
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 13/15
+
+8.Safarani S,NixA,Willeke K,Cadena SA,Restivo K,Denfield G,etal.Towards robust vision bymulti-
+tasklearning onmonkey visual cortex. In:Advances inNeural Information Processin gSystem s34.
+Curran Associat es,Inc.;2021.
+9.Dapello J,Marque sT,Schrimpf M,Geiger F,CoxD,DiCarlo JJ.Simulatin gaPrimary Visual Cortex at
+theFront ofCNNs Improves Robustnes stoImage Perturbatio ns.In:Larochelle H,Ranzato M,Hadsell
+R,Balcan MF,LinH,editors. Advances inNeural Information Processin gSystem s33.vol.33.Curran
+Associates ,Inc.;2020. p.13073–13087 .
+10. Rusak E,Schott L,Zimmerm annRS,Bitterwol fJ,Bringmann O,Bethge M,etal.ASimple Way toMake
+Neural Networ ksRobust Against Diverse Image Corruptions .In:Vedaldi A,Bischof H,Brox T,Frahm
+JM,editors. Comp uterVision –ECCV 2020. Cham: Springer Internationa lPublish ing;2020. p.53–69.
+11. Geirhos R,Rubisch P,Michaelis C,Bethge M,Wichmann FA,Brendel W.ImageNet-tr ained CNNs are
+biased towards texture; increasin gshape biasimproves accuracy androbustne ss.In:International
+Conferen ceonLearning Representa tions; 2019.
+12. Madry A,Makelov A,Schmidt L,Tsipras D,Vladu A.Towards deep learning models resistant toadver-
+sarial attacks. arXiv e-prints. 2017;.
+13. Zhang H,YuY,JiaoJ,Xing E,ElGhaoui L,Jordan M.Theoretically principled trade-off between robust-
+ness andaccuracy. In:International Conferen ceonMachine Learning. PMLR; 2019. p.7472–7482.
+14. Zhang R.Making convolutio nalnetworks shift-invar iantagain. In:International conferen ceonmachine
+learning. PMLR; 2019. p.7324–7334.
+15. YinD,Gontijo Lopes R,Shlens J,Cubuk ED,Gilmer J.AFourier Perspe ctive onModel Robustnes sin
+Computer Vision. In:Advances inNeural Informatio nProcessin gSystem s32.vol.32.Curran Associ-
+ates, Inc.;2019. p.13276–13286 .
+16. Sinz FH,Pitkow X,Reimer J,Bethge M,Tolias AS.Engineeri ngalessartificia lintelligence. Neuron.
+2019; 103(6):967 –979. https://doi.or g/10.1016/ j.neuron.201 9.08.034 PMID: 31557461
+17. Federer C,XuH,Fyshe A,Zylberbe rgJ.Improved object recognition using neural networks trained to
+mimic thebrain’s statistical properties. Neural Networks. 2020; 131:103 –114. https://doi.or g/10.101 6/j.
+neunet.2 020.07.013 PMID: 327718 41
+18. Stringer C,Pachitar iuM,Steinmetz N,Carandi niM,Harris KD.High-dime nsional geometry ofpopula-
+tionresponse sinvisual cortex. Nature. 2019; 571(7765) :361–365. https:// doi.org/10.10 38/s4158 6-019-
+1346-5 PMID: 312433 67
+19. Kriegesk orteN,MurM,Bandett iniP.Represent ational similarity analysis—con necting thebranche sof
+systems neuroscie nce.Frontie rsinSystems Neurosc ience. 2008; 2:4.https://doi.or g/10.338 9/neuro.
+06.004.2 008PMID: 19104670
+20. Brendel W,Rauber J,Ku¨mmerer M,Ustyuzhan inovI,Bethge M.Accurate, reliable andfastrobustne ss
+evaluatio n.In:Wallach H,Laroche lleH,Beygelzim erA,d’Alche ´-Buc F,FoxE,Garnett R,editors.
+Advances inNeural Information Processin gSystem s32.Curran Assoc iates, Inc.;2019. p.12861–
+12871.
+21. LeY,Yang X.TinyImageNet visual recognition challeng e.CS231N. 2015; 7(7):3.
+22. Hendryck sD,Dietterich T.Benchmar kingNeural Network Robustn esstoCommon Corrupti onsand
+Perturbatio ns.In:International Conferen ceonLearning Represent ations; 2019. Available from: https://
+openreview .net/foru m?id=HJz6tiC qYm.
+23. Oliva A,Torralba A,Schyns PG.Hybrid Images. ACM Trans Graph. 2006; 25(3):527– 532. https://doi.
+org/10.1145/ 1141911.1141 919
+24. Croce F,Andriushc henko M,Sehwag V,Flammario nN,Chiang M,Mittal P,etal.RobustBench: astan-
+dardized adversar ialrobustnes sbenchmar k.arXiv e-prints .2020;.
+25. Bhagoji AN,Cullina D,Sitawarin C,Mittal P.Enhancing robustne ssofmachine learning systems via
+data transfor mations. In:2018 52nd Annua lConferen ceonInformation Sciences andSystems (CISS) .
+IEEE; 2018. p.1–5.
+26. Laugros A,Caplier A,Ospici M.Areadversarial robustne ssandcommo nperturbation robustnes sinde-
+pendant attribu tes?In:Procee dings oftheIEEE/CV FInterna tional Conference onComputer Vision
+Workshops; 2019. p.0–0.
+27. Ringach DL,Hawken MJ,Shapley R.Recep tivefieldstructure ofneurons inmonkey primary visual cor-
+texrevealed bystimulation withnatural image sequences. Journal ofVision. 2002; 2(1):2–2. https://doi.
+org/10.1167/ 2.1.2 PMID: 126785 94
+28. Niell CM,Stryker MP.Highly Selective Receptiv eFields inMouse Visual Cortex. Journal ofNeurosci-
+ence. 2008; 28(30):752 0–7536. https:// doi.org/10.15 23/JNEU ROSCI.0623 -08.2008 PMID: 18650330
+29. VandenBergh G,Zhang B,Arckens L,Chino YM.Recep tive-field properties ofV1andV2neurons in
+mice andmacaque monkeys .TheJournal ofcomparati veneurology. 2010; 518:2051–70. https://do i.
+org/10.1002/ cne.22321 PMID: 20394058
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 14/15
+
+30. Caro JO,JuY,Pyle R,DeyS,Brendel W,Anselmi F,etal.Local convolutio nscause animplicit bias
+towards highfrequenc yadversarial examples .arXiv preprint arXiv:200611 440. 2020;.
+31. Vasconcelo sC,Laroche lleH,Dumoulin V,Roux NL,Goroshin R.Aneffective anti-aliasing approac h
+forresidual networks .arXiv e-prints. 2020;.
+32. Athalye A,Carlini N,Wagner D.Obfuscate dGradients Give aFalse Sense ofSecurity: Circumvent ing
+Defenses toAdversarial Examples. vol.80ofProceedings ofMachine Learning Research. Stock-
+holmsma ¨ssan, Stockholm Sweden: PMLR; 2018. p.274–283. Availab lefrom: http://pro ceeding s.mlr.
+press/v80/at halye18a.htm l.
+33. Kong NCL, Margali tE,Gardner JL,Norcia AM.Increasing neural network robustnes simproves match
+tomacaque V1eigensp ectrum, spatial frequenc ypreference andpredicti vity.PLOS Comp utational
+Biology. 2022; 18(1):1–25 .https://doi.or g/10.137 1/journal.pcbi .100973 9PMID: 34995280
+34. Rauber J,Zimmerm annR,Bethge M,Brendel W.Foolbox Native: Fast adversar ialattacks tobench-
+mark therobustnes sofmachine learning models inPyTorch, TensorFlo w,andJAX. Journal ofOpen
+Source Software. 2020; 5(53):2607 .https://doi.or g/10.21105/ joss.02607
+35. Rauber J,Brendel W,Bethge M.Foolbox: APython toolbox tobenchmar ktherobustness ofmachine
+learning models. In:Reliable Machine Learning intheWild Workshop, 34th Interna tional Conferen ceon
+Machine Learning; 2017. Availab lefrom: http://arxiv .org/abs/1707. 04131.
+PLOS COMP UTATIONAL  BIOLOGYRobust deep models relyonlowfrequenc yinformati on
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1010932 March 27,2023 15/15

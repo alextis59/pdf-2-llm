@@ -205,7 +205,47 @@
       "minimumCount": 5,
       "strategy": "Retrieve open papers with columns, formulas, and references.",
       "why": "Tests reading order, equations, and captions.",
-      "candidates": []
+      "candidates": [
+        {
+          "id": "plos-interpretable-ml-reliability-2023",
+          "sourceType": "url",
+          "url": "https://journals.plos.org/ploscompbiol/article/file?id=10.1371%2Fjournal.pcbi.1011175&type=printable",
+          "targetPath": "corpus/raw/_incoming/plos-interpretable-ml-reliability-2023.pdf",
+          "licenseName": "Creative Commons Attribution License",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+          "licenseNotes": "PLOS article page states the paper is distributed under the Creative Commons Attribution License.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id plos-interpretable-ml-reliability-2023",
+          "notes": "PLOS Computational Biology research paper with two-column scientific layout, figures, equations, references, and machine-learning terminology."
+        },
+        {
+          "id": "plos-metagenomic-ml-meta-analysis-2016",
+          "sourceType": "url",
+          "url": "https://journals.plos.org/ploscompbiol/article/file?id=10.1371%2Fjournal.pcbi.1004977&type=printable",
+          "targetPath": "corpus/raw/_incoming/plos-metagenomic-ml-meta-analysis-2016.pdf",
+          "licenseName": "Creative Commons Attribution License",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+          "licenseNotes": "PLOS article page states the paper is distributed under the Creative Commons Attribution License.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id plos-metagenomic-ml-meta-analysis-2016",
+          "notes": "Large PLOS Computational Biology research paper with multi-page scientific layout, tables, figures, references, and dense biomedical machine-learning prose."
+        },
+        {
+          "id": "plos-robust-deep-learning-low-frequency-2023",
+          "sourceType": "url",
+          "url": "https://journals.plos.org/ploscompbiol/article/file?id=10.1371%2Fjournal.pcbi.1010932&type=printable",
+          "targetPath": "corpus/raw/_incoming/plos-robust-deep-learning-low-frequency-2023.pdf",
+          "licenseName": "Creative Commons Attribution License",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+          "licenseNotes": "PLOS article page states the paper is distributed under the Creative Commons Attribution License.",
+          "redistributable": true,
+          "disposition": "commit-ok",
+          "retrievalCommand": "node scripts/corpus/retrieve.mjs --id plos-robust-deep-learning-low-frequency-2023",
+          "notes": "PLOS Computational Biology research paper with two-column layout, figures, references, and deep-learning benchmark terminology."
+        }
+      ]
     },
     {
       "id": "visible-border-tables",

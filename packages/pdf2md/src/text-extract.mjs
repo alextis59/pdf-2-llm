@@ -2173,11 +2173,12 @@ function sourceLinesForRulingTable(table) {
   const sourceLines = [];
   for (const cell of table.cells) {
     for (const line of cell.lines ?? []) {
-      if (seen.has(line)) {
+      const sourceLine = line.sourceLine ?? line;
+      if (seen.has(sourceLine)) {
         continue;
       }
-      seen.add(line);
-      sourceLines.push(line);
+      seen.add(sourceLine);
+      sourceLines.push(sourceLine);
     }
   }
   return sourceLines;

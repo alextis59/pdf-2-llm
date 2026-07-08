@@ -1,0 +1,28 @@
+{
+  "id": "plos-metagenomic-ml-meta-analysis-2016",
+  "generatedAt": "2026-07-08T19:14:28.448Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/raw/public/plos-metagenomic-ml-meta-analysis-2016.pdf",
+    "sha256": "c4a4f794173e03ddbbc3750742bb0373a75beb2324b5fd16ae138b8503bac29c",
+    "pages": 26
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/plos-metagenomic-ml-meta-analysis-2016/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/plos-metagenomic-ml-meta-analysis-2016/previews/page-0002.png"
+    },
+    {
+      "page": 3,
+      "path": "corpus/baselines/plos-metagenomic-ml-meta-analysis-2016/previews/page-0003.png"
+    }
+  ]
+}

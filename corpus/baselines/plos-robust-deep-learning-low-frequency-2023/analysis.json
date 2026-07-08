@@ -1,0 +1,528 @@
+{
+  "id": "plos-robust-deep-learning-low-frequency-2023",
+  "analyzedAt": "2026-07-08T19:15:45.449Z",
+  "path": "corpus/raw/public/plos-robust-deep-learning-low-frequency-2023.pdf",
+  "bytes": 2115875,
+  "sha256": "9b94c72e722b82b7d93407a75639584cc1984e9cdfcadc0d87a9a6a26dfcb255",
+  "manifest": {
+    "kind": "scientific-paper",
+    "pages": 15,
+    "features": [
+      "born-digital",
+      "scientific-paper",
+      "two-column",
+      "figures",
+      "equations",
+      "references",
+      "untagged"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/plos-robust-deep-learning-low-frequency-2023.yaml"
+  },
+  "pdfVersion": "1.6",
+  "pages": {
+    "staticPageObjectCount": 15,
+    "manifest": 15,
+    "pdfinfo": 15
+  },
+  "header": {
+    "pdfVersion": "1.6",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 15,
+    "pageBoxes": [
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [],
+    "classicXrefCount": 1,
+    "xrefStreamCount": 0,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": true,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": true
+  },
+  "contentSignals": {
+    "beginTextOps": 0,
+    "endTextOps": 0,
+    "textShowOps": 270,
+    "imageXObjects": 7,
+    "pathOperators": 663,
+    "fontObjects": 45,
+    "cidFonts": 4,
+    "cidSystemInfo": 4,
+    "toUnicodeMaps": 22,
+    "encodings": 16,
+    "missingToUnicodeLikely": false,
+    "estimatedTextShowOpsPerPage": 18,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "ocrOverlaySignals": {
+    "toolBacked": true,
+    "hiddenOcrOverlayLikely": false,
+    "candidatePages": [],
+    "notes": [
+      "Candidates indicate image-heavy pages that also expose text boxes; human review should confirm whether the text layer is visible, OCR, or misleading."
+    ]
+  },
+  "externalTools": {
+    "pdfinfo": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdfimages": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdftotextBbox": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "qpdfJson": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    },
+    "mutoolInfo": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    }
+  },
+  "toolOutputs": {
+    "pdfinfo": "corpus/baselines/plos-robust-deep-learning-low-frequency-2023/tools/pdfinfo.json",
+    "pdfimages": "corpus/baselines/plos-robust-deep-learning-low-frequency-2023/tools/pdfimages.json",
+    "pdftotextBbox": "corpus/baselines/plos-robust-deep-learning-low-frequency-2023/tools/pdftotextBbox.json",
+    "qpdfJson": "corpus/baselines/plos-robust-deep-learning-low-frequency-2023/tools/qpdfJson.json",
+    "mutoolInfo": "corpus/baselines/plos-robust-deep-learning-low-frequency-2023/tools/mutoolInfo.json"
+  },
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

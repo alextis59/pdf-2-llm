@@ -1,0 +1,28 @@
+{
+  "id": "plos-robust-deep-learning-low-frequency-2023",
+  "generatedAt": "2026-07-08T19:14:28.448Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/raw/public/plos-robust-deep-learning-low-frequency-2023.pdf",
+    "sha256": "9b94c72e722b82b7d93407a75639584cc1984e9cdfcadc0d87a9a6a26dfcb255",
+    "pages": 15
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/plos-robust-deep-learning-low-frequency-2023/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/plos-robust-deep-learning-low-frequency-2023/previews/page-0002.png"
+    },
+    {
+      "page": 3,
+      "path": "corpus/baselines/plos-robust-deep-learning-low-frequency-2023/previews/page-0003.png"
+    }
+  ]
+}

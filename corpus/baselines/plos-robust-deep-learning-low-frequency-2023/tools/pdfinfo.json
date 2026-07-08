@@ -1,0 +1,12 @@
+{
+  "available": true,
+  "command": "pdfinfo",
+  "args": [
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/raw/public/plos-robust-deep-learning-low-frequency-2023.pdf"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "Title:           Robust deep learning object recognition models rely on low frequency information in natural images\nAuthor:          Zhe Li, Josue Ortega Caro, Evgenia Rusak, Wieland Brendel, Matthias Bethge, Fabio Anselmi, Ankit B. Patel, Andreas S. Tolias, Xaq Pitkow\nCreator:         PTC Arbortext Layout Developer 12.1.6180/W-x64\nProducer:        PDFlib+PDI 9.3.1p2 (C++/Win64)\nCreationDate:    Mon Mar 27 11:08:34 2023 CEST\nModDate:         Mon Mar 27 11:08:34 2023 CEST\nCustom Metadata: yes\nMetadata Stream: yes\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           15\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       2115875 bytes\nOptimized:       no\nPDF version:     1.6\n",
+  "stderr": ""
+}

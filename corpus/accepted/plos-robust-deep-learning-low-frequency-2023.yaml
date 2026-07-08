@@ -1,0 +1,50 @@
+id: plos-robust-deep-learning-low-frequency-2023
+gate: layout-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_title
+  - preserve_body_text
+  - preserve_caption
+  - preserve_references
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - emit_empty_markdown
+  - flatten_all_sections_into_one_paragraph
+metrics:
+  minTextCoverage: 0.75
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Robust deep learning object recognition"
+  - page: 1
+    contains: "Machine learning models have difficulty generalizing"
+  - page: 1
+    contains: "Author summary"
+  - page: 3
+    contains: "Neural regularization boosts model robustness"
+  - page: 2
+    contains: "brain’s inductive"
+  - page: 3
+    contains: "Fig 1. Schematic of neural similarity regularization"
+  - page: 13
+    contains: "References"
+structure:
+  expected:
+    - scientific_paper
+    - two_column_layout
+    - abstract
+    - figures
+    - references
+warnings:
+  allowed:
+    - text.ordering_uncertain
+    - figure.low_semantic_content
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-08"
+  notes: "Accepted from the PLOS source URL after pdfinfo confirmed an unencrypted, untagged 15-page PDF 1.6. The snippets cover title, abstract, section heading, figure caption, references, and the tight possessive spacing regression."

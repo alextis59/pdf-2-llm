@@ -1,0 +1,9 @@
+{
+  "available": false,
+  "command": "mutool",
+  "args": [
+    "info",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/raw/public/plos-interpretable-ml-reliability-2023.pdf"
+  ],
+  "error": "not found"
+}

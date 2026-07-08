@@ -1,0 +1,12 @@
+{
+  "available": true,
+  "command": "pdfinfo",
+  "args": [
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/raw/public/plos-metagenomic-ml-meta-analysis-2016.pdf"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "Title:           Machine Learning Meta-analysis of Large Metagenomic Datasets: Tools and Biological Insights\nAuthor:          Edoardo Pasolli, Duy Tin Truong, Faizan Malik, Levi Waldron, Nicola Segata\nCreator:         Arbortext Advanced Print Publisher 11.0.2857/W Unicode-x64\nProducer:        Acrobat Distiller 11.0 (Windows); modified using iTextSharp™ 5.5.3 ©2000-2014 iText Group NV (AGPL-version)\nCreationDate:    Wed Jun 29 17:29:33 2016 CEST\nModDate:         Wed Jun 29 17:29:54 2016 CEST\nCustom Metadata: no\nMetadata Stream: yes\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           26\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       4232685 bytes\nOptimized:       no\nPDF version:     1.4\n",
+  "stderr": ""
+}

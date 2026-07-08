@@ -1,0 +1,28 @@
+{
+  "id": "plos-interpretable-ml-reliability-2023",
+  "generatedAt": "2026-07-08T19:14:28.448Z",
+  "renderer": {
+    "command": "pdftoppm",
+    "dpi": 36,
+    "format": "png"
+  },
+  "source": {
+    "path": "corpus/raw/public/plos-interpretable-ml-reliability-2023.pdf",
+    "sha256": "7922442d77ef0ab40547dad4f9aa0ee36b3ac4b47b479a87a65637647f556348",
+    "pages": 24
+  },
+  "previews": [
+    {
+      "page": 1,
+      "path": "corpus/baselines/plos-interpretable-ml-reliability-2023/previews/page-0001.png"
+    },
+    {
+      "page": 2,
+      "path": "corpus/baselines/plos-interpretable-ml-reliability-2023/previews/page-0002.png"
+    },
+    {
+      "page": 3,
+      "path": "corpus/baselines/plos-interpretable-ml-reliability-2023/previews/page-0003.png"
+    }
+  ]
+}

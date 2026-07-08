@@ -1,0 +1,13 @@
+{
+  "available": true,
+  "command": "pdfimages",
+  "args": [
+    "-list",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/raw/public/plos-robust-deep-learning-low-frequency-2023.pdf"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "page   num  type   width height color comp bpc  enc interp  object ID x-ppi y-ppi size ratio\n--------------------------------------------------------------------------------------------\n   1     0 image      38    49  cmyk    4   8  jpeg   no       532  0   302   301 1277B  17%\n   3     1 image    2000   545  rgb     3   8  jpeg   no        38  0   300   300  149K 4.7%\n   4     2 image    2000   670  rgb     3   8  jpeg   no        63  0   300   300  226K 5.7%\n   6     3 image    2000   660  rgb     3   8  jpeg   no       103  0   300   300  182K 4.7%\n   7     4 image    2000  1678  rgb     3   8  jpeg   no       116  0   300   300  543K 5.5%\n   8     5 image    2000   771  rgb     3   8  jpeg   no       129  0   300   300  189K 4.2%\n   9     6 image    1905   779  rgb     3   8  jpeg   no       148  0   300   300  134K 3.1%\n",
+  "stderr": ""
+}

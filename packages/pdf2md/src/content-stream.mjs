@@ -664,7 +664,9 @@ function executeOperator(operator, context) {
         state.leading = -ty;
       }
       moveTextPosition(state, tx, ty);
-      context.lineSerial += 1;
+      if (isTextLineAdvance(state, tx, ty)) {
+        context.lineSerial += 1;
+      }
     }
     return;
   }
@@ -745,6 +747,7 @@ function emitText(text, context) {
   const mergeKey = currentMergeKey(context);
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
+    appendInferredInterSpanSpace(lastLine, text, context.state, position, metrics, confidence, structure, direction);
     const span = createSpan(text, context.state, position, metrics, confidence, structure, direction);
     lastLine.text += text;
     lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
@@ -761,7 +764,7 @@ function emitText(text, context) {
   const span = createSpan(text, context.state, position, metrics, confidence, structure, direction);
   context.lines.push({
     text,
-    fontSize: context.state.fontSize,
+    fontSize: metrics.fontSize,
     fontName: context.state.fontName,
     font: context.state.font,
     x: position.x,
@@ -798,20 +801,23 @@ function emitSyntheticSpace(context, width) {
   const confidence = textConfidence(context.state.font);
   const structure = currentStructureSignal(context.state);
   const direction = textDirectionFromContent(context.state, " ");
+  const fontSize = effectiveFontSize(context.state);
+  const userWidth = textSpaceHorizontalDistance(context.state, width);
   const metrics = {
-    width,
-    height: context.state.fontSize,
-    xEnd: position.x + width,
+    width: userWidth,
+    height: fontSize,
+    fontSize,
+    xEnd: position.x + userWidth,
     glyphs: [
       {
         text: " ",
         codePoint: 32,
         x: position.x,
         y: position.y,
-        width,
-        height: context.state.fontSize,
+        width: userWidth,
+        height: fontSize,
         fontName: context.state.fontName,
-        fontSize: context.state.fontSize,
+        fontSize,
         confidence
       }
     ]
@@ -830,6 +836,103 @@ function emitSyntheticSpace(context, width) {
     mergeLineStructure(lastLine, structure);
   }
   advanceTextPositionBy(context.state, width);
+}
+
+function appendInferredInterSpanSpace(line, text, state, position, metrics, confidence, structure, direction) {
+  if (!shouldInferInterSpanSpace(line, text, state, position, metrics)) {
+    return;
+  }
+
+  const width = inferredSpaceWidth(line, position, metrics.fontSize);
+  const x = Math.max(line.x, Math.min(position.x, line.x + line.width));
+  const spaceMetrics = {
+    width,
+    height: metrics.fontSize,
+    fontSize: metrics.fontSize,
+    glyphs: [
+      {
+        text: " ",
+        codePoint: 32,
+        x,
+        y: position.y,
+        width,
+        height: metrics.fontSize,
+        fontName: state.fontName,
+        fontSize: metrics.fontSize,
+        confidence
+      }
+    ]
+  };
+  const span = createSpan(" ", state, { x, y: position.y }, spaceMetrics, confidence, structure, direction);
+  line.text += " ";
+  line.width = Math.max(line.width, x + width - line.x);
+  line.direction = mergeTextDirection(line.direction, direction);
+  line.spans.push(span);
+  line.glyphs.push(...spaceMetrics.glyphs);
+  mergeLineVisibility(line, span);
+  mergeLineStructure(line, structure);
+}
+
+function shouldInferInterSpanSpace(line, text, state, position, metrics) {
+  const previousText = line.text ?? "";
+  if (!previousText || !text || whitespacePattern.test(previousText.at(-1)) || whitespacePattern.test(text.at(0))) {
+    return false;
+  }
+  const gap = position.x - (line.x + line.width);
+  const fontSize = metrics.fontSize || 10;
+  if (shouldGlueAdjacentTextFragments(previousText, text, gap, fontSize)) {
+    return false;
+  }
+
+  const minimumGap = hasFontWidthMetrics(state)
+    ? inferredInterSpanMinimumGap(previousText, text, fontSize)
+    : -fontSize * 0.8;
+  return gap >= minimumGap && gap <= fontSize * 2.5;
+}
+
+function hasFontWidthMetrics(state) {
+  return Number.isInteger(state.font?.firstChar) && Array.isArray(state.font?.widths);
+}
+
+function inferredInterSpanMinimumGap(previousText, nextText, fontSize) {
+  const previous = trailingWordOrQuoteFragment(previousText);
+  const next = leadingWordFragment(nextText);
+  if (next && /(?:['\u2019]s|['\u2019"\u201d])$/.test(previous)) {
+    return -fontSize * 0.08;
+  }
+  return fontSize * 0.08;
+}
+
+function shouldGlueAdjacentTextFragments(previousText, nextText, gap, fontSize) {
+  const previous = trailingWordFragment(previousText);
+  const next = leadingWordFragment(nextText);
+  if (!previous || !next) {
+    return /^[,.;:!?%)\]\}]/.test(nextText);
+  }
+  if (/^[a-z]$/.test(next) || /^[a-z][,.;:]$/.test(next)) {
+    return gap < fontSize * 0.16;
+  }
+  if (/^[A-Z]{1,3}$/.test(next) && /^[A-Z]{3,}$/.test(previous)) {
+    return true;
+  }
+  return false;
+}
+
+function trailingWordFragment(text) {
+  return text.match(/[A-Za-z]+$/)?.[0] ?? "";
+}
+
+function trailingWordOrQuoteFragment(text) {
+  return text.match(/[A-Za-z]+(?:['\u2019]s|['\u2019"\u201d])?$/)?.[0] ?? "";
+}
+
+function leadingWordFragment(text) {
+  return text.match(/^[A-Za-z]+[,.;:]?/)?.[0] ?? "";
+}
+
+function inferredSpaceWidth(line, position, fontSize) {
+  const gap = position.x - (line.x + line.width);
+  return Math.max(fontSize * 0.25, gap);
 }
 
 function shouldInsertSyntheticWordSpace(context, delta, nextText) {
@@ -941,6 +1044,16 @@ function moveTextPosition(state, tx, ty) {
   state.textMatrix = [...state.textLineMatrix];
 }
 
+function isTextLineAdvance(state, tx, ty) {
+  const matrix = multiplyMatrices(state.ctm, state.textLineMatrix);
+  const userDx = matrix[0] * tx + matrix[2] * ty;
+  const userDy = matrix[1] * tx + matrix[3] * ty;
+  if (textDirectionFromState(state) === "vertical") {
+    return Math.abs(userDx) > Math.max(0.5, effectiveFontSize(state) * 0.25);
+  }
+  return Math.abs(userDy) > Math.max(0.5, effectiveFontSize(state) * 0.25);
+}
+
 function currentTextPosition(state) {
   const matrix = multiplyMatrices(state.ctm, state.textMatrix);
   return transformPoint(matrix, 0, state.textRise);
@@ -1014,18 +1127,19 @@ function wordGapThreshold(state) {
 function measureText(state, text, position) {
   const glyphs = [];
   const confidence = textConfidence(state.font);
+  const fontSize = effectiveFontSize(state);
   let cursor = position.x;
   for (const char of text) {
-    const width = measureGlyphWidth(state, char);
+    const width = textSpaceHorizontalDistance(state, measureGlyphWidth(state, char));
     glyphs.push({
       text: char,
       codePoint: char.codePointAt(0),
       x: cursor,
       y: position.y,
       width,
-      height: state.fontSize,
+      height: fontSize,
       fontName: state.fontName,
-      fontSize: state.fontSize,
+      fontSize,
       confidence
     });
     cursor += width;
@@ -1033,7 +1147,8 @@ function measureText(state, text, position) {
 
   return {
     width: cursor - position.x,
-    height: state.fontSize,
+    height: fontSize,
+    fontSize,
     xEnd: cursor,
     glyphs
   };
@@ -1043,7 +1158,7 @@ function createSpan(text, state, position, metrics, confidence, structure = null
   return {
     text,
     fontName: state.fontName,
-    fontSize: state.fontSize,
+    fontSize: metrics.fontSize,
     x: position.x,
     y: position.y,
     width: metrics.width,
@@ -1080,7 +1195,35 @@ function measureTextWidth(state, text) {
 function measureGlyphWidth(state, char) {
   const scale = (state.horizontalScaling || 100) / 100;
   const wordSpacing = char === " " ? state.wordSpacing : 0;
-  return (state.fontSize * 0.5 + state.charSpacing + wordSpacing) * scale;
+  return (fontGlyphWidth(state, char) + state.charSpacing + wordSpacing) * scale;
+}
+
+function fontGlyphWidth(state, char) {
+  const firstChar = state.font?.firstChar;
+  const widths = state.font?.widths;
+  const codePoint = char.codePointAt(0);
+  if (Number.isInteger(firstChar) && Array.isArray(widths) && Number.isInteger(codePoint)) {
+    const width = widths[codePoint - firstChar];
+    if (Number.isFinite(width)) {
+      return (width / 1000) * state.fontSize;
+    }
+  }
+  return state.fontSize * 0.5;
+}
+
+function effectiveTextMatrix(state) {
+  return multiplyMatrices(state.ctm, state.textMatrix);
+}
+
+function textSpaceHorizontalDistance(state, width) {
+  const matrix = effectiveTextMatrix(state);
+  return Math.hypot(matrix[0] * width, matrix[1] * width);
+}
+
+function effectiveFontSize(state) {
+  const matrix = effectiveTextMatrix(state);
+  const verticalScale = Math.hypot(matrix[2], matrix[3]);
+  return state.fontSize * (verticalScale || 1);
 }
 
 function multiplyMatrices(left, right) {

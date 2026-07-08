@@ -1,0 +1,782 @@
+{
+  "id": "plos-interpretable-ml-reliability-2023",
+  "analyzedAt": "2026-07-08T19:15:45.449Z",
+  "path": "corpus/raw/public/plos-interpretable-ml-reliability-2023.pdf",
+  "bytes": 3038998,
+  "sha256": "7922442d77ef0ab40547dad4f9aa0ee36b3ac4b47b479a87a65637647f556348",
+  "manifest": {
+    "kind": "scientific-paper",
+    "pages": 24,
+    "features": [
+      "born-digital",
+      "scientific-paper",
+      "two-column",
+      "figures",
+      "equations",
+      "references",
+      "untagged"
+    ],
+    "redistributable": true,
+    "acceptanceFile": "corpus/accepted/plos-interpretable-ml-reliability-2023.yaml"
+  },
+  "pdfVersion": "1.6",
+  "pages": {
+    "staticPageObjectCount": 24,
+    "manifest": 24,
+    "pdfinfo": 24
+  },
+  "header": {
+    "pdfVersion": "1.6",
+    "hasPdfHeader": true,
+    "hasEofMarker": true,
+    "startxrefCount": 1
+  },
+  "structure": {
+    "pageObjectCount": 24,
+    "pageBoxes": [
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "CropBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "MediaBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      },
+      {
+        "type": "TrimBox",
+        "values": [
+          0,
+          0,
+          612,
+          792
+        ]
+      }
+    ],
+    "rotations": [],
+    "classicXrefCount": 1,
+    "xrefStreamCount": 0,
+    "objectStreamCount": 0,
+    "linearizedHint": false,
+    "encrypted": false
+  },
+  "documentFeatures": {
+    "tagged": false,
+    "roleMap": false,
+    "acroForm": false,
+    "xfa": false,
+    "annotations": true,
+    "outlines": false,
+    "attachments": false,
+    "signatures": false,
+    "metadata": true
+  },
+  "contentSignals": {
+    "beginTextOps": 0,
+    "endTextOps": 0,
+    "textShowOps": 341,
+    "imageXObjects": 5,
+    "pathOperators": 1100,
+    "fontObjects": 50,
+    "cidFonts": 4,
+    "cidSystemInfo": 4,
+    "toUnicodeMaps": 18,
+    "encodings": 12,
+    "missingToUnicodeLikely": false,
+    "estimatedTextShowOpsPerPage": 14.208333333333334,
+    "imageDominantLikely": false,
+    "pathHeavyLikely": false
+  },
+  "ocrOverlaySignals": {
+    "toolBacked": true,
+    "hiddenOcrOverlayLikely": true,
+    "candidatePages": [
+      {
+        "page": 6,
+        "imageCount": 1,
+        "totalImagePixels": 4361700,
+        "maxImagePixels": 4361700,
+        "imageAreaRatio": 0.5183244206773618,
+        "wordBoxes": 272,
+        "textAreaRatio": 0.08009780993425801,
+        "imageDominantLikely": true
+      }
+    ],
+    "notes": [
+      "Candidates indicate image-heavy pages that also expose text boxes; human review should confirm whether the text layer is visible, OCR, or misleading."
+    ]
+  },
+  "externalTools": {
+    "pdfinfo": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdfimages": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "pdftotextBbox": {
+      "available": true,
+      "status": 0,
+      "signal": null,
+      "truncated": false
+    },
+    "qpdfJson": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    },
+    "mutoolInfo": {
+      "available": false,
+      "status": null,
+      "signal": null,
+      "truncated": false
+    }
+  },
+  "toolOutputs": {
+    "pdfinfo": "corpus/baselines/plos-interpretable-ml-reliability-2023/tools/pdfinfo.json",
+    "pdfimages": "corpus/baselines/plos-interpretable-ml-reliability-2023/tools/pdfimages.json",
+    "pdftotextBbox": "corpus/baselines/plos-interpretable-ml-reliability-2023/tools/pdftotextBbox.json",
+    "qpdfJson": "corpus/baselines/plos-interpretable-ml-reliability-2023/tools/qpdfJson.json",
+    "mutoolInfo": "corpus/baselines/plos-interpretable-ml-reliability-2023/tools/mutoolInfo.json"
+  },
+  "notes": [
+    "Static byte-pattern analysis is a triage aid, not a correctness oracle.",
+    "External tool outputs are baselines for review and must not be treated as ground truth without acceptance criteria."
+  ]
+}

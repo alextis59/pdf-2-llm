@@ -1,0 +1,13 @@
+{
+  "available": true,
+  "command": "pdfimages",
+  "args": [
+    "-list",
+    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/raw/public/plos-interpretable-ml-reliability-2023.pdf"
+  ],
+  "status": 0,
+  "signal": null,
+  "truncated": false,
+  "stdout": "page   num  type   width height color comp bpc  enc interp  object ID x-ppi y-ppi size ratio\n--------------------------------------------------------------------------------------------\n   1     0 image      38    49  cmyk    4   8  jpeg   no       961  0   302   301 1277B  17%\n   5     1 image    2100  1828  icc     3   8  jpeg   no        74  0   300   300  845K 7.5%\n   6     2 image    2100  2077  icc     3   8  jpeg   no        86  0   300   300  595K 4.7%\n   8     3 image    2100  1971  icc     3   8  jpeg   no       117  0   300   300  651K 5.4%\n   9     4 image    2100  1549  icc     3   8  jpeg   no       126  0   300   300  266K 2.8%\n",
+  "stderr": ""
+}

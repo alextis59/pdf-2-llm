@@ -1,0 +1,1097 @@
+RESEA RCH ARTICL E
+Enabling interpretable machine learning for
+biological data with reliability scores
+K.D.Ahlquist ID
+1,2*,Lauren A.Sugden ID
+3‡*,Sohini Ramachandran ID
+1,4,5‡
+1Center forComputationa lMolecular Biology, Brown University, Providence, Rhode Island, United States of
+America, 2Department ofMolecular Biology, CellBiology, andBiochemistr y,Brown University, Providenc e,
+Rhode Island, United States ofAmerica, 3Department ofMathem atics andComputer Science, Duquesne
+University ,Pittsburgh, Pennsylvan ia,United States ofAmerica, 4Department ofEcology, Evolutio nand
+Organism alBiology, Brown University, Providenc e,Rhode Island, United States ofAmerica, 5Data Science
+Initiative, Brown Univers ity,Providenc e,Rhode Island, United States ofAmerica
+‡These authors arejointsenior authors onthiswork.
+*kaileigh _ahlquist@ alumni.bro wn.edu (KDA); sugdenl@d uq.edu (LAS)
+Abstract
+Machine learning tools have proven useful across biological disciplines, allowing research-
+erstodraw conclusions from large datasets, andopening upnewopportunities forinterpret-
+ingcomplex andheterogeneous biological data. Alongside therapid growth ofmachine
+learning, there have alsobeen growing pains: some models thatappear toperform well
+have later been revealed torelyonfeatures ofthedata thatareartifactual orbiased; this
+feeds intothegeneral criticism thatmachine learning models aredesigned tooptimize
+model performance over thecreation ofnewbiological insights. Anatural question arises:
+howdowedevelop machine learning models thatareinherently interpretable orexplain-
+able? Inthismanuscript, wedescribe theSWIF(r) reliability score (SRS), amethod building
+ontheSWIF(r) generative framework thatreflects thetrustworthiness oftheclassification of
+aspecific instance. Theconcept ofthereliability score hasthepotential togeneralize to
+other machine learning methods. Wedemonstrate theutility oftheSRS when faced with
+common challenges inmachine learning including: 1)anunknown class present intesting
+data thatwasnotpresent intraining data, 2)systemic mismatch between training andtest-
+ingdata, and3)instances oftesting data thathave missing values forsome attributes. We
+explore these applications oftheSRS using arange ofbiological datasets, from agricultural
+data onseed morphology, to22quantitative traits intheUKBiobank, andpopulation genetic
+simulations and1000 Genomes Project data. With each ofthese examples, wedemonstrate
+howtheSRS canallow researchers tointerrogate their data andtraining approach thor-
+oughly, andtopairtheir domain-specific knowledge withpowerful machine-learn ingframe-
+works. Wealsocompare theSRS torelated tools foroutlier andnovelty detection, andfind
+thatithascomparable performance, withtheadvantage ofbeing abletooperate when
+some data aremissing. TheSRS, andthebroader discussion ofinterpretable scientific
+machine learning, willaidresearchers inthebiological machine learning space astheyseek
+toharness thepower ofmachine learning without sacrificing rigor andbiological insight.
+PLOS COMP UTATIONAL  BIOLOGY
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 1/24a1111111111
+a1111111111
+a1111111111
+a1111111111
+a1111111111
+OPEN ACCESS
+Citation: Ahlquist KD,Sugden LA,Ramacha ndran
+S(2023) Enabling interpretabl emachine learning
+forbiological datawithreliability scores. PLoS
+Comput Biol19(5): e1011175. https://do i.org/
+10.1371/ journal.pcbi.10 11175
+Editor: LuisPedro Coelho, Fudan University,
+CHINA
+Received: February 24,2022
+Accepted: May10,2023
+Published: May26,2023
+Peer Review History: PLOS recognize sthe
+benefits oftranspar ency inthepeer review
+process; therefore, weenable thepublication of
+allofthecontent ofpeer review andauthor
+response salongside final, published articles. The
+editorial history ofthisarticle isavailable here:
+https://doi.o rg/10.1371/jo urnal.pcbi .1011175
+Copyright: ©2023 Ahlquist etal.Thisisanopen
+access article distributed under theterms ofthe
+Creative Commons Attribution License, which
+permits unrestricte duse,distribu tion,and
+reproduction inanymedium, provided theoriginal
+author andsource arecredited.
+Data Availabilit yStatement: Allrelevant dataare
+within themanuscript anditsSupport ing
+Information files. Data andcode areavailable on
+Github: https://github. com/ramacha ndran-lab/
+SRS_paper
+
+Author summary
+Machine learning methods areincredibly powerful atperforming tasks such asclassification
+andclustering, butthey alsopose unique problems that canlimit new insights. Complex
+machine learning models may reach conclusions thataredifficult orimpossible forresearch-
+erstounderstand after-the-fact, sometimes producing biased ormeaningless results. Itis
+therefore essential that researchers have tools thatallow them tounderstand how machine
+learning tools reach their conclusions, sothat they caneffectively design models. This paper
+builds onthemachine learning method SWIF(r), originally designed todetect regions inthe
+genome targeted bynatural selection. Our new method, theSWIF(r) Reliability Score (SRS),
+canhelp researchers evaluate how trustworthy theprediction ofaSWIF(r) model iswhen
+classifying aspecific instance ofdata. Wealsoshow how SWIF(r) andtheSRS canbeused
+forbiological problems outside theoriginal scope ofSWIF(r). Weshow that theSRS ishelp-
+fulinsituations where thedata used totrain themachine learning model fails torepresent
+thetesting data insome way. The SRS canbeused across many different disciplines, andhas
+unique properties forscientific machine learning research.
+This isaPLOSComputational Biology Methods paper.
+Introduction
+Interpretability hasbecome anincreasingly important area ofresearch inmachine learning [1,2],
+although theterm “interpretability” isnotalways well-defined [3,4] When machine learning
+approaches areapplied tobiological problems, twomajor elements ofinterpretability aredesir-
+able: 1)theability toconnect results generated bymachine learning applications with existing bio-
+logical theory andunderstanding ofbiological mechanisms, and2)theability toidentify and
+characterize thelimitations ofagiven machine learning algorithm, sothatitisapplied correctly
+andappropriately inthebiological context ofinterest. Recent field-specific papers have addressed
+thefirst aspect ofbiological interpretability, byidentifying contexts where machine learning
+approaches areespecially powerful, andidentifying thetypes ofinsights thatcanbegained [5–9].
+The second aspect, ensuring that machine learning isapplied correctly andappropriately inthe
+biological context, isalsoaprominent concern inthefield, with recent studies suggesting stan-
+dards forreporting machine learning results inabiological context [10–12], auditing practices for
+detecting bias inmachine learning applications tobiology [13], andguidelines forpreventing
+common pitfalls inmachine learning written expressly forbiologists [14,15].
+Ideally, machine learning workflows should include steps that evaluate thefitbetween
+training and testing data: testing foroutliers orout-of-distribution instances, and distribution
+shifts between training data and testing data [16,17]. This hasreceived particular attention in
+thecontext ofneural networks [18–20], butinthecontext ofother types ofclassifiers, tools
+available fortheprocess ofoutlier detection ordetecting distribution differences typically rely
+ondifferent mathematical frameworks than themachine learning model and require aninde-
+pendent analysis. Forexample, onecandetect outliers using thedensity ofinstances with the-
+Local Outlier Factor [21], then subsequently apply anunrelated machine learning method to
+make classifications. Researchers have torelyontheir own knowledge and discretion todecide
+which, ifany, evaluations toinclude intheir experiments.
+Here, weintroduce theSWIF(r) reliability score (SRS) with thegoal ofcontributing tothe
+goals ofinterpretability and best-practices inmachine learning workflows. Weseek tosimplify
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 2/24Funding: Thiswork wassupported bytheUS
+National Institutes ofHealth R01GM1186 52(KDA,
+LAS, SR)andR35GM1396 28(KDA, SR),andthe
+Wimmer Family Foundation (LAS). KDAwasalso
+supported asatrainee byNIHT32GM00 7601. The
+funders hadnoroleinsoftware design, data
+collection oranalysis ,decision topublish orthe
+preparation ofthemanuscript.
+Competing interests :Theauthors have declared
+thatnocompeting interests exist.
+
+thedecision about how toinclude testing foroutliers and distribution differences inafew
+ways. Bypackaging ourclassifier and theSRS together, weprioritize and highlight theneed for
+evaluations ofoutliers and distribution differences tobeincluded inevery machine learning
+analysis. Rather than performing outlier detection orlooking fordistribution differences prior
+toperforming classification, orasapost-hoc analysis, researchers getSRS output and SWIF(r)
+classification output inasingle step. Exclusion ofoutliers and many out-of-distribution
+instances canbeperformed bysetting athreshold ontheSRS, inmuch thesame way that
+other methods foroutlier and novelty detection canbeapplied. The SRS canalso beused to
+measure distribution shifts, fitting into the“Failing Loudly” framework formachine learning
+described inRabanser etal.2019 [17], inwhich theauthors advocate formachine learning
+tools that give warnings when facing unexpected input. Inthisparticular framework, theSRS
+canserve intherole ofdimensionality reduction, astep intheFailing Loudly pipeline prior to
+testing forsignificant distribution shift with subsequent two-sample tests.
+Wepreviously introduced SWIF(r) (SWeep Inference Framework (controlling forcorrela-
+tion), asupervised machine learning classifier that weapplied totheproblem ofclassifying
+genomic sites asneutrally evolving orundergoing positive selection inhuman population
+genetic data [22]. Forthisapplication, weshow SWIF(r) tobecompetitive with other methods
+including deep neural networks and boosted logistic regression. SWIF(r) returns posterior
+class probabilities based onlearned joint distributions ofattributes (selection statistics inour
+motivating application) and user-provided priors ontheclass frequencies. The probabilities
+output bySWIF(r), and byother probabilistic classifiers, represent aposterior probability dis-
+tribution across classes, with probabilities summing to1regardless ofhow well aclassified
+instance matches thetraining data. Asaconsequence, ahigh classification probability canbe
+untrustworthy forinstances that donotresemble anyoftheclasses included intraining, while
+anoutcome assigning equal probability toallclasses may nevertheless betrustworthy ifthe
+classifier hasbeen trained using many similar instances. When using atypical classifier, users
+willreceive classification outcomes from their models, with little visibility into theunderlying
+features contributing toclassification [23,24], making thetrustworthiness ofindividual classifi-
+cation decisions unclear; thepurpose oftheSRS istoprovide thisimportant feedback.
+The useofselection statistics, orother immediately interpretable attributes, asfeatures for
+training SWIF(r) contributes tothefirst aspect ofinterpretability described above: theability
+toconnect results generated bymachine learning applications with existing biological theory
+and understanding ofbiological mechanisms. Initsoriginal application, thefeatures used for
+machine learning with SWIF(r) arederived from existing mathematical theory inpopulation
+genetics [25–30]. Working with alimited number ofattributes that arehighly meaningful in
+thebiological context, whether summary statistics orother measurements ofbiological fea-
+tures, creates opportunities forbiological interpretation—through thegeneration oftestable
+hypotheses, orthrough critical dissection oftheclassification outcomes. SWIF(r) isable toper-
+form classification even when instances contain missing attributes, anunusual feature inthe
+machine learning space. While insome circumstances missing data canbeimputed, SWIF(r)
+serves aparticularly important role incircumstances when data cannot bereliably imputed,
+such aswhen data ismissing inameaningful pattern (aka. “missing notatrandom”) [31,32],
+orwhen sample sizeand proportion ofmissing data restrict imputation [33,34].
+The generative model underlying SWIF(r) also provides opportunities forinterpretability
+ofthesecond type: characterizing thelimitations oftheclassifier inthecontext ofaspecific
+biological dataset. The SRS isderived from theAveraged One-Dependence Estimation
+(AODE) framework [35] underlying SWIF(r). AnAODE isagenerative classifier, learning the
+attribute distributions (orlikelihoods) foreach class from training data. Posterior distributions
+forclasses that condition onobserved attributes canthen bederived and used toassign class
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 3/24
+
+probabilities tonew instances. This isincontrast todiscriminative classifiers, which includes
+neural networks, support vector machines, random forest, and k-nearest neighbors algorithms,
+which learn decision boundaries between classes directly. The SRS uses theAODE framework
+underlying SWIF(r), and theattribute distributions learned bytheclassifier, tomeasure the
+trustworthiness ofparticular instances, which canbethought ofasthesimilarity between a
+given instance and thetraining data asseen bythetrained model. This allows auser todistin-
+guish between aclassification prediction that ismade because theinstance inquestion isagen-
+uine match tooneofthetrained classes, and aprediction made because theclassifier has
+simply found the“least bad” option. Wedemonstrate how theSWIF(r) and SRS framework
+canbeextended toawide range ofbiological problems.
+The SRS isofparticular value forbiological applications where itisnecessary tousesimu-
+lated training data, apractice that isubiquitous inpopulation genetics, and extends tomany
+evolutionary questions across different areas ofbiology [36–41]. Simulation studies also under-
+lieother analyses ofcomplex biological phenomena, such ascancer progression [42,43]. In
+many cases, researchers evaluate theperformance ofanalgorithm ormethod onsimulated
+“testing” data, before applying itto“application” data drawn from biological samples. The reli-
+ability ofthese models relies inpart onthedegree ofsimilarity between simulated data and
+application data, butahigh degree ofsimilarity canbedifficult toachieve despite thebest
+efforts ofresearchers. When differences doarise, itmay bedesirable tosetaside data instances
+with poor fit,allowing theclassifier toeffectively abstain when itencounters signatures ithas
+notbeen trained tohandle. Forexample, inthecontext ofgenome scans forselection, such
+unexpected signatures canarise inregions ofthegenome with idiosyncratic recombination or
+mutation profiles that arenotcaptured insimulated training data, such astheMHC [44,45].
+Designing abstention into classifiers should beconsidered abest practice [46], especially for
+biomedical data [47]. Abstention inthecontext ofdiscriminative classifiers canbeaddressed
+with theaddition ofan“abstention class” intraining data [48] oran“abstention option”
+included inthelossfunction [49]. Inthecontext ofagenerative classifier, weassert that the
+addition ofanabstention class orabstention option isnotnecessary; wecaninstead usethe
+trained model itself (via theSRS) toidentify instances where abstention isdesirable without
+requiring themodel tolearn features associated with unreliable orconfusing instances.
+Inthisstudy, weassess theability oftheSRS toidentify deficiencies affecting theclassifica-
+tions produced bySWIF(r) across different biological applications and contexts. When aclas-
+sifier encounters data that isnotwell-matched toanytrained class, itsdefault behavior canbe
+erratic, and atworst, deceptive, asweillustrate inourexperiments. The addition oftheSRS
+allows foridentification ofmany types ofperformance problems, and offers potential remedies
+viatheremoval ofoutliers and measurement ofdistribution shifts using asubsequent two-
+sample test. More aggressive remedies include theaddition ofnew classes and instances, orthe
+training ofadditional classifiers toaccount forimportant structure identified inthedata. In
+particular, westudy performance insituations inwhich thefollowing occur: 1)classes ofdata
+aremissing inthetraining data butpresent intheapplication data, 2)there exists asystemic
+mismatch between training data and application data, 3)there aremissing attribute values for
+specific instances undergoing classification.
+Results
+Inthisstudy weintroduce theSWIF(r) Reliability Score (SRS), and explore itsutility forappli-
+cations tobiological data. Wedefine theSRS, and usesimulations todemonstrate thesensitiv-
+ityoftheSRS tounderlying data features, including thedistribution ofindividual attributes
+and thestructure ofcorrelation between attributes (Fig 1).Next, weexamine and analyze a
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 4/24
+
+series ofbiological datasets toillustrate theutility oftheSRS inapplications tobiological prob-
+lems. First, weuseawheat morphology dataset tostudy theeffect ofaclass that ispresent in
+testing data butunaccounted forintraining data (Fig 2).Second, weusephenotype data
+Fig1.The SRS reveals theunderly ingstructure ofthedata inexample training scenarios. A)Foraclassificati onproblem with asingle attribute, we
+illustrate how theSRS rises and falls over arange ofclassification probabil ities. Data wasgenerated fortwoclasses (class 1:blue, dashed line, and class 2:red,
+solid line) with asingle attribut e.SWIF(r) wastrained using 1000 instanc esofeach class drawn from theattribute distribution shown ontheleft.Following
+training, SWIF(r) wastested onvalues across therange (-20, 20), resulting intheSWIF(r) probabilities andSRS values shown ontheright. Intheright hand
+graph, SWIF(r) probabil ityofclass 2isshown inorange, and SRS isshown indark gray. Here weseethat theSRS drops inregions that arenotrepresente dby
+either class intraining, across awide range ofclassificati onprobabiliti es.B)The SRS detects differen cesinthecorrelation structure oftesting data compared to
+training data inatwo-attribute model. Data wasgenerated fortwoclasses (class 1shown inblue, andclass 2shown inred) with twoattributes. Different
+distributions and correlation sbetween attributes were chosen tocreate three SWIF(r) models labeled “X”(left), “Y”(middle) and “Z”(right). Inthetoprow for
+each model isthedata used totrain themodel, with oneattribute along each axis. The middle andbottom rows show testing data drawn uniformly across the
+same area shown. Inthemiddle row, testing data iscolored bytheSWIF(r) probabil ity,ranging from 0to1foreach class (note that forabinary classifier,
+Pðclass 1ÞþPðclass 2Þ¼1).Inthebottom row testing data iscolored bytherelative value oftheSRS forthetesting data shown, with yellow correspond ingto
+thehighest SRS, and purple correspond ingtothelowest SRS. Wenote that allcombina tions ofhigh and lowSRS, and high and lowSWIF(r) probabilities are
+possible, dependi ngonthestructure ofthedataset and theparticular instance being classified.
+https://do i.org/10.1371/j ournal.pc bi.1011175. g001
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 5/24
+
+Fig2.The SRS islower when aninstance’s class isexcluded from training. SWIF(r) wastrained using each combinat ionoftwoclasses inthewheat
+morpholo gydataset [50] (see Methods). The trained model wasthen tested oninstances from allthree classes. A)Distribu tion ofthetraining and testing data
+across allseven attributes: Perimeter, Area, Kernel Length, Compactne ss,Kernel Width, Asymmetry andLength ofKernel Groove .Note that wheat 1(blue
+circles) generally hastrait values that areintermedi atetotheother twoclasses. SeeS1Figforadditional views into therawdataset. B)Histograms show the
+distribution oftheSRS forinstances ofeach class. Ineach case, theunknown class hasamore negative distribution ofSRS compared tothetwoknown classes.
+This istrue even forwheat 1(blue), which hasattributes that areinterme diate invalue ascompared totheother classes (see S1Table forp-values). C)Data
+graphed bytwoattributes (Kernel Length and Compactne ss).Left: fulldata setcolored bytrue labels. Right: colored bySWIF(r) probability (top) and SRS
+(bottom). SWIF(r) scores were generally greater than 90% foroneofthetwotrained classes,evenforinstances fromtheunknown class, with justahandful of
+points receiving intermediat evalues from SWIF(r) (black diamonds) .Incontrast, coloring bySRS shows that points associated with theunknown class (larger
+dots) tend tohave lower SRS, while points associated with known classes (smaller dots) received higher SRS.
+https://do i.org/10.1371/j ournal.pc bi.1011175. g002
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 6/24
+
+drawn from theUKBiobank tostudy theeffect ofasystemic mismatch between training data
+and testing data, inthiscase duetodifferences inancestry orsexacross thetraining and testing
+sets(Fig 3).Third, weusesimulated data and 1000 Genomes Project data toillustrate the
+effects ofmissing data onclassification performance inapopulation genetics context (Fig 4).
+Overview and definition oftheSRS
+The SRS, developed here forSWIF(r) butgeneralizable toother generative classifiers, isan
+interpretability aidimplemented from intermediate steps within SWIF(r)’s classification pipe-
+line. SWIF(r) classifies instances using Averaged One-Dependence Estimation, anextension
+toNaive Bayes that incorporates pairwise joint distributions ofattributes toestimate thejoint
+likelihood oftheobserved data conditioned oneach class. Briefly, from training data foreach
+class, SWIF(r) learns ajoint, two-dimensional Gaussian mixture foreach pair ofattributes
+fðXi¼xi;Xj¼xjjclassÞ,along with one-dimensional marginal Gaussian mixtures foreach
+attribute fðXi¼xijclassÞ. From thejoint distributions, wederive conditional distributions
+fðXi¼xijXj¼xj;classÞ.Wethen express thelikelihood oftheclass given nattributes asfol-
+lows:
+LðclassjX1¼x1;:::;Xn¼xnÞ/Xn
+j¼1½fðXj¼xjjclassÞY
+i6¼jfðXi¼xijXj¼xj;classÞ�ðEq1Þ
+WhereXirepresents theithattribute and nisthenumber ofattributes. With theuseofprior
+class probabilities, and anormalization factor representing themarginal probability ofthedata
+summed over allclasses, SWIF(r) returns aposterior probability foreach class (see Materials
+and Methods, Eq3).The SRS focuses solely ontheestimated likelihoods, because these arethe
+values that indicate thefitoftheinstance tothetrained model, while theposterior probabilities
+inEq3convey therelative fitacross thetrained classes. Because theposterior probabilities are
+forced tosum to1,instances that donotresemble anytrained class may stillreceive ahigh
+classification probability forthe“least bad” option; theSRS isdesigned tohelp detect such
+instances.
+Tocalculate theSRS, wecalculate theestimated joint likelihoods given allninstances, take
+themaximum across allclasses, then apply alog 10transformation toaidvisualization:
+SRS¼log10ðmaxclassðXn
+j¼1fðXj¼xjjclassÞY
+i6¼jfðXi¼xijXj¼xj;classÞÞÞðEq2Þ
+Bytaking themaximum value with respect toclass, theSRS isagnostic tothespecific class
+labels ofaninstance. Because theSRS depends heavily onthespecifics ofaparticular applica-
+tion, SRS values cannot becompared across experiments. Instead, thescores aredesigned to
+becompared withinthecontextofasingletrainedmodel.
+InFig1,weillustrate how theSRS works inthecontext oftwoexamples. Inthefirst exam-
+ple(Fig 1A), classification into oneoftwoclasses isbased onasingle attribute, reducing the
+classification problem toastraightforward application ofBayes’ rule. Observations inclass 1
+follow aGaussian distribution with amean of-1and standard deviation 0.2,while observa-
+tions inclass 2follow aGaussian distribution with amean of1and standard deviation 0.2.
+Note that inthiscase, theSRS reduces tothemaximum value ofthetwoprobability density
+functions. Asweclassify values across thex-axis, weseethat theprobability assigned toclass 2
+monotonically increases, aswewould expect. However, theSRS reports lowreliability, or
+trustworthiness, inthree places: values totheleftofclass 1,values between thetwoclasses, and
+values totheright ofclass 2.Inthese ranges, wehave values oftesting data that areapoor
+match toboth classes. Wenote inparticular that lowSRS values canoccur across thefullrange
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 7/24
+
+Fig3.Low average SRS can indicate systemic mismat chbetween training and testing data. A)Histograms and boxplots showing thedistributi onsof
+“match” and “mismatch ”cohorts foreach experiment .Histograms and boxplots show thesame informat ion, with boxplots zoomed intoallow foreasier
+comparison ofthedistributi ons. The x-axis range inthehistograms represents thecomplet erange ofobserved SRS values ineach case. Inthesex-mismat ch
+model (left), SWIF(r) wastrained using adataset consisting ofmale individual sofEuropean ancestry divided into twocategories based onHBA1C readings,
+used toesimate blood sugar: Elevated, orNormal. The data provided fortraining consisted of22health-relat edattributes (see Method s).The trained model was
+then tested ontwocohorts, females with European ancestry andanindependen tcohort ofmales with Europea nancestry. These cohorts were labeled with their
+Elevated orNormal status, allowing foridentificat ionofcorrect orincorr ectclassificati onbySWIF(r). Inthetopleft,weseethedistribution ofSRS forElevated
+and Normal individual sfrom either thematching cohort (male) ornon-match ingcohort (female). The female cohort haslower average SRS, visible asa
+leftward shift inboth theElevated (t-test p-value =1.53e-4) and Normal (t-test p-value =5.11e-34 )distributi ons(*** represents p<0.001). Likewise inthe
+ancestry mismat chmodel (right), SWIF(r) wastrained using adataset ofmale and female individuals ofEuropean ancest rydivided into twocategories:
+Elevated andNormal. The trained model wasthen tested ontwocohorts, males and females with African ancestry and anindependen tcohort ofmales and
+females with European ancestry. Asabove, weseethedistributi onofSRS foreach cohort. The non-match ingAfrica nancestry cohort haslower average SRS,
+visible asaleftward shift inboth theElevated (t-test p-value =6.04e-06) andNormal (t-test p-value =1.50e-28 )distributions .B)Confusio nmatrices show
+differences inSWIF(r) classificati onaccuracy between matching andnon-matching cohorts. The non-match ingsexcohort experienced asmall shift towards
+theElevated classificati onwhen compa redtothematching cohort. The non-match ingancestry cohort experienced alarger shift towards theNormal
+classificati onwhen compared tothematching cohort. C)SRS and SWIF(r) probabil ityarecalculated over aplane defined bytwoofthetwenty-two model
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 8/24
+
+ofclassification probabilities, including probabilities that would beinterpreted as“very likely
+class 1”to“very likely class 2”and everything inbetween. This makes theSRS avaluable, com-
+plementary addition tothestandard classification output.
+InFig1B,wescale uptoexamining aseries ofmodels with twoattributes. The distribution
+ofthetraining data isshown inthefirst row ofpanel B.The second row ofpanel Bshows the
+SRS evaluated atpoints drawn uniformly across theplane. Weseethat theSRS ishighest atattributes (Hemogl obin vCholeste rolforthesex-mism atch analysis, and BMI vLDL fortheancestry-mis match analysis), providing abackground ofpoints for
+each graph. Forother views into thedata, seeS6and S7Figs. Ontopofeach isgraphed acontour plot ofthedistribution ofElevated (red-to-wh ite,solid line)
+orNormal (black-to-w hite, dashed line) data foreach cohort. Ontheleft,comparing theMale and Female cohorts wecanobserve ashift intheoverall
+distribution ofthedata, pushing theFemale cohort into anarea with lower SRS values (top) and greater Elevated SWIF(r) probability (bottom). Ontheright,
+comparin gtheEuropean andAfrican cohorts, weobserve that themean difference between theElevated and Normal cohorts ishigher forindividuals with
+European ancestry, and smaller forindividuals with African ancestry. This results ingreater overlap between theElevated and Normal distributions inthe
+African cohort, aswell asanoverall shift towards theNormal classificati on.
+https://do i.org/10.1371/j ournal.pc bi.1011175. g003
+Fig4.The SRS can identify valuable attribute stocreate smarter filters onmissingn ess. A)Applicatio ndata exhibits extrem elowvalues oftheSRS as
+compared tosimulated data. B)Missing Informative attribut eslead tolower SRS compared tomissing Noise attributes. SWIF(r) wastrained with a
+combinatio noffivepotentially informat iveattributes (“Inform ative”), and three “Noise” attributes drawn randoml yfrom Gaussi andistributions with no
+relation totheclass oftheinstance. Inthetesting set,3attribut eswere removed from each instance: either allthree Noise attributes (“Noise Removed”), or3
+randoml yselected Informat iveattributes (“Inform ative Remove d”).The SRS wasthen calculated forallinstances. Instances where Informative attribut eswere
+removed have lower average SRS values compared toinstances where thesame number ofNoise attributes were remove d,visible inthehistograms shown.
+https://do i.org/10.1371/j ournal.pc bi.1011175. g004
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 9/24
+
+points similar totraining data, notonly inindividual attribute value, butalso with respect to
+thecorrelation between attributes. Inparticular, weseethat forinstances inwhich individual
+attribute values areallwithin typical ranges, theSRS willstillreport lowvalues iftheattributes
+jointly lieinaregion ofspace notwell-represented inthetraining data. This illustrates thesen-
+sitivity oftheSRS tothehigh-dimensional structure ofthetrained dataset, which allows itto
+register aninstance as“unexpected” even when nosingle attribute value constitutes anoutlier
+with respect toitstrained distribution. The bottom row shows theSWIF(r) probability evalu-
+ated atpoints drawn uniformly across theplane. Since SWIF(r) tries tofind the“best” class to
+fitaparticular instance, weseeinstances that liefarfrom thetraining data ofboth classes, as
+captured bytheSRS, that arenevertheless classified with high probability tooneclass orthe
+other. More generally, thisillustrates theinherent limitations ofaclassifier asasetofdecision
+boundaries. Ontheother hand, wecanconsider instances with SWIF(r) probabilities close to
+0.5:insome cases, theSRS islowforthese instances (Fig 1,panel B,left), while inother cases
+theSRS ishigh (Fig 1,panel B,center). Forinstances where SWIF(r) probability isclose to0.5
+and theSRS islow, wehave clearly separated distributions foreach class, and points with
+SWIF(r) probability close to0.5aremerely intermediate between thetwoclasses (Fig 1,panel
+B,left) while being apoor fittoboth. When SWIF(r) probability isclose to0.5and SRS ishigh,
+thisindicates that there isoverlap inthedistributions ofthetraining data within which
+instances arewell-fit byboth classes, and aretherefore ambiguous and difficult toclassify (Fig
+2,panel B,center). Combining SWIF(r) classification output with theSRS inthisway enables
+amore complete and nuanced interpretation ofresults.
+The SRS issensitive toinstances from unknown classes
+The SRS issensitive toinstances from classes inapplication data that arenotpresent inthe
+training data. While classifiers aregenerally forced tofind thebest match across trained clas-
+ses,using theSRS allows researchers toidentify those instances that areunusual with respect
+toallclasses (Fig 1),and, potentially, toassociate them with aclass that wasexcluded from
+training orwaspreviously unknown. Inorder todemonstrate theeffect ofmissing classes in
+thetraining setinanauthentic biological context, weanalyzed adataset containing seven mor-
+phological attributes ofseeds from three types ofwheat (Figs 2Aand S1). Intheoriginal dataset
+from Charytanowicz etal.[50], three varieties ofwheat—Kama (wheat 1),Rosa (wheat 2)and
+Canadian (wheat 3)—were grown and visualized using asoftX-ray technique, measuring area,
+perimeter, compactness, length ofkernel, width ofkernel, asymmetry coefficient and length of
+kernel groove. Wedivided thedataset into training and testing sets, then created three models,
+each trained ontwotypes ofwheat, and tested onallthree. Wethen investigated theperfor-
+mance ofSWIF(r) and theSRS inthecase where oneofthethree classes isunrepresented in
+training, butpresent intesting. Fig2Band 2Cshow that foreach model, theinstances belong-
+ingtotheclass that wasexcluded from training have significantly lower SRS values than
+instances that belong toaknown class (p-value<1e-08, Mann-Whitney Test; S1Table). This
+iseven true when theunknown class contains values that areintermediate tothetwoknown
+classes (Fig 2B,leftmost panel), suggesting that theSRS isable toindicate deficiencies inthe
+training setwithout relying onthepresence ofextreme attribute values. When SWIF(r) is
+trained onallthree classes, noclass hassignificantly different SRS values from theother classes
+(p-value>0.05, Mann-Whitney Test; S1Table and S2Fig). Wenote theroughly bimodal
+shape oftheSRS scores when aclass missing from training data isrepresented bymany
+instances intesting data (S3–S5 Figs). Combining thisbimodal profile with domain expertise
+toinspect thelow-SRS samples and identify their common features could lead totheidentifica-
+tion ofanovel class.
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 10/24
+
+The “missing class” task isanalogous tooutlier ornovelty detection, which canbeevaluated
+byother methods including Local Outlier Factor [21], Isolation Forest [51,52], Elliptic Enve-
+lope [53] and Gaussian Mixture Models [54]. Wefind that theSRS hascomparable perfor-
+mance tothese methods onthetask ofdistinguishing instances that came from aclass that was
+notincluded intraining (S3–S5 Figs), while having theadvantage ofbeing produced automati-
+cally within theSWIF(r) pipeline with thesame underlying statistical framework. One addi-
+tional advantage oftheSRS over alternative methods, which weexplore later, isthat itcanbe
+applied even when instances contain missing values forsome attributes; none oftheother
+methods used inthiscomparison allow foranymissing attribute values.
+The SRS issensitive tosystemic bias intraining data relative toapplication
+data
+InFig3,wedemonstrate how theSRS canbeused toidentify systemic differences between
+training data and application data, using examples ofdemographic mismatch between training
+and testing setsintheUKBiobank. Two models were trained topredict elevated ornormal
+blood sugar levels (HBA1C>48 mmol/mol for“Elevated”, HBA1C<42 mmol/mol for“Nor-
+mal”) from acollection ofphenotypes asattributes. Principal Components Analysis (PCA) for
+thephenotype data used inthese experiments isavailable inS6and S7Figs. Inthefirst “sex
+mismatch” model (Figs 3A,leftand S6), themodel wastrained ondata from males with Euro-
+pean ancestry, using 22attributes (see Methods) topredict Elevated orNormal blood sugar.
+This model wasthen tested onasecond cohort ofmales with European ancestry, and a“non-
+matching” cohort consisting offemales with European ancestry. Inthesecond “ancestry mis-
+match” model (Figs 3A,right and S7), themodel wastrained ondata from male and female
+individuals with European ancestry, using thesame 22attributes, with thesame classification
+goal. This model wasthen tested onasecond cohort ofmale and female individuals with Euro-
+pean ancestry, and anon-matching cohort consisting ofmale and female individuals with Afri-
+canAncestry (see Methods). Inboth cases, theaverage SRS ofthenon-matching cohort was
+significantly lower than theaverage SRS ofthematching cohort (Fig 3A,p-values: S2Table).
+This corresponded with systematic biases observed inSWIF(r)’s classification ofthenon-
+matching cohorts (Fig 3B), which resulted inanoverabundance ofindividuals classified as
+Normal intheAfrican ancestry cohort, and anoverabundance ofindividuals classified asEle-
+vated inthefemale sexcohort (Fig 3B). Inorder toinvestigate thecauses ofthereduction in
+SRS, weidentified some attributes with large mean differences between matching and non-
+matching cohorts. InFig3Cleft,weshow apronounced example ofmean difference between
+thedistributions ofcholesterol and hemoglobin across male and female cohorts that results in
+lower SRS values forthefemale cohort. Inthebackground oftheupper plots, weplot thevalue
+oftheSRS across aplane defined bythose twoattributes, and overlay thedistribution oftrait
+values foreach cohort. Inthelower panels ofFig3C,thebackground iscolored using SWIF(r)
+probability. This allows ustovisualize how theattribute values occupy different ranges ofval-
+uesoftheSRS and ofSWIF(r) probability. From thisview, wecannotice some patterns emerg-
+inginthismean shift example. The matching (male) cohort sitsinthecenter ofthearea with
+highest SRS. Likewise, theprobability distributions determined using the(male-only) training
+data appear toeffectively separate thetesting data from themale cohort. Incontrast, thefemale
+cohort isshifted downward, outofthearea oftheplane with thehighest SRS. This also causes
+theprobability distribution shift relative tothemeans ofthiscohort, resulting inagreater
+number ofindividuals from both Elevated and Normal classes being classified ashaving ele-
+vated blood sugar levels. Intheancestry mismatch example, weobserve that there isasmaller
+mean difference between theclasses oftheancestry mismatch cohort (African/elevated vs.
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 11/24
+
+African/normal) than there isbetween thematching ancestry cohort (European/elevated vs
+European/normal). This demonstrates amajor failure fortheclassifier: byrelying onadiffer-
+ence that ispresent inthetraining cohort, theclassifier willnotbeable toaccurately distin-
+guish between individuals belonging toacohort that lacks thisdifference. This results inthe
+increased classification ofindividuals with African ancestry asNormal, forindividuals inboth
+theNormal and Elevated categories. Wecanseethisinthelower right panel, where thedistri-
+bution ofindividuals with elevated blood sugar levels isshifted towards thearea given ahigh
+Normal probability (blue) orintermediate probability (white), rather than thearea with high
+Elevated probability (red). The SRS lacks sensitivity inthisscenario: ifdifferences between
+cohortscauseindividuals fromoneclasstolooklikevalidinstances fromanotherclass,SRScan-
+nothelptoidentifythesemisclassified individuals. PCA analysis (S6and S7Figs) provides an
+additional context forthechallenge ofclassification and useoftheSRS intheancestry mis-
+match model: while there isaclear systemic difference between theMale and Female cohorts
+inattribute space (S6Fig), thedifferences between African and European cohorts arenotas
+obvious (S7Fig). The lack ofobvious differences between theAfrican and European cohorts,
+and thefactthat distribution shifts inthiscontext cause individuals from oneclass tolook like
+individuals from another class areboth challenging situations where wemight expect methods
+liketheSRS that detect distribution shifts tofail.
+When SWIF(r) istrained with data from both thematching andnon-matching cohorts, the
+differences intheSRS arenolonger significant fortheexperiment looking atsex(S8Fig). The dif-
+ference between theSRS forAfrican andEuropean cohorts isstillsignificant forindividuals inthe
+Normal class, though notforindividuals intheElevated class (S9Fig). Wedonotnecessarily see
+animprovement inoverall performance oftheclassifier with anincrease inthediversity ofthe
+samples (S10 andS11Figs). Infact, theclassifier trained onboth African andEuropean ancestries
+performed worse ontheEuropean cohort, andonly slightly better ontheAfrican cohort than the
+model trained onjusttheEuropean cohort. This suggests thatmeaningful differences between the
+cohorts may bedriving misclassification, possibly through ashift inwhich phenotypic measure-
+ments provide thebest indicators ofelevated HBA1C inagiven population.
+This experiment represents animportant usecase fortheSRS; inmany contexts, research-
+ersmay beunsure how well their classifiers willgeneralize toanew dataset. The SRS provides
+aquick way toview theoverall difference inmodel fitbetween atraining orvalidation setand
+atesting set,making itstraightforward totestforsignificant shifts inSRS distribution using
+two-sample tests [17]. Inthisexample, weareable toobserve astatistically significant decrease
+inSRS score oncohorts mismatched oneither sexorancestry. This analysis iscrucial formak-
+ingsubsequent decisions about theneed foradditional training.
+The SRS can beused tofilter instances missing valuable attributes
+Wehave shown how theSRS canassist researchers indetecting unknown classes intesting
+data (Fig 2),and identifying systemic mismatches between training and testing data (Fig 3).
+Another feature oftheSRS that isespecially relevant toreal-world data ishow itresponds to
+data ‘missingness’. Many machine learning classifiers and outlier/novelty detection methods
+donotallow foranyattributes tobemissing from aninstance forclassification tobeper-
+formed. SWIF(r) allows foranynumber ofmissing attributes atagiven instance, aslong asat
+least asingle attribute isdefined, and itallows forthenumber ofmissing attributes tovary
+from instance toinstance. However, while SWIF(r) istolerant ofmissing data, performance
+generally declines asmissingness increases [22]. Knowing this, itmay betempting tosetasim-
+plethreshold onthenumber ofmissing attributes allowed, orotherwise filter instances that
+contain missing attributes. However, wefind that theSRS offers amethod forselectively
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 12/24
+
+filtering instances that aremissing valuable attributes, without losing instances that canbe
+classified confidently with existing attributes.
+InFig4,weillustrate thisinapopulation genetics context, inwhich SWIF(r) istrained on
+simulated genetic data undergoing neutral evolution and balancing selection, with application
+data coming from the1000 Genomes project [55] (Materials and Methods). Inthisdataset,
+each instance isasiteinthegenome. Missing data isubiquitous inboth simulated and applica-
+tion data duetotheconstraints oncalculating many oftheattributes, which inthiscase are
+selection statistics. InFig4Aweobserve thegeneral problem that lowSRS values arepresent,
+especially inapplication data. Asweknow from prior experiments, thiscanhave multiple
+causes related tomismatch between training and testing data. Inthiscase, application data had
+thehighest average number ofmissing attributes, missing anaverage of2.87 attributes outof
+fivetotal attributes. Balancing selection simulations were missing anaverage of2.75 attributes,
+and neutral evolution simulations were missing anaverage of1.56 attributes. The number of
+missing attributes differed across data types and SRS ranges. Notably, outof23application
+data instances with SRS values lessthan -16, all23were missing selection statistics iHS and
+nSL, both measures ofhaplotype homozygosity.
+InFig4B,wesetupanexperiment that demonstrates thebenefit ofusing theSRS todeter-
+mine how tofilter instances with missing data, rather than setting anarbitrary threshold on
+missingness. First, wecreated afiltered training dataset from simulated data, using only
+instances forwhich alloftheselection statistics aredefined. Welabel ouroriginal setofselec-
+tion statistics “Informative attributes”. Wealso added 3additional attributes that have nocon-
+nection toinstance properties; instead, they aredrawn randomly from Gaussian distributions.
+These “Noise attributes” aredrawn inanidentical manner forboth classes, sothey have no
+information value tothemachine learning algorithm. Wefiltered testing data inthesame
+manner, with thesame added Noise attributes. Asafinal step inthecreation oftesting data for
+thisexperiment, weadded missingness byeliminating either three Informative attributes (Fig
+4B,yellow and blue) orthethree Noise attributes (Fig 4B,orange and red). Holding thenum-
+berofmissing attributes constant, weseethat SRS islower when Informative attributes are
+missing, and higher when Noise attributes aremissing. Astrict threshold onmissingness
+would treat Noise and Informative attributes equally when deciding toeliminate aninstance
+from consideration bytheclassifier. Instead, wedemonstrate that wecanuseSRS toidentify
+valuable attributes, inorder toavoid eliminating instances that aremissing low-value orunin-
+formative attributes.
+Discussion
+Inthisstudy weintroduce theSWIF(r) reliability score (SRS), which assesses thetrustworthi-
+ness oftheclassification foraspecific instance using themodel underlying theSWIF(r) classi-
+fier. Wedemonstrate theutility oftheSRS when faced with common challenges inmachine
+learning including: 1)anunknown class present intesting data that wasnotpresent intraining
+data, 2)systemic mismatch between training andtesting data, and3)instances oftesting data
+that have missing values forsome attributes. Reliability scores ingeneral provide aframework
+toevaluate how closely agiven testing instance matches thetraining data underlying aclassifier.
+The reliability score shares some features with outlier detection, novelty detection and detecting
+out-of-distribution instances [16,19–21,51–53], aswell asmethods fortesting distribution shifts
+[17]. Our implementation, theSWIF(r) Reliability Score orSRS, isable tooperate inthepres-
+ence ofmissing attribute values, astrength that setsitapart from many related methods.
+Current debates inthemachine learning field propose twomajor distinct objectives for
+developing machine learning frameworks: thedevelopment ofinterpretable methods, which
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 13/24
+
+have inherent features that allow users tounderstand how model conclusions arereached
+[4,24], and thedevelopment ofexplainable methods (and/or explanatory tools) which pro-
+vide post-hoc ormathematically distinct overlays onto model conclusions inorder toaid
+human understanding ofhow model conclusions may have been reached [56]. Most exist-
+ingmethods forthedetection ofoutliers and novel instances indatasets operate inthesec-
+ond mode, providing asecondary analysis that creates anew model ofthedata, and then
+filters thedata based onthis model [16,21,51–53]. Methods fordetecting out-of-distributio n
+instances inthecontext ofneural networks [18–20] bear some resemblance totheSRS, as
+they attempt touseaspects oftheneural network architecture toderive measures ofconfi-
+dence [19] ortoidentify out-of-distribution instances [18]. Inthis paper, wecontribute
+towards thegoal ofinterpretability specifically: because ofSWIF(r)’s generative framework,
+wehave anavailable model upon which tobuild theSRS, which canbeused toscrutinize
+multiple failure cases oftheSWIF(r) machine learning algorithm. The SRS allows auser to
+probe forimportant deficiencies inthetraining and testing data, including missing classes,
+systemic mismatch between training and testing data, and instances missing informative
+attributes. Forexample, users may look forabimodal distribution inSRS values toindicate
+alarge number ofinstances that may come from anunknown class, allowing forsubsequent
+investigation ofwhat those instances have incommon. Additionally, analyzing SRS distri-
+butions between known subgroups may help users diagnose asystemic mismatch between
+training and application data. While afullinterpretation ofthecauses contributing toalow
+SRS requires domain specific knowledge, useoftheSRS offers researchers several potential
+remedies, including removal ofoutliers, measurement ofdistribution shifts, expanding or
+revising thetraining set,orthecreation ofmultiple classifiers toaccount fordistinct sub-
+groups intheir analysis.
+The SRS represents avaluable measure forSWIF(r), and similar reliability scores could be
+created forclosely related methods with agenerative basis. This underscores theinherent
+interpretability ofgenerative methods: because they learn theunderlying distribution ofdata
+foreach class, reliability scores canreveal elements ofthat process inorder toimprove the
+quality ofclassification, and understand itsbasis. Since discriminative classifiers learn decision
+boundaries directly without learning underlying distributions, these methods (including most
+neural networks, support vector machines, random forest classifiers, regression-based meth-
+odsand more) require adifferent approach, such aspost-hoc useofnovelty detection methods
+and measures ofdistribution shifts. Insuch acase, itispossible tousetheSRS independent of
+applying SWIF(r), asacomplementary read-out alongside another machine learning classifier.
+Inthiscase, theSRS would beanexplanatory tool forexamining results orrefining thedesign
+ofthetraining set,butcould notbeunderstood asproviding insight into thespecific classifier.
+Wenote that theSRS, similar toSWIF(r) itself, isparticularly suitable asanexplanatory tool
+forapplications with asmall-to-moderate number offeatures. With alarge number offeatures,
+pairwise correlations learned bytheSWIF(r) framework may notbesufficient tocapture the
+fullstructure ofthedata, and other tools foroutlier detection ordistribution shift might be
+more desirable. Ontheother hand, insituations inwhich thefeatures arehighly correlated, it
+might bepreferable toreduce thenumber offeatures toasmaller, lesscorrelated setusing an
+approach such asPCA.
+One limitation oftheSRS isthat while theSRS indicates problems with missing data or
+deficiencies inthedataset, asolution tothose problems may notalways bepossible orsimple
+toimplement. Researchers willneed torelyondomain-specific knowledge todecide whether
+theindicated problem canbesolved byremoving instances, adding additional classes orattri-
+butes totheir model, orbyincluding more, ormore diverse instances, intheir training data. It
+may also beadvantageous totrain independent classifiers forcohorts that may have distinct
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 14/24
+
+underlying properties; forexample, separate classifiers foreach sexmay beuseful inastudy
+where thegoal istodistinguish individuals with adisease phenotype [57] (Fig 3).Discovering
+asolution tolow-reliability instances willrequire answers tosubjective and context-dependent
+questions that may bedifficult toanticipate and may notgeneralize. Care should betaken to
+useabstention, ortheremoval ofinstances inaprincipled and appropriate manner. When
+there isriskinvolved inmaking thewrong classification, abstention canbeanimportant prac-
+tice, asinmedical contexts [46,47]. Inother cases there may beadistinctive factor impacting
+theperformance oftheclassifier onspecific instances: forexample, when simulated training
+data fails tocapture dynamics inunusual genomic regions. Wenote that abstention orremoval
+ofinstances should notbeused toboost measurement ofperformance oftheclassifier, butto
+invite further investigation and scrutiny. When distribution shifts oradditional classes aresus-
+pected, researchers may face decisions about thenumber and types ofclasses toinclude in
+training, and cost-benefit considerations when deciding whether togather theadditional data
+required toaddnew attributes oradditional training examples. Increasing transparency and
+publication ofmodels with negative results would help address some oftheproblems raised by
+these subjective questions.
+Our study ismotivated bythefactthattheinvestigation offlaws inmachine learning has
+become animportant topic ofresearch initsown right. Asmachine learning methods areputto
+thetestforapplications likemedical image analysis, weencounter examples where theaccuracy
+andvalue ofmachine learning methods areartificially inflated byflaws inthetraining set,over-
+confidence inresults, orreliance onunintended features ofdata [58,59]. Many ofthese machine
+learning methods areso-called ‘black box’ methods that arerelatively difficult todeconstruct.
+Explanatory tools built toanalyze theoutput ofthese methods often relyonpost-hoc challenges to
+atrained model. Incontrast, therelative mathematical simplicity ofSWIF(r) andtheSRS allows
+formore direct observation oftheperformance ofthemachine learning classifier.
+Across many areas ofbiology there isanopportunity toimprove machine learning analy-
+sesbycreating community standards and best practices forsimulation, interpretability and
+reproducibility. Bypackaging SWIF(r) and theSRS together into asingle workflow, weaim
+togive researchers thetools toboth apply themachine learning method, and tocritique and
+interpret theresults they obtain. Inaddition, byincluding theSRS asdefault output when
+using theSWIF(r) classifier, wehope toincrease theadoption ofthis way ofthinking,
+encouraging researchers across thebiological spectrum who useout-of-the-box classifiers
+tointerrogate results that might betoogood tobetrue, orunderstand theways inwhich
+their training data may besystematically biased. Asmachine learning applications tobio-
+logical data expand, itwill beimportant toprioritize theability todraw biological conclu-
+sions from data. Wealso cannot afford tolose sight oftheway that subjective researcher-
+specific decisions guide thedesign ofmachine learning models. Domain-specific biological
+knowledge currently provides thebest available guide fornavigating thecomplex, multi-fac-
+torial choices involved inmodel design. Inorder tobest leverage this domain-specific
+expertise, weneed toensure that machine learning models areeasy tointerpret, dissect and
+critique, including byresearchers without machine learning expertise. Tools that enhance
+theinterpretability and transparency ofmachine learning algorithms areanimportant step
+towards this goal.
+Materials andmethods
+Overview and Definition ofSRS
+SWIF(r) wasoriginally defined tocalculate theprobability that agenomic siteisadaptive (vs
+neutral) using thefollowing formula, with theterms adjusted here tosuitthemore general
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 15/24
+
+case and tomatch thedefinition oftheSRS inEq2:
+Pclass1jX1¼x1;...;Xn¼xn ð Þ
+¼pPn
+j¼1½fðXj¼xjjclass1ÞQ
+i6¼jfðXi¼xijXj¼xj;class1Þ�
+pPn
+j¼1½fðXj¼xjjclass1ÞQ
+i6¼jfðXi¼xijXj¼xj;class1Þ�
+þð1 pÞPn
+j¼1½fðXj¼xjjclass2ÞQ
+i6¼jfðXi¼xijXj¼xj;class2Þ�ðEq3Þ
+This framework canbegeneralized toother applications bysimply changing theclassifica-
+tion categories (in[22], adaptive and neutral), and with adjustment oftheBayesian priorπ
+according tothespecific application. Attributes denoted byXmust becontinuous variables.
+Eq1(Results) adapts thenumerator ofSWIF(r), which approximates thelikelihood ofthe
+observed data conditioned oneach class using both themarginal distributions oftheattributes
+and thetwo-dimensional joint distributions oftheattributes, from which conditional distribu-
+tions arederived. The SWIF(r) probability istheposterior probability ofaclass given thesetof
+attributes. Inthecase ofaninstance with oneormore missing attributes, both SWIF(r) and
+theSRS arecalculated based onthesetofpresent attributes rather than thefullsetofnattri-
+butes, altering thenumber ofdensity functions ineach sum and product ofEqs2and 3.The
+output from Eq3canbethought ofasanswering thequestion: Given thetraining data and the
+available classes, what istheprobability that aninstance came from thisclass (instead of
+another oftheavailable classes)? Eq2(Results), which defines theSRS, aims toaskadifferent
+question, which issimply: What isthelikelihood ofseeing aninstance likethisone, across all
+available classes?
+InFig1ofthisstudy, SWIF(r) wastrained using aπvalue of0.5,anunbiased prior that
+gives both classes equal weight. InFig1A,data foreach class wasgenerated with asingle attri-
+bute, drawn from N(-1, 0.22)forclass 1and N(+1, 0.22)forclass 2.InFig1C,wegenerated
+twoattributes foreach class instance from bivariate Gaussian distributions. Inthisexperiment,
+three different models were trained, each consisting oftwoclasses (S3Table). 1000 instances
+were generated foreach class totrain SWIF(r). Tocreate thetesting set,2000 instances were
+generated bydrawing from theuniform distribution across theplane bounded by(-2,2)in
+both dimensions. SWIF(r) classification and theSRS were both calculated oneach instance in
+thetesting set,using thexand ycoordinates astheattribute values. Data and code forthisanal-
+ysisareavailable onGithub: https://github.com/ramachandran- lab/SRS_paper. SWIF(r), with
+theSRS included, canbeinstalled according toinstructions available at:https://github.com/
+ramachandran-lab/SWIFr.
+Unknown class example: Wheat seeds dataset
+Data forthisexperiment wasoriginally gathered byCharytanowicz etal.[50]. Three varieties
+ofwheat: Kama (wheat 1),Rosa (wheat 2)and Canadian (wheat 3),were grown inexperimen-
+talfields attheInstitute ofAgrophysics ofthePolish Academy ofSciences inLublin. 70seeds
+from each variety were randomly selected, and visualized using asoftX-ray technique. Seven
+geometric parameters were measured: area, perimeter, compactness, length ofkernel, width of
+kernel, asymmetry coefficient and length ofkernel groove [50].
+Toconstruct training and testing sets, each setof70wasrandomly divided into twosetsof
+35,fortraining and testing respectively. Wecreated three models, each trained ontwotypes of
+wheat. Testing wasthen performed onallthree types. SeeS4Table forsample breakdown. Dif-
+ferences inclass distributions ofSRS used Mann-Whitney Utests. Forperformance compari-
+sonthefollowing methods were used: Elliptic Envelope, Local Outlier Factor and Isolation
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 16/24
+
+Factor from sklearn [60] and Gaussian Mixture Models from sklego (scikit-lego: https://scikit-
+lego.netlify.app). Data and code forthisanalysis areavailable onGithub: https://github.com/
+ramachandran-lab/SRS_paper .
+Systemic mismatch between training and testing set:UK biobank elevated
+blood sugar
+Phenotype data wasdownloaded from theUKBiobank under Application 22419, for22pheno-
+types used asattributes, andHBA1C asanoutcome. Attributes were asfollows: BMI (Body Mass
+Index), MCV (Mean Corpuscular Volume), Platelet (count ofPlatelets inblood), DBP (Diastolic
+Blood Pressure), SBP (Systolic Blood Pressure), WBC (White Blood Cell count), RBC (Red Blood
+Cell count), Hemoglobin (Hemoglobin blood test), Hematocrit (hematocrit blood test), MCH
+(Mean Corpuscular Hemoglobin), MCHC (Mean Corpuscular Hemoglobin Concentration),
+Lymphocyte (Lymphocyte cellcount), Monocyte (Monocyte cellcount), Neutrophil (Neutrophil
+cellcount), Eosinophil (Eosinophil cellcount), Basophil (Basophil cellcount), Urate (Uric acid
+concentration inblood), EGFR (Estimated Glomerular Filtration Rate), CRP (C-Reactive Protein
+concentration), Triglyceride (Triglyceride concentration), HDL (High-Density Lipoprotein test),
+LDL (Low-Density Lipoprotein test) andCholesterol (Cholesterol test). Foreach phenotype, we
+centered themean phenotype value at0andscaled thephenotype values tohave astandard devia-
+tion of1.Wethen selected asubset ofthose individuals fortraining each oftwomodels. Within
+each model, individuals were divided onthebasis oftheir HBA1C measurement, ablood testthat
+estimates blood sugar levels. Individuals with anHBA1C reading ofover 48mmol/mol were
+sorted into the“elevated” cohort; readings of48mmol/mol orgreater aretypically considered
+diagnostic fordiabetes. Individuals with anHBA1C reading of42mmol/mol orbelow were sorted
+into the“normal” cohort. Individuals with HBA1C readings of42–48 mmol/mol, arange associ-
+ated with prediabetes, were notincluded intheanalysis. SeeS5Table forsample breakdown. All
+statistical tests performed inthissection aretwo-sample t-tests.
+Ancestry mismatch experiment. Individuals were first divided onthebasis ofancestry, asin
+[61], resulting in349,411 individuals ofself-identified European descent, and4,967 individuals of
+African descent. The latter group wasidentified both byself-identification andbyanADMIX-
+TURE analysis asdescribed in[61]. Applying theHBA1C filter described above resulted in8,631
+individuals intheEuropean/elevated cohort, 268individuals intheAfrican/elevated cohort,
+243,283 individuals intheEuropean/normal cohort and2,532 individuals intheAfrican/normal
+cohort. Forthepurposes oftraining, 800individuals were selected atrandom from each ofthe
+European/elevated andEuropean/normal cohorts, creating atraining setwith 1600 European
+individuals. The model wasthen tested on800individuals from each cohort, with theexception
+oftheAfrican/elevated cohort which wastested onthe268eligible individuals.
+Sexmismatch experiment. The same 349,411 individuals ofEuropean descent described
+intheancestry experiment were divided onthebasis ofsex,yielding 134,578 female individu-
+alsand 117,336 male individuals. Applying theHBA1C filter described above resulted in
+131,432 individuals inthefemale/normal cohort, 3146 individuals inthefemale/elevated
+cohort, 111,851 individuals inthemale/normal cohort and 5485 individuals inthemale/ele-
+vated cohort. Forthepurposes oftraining, 800individuals were selected atrandom from each
+ofthemale/normal and male/elevated cohorts, creating atraining setwith 1600 male individu-
+als.The model wasthen tested on800individuals from each cohort.
+Missing data: Balancing selection/1000 genomes dataset
+Toproduce genome simulations ofbalancing selection and neutral evolution weused SLiM,
+pyslim and msprime tocombine coalescent and forward simulation approaches [62]. We
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 17/24
+
+simulated 1Mbgenomic regions with 500simulations foreach ofthetwoconditions (balanc-
+ingand neutral). Balancing simulations contained asingle balanced mutation atthecenter of
+the1Mbgenomic region. The mutation wasintroduced 100,000 generations ago, with aselec-
+tion coefficient (s)of0.01, and overdominance coefficient (h)varied according toauniform
+distribution from 1.33 to5.The simulation process used SLiM 3.3,including tree sequence
+recording, along with pyslim, tskit and msprime forrecapitation and neutral mutation overlay
+[62]. Wesimulated African, European, and Asian populations according tothedemographic
+model developed byGraveletal.[63]. Following simulation, wesampled 200individuals (400
+haplotypes) from theAfrican population foreach selection scenario togenerate training data.
+Testing data wasgenerated inanidentical manner, with 100simulations performed foreach
+selection scenario.
+Cross-Population Extended Haplotype Homozygosity (XP-EHH) [28], Integrated Haplo-
+type Score (iHS) [26], iHH12 [64,65] and nSL [66] were calculated using selscan [67]. These
+statistics require phased genomic data asinput, and were designed todetect signatures of
+recent orongoing positive selection ingenomes. Beta, astatistic built todetect balancing selec-
+tion using ancestral/derived allele frequencies, wascalculated using Betascan [68]. For
+XP-EHH, which requires anoutgroup population tocalculate, thesimulated European popu-
+lation served astheoutgroup fortheAfrican population sampled. DDAF (difference inderived
+allele frequency) also requires anoutgroup allele frequency tocalculate. Here, theaverage of
+theEuropean and Asian allele frequencies wasused.
+Forcomparison with 1000 Genomes data, alloftheabove summary statistics were calcu-
+lated onthecomplete setofYRI individuals. Where outgroup calculations were required, the
+CEU and CHB populations were used inthesame manner astheEuropean and Asian simula-
+tions, respectively. Simulated testing data foreach scenario, aswell as1000 Genomes data,
+were processed with SWIF(r), producing classification probabilities and SRS values (shown in
+Fig4A). Data and code forthisanalysis areavailable onGithub: https://github.com/
+ramachandran-lab/SRS_paper .
+Supporting information
+S1Table. Mann-Whitney test scores comparing SRS distributions forwheat classes under
+different models. Classifiers were trained with twooutofthree classes and tested onallthree
+classes. The missing class isindicated inthefirst column. Highlighted cells indicate compari-
+sons where wedonotexpect significant differences between classes because they areboth pres-
+entinthetraining data.
+(PDF)
+S2Table. Average SRS values and p-values forUKB cohort comparisons.
+(PDF)
+S3Table. Gaussian distributions byclass and model forFig1C.
+(PDF)
+S4Table. Sample sizes forwheat dataset.
+(PDF)
+S5Table. Sample sizes forUKB cohorts.
+(PDF)
+S1Fig. View ofwheat dataset. Scatterplots ofeach pair ofattributes. Histograms showing the
+distribution foreach individual attribute.
+(PDF)
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 18/24
+
+S2Fig. SRS scores show aunimodal pattern when trained onallthree classes ofwheat. His-
+togram ofSRS scores generated when SWIF(r) wastrained onallthree classes ofwheat, and
+tested onallthree classes.
+(PDF)
+S3Fig. SRS hassimilar performance toother outlier detection methods when separating
+instances from anunknown class (wheat 1).(Top) Receiver Operating Characteristic curve
+ofoutlier detection methods and theSRS. The “True Positive Rate” isthefraction ofmembers
+ofthetrained classes encompassed bythescore threshold, while the“False Positive Rate” isthe
+fraction ofthemembers ofthe“unknown” orexcluded class encompassed bythescore thresh-
+old. (Middle) The unknown class isshown inblue (wheat 1),while theclasses included in
+training data areshown inredand green (wheat 2,wheat 3).Weseethat forallmethods, the
+majority ofinstances ofwheat 1(blue) aretotheleft,receiving lower scores than instances
+from known classes. (Bottom) Receiver Operating Characteristic curve ofGaussian Mixture
+Models (GMM) outlier detection methods and theSRS. The “True Positive Rate” isthefrac-
+tion ofmembers ofthetrained classes encompassed bythescore threshold, while the“False
+Positive Rate” isthefraction ofthemembers ofthe“unknown” orexcluded class encompassed
+bythescore threshold. GMM10 refers toaGaussian Mixture Model trained with 10compo-
+nents, GMM5 istrained with 5components and GMM20 istrained with 20components.
+(PDF)
+S4Fig. SRS hassimilar performance toother outlier detection methods when separating
+instances from anunknown class (wheat 2).(Top) Receiver Operating Characteristic curve
+ofoutlier detection methods and theSRS. The “True Positive Rate” isthefraction ofmembers
+ofthetrained classes encompassed bythescore threshold, while the“False Positive Rate” isthe
+fraction ofthemembers ofthe“unknown” orexcluded class encompassed bythescore thresh-
+old. (Middle) The unknown class isshown inred(wheat 2),while theclasses included intrain-
+ingdata areshown inblue and green (wheat 1,wheat 3).Weseethat forallmethods, the
+majority ofinstances ofwheat 2(red) aretotheleft,receiving lower scores than instances from
+known classes. (Bottom) Receiver Operating Characteristic curve ofGaussian Mixture Models
+(GMM) outlier detection methods and theSRS. The “True Positive Rate” isthefraction of
+members ofthetrained classes encompassed bythescore threshold, while the“False Positive
+Rate” isthefraction ofthemembers ofthe“unknown” orexcluded class encompassed bythe
+score threshold. GMM10 refers toaGaussian Mixture Model trained with 10components,
+GMM5 istrained with 5components and GMM20 istrained with 20components.
+(PDF)
+S5Fig. SRS hassimilar performance toother outlier detection methods when separating
+instances from anunknown class (wheat 3).(Top) Receiver Operating Characteristic curve
+ofoutlier detection methods and theSRS. The “True Positive Rate” isthefraction ofmembers
+ofthetrained classes encompassed bythescore threshold, while the“False Positive Rate” isthe
+fraction ofthemembers ofthe“unknown” orexcluded class encompassed bythescore thresh-
+old. (Middle) The unknown class isshown ingreen (wheat 3),while theclasses included in
+training data areshown inblue and red(wheat 1,wheat 2).Weseethat forallmethods, the
+majority ofinstances ofwheat 3(green) aretotheleft,receiving lower scores than instances
+from known classes. (Bottom) Receiver Operating Characteristic curve ofGaussian Mixture
+Models (GMM) outlier detection methods and theSRS. The “True Positive Rate” isthefrac-
+tion ofmembers ofthetrained classes encompassed bythescore threshold, while the“False
+Positive Rate” isthefraction ofthemembers ofthe“unknown” orexcluded class encompassed
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 19/24
+
+bythescore threshold. GMM10 refers toaGaussian Mixture Model trained with 10compo-
+nents, GMM5 istrained with 5components and GMM20 istrained with 20components.
+(PDF)
+S6Fig. Principle Components Analysis ofdataset composed ofhealth attributes formale
+and female individuals ofEuropean descent with both normal and elevated HBA1C. For
+each class, 800individuals meeting theclass definition (sex and HBA1C status) were selected
+atrandom from thesetofindividuals who selfidentified. PCs 1–10 areshown.
+(PDF)
+S7Fig. Principle Components Analysis ofdataset composed ofhealth attributes forindi-
+viduals ofboth African and European descent with both normal and elevated HBA1C. For
+each class, 800individuals meeting theclass definition (ancestry and HBA1C status) were
+selected atrandom. Only 268individuals met theclass definition ofAfrican ancestry and ele-
+vated HBA1C, soonly these 268individuals were included forthat class. PCs 1–10 areshown.
+Individuals ofboth sexes were included intheanalysis.
+(PDF)
+S8Fig. SWIF(r) model trained with both male and female European individuals and tested
+onboth male and female individuals. Boxplots (left) and histograms (right) represent the
+same data, with histograms zoomed outtoshow outliers, while outliers arenotshown inbox-
+plots. Annotation “ns” indicates “not significant” (t-test: top: p=0.353, bottom p=0.254).
+(PDF)
+S9Fig. SWIF(r) model trained with both African and European individuals and tested on
+both African and European individuals. Boxplots (left) and histograms (right) represent the
+same data, with histograms zoomed outtoshow outliers, while outliers arenotshown inbox-
+plots. Annotation “ns” indicates “not significant,” “*”indicates asignificant difference (t-test:
+top: p=0.165, bottom p=0.00216*)
+(PDF)
+S10 Fig. Confusion matrix forAfrican and European test sets with SWIF(r) model trained
+with both African and European samples. ASWIF(r) model wastrained with combined Afri-
+canand European data, and tested ontheAfrican and European testcohorts from Fig3.Num-
+bers correspond tothefollowing: 0=Elevated HBA1C, 1=Normal HBA1C. Actual class ison
+they-axis, predicted class isonthex-axis.
+(PDF)
+S11 Fig. Confusion matrix forMale and Female European test sets with SWIF(r) model
+trained with both Male and Female European samples. ASWIF(r) model wastrained with
+combined Male and Female European data, and tested ontheMale and Female European test
+cohorts from Fig3.Numbers correspond tothefollowing: 0=Elevated HBA1C, 1=Normal
+HBA1C. Actual class isonthey-axis, predicted class isonthex-axis.
+(PDF)
+Acknowledgmen ts
+The authors thank Samuel Pattillo Smith forassistance with UKBiobank data.
+Author Contributions
+Conceptualization: K.D.Ahlquist, Lauren A.Sugden, Sohini Ramachandran.
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 20/24
+
+Formal analysis: K.D.Ahlquist, Lauren A.Sugden.
+Funding acquisition: Sohini Ramachandran.
+Investigation: K.D.Ahlquist, Lauren A.Sugden.
+Methodology: Lauren A.Sugden.
+Resources: Sohini Ramachandran.
+Software: K.D.Ahlquist, Lauren A.Sugden.
+Supervision: Sohini Ramachandran.
+Validation: K.D.Ahlquist.
+Visualization: K.D.Ahlquist, Lauren A.Sugden.
+Writing –original draft: K.D.Ahlquist, Lauren A.Sugden.
+Writing –review &editing: K.D.Ahlquist, Lauren A.Sugden, Sohini Ramachandran.
+References
+1.Azodi CB,Tang J,Shiu SH.Opening theblack box:interpretabl emachine learning forgeneticists.
+Trends Genet. 2020 Jun1;36(6):442– 55.https://doi.or g/10.1016 /j.tig.2020.03. 005PMID: 32396837
+2.Freitas AA.Comprehen sible classifica tionmodels: aposition paper. SIGKDD Explor. 2014 Mar17;15
+(1):1–0.
+3.Lipton ZC.Themytho sofmodel interpretabi lity:Inmachine learning, theconcept ofinterpretabi lityis
+both importan tandslippery. ACM Queue. 2018 Jun1;16(3):31–5 7.
+4.Rudin C.Stop explaini ngblack boxmachine learning models forhighstakes decisions anduseinter-
+pretable models instead. NatMach Intell. 2019 May; 1(5):206–1 5.https://doi.or g/10.103 8/s42256 -019-
+0048-x PMID: 35603010
+5.Villoutreix P.What machine learning candofordevelopme ntalbiology. Development. 2021 Jan1;148
+(1):dev18847 4.https://doi.or g/10.1242/ dev.188474 PMID: 33431591
+6.Gilpin W,Huang Y,Forger DB.Learning dynamic sfrom large biologic aldata sets: machine learning
+meets systems biology. Curr Opin Syst Biol. 2020 Aug1;22:1–7.
+7.Zitnik M,Nguyen F,Wang B,Leskovec J,Goldenber gA,Hoffman MM. Machine learning forintegra ting
+data inbiology andmedicine: Principles, practice, andopportunitie s.InfFusion. 2019 Oct1;50:71–91.
+https://doi.or g/10.101 6/j.inffus.20 18.09.01 2PMID: 30467459
+8.Lu¨rigMD,Donoughe S,Svensson EI,Porto A,Tsuboi M.Computer vision, machine learning, andthe
+promise ofphenomics inecology andevolution arybiology. Front Ecol Evol. 2021 Apr21;9:64277 4.
+9.Chen R,LiuX,JinS,LinJ,LiuJ.Machine learning fordrug-targe tinteracti onprediction. Molecules .
+2018 Aug31;23(9):2208 .https:/ /doi.org/10.33 90/molecul es23092 208PMID: 302003 33
+10. Walsh I,Fishman D,Garcia-Gas ullaD,Titma T,Pollastri G,Harrow J,etal.DOME: recomme ndations
+forsupervised machine learning validation inbiology. NatMethods. 2021 Oct;18(10):112 2–7. https://
+doi.org/10.10 38/s41592-021 -01205-4 PMID: 343160 68
+11. Wojtusiak J.,Reproduci bility Transpar ency andEvaluati onofMachine Learning inHealth Applications .
+Biomed EngSyst Technol IntJtConf BIOST EC.2021 (pp.685–69 2).
+12. HeilBJ,Hoffman MM, Markow etzF,LeeSI,Greene CS,Hicks SC.Reproduci bility standards for
+machine learning inthelifesciences. NatMethods .2021 Oct;18(10):113 2–5. https://doi.or g/10.1038/
+s41592-021 -01256-7 PMID: 34462593
+13. EidFE,Elmarake byHA,Chan YA,Fornel osN,ElHefnawi M,VanAllen EM,etal.Systema ticauditing
+isessential todebiasin gmachine learning inbiology. Commun Biology. 2021 Feb10;4(1):183. https://
+doi.org/10.10 38/s42003-021 -01674-5 PMID: 335687 41
+14. Jones DT.Setting thestandard sformachine learning inbiology. NatRevMolCellBiol. 2019 Nov; 20
+(11):659–6 0.https://do i.org/10.1038 /s41580- 019-0176- 5PMID: 31548714
+15. Greener JG,Kandathil SM,Moffat L,Jones DT.Aguide tomachine learning forbiologis ts.NatRevMol
+CellBiol. 2022 Jan;23(1):40–5 5.https:// doi.org/10.10 38/s4158 0-021-004 07-0 PMID: 34518686
+16. Pimentel MA,Clifton DA,Clifton L,Tarassenk oL.Areview ofnovelty detection. Signal process ing.
+2014 Jun1;99:215–49.
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 21/24
+
+17. Rabanser S,Gu¨nnemann S,Lipton Z.Failing loudly: Anempirical study ofmethods fordetecting data-
+setshift. AdvNeural InfProcess Syst. 2019;32 .
+18. Liang S,LiY,Srikant R.Enhanc ingthereliability ofout-of-distrib ution image detection inneural net-
+works. arXiv:1 706.02690 [Preprint]. 2017 Jun8[cited 2023 May15].Available from: https://arxiv.o rg/
+abs/1706 .02690
+19. DeVries T,Taylor GW. Learning confidence forout-of-distrib ution detection inneural networks.
+arXiv:1802. 04865 [Preprint]. 2018 Feb13[cited 2023 May15].Availab lefrom: https://arx iv.org/abs/
+1802.04865
+20. LeeK,LeeK,LeeH,Shin J.Asimple unified framework fordetecting out-of-dis tribution samples and
+adversar ialattack s.AdvNeural InfProcess Syst. 2018;31.
+21. Breunig MM, Kriegel HP,NgRT,Sander J.LOF: identifyin gdensity-ba sedlocal outliers. Proc ACM
+SIGMOD IntConf Manag Data. 2000 May16(pp.93–104 ).
+22. Sugden LA,Atkinson EG,Fischer AP,Rong S,Henn BM,Ramachandra nS.Localizatio nofadaptive
+variants inhuman genomes using averaged one-depend ence estimation. Nature Commun. 2018 Feb
+19;9(1):703. https://d oi.org/10.103 8/s41467 -018-0310 0-7PMID: 29459739
+23. Murphy KP.Machine learning: aprobabilistic perspective .MITpress; 2012 Sep7.
+24. Rudin C,Chen C,Chen Z,Huang H,Semeno vaL,Zhong C.Interpre table machine learning: Funda-
+mental principles and10grand challeng es.StatSurv. 2022; 16:1–85.
+25. Weir BS.Genetic data analysis. Methods fordiscrete population genetic data. Sinauer Associates, Inc.
+Publishers ;1990.
+26. Voight BF,Kudaravalli S,Wen X,Pritcha rdJK.Amap ofrecent positive selection inthehuman genome.
+PLoS Biol. 2006 Mar; 4(3):e72. https://doi.or g/10.1371/ journal.pbio .0040072 PMID: 164945 31
+27. Tajima F.Statistical method fortesting theneutral mutation hypothes isbyDNA polymorp hism. Genet-
+ics.1989 Nov1;123(3):585 –95. https:// doi.org/10.10 93/gene tics/123.3.585 PMID: 251325 5
+28. Sabeti PC,Varilly P,FryB,Lohmuel lerJ,Hostette rE,Cotsap asC,etal.Genome-w idedetection and
+character ization ofpositive selection inhuman populations. Nature. 2007 Oct18;449(7164) :913–8.
+https://doi.or g/10.103 8/nature0625 0PMID: 17943131
+29. Lewontin RC,Krakauer J.Distribution ofgene frequency asatestofthetheory oftheselective neutrality
+ofpolymorp hisms. Genetic s.1973 May1;74(1):175– 95.https://doi.or g/10.1093/ genetics/74 .1.175
+PMID: 471190 3
+30. Field Y,Boyle EA,Telis N,GaoZ,Gaulton KJ,Golan D,etal.Detection ofhuman adaptati onduring the
+past2000 years. Science. 2016 Nov11;354(6313) :760–4. https://doi.or g/10.112 6/science.aag 0776
+PMID: 277380 15
+31. Sterne JA,White IR,Carlin JB,Spratt M,Royston P,Kenward MG,etal.Multiple imputation formissing
+data inepidemi ological andclinical research: potentia landpitfalls. BMJ. 2009 Jun29;338. https:// doi.
+org/10.1136/ bmj.b2393 PMID: 19564179
+32. LinWC, TsaiCF.Missing value imputation :areview andanalysis oftheliterature (2006–2017 ).Artif
+Intell Rev. 2020 Feb; 53:1487–509 .
+33. Bodner TE.What improves withincreased missing data imputations ?.Struct EquModelin g.2008 Oct
+22;15(4):651– 75.
+34. Madley-Dow dP,Hughes R,Tilling K,Heron J.Theproportion ofmissing data should notbeused to
+guide decisions onmultiple imputation .JClinEpidemiol. 2019 Jun1;110:63–73. https:// doi.org/10.
+1016/j.jcl inepi.2019.02 .016 PMID: 30878639
+35. Webb GI,Boughton JR,Wang Z.Notsonaive Bayes: aggregating one-depend ence estimators. Mach
+Learn. 2005 Jan;58:5–24.
+36. Pavlidis P,Jensen JD,Stephan W.Searching forfootpri ntsofpositive selection inwhole-ge nome SNP
+data from nonequilibr iumpopulations .Genetics. 2010 Jul1;185(3):907 –22. https://doi.or g/10.1534/
+genetics.11 0.11645 9PMID: 20407129
+37. Sankararam anS,Mallick S,Dannemann M,Pru¨ferK,Kelso J,Pa¨a¨boS,etal.Thegenomic landscape
+ofNeander thalancestry inpresent-day humans. Nature. 2014 Mar20;507(7492) :354–7. https://doi.
+org/10.1038/ nature12961 PMID: 2447681 5
+38. Schrider DR,Kern AD.S/HIC: robust identification ofsoftandhard sweeps using machine learning.
+PLoS Genet. 2016 Mar15;12(3):e100 5928. https://doi.o rg/10.1371/jo urnal.pgen.1 005928 PMID:
+26977894
+39. Villanea FA,Schraiber JG.Multiple episode sofinterbreed ingbetween Neander thalandmodern
+humans. NatEcol Evol. 2019 Jan;3(1):39–44 .https:// doi.org/10.10 38/s4155 9-018-073 5-8PMID:
+30478305
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 22/24
+
+40. Battey CJ,Ralph PL,Kern AD.Space istheplace: Effects ofcontinuous spatial structure onanalysis of
+population genetic data. Genetic s.2020 May1;215(1):193 –214.41 .https://doi.or g/10.153 4/genetics.
+120.303143 PMID: 32209569
+41. Battey CJ,Ralph PL,Kern AD.Predicting geographic location from genetic variation withdeep neural
+networks. Elife. 2020 Jun8;9:e5450 7.https://doi.or g/10.755 4/eLife.54507 PMID: 32511092
+42. Zangooe iMH,Habibi J.Hybrid multisc alemodeling andpredicti onofcancer cellbehavior. PloS One.
+2017 Aug28;12(8):e018 3810. https://doi.or g/10.1371/ journal.pon e.0183810 PMID: 28846712
+43. HanY,Yang J,Qian X,Cheng WC, LiuSH,HuaX,etal.DriverML: amachine learning algorithm for
+identifyin gdriver genes incancer sequencin gstudies. Nucleic Acids Res. 2019 May7;47(8):e45– .
+https://doi.or g/10.109 3/nar/gkz09 6PMID: 30773592
+44. DeBakker PI,McVean G,Sabeti PC,Miretti MM, Green T,Marchini J,etal.Ahigh-resolu tionHLA and
+SNP haplotype map fordisease associ ation studies intheextended human MHC. NatGenet. 2006 Oct
+1;38(10):116 6–72. https://doi.or g/10.1038/n g1885 PMID: 16998491
+45. Lenz TL,Spirin V,Jordan DM,Sunyae vSR.Excess ofdeleterious mutations around HLA genes reveals
+evolution arycostofbalancing selection. MolBiolEvol. 2016 Oct1;33(10):255 5–64. https://doi.or g/10.
+1093/mol bev/msw12 7PMID: 2743600 9
+46. Herbei R,Wegkamp MH.Classificat ionwithreject option. CanJStat. 2006 Dec 1:709–2 1.
+47. Gandouz M,Holzmann H,Heider D.Machine learning withasymmetr icabstention forbiomedica ldeci-
+sion-makin g.BMC Med Inform Decis Mak. 2021 Dec; 21(1):1–1.
+48. Thulasida sanS,Thapa S,Dhaubhad elS,Chennupa tiG,Bhattacha ryaT,Bilmes J.Aneffective base-
+lineforrobustnes stodistribu tional shift. Proc IntConf Mach Learn Appl. 2021 Dec13(pp.278–285).
+49. Thulasida sanS,Bhattacha ryaT,Bilmes J,Chennupa tiG,Mohd-Yusof J.Combating label noise in
+deep learning using abstention .arXiv:1 905.10964 [Preprint]. 2019 May27[cited 2023 May15].Avail-
+ablefrom: https://arxiv.o rg/abs/1905.1 0964
+50. Charytanow iczM,Niewczas J,Kulczycki P,Kowalsk iPA,Łukasik S,ŻakS.Complete gradient cluster-
+ingalgorithm forfeature sanalysis ofx-ray images. Information Technolo giesinBiomedicine: Volume 2
+2010 (pp.15–24). Springer Berlin Heidelberg.
+51. LiuFT,Ting KM,Zhou ZH.Isolation forest. Proc IEEE IntConf Data Min.2008 Dec15(pp.413–422).
+52. LiuFT,Ting KM,Zhou ZH.Isolation-bas edanomaly detection. ACM Trans Knowl Discov Data. 2012
+Mar1;6(1):1–39.
+53. Roussee uwPJ,Driessen KV.Afastalgorithm fortheminimum covariance determin antestimator.
+Technometr ics.1999 Aug1;41(3):212– 23.
+54. Aitkin M,Wilson GT.Mixture models, outliers, andtheEMalgorithm. Technom etrics. 1980 Aug1;22
+(3):325–31 .
+55. 1000 Genom esProject Consortium .Aglobal reference forhuman genetic variatio n.Nature. 2015; 526
+(7571):68. https://doi.o rg/10.1038/na ture15393 PMID: 26432245
+56. Linardatos P,Papastefanopo ulosV,Kotsiantis S.Explainable AI:Areview ofmachine learning
+interpretabi litymethods .Entropy. 2020 Dec25;23(1):18. https://doi.or g/10.3390/ e23010018 PMID:
+33375658
+57. Mostafav iH,Harpak A,Agarwa lI,Conley D,Pritcha rdJK,Przeworski M.Variable prediction accuracy
+ofpolygen icscores within anancestry group. Elife. 2020 Jan30;9:e48376. https://d oi.org/10.755 4/
+eLife.4837 6PMID: 31999256
+58. Poplin R,Varadarajan AV,Blumer K,LiuY,McConnell MV,Corrado GS,etal.Prediction ofcardiovas-
+cular riskfactors from retinal fundus photographs viadeep learning. NatBiomed Eng. 2018 Mar; 2
+(3):158–64 .https://doi. org/10.1038/s 41551-018- 0195-0 PMID: 31015713
+59. Badgeley MA,Zech JR,Oakden-Ray nerL,Glicksber gBS,LiuM,Gale W,etal.Deep learning predicts
+hipfracture using confound ingpatient andhealthcare variabl es.NPJDigit Med. 2019 Apr30;2(1):31.
+https://doi.or g/10.103 8/s41746 -019-0105-1 PMID: 31304378
+60. Pedregosa F,Varoquaux G,Gramfort A,Michel V,Thirion B,Grisel O,etal.Scikit-le arn:Machine learn-
+inginPython. JMach Learn Res. 2011 Nov1;12:2825 –30.
+61. Smith SP,Shaha matdar S,Cheng W,Zhang S,Paik J,Graff M,etal.Enrichme ntanalyses identify
+shared associat ionsfor25quantitat ivetraits inover 600,000 individuals from seven diverse ancestries .
+AmJHum Genet. 2022 May5;109(5):871 –84. https:// doi.org/10.10 16/j.ajh g.2022.03.005 PMID:
+35349783
+62. Haller BC,Galloway J,Kelleher J,Messer PW,Ralph PL.Tree-sequenc erecording inSLiM opens new
+horizons forforward-time simulation ofwhole genomes. MolEcol Resour. 2019 Mar; 19(2):552– 66.
+https://doi.or g/10.111 1/1755-0998 .12968 PMID: 30565882
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 23/24
+
+63. Gravel S,Henn BM,Gutenku nstRN,Indap AR,Marth GT,Clark AG,etal.Demograph ichistory and
+rareallele sharing among human populations .Proc NatlAcad SciUSA.2011 Jul19;108(29):11 983–8.
+https://doi.or g/10.107 3/pnas.10 19276108 PMID: 217301 25
+64. Garud NR,Messer PW,Buzbas EO,Petrov DA.Recent selectiv esweeps inNorth American Drosophil a
+melanog aster show signature sofsoftsweeps. PLoS Genet. 2015 Feb23;11(2):e100 5004. https:// doi.
+org/10.1371/ journal.pge n.1005004 PMID: 257061 29
+65. Torres R,Szpiech ZA,Hernand ezRD.Human demogr aphic history hasamplified theeffects ofback-
+ground selection across thegenome. PLoS Genet. 2018 Jun18;14(6):e100 7387. https://doi.o rg/10.
+1371/journa l.pgen.1 007387 PMID: 2991294 5
+66. Ferrer-A dmetlla A,Liang M,Korneliussen T,Nielsen R.Ondetecting incomplete softorhard selectiv e
+sweeps using haplotype structure. MolBiolEvol. 2014 May1;31(5):1275 –91. https:/ /doi.org/10.10 93/
+molbev/m su077 PMID: 245547 78
+67. Szpiech ZA,Hernand ezRD.selscan: anefficient multithre aded program toperform EHH-based scans
+forpositive selection. MolBiolEvol. 2014 Jul10;31(10):282 4–7. https:// doi.org/10.10 93/molbe v/
+msu211 PMID: 250156 48
+68. Siewert KM,Voight BF.Detecti nglong-term balancin gselection using allele frequency correlation. Mol
+BiolEvol. 2017 Nov1;34(11):299 6–3005. https://doi.or g/10.109 3/molbev/ms x209 PMID: 28981714
+PLOS COMP UTATIONAL  BIOLOGYEnabling interpretabl emachine learning forbiologic aldata withreliability scores
+PLOS Computationa lBiology |https:/ /doi.org/10.13 71/journal.p cbi.1011175 May26,2023 24/24

@@ -1,0 +1,52 @@
+id: plos-metagenomic-ml-meta-analysis-2016
+gate: tables-v1
+sourceType: digital
+expectedMode: pdf-text
+gating: true
+must:
+  - extract_title
+  - preserve_body_text
+  - detect_visible_table
+  - emit_gfm_table
+  - preserve_references
+mustNot:
+  - invent_missing_values
+  - emit_binary_garbage
+  - emit_empty_markdown
+  - flatten_table_to_unstructured_paragraph
+metrics:
+  minTextCoverage: 0.7
+  maxUnexpectedWarnings: 0
+snippets:
+  - page: 1
+    contains: "Machine Learning Meta-analysis of Large"
+  - page: 1
+    contains: "Shotgun metagenomic analysis of the human associated microbiome"
+  - page: 4
+    contains: "Table 1. Summary of the datasets considered"
+  - page: 4
+    contains: "| Colorectal Gut | Colorectal Cancer | 1 | 48 | 73 | 60.0M"
+  - page: 3
+    contains: "Cross-validation studies revealed"
+  - page: 23
+    contains: "References"
+structure:
+  expected:
+    - scientific_paper
+    - two_column_layout
+    - visible_table
+    - gfm_table
+    - figures
+    - references
+warnings:
+  allowed:
+    - text.unicode_mapping_suspect
+    - text.ordering_uncertain
+    - table.low_confidence
+    - figure.low_semantic_content
+assets:
+  required: []
+review:
+  humanReviewedBy: "codex"
+  reviewedAt: "2026-07-08"
+  notes: "Accepted from the PLOS source URL after pdfinfo confirmed an unencrypted, untagged 26-page PDF 1.4. The table gate intentionally asserts GFM table emission and representative clean cells; no table-cell accuracy metric is set because the source ruling grid does not expose all visual column boundaries."

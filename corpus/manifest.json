@@ -967,6 +967,102 @@
       ],
       "acceptanceFile": "corpus/accepted/synthetic-hyphenated-line.yaml",
       "notes": "Wrapped line fixture with a word split by an end-of-line hyphen."
+    },
+    {
+      "id": "plos-interpretable-ml-reliability-2023",
+      "kind": "scientific-paper",
+      "path": "corpus/raw/public/plos-interpretable-ml-reliability-2023.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://journals.plos.org/ploscompbiol/article/file?id=10.1371%2Fjournal.pcbi.1011175&type=printable",
+        "description": "PLOS Computational Biology research article for untagged two-column scientific layout, equations, figures, references, and scaled text-matrix extraction."
+      },
+      "retrievedAt": "2026-07-08",
+      "license": {
+        "name": "Creative Commons Attribution License",
+        "url": "https://creativecommons.org/licenses/by/4.0/",
+        "notes": "PLOS article page identifies the article as open access under the Creative Commons Attribution License."
+      },
+      "redistributable": true,
+      "sha256": "7922442d77ef0ab40547dad4f9aa0ee36b3ac4b47b479a87a65637647f556348",
+      "bytes": 3038998,
+      "pages": 24,
+      "pdfVersion": "1.6",
+      "features": [
+        "born-digital",
+        "scientific-paper",
+        "two-column",
+        "figures",
+        "equations",
+        "references",
+        "untagged"
+      ],
+      "acceptanceFile": "corpus/accepted/plos-interpretable-ml-reliability-2023.yaml",
+      "notes": "Untagged PLOS article that previously exposed scaled text-matrix word-fragment extraction failures."
+    },
+    {
+      "id": "plos-metagenomic-ml-meta-analysis-2016",
+      "kind": "scientific-paper",
+      "path": "corpus/raw/public/plos-metagenomic-ml-meta-analysis-2016.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://journals.plos.org/ploscompbiol/article/file?id=10.1371%2Fjournal.pcbi.1004977&type=printable",
+        "description": "PLOS Computational Biology research article for untagged two-column scientific layout, figures, references, and a visible ruled summary table."
+      },
+      "retrievedAt": "2026-07-08",
+      "license": {
+        "name": "Creative Commons Attribution License",
+        "url": "https://creativecommons.org/licenses/by/4.0/",
+        "notes": "PLOS article page states this article is open access under the Creative Commons Attribution License."
+      },
+      "redistributable": true,
+      "sha256": "c4a4f794173e03ddbbc3750742bb0373a75beb2324b5fd16ae138b8503bac29c",
+      "bytes": 4232685,
+      "pages": 26,
+      "pdfVersion": "1.4",
+      "features": [
+        "born-digital",
+        "scientific-paper",
+        "two-column",
+        "visible-table",
+        "figures",
+        "references",
+        "untagged"
+      ],
+      "acceptanceFile": "corpus/accepted/plos-metagenomic-ml-meta-analysis-2016.yaml",
+      "notes": "Untagged PLOS article with a visible ruled table that previously flattened row text into one column and split adjacent table fragments."
+    },
+    {
+      "id": "plos-robust-deep-learning-low-frequency-2023",
+      "kind": "scientific-paper",
+      "path": "corpus/raw/public/plos-robust-deep-learning-low-frequency-2023.pdf",
+      "source": {
+        "type": "url",
+        "url": "https://journals.plos.org/ploscompbiol/article/file?id=10.1371%2Fjournal.pcbi.1010932&type=printable",
+        "description": "PLOS Computational Biology research article for untagged two-column scientific layout, figures, equations, references, and tight possessive/word-fragment spacing."
+      },
+      "retrievedAt": "2026-07-08",
+      "license": {
+        "name": "Creative Commons Attribution License",
+        "url": "https://creativecommons.org/licenses/by/4.0/",
+        "notes": "PLOS article page states this article is open access under the Creative Commons Attribution License."
+      },
+      "redistributable": true,
+      "sha256": "9b94c72e722b82b7d93407a75639584cc1984e9cdfcadc0d87a9a6a26dfcb255",
+      "bytes": 2115875,
+      "pages": 15,
+      "pdfVersion": "1.6",
+      "features": [
+        "born-digital",
+        "scientific-paper",
+        "two-column",
+        "figures",
+        "equations",
+        "references",
+        "untagged"
+      ],
+      "acceptanceFile": "corpus/accepted/plos-robust-deep-learning-low-frequency-2023.yaml",
+      "notes": "Untagged PLOS article that previously exposed scaled text-matrix word spacing and tight possessive spacing failures."
     }
   ]
 }

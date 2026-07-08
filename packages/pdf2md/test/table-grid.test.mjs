@@ -139,6 +139,76 @@ test("assignTextLinesToGridCells assigns text boxes to cells in visual row order
   );
 });
 
+test("assignTextLinesToGridCells splits span-bearing lines across ruled cells", () => {
+  const [grid] = inferRulingGrids([
+    horizontal(100, 100, 300, 100),
+    horizontal(100, 130, 300, 130),
+    vertical(100, 100, 100, 130),
+    vertical(200, 100, 200, 130),
+    vertical(300, 100, 300, 130)
+  ]);
+  const [table] = assignTextLinesToGridCells(
+    [grid],
+    [
+      {
+        ...textLine("Alpha 42", 80, 112, 170, 10),
+        spans: [
+          { text: "Alpha", x: 80, y: 112, width: 24, height: 10, fontSize: 10 },
+          { text: "42", x: 220, y: 112, width: 10, height: 10, fontSize: 10 }
+        ]
+      }
+    ]
+  );
+
+  assert.equal(table.assignedTextLines, 2);
+  assert.deepEqual(
+    table.cells
+      .filter((cell) => cell.text)
+      .map((cell) => [cell.rowIndex, cell.columnIndex, cell.text]),
+    [
+      [0, 0, "Alpha"],
+      [0, 1, "42"]
+    ]
+  );
+});
+
+test("assignTextLinesToGridCells preserves adjacent spans within one ruled cell", () => {
+  const [grid] = inferRulingGrids([
+    horizontal(100, 100, 350, 100),
+    horizontal(100, 130, 350, 130),
+    vertical(100, 100, 100, 130),
+    vertical(250, 100, 250, 130),
+    vertical(350, 100, 350, 130)
+  ]);
+  const [table] = assignTextLinesToGridCells(
+    [grid],
+    [
+      {
+        ...textLine("Colorectal Gut 48", 110, 112, 190, 10),
+        spans: [
+          { text: "Colorecta", x: 110, y: 112, width: 40, height: 10, fontSize: 10 },
+          { text: "l", x: 150, y: 112, width: 4, height: 10, fontSize: 10 },
+          { text: " ", x: 154, y: 112, width: 12, height: 10, fontSize: 10 },
+          { text: "Gut", x: 166, y: 112, width: 16, height: 10, fontSize: 10 },
+          { text: "4", x: 282, y: 112, width: 5, height: 10, fontSize: 10 },
+          { text: "8", x: 287, y: 112, width: 5, height: 10, fontSize: 10 }
+        ]
+      }
+    ]
+  );
+
+  assert.equal(table.assignedTextLines, 2);
+  assert.deepEqual(
+    table.cells
+      .filter((cell) => cell.text)
+      .map((cell) => [cell.rowIndex, cell.columnIndex, cell.text]),
+    [
+      [0, 0, "Colorectal Gut"],
+      [0, 1, "48"]
+    ]
+  );
+});
+
 test("detectTableCellSpans detects column spans from missing vertical boundaries", () => {
   const lines = [
     horizontal(0, 0, 100, 0),

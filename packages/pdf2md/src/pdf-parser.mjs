@@ -1539,6 +1539,9 @@ function resolveResources(resourcesValue, getObject) {
         subtype: nameValue(fontDict?.entries?.Subtype),
         baseFont: nameValue(fontDict?.entries?.BaseFont),
         encoding: nameValue(fontDict?.entries?.Encoding),
+        firstChar: fontFirstChar(fontDict, getObject),
+        lastChar: fontLastChar(fontDict, getObject),
+        widths: fontWidths(fontDict, getObject),
         hasToUnicode: Boolean(toUnicodeObject?.stream),
         toUnicode,
         toUnicodeEntries: toUnicode?.entries ?? 0
@@ -1632,6 +1635,21 @@ function resolveValue(value, getObject) {
 function resolveScalar(value, getObject) {
   const resolved = resolveValue(value, getObject);
   return typeof resolved === "number" ? resolved : value;
+}
+
+function fontFirstChar(fontDict, getObject) {
+  const firstChar = resolveScalar(fontDict?.entries?.FirstChar, getObject);
+  return Number.isInteger(firstChar) ? firstChar : null;
+}
+
+function fontLastChar(fontDict, getObject) {
+  const lastChar = resolveScalar(fontDict?.entries?.LastChar, getObject);
+  return Number.isInteger(lastChar) ? lastChar : null;
+}
+
+function fontWidths(fontDict, getObject) {
+  const widths = numberArray(resolveValue(fontDict?.entries?.Widths, getObject));
+  return widths?.length > 0 ? widths : null;
 }
 
 function numberArray(value) {
