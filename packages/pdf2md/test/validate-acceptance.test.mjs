@@ -50,7 +50,7 @@ test("validate-acceptance requires minTextCoverage for gating files", async (t) 
   assert.match(result.stderr, /gating files require metrics\.minTextCoverage/);
 });
 
-test("validate-acceptance range-checks minTextCoverage", async (t) => {
+test("validate-acceptance range-checks acceptance metrics", async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "pdf2md-acceptance-"));
   t.after(() => rm(root, { force: true, recursive: true }));
   await mkdir(path.join(root, "corpus", "accepted"), { recursive: true });
@@ -68,6 +68,7 @@ test("validate-acceptance range-checks minTextCoverage", async (t) => {
       "  - invent_missing_values",
       "metrics:",
       "  minTextCoverage: 1.2",
+      "  maxUnexpectedWarnings: -1",
       "snippets:",
       "  - page: 1",
       "    contains: \"Sample\"",
@@ -88,6 +89,57 @@ test("validate-acceptance range-checks minTextCoverage", async (t) => {
   const result = await runValidateAcceptance(root);
   assert.notEqual(result.code, 0);
   assert.match(result.stderr, /metrics\.minTextCoverage must be a number from 0 to 1/);
+  assert.match(
+    result.stderr,
+    /metrics\.maxUnexpectedWarnings must be a non-negative integer/
+  );
+});
+
+test("validate-acceptance rejects warning allowlist entries outside the public registry", async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "pdf2md-acceptance-"));
+  t.after(() => rm(root, { force: true, recursive: true }));
+  await mkdir(path.join(root, "corpus", "accepted"), { recursive: true });
+  await writeFile(
+    path.join(root, "corpus", "accepted", "sample.yaml"),
+    [
+      "id: sample",
+      "gate: text-mvp",
+      "sourceType: digital",
+      "expectedMode: pdf-text",
+      "gating: true",
+      "must:",
+      "  - extract_main_text",
+      "mustNot:",
+      "  - invent_missing_values",
+      "metrics:",
+      "  minTextCoverage: 1",
+      "  maxUnexpectedWarnings: 0",
+      "snippets:",
+      "  - page: 1",
+      "    contains: \"Sample\"",
+      "structure:",
+      "  expected:",
+      "    - paragraph",
+      "warnings:",
+      "  allowed:",
+      "    - figure.low_semantic_content",
+      "    - legacy_warning_name",
+      "assets:",
+      "  required: []",
+      "review:",
+      "  humanReviewedBy: \"codex\"",
+      "  reviewedAt: \"2026-07-10\"",
+      "  notes: \"Only public warning codes may be allowlisted.\""
+    ].join("\n")
+  );
+
+  const result = await runValidateAcceptance(root);
+  assert.notEqual(result.code, 0);
+  assert.match(
+    result.stderr,
+    /warnings\.allowed contains unknown public code "legacy_warning_name"/
+  );
+  assert.doesNotMatch(result.stderr, /figure\.low_semantic_content/);
 });
 
 function runValidateAcceptance(root) {

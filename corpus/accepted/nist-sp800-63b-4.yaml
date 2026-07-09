@@ -28,7 +28,7 @@ metrics:
   minRenderedHtmlHeadings: 50
   minRenderedHtmlParagraphs: 500
   maxRenderedHtmlParagraphChars: 1500
-  maxUnexpectedWarnings: 3
+  maxUnexpectedWarnings: 0
 snippets:
   - page: 1
     contains: "NIST SP 800-63B-4"
@@ -54,9 +54,8 @@ structure:
     - acroform_metadata
 warnings:
   allowed:
-    - repeated_running_content
-    - complex_table_html_fallback
-    - form_metadata_only
+    - text.ordering_uncertain
+    - table.low_confidence
 assets:
   required: []
 review:

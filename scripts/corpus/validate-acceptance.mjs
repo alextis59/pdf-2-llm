@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { warningCodes } from "../../packages/pdf2md/src/index.mjs";
 
 const args = process.argv.slice(2);
 const repoRoot = path.resolve(readOption("--root") ?? process.cwd());
@@ -35,6 +36,7 @@ const allowedExpectedModes = new Set([
   "metadata-only",
   "unsupported"
 ]);
+const allowedWarningCodes = new Set(Object.values(warningCodes));
 const requiredTopLevelKeys = [
   "id",
   "gate",
@@ -257,6 +259,7 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
   const topLevelKeys = readTopLevelKeys(text);
   const scalars = readTopLevelScalars(text);
   const metrics = readNamedBlockScalars(text, "metrics");
+  const warningsAllowed = readNamedStringLists(text, "warnings").get("allowed") ?? [];
   const relativePath = path.relative(repoRoot, filePath);
 
   for (const key of requiredTopLevelKeys) {
@@ -349,6 +352,12 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
     }
   }
 
+  for (const code of warningsAllowed) {
+    if (!allowedWarningCodes.has(code)) {
+      errors.push(`${relativePath}: warnings.allowed contains unknown public code "${code}"`);
+    }
+  }
+
   for (const metricName of [
     "minTextCoverage",
     "maxReadingOrderDistance",
@@ -368,7 +377,11 @@ function validateAcceptanceText(text, filePath, manifestEntry) {
     }
   }
 
-  for (const metricName of ["maxRssDeltaBytes", "maxHeapUsedDeltaBytes"]) {
+  for (const metricName of [
+    "maxUnexpectedWarnings",
+    "maxRssDeltaBytes",
+    "maxHeapUsedDeltaBytes"
+  ]) {
     if (metrics.has(metricName)) {
       const value = readNumber(metrics.get(metricName));
       if (!Number.isInteger(value) || value < 0) {

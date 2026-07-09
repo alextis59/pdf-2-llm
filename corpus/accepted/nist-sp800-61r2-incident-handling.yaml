@@ -20,7 +20,7 @@ metrics:
   minTextCoverage: 0.95
   minTaggedMarkedContent: 1
   maxTaggedStructureConflicts: 0
-  maxUnexpectedWarnings: 3
+  maxUnexpectedWarnings: 0
 snippets:
   - page: 1
     contains: "Withdrawn NIST Technical Series Publication"
@@ -38,9 +38,8 @@ structure:
     - tables
 warnings:
   allowed:
-    - repeated_running_content
-    - complex_table_html_fallback
-    - form_metadata_only
+    - text.ordering_uncertain
+    - table.low_confidence
 assets:
   required: []
 review:

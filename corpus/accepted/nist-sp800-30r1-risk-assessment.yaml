@@ -20,7 +20,7 @@ metrics:
   minTextCoverage: 0.95
   minTaggedMarkedContent: 1
   maxTaggedStructureConflicts: 0
-  maxUnexpectedWarnings: 3
+  maxUnexpectedWarnings: 0
 snippets:
   - page: 1
     contains: "NIST Special Publication 800-30 Revision 1"
@@ -38,8 +38,10 @@ structure:
     - appendices
 warnings:
   allowed:
-    - repeated_running_content
-    - complex_table_html_fallback
+    - text.ordering_uncertain
+    - table.low_confidence
+    - figure.low_semantic_content
+    - structure.tagged_layout_conflict
 assets:
   required: []
 review:

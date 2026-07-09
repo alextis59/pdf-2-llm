@@ -21,7 +21,7 @@ metrics:
   minRunningContentRecall: 1
   minTaggedMarkedContent: 1
   maxTaggedStructureConflicts: 0
-  maxUnexpectedWarnings: 3
+  maxUnexpectedWarnings: 0
 snippets:
   - page: 1
     contains: "NIST Special Publication 800-218"
@@ -45,8 +45,8 @@ structure:
     - references
 warnings:
   allowed:
-    - repeated_running_content
-    - complex_table_html_fallback
+    - text.ordering_uncertain
+    - table.low_confidence
 assets:
   required: []
 review:

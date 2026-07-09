@@ -48,6 +48,10 @@ fuzz smoke, build, and API tests.
   structure, asset, snippet, warning, source-type, and expected-mode assertion.
   Unknown criteria fail closed; recognizing a criterion name is not evidence
   that it passed.
+- Every `warnings.allowed` entry must be a value from the public
+  `warningCodes` registry. `maxUnexpectedWarnings` is a non-negative instance
+  budget for emitted non-baseline warning codes that are not explicitly
+  allowlisted.
 - Text coverage uses a reviewed Markdown snapshot when one exists and otherwise
   falls back to the stored text oracle. Raw text oracles remain the reference
   for repeated running-content removal checks.

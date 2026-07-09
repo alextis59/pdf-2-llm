@@ -21,7 +21,7 @@ metrics:
   minRunningContentRecall: 1
   minTaggedMarkedContent: 1
   maxTaggedStructureConflicts: 0
-  maxUnexpectedWarnings: 3
+  maxUnexpectedWarnings: 0
 snippets:
   - page: 1
     contains: "NIST Special Publication 800-213"
@@ -45,7 +45,9 @@ structure:
     - references
 warnings:
   allowed:
-    - repeated_running_content
+    - text.ordering_uncertain
+    - table.low_confidence
+    - figure.low_semantic_content
 assets:
   required: []
 review:
