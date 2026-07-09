@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
@@ -7,6 +8,10 @@ import {
   parseAcceptanceText
 } from "../../../scripts/qa/run-corpus.mjs";
 import { warningCodes } from "../src/index.mjs";
+import {
+  evaluateAcceptanceCriteria,
+  evaluateStructureExpectations
+} from "../../../scripts/qa/corpus-criteria.mjs";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const runCorpusPath = fileURLToPath(
@@ -57,13 +62,29 @@ test("parseAcceptanceText reads snippets, warnings, metrics, and behavior criter
       "mustNot:",
       "  - emit_binary_garbage",
       "metrics:",
+      "  minTextCoverage: 0.9",
+      "  maxReadingOrderDistance: 0.1",
+      "  maxCharacterErrorRate: 0.05",
       "  maxUnexpectedWarnings: 0",
+      "  minRenderedHtmlTextChars: 5",
       "snippets:",
       "  - page: 1",
       "    contains: \"Alpha\"",
       "warnings:",
       "  allowed:",
-      "    - figure.low_semantic_content"
+      "    - figure.low_semantic_content",
+      "structure:",
+      "  expected:",
+      "    - paragraphs",
+      "assets:",
+      "  required:",
+      "    - table-csv",
+      "runningContent:",
+      "  expectedRetained:",
+      "    - Alpha",
+      "review:",
+      "  humanReviewedBy: reviewer",
+      "  reviewedAt: 2026-07-10"
     ].join("\n")
   );
 
@@ -71,8 +92,17 @@ test("parseAcceptanceText reads snippets, warnings, metrics, and behavior criter
   assert.deepEqual(acceptance.must, ["extract_main_text"]);
   assert.deepEqual(acceptance.mustNot, ["emit_binary_garbage"]);
   assert.equal(acceptance.maxUnexpectedWarnings, 0);
+  assert.equal(acceptance.minTextCoverage, 0.9);
+  assert.equal(acceptance.maxReadingOrderDistance, 0.1);
+  assert.equal(acceptance.maxCharacterErrorRate, 0.05);
+  assert.equal(acceptance.minRenderedHtmlTextChars, 5);
   assert.deepEqual(acceptance.snippets, [{ page: "1", contains: "Alpha" }]);
   assert.deepEqual(acceptance.warningsAllowed, ["figure.low_semantic_content"]);
+  assert.deepEqual(acceptance.structureExpected, ["paragraphs"]);
+  assert.deepEqual(acceptance.assetsRequired, ["table-csv"]);
+  assert.deepEqual(acceptance.runningContent.expectedRetained, ["Alpha"]);
+  assert.equal(acceptance.humanReviewedBy, "reviewer");
+  assert.equal(acceptance.reviewedAt, "2026-07-10");
 });
 
 test("checkAcceptanceOutput enforces snippets on the expected source page", () => {
@@ -155,6 +185,55 @@ test("checkAcceptanceOutput rejects unknown behavior criteria instead of silentl
 
   const output = checkAcceptanceOutput(acceptance, fakeResult());
   assert.match(output.errors.join("\n"), /unsupported acceptance must criterion/);
+});
+
+test("recognized behavior criteria execute predicates instead of passing by name", () => {
+  const acceptance = parseAcceptanceText(
+    [
+      "must:",
+      "  - emit_gfm_table",
+      "mustNot:",
+      "  - emit_empty_markdown",
+      "snippets: []",
+      "warnings:",
+      "  allowed: []"
+    ].join("\n")
+  );
+  const output = checkAcceptanceOutput(acceptance, fakeResult({ markdown: "" }));
+
+  assert.match(output.errors.join("\n"), /must criterion "emit_gfm_table" failed/);
+  assert.match(output.errors.join("\n"), /mustNot criterion "emit_empty_markdown" failed/);
+});
+
+test("every committed criterion and structure expectation has an executable checker", async () => {
+  const acceptanceDir = new URL("../../../corpus/accepted/", import.meta.url);
+  const files = (await readdir(acceptanceDir)).filter(
+    (file) => file.endsWith(".yaml") && file !== "template.yaml"
+  );
+  const result = fakeResult();
+
+  for (const file of files) {
+    const acceptance = parseAcceptanceText(
+      await readFile(new URL(file, acceptanceDir), "utf8")
+    );
+    const context = {
+      acceptance,
+      entry: { features: [] },
+      evidence: {},
+      result
+    };
+    const criterionErrors = evaluateAcceptanceCriteria(acceptance, context).errors;
+    const structureErrors = evaluateStructureExpectations(
+      acceptance.structureExpected,
+      context
+    ).errors;
+
+    assert.doesNotMatch(
+      [...criterionErrors, ...structureErrors].join("\n"),
+      /unsupported .* without a checker/,
+      file
+    );
+  }
 });
 
 test("run-corpus rejects reserved snapshot updates instead of silently continuing", async () => {

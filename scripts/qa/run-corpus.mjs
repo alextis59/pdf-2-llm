@@ -4,6 +4,21 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { convertPdfToMarkdown, warningCodes } from "../../packages/pdf2md/src/index.mjs";
 import { compareOcrAccuracy } from "./ocr-accuracy.mjs";
+import {
+  compareCharacterErrorRate,
+  compareReadingOrder,
+  compareTextCoverage,
+  markdownToComparableText
+} from "./compare-oracles.mjs";
+import { compareRunningContent } from "./compare-running-content.mjs";
+import { compareTaggedStructure } from "./compare-tagged-structure.mjs";
+import { analyzeRenderedHtml, evaluateRenderedHtml } from "./check-rendered-html.mjs";
+import {
+  evaluateAcceptanceCriteria,
+  evaluateExpectedMode,
+  evaluateStructureExpectations
+} from "./corpus-criteria.mjs";
+import { renderMarkdownToHtml } from "./render-markdown.mjs";
 import { compareTableCellAdjacency } from "./table-adjacency.mjs";
 import { compareTableCsvCellTextAccuracy } from "./table-csv-accuracy.mjs";
 import { compareTableSpanAccuracy } from "./table-span-accuracy.mjs";
@@ -22,122 +37,6 @@ const selectedIds = readOptions("--id");
 const runnerBaselineWarnings = new Set([
   warningCodes.OcrDisabled,
   warningCodes.HeuristicTextExtraction
-]);
-const supportedMustCriteria = new Set([
-  "decrypt_with_known_user_password",
-  "detect_borderless_table",
-  "detect_cell_span",
-  "detect_columns",
-  "detect_footnote_region",
-  "detect_repeated_footer",
-  "detect_repeated_header",
-  "detect_vector_figure_region",
-  "detect_visible_table",
-  "emit_bidi_markup",
-  "emit_csv_sidecar",
-  "emit_gfm_table",
-  "emit_html_table",
-  "emit_vertical_writing_markup",
-  "extract_acroform_fields",
-  "extract_bullet_list",
-  "extract_cjk_text",
-  "extract_headings",
-  "extract_main_text",
-  "extract_ocr_text",
-  "extract_rtl_text",
-  "extract_title",
-  "extract_updated_revision_text",
-  "extract_vertical_text",
-  "follow_prev_xref_chain",
-  "follow_xref_prev_chain",
-  "join_cjk_wrapped_lines_without_spaces",
-  "meet_ocr_error_thresholds",
-  "normalize_coordinates",
-  "prefer_aligned_hidden_text",
-  "prefer_newest_object_revision",
-  "preserve_appendices",
-  "preserve_body_text",
-  "preserve_button_states",
-  "preserve_caption",
-  "preserve_column_alignment",
-  "preserve_continued_table_rows",
-  "preserve_decrypted_text_order",
-  "preserve_field_values",
-  "preserve_footnote_text",
-  "preserve_heading",
-  "preserve_left_then_right_reading_order",
-  "preserve_list_order",
-  "preserve_lists",
-  "preserve_nist_publication_identifier",
-  "preserve_page_anchors",
-  "preserve_paragraph_order",
-  "preserve_references",
-  "preserve_rtl_reading_order",
-  "preserve_section_headings",
-  "preserve_table_cells",
-  "preserve_table_note",
-  "preserve_tables",
-  "preserve_tagged_pdf_signal",
-  "preserve_vertical_column_order",
-  "preserve_visible_crop_text",
-  "preserve_withdrawn_notice",
-  "read_rotated_page",
-  "repair_damaged_xref",
-  "repair_line_end_hyphenation",
-  "report_form_metadata",
-  "require_password_before_extraction",
-  "resolve_linearized_pdf",
-  "resolve_object_stream",
-  "resolve_qpdf_object_stream",
-  "resolve_qpdf_xref_stream",
-  "resolve_xref_stream",
-  "respect_crop_box",
-  "route_as_hybrid",
-  "route_as_scanned",
-  "scan_indirect_objects",
-  "use_ocr_for_bad_hidden_region"
-]);
-const supportedMustNotCriteria = new Set([
-  "bypass_encryption_without_password",
-  "drop_authenticator_requirement_tables",
-  "drop_bidi_markup",
-  "drop_checked_state",
-  "drop_compressed_page_objects",
-  "drop_continued_rows",
-  "drop_rotated_text",
-  "drop_spanned_header",
-  "drop_table_note",
-  "drop_title_page_metadata",
-  "drop_vertical_writing_markup",
-  "emit_bad_hidden_text",
-  "emit_binary_garbage",
-  "emit_broken_gfm_for_spans",
-  "emit_empty_markdown",
-  "emit_ocr_duplicate_text",
-  "fall_back_to_unstructured_binary_scan",
-  "flatten_all_sections_into_one_paragraph",
-  "flatten_table_to_unstructured_paragraph",
-  "flatten_vertical_columns",
-  "fold_note_into_table",
-  "ignore_newest_xref_revision",
-  "insert_synthetic_cjk_spaces",
-  "interleave_columns_line_by_line",
-  "interleave_footnote_inside_body_sentence",
-  "invent_chart_data",
-  "invent_missing_form_values",
-  "invent_missing_values",
-  "keep_unrepaired_line_end_hyphen",
-  "merge_adjacent_columns",
-  "merge_rows_across_columns",
-  "move_caption_before_body",
-  "omit_withdrawn_notice",
-  "prefer_hidden_media_box_content",
-  "repeat_running_header_in_body",
-  "reverse_rtl_fragments",
-  "split_wrapped_cjk_paragraph",
-  "treat_acroform_metadata_as_user_filled_values",
-  "trust_repaired_output_without_diagnostics",
-  "use_stale_page_tree"
 ]);
 
 function hasFlag(name) {
@@ -260,6 +159,9 @@ function readNestedList(text, blockName, listName) {
     if (/^\S/.test(line)) {
       break;
     }
+    if (inList && /^\s{2}[A-Za-z][A-Za-z0-9]*:/.test(line)) {
+      break;
+    }
     if (!inList) {
       const listMatch = line.match(new RegExp(`^\\s{2}${listName}:(?:\\s*(\\[\\])\\s*)?$`));
       if (listMatch) {
@@ -370,6 +272,7 @@ function readNumber(value, fallback = null) {
 export function parseAcceptanceText(text) {
   const scalars = readTopLevelScalars(text);
   const metrics = readNamedBlockScalars(text, "metrics");
+  const review = readNamedBlockScalars(text, "review");
   return {
     id: scalars.get("id"),
     gate: scalars.get("gate"),
@@ -378,15 +281,38 @@ export function parseAcceptanceText(text) {
     gating: scalars.get("gating") === "true",
     must: readTopLevelList(text, "must"),
     mustNot: readTopLevelList(text, "mustNot"),
+    minTextCoverage: readNumber(metrics.get("minTextCoverage")),
+    maxReadingOrderDistance: readNumber(metrics.get("maxReadingOrderDistance")),
+    maxCharacterErrorRate: readNumber(metrics.get("maxCharacterErrorRate")),
     maxOcrCharacterErrorRate: readNumber(metrics.get("maxOcrCharacterErrorRate")),
     maxOcrWordErrorRate: readNumber(metrics.get("maxOcrWordErrorRate")),
     maxUnexpectedWarnings: readNumber(metrics.get("maxUnexpectedWarnings")),
+    minRunningContentPrecision: readNumber(metrics.get("minRunningContentPrecision")),
+    minRunningContentRecall: readNumber(metrics.get("minRunningContentRecall")),
     minTableCellAdjacency: readNumber(metrics.get("minTableCellAdjacency")),
     minTableCsvCellTextAccuracy: readNumber(metrics.get("minTableCsvCellTextAccuracy")),
     minTableSpanAccuracy: readNumber(metrics.get("minTableSpanAccuracy")),
+    maxRssDeltaBytes: readNumber(metrics.get("maxRssDeltaBytes")),
+    maxHeapUsedDeltaBytes: readNumber(metrics.get("maxHeapUsedDeltaBytes")),
+    minTaggedMarkedContent: readNumber(metrics.get("minTaggedMarkedContent")),
+    maxTaggedStructureConflicts: readNumber(metrics.get("maxTaggedStructureConflicts")),
+    minRenderedHtmlTextChars: readNumber(metrics.get("minRenderedHtmlTextChars")),
+    minRenderedHtmlHeadings: readNumber(metrics.get("minRenderedHtmlHeadings")),
+    minRenderedHtmlParagraphs: readNumber(metrics.get("minRenderedHtmlParagraphs")),
+    maxRenderedHtmlParagraphChars: readNumber(metrics.get("maxRenderedHtmlParagraphChars")),
     snippets: readSnippetAssertions(text),
     warningsAllowed: readNestedList(text, "warnings", "allowed"),
+    structureExpected: readNestedList(text, "structure", "expected"),
+    structureHeadings: readNestedList(text, "structure", "headings"),
+    structureTables: readNestedList(text, "structure", "tables"),
     forms: readStructureForms(text),
+    assetsRequired: readNestedList(text, "assets", "required"),
+    runningContent: {
+      expectedRemoved: readNestedList(text, "runningContent", "expectedRemoved"),
+      expectedRetained: readNestedList(text, "runningContent", "expectedRetained")
+    },
+    humanReviewedBy: review.get("humanReviewedBy") ?? "",
+    reviewedAt: review.get("reviewedAt") ?? "",
     skipReason: scalars.get("skipReason") ?? ""
   };
 }
@@ -471,12 +397,44 @@ function printCase(prefix, corpusCase) {
 async function runCase(corpusCase) {
   const { entry, acceptance } = corpusCase;
   const ocrResults = entry.ocrResultsFile ? await readOcrResults(entry) : null;
-  const result = await convertPdfToMarkdown(path.join(repoRoot, entry.path), {
-    ocr: ocrResults ? { results: ocrResults } : { enabled: false }
-  });
+  const conversionOptions = {
+    ocr: ocrResults ? { results: ocrResults } : { enabled: false },
+    ...(acceptance.must.includes("repair_damaged_xref")
+      ? { parser: { mode: "tolerant" } }
+      : {}),
+    ...(acceptance.must.includes("preserve_page_anchors")
+      ? { markdown: { pageAnchors: true } }
+      : {})
+  };
+  const memoryBefore = process.memoryUsage();
+  const result = await convertPdfToMarkdown(
+    path.join(repoRoot, entry.path),
+    conversionOptions
+  );
+  const memoryAfter = process.memoryUsage();
   const errors = [];
   const details = [];
-  let expected = null;
+  const expected = await readOptionalExpectedMarkdown(entry);
+  const sourceOracleText = await readTextOracle(entry, expected);
+  const oracleText = expected === null
+    ? sourceOracleText
+    : markdownToComparableText(expected);
+  const comparisonText = expected ?? sourceOracleText;
+  const evidence = {
+    expectedMarkdownMatch: expected === null ? null : result.markdown === expected,
+    rssDeltaBytes: Math.max(0, memoryAfter.rss - memoryBefore.rss),
+    heapUsedDeltaBytes: Math.max(0, memoryAfter.heapUsed - memoryBefore.heapUsed)
+  };
+
+  if (acceptance.id !== entry.id) {
+    errors.push(`acceptance id mismatch: expected ${entry.id}, got ${acceptance.id}`);
+  }
+
+  if (result.ir.sourceType !== acceptance.sourceType) {
+    errors.push(
+      `sourceType mismatch: expected ${acceptance.sourceType}, got ${result.ir.sourceType}`
+    );
+  }
 
   if (result.diagnostics.input.sha256 !== entry.sha256) {
     errors.push(`sha256 mismatch: expected ${entry.sha256}, got ${result.diagnostics.input.sha256}`);
@@ -492,31 +450,168 @@ async function runCase(corpusCase) {
     );
   }
 
-  if (
-    assertMarkdown ||
-    acceptance.maxOcrCharacterErrorRate !== null ||
-    acceptance.maxOcrWordErrorRate !== null ||
-    acceptance.minTableCellAdjacency !== null ||
-    acceptance.minTableCsvCellTextAccuracy !== null ||
-    acceptance.minTableSpanAccuracy !== null
-  ) {
-    expected = await readExpectedMarkdown(entry);
-  }
-
   if (assertMarkdown) {
-    if (result.markdown !== expected) {
+    if (expected === null) {
+      errors.push(`missing Markdown snapshot at corpus/expected/${entry.id}.md`);
+    } else if (result.markdown !== expected) {
       errors.push(`Markdown snapshot mismatch against corpus/expected/${entry.id}.md`);
     } else {
       details.push("markdown=match");
     }
   }
 
+  const textCoverage = compareTextCoverage(oracleText, result.markdown);
+  const readingOrder = compareReadingOrder(oracleText, result.markdown);
+  const characterError = compareCharacterErrorRate(comparisonText, result.markdown);
+  evidence.textCoverage = textCoverage;
+  evidence.readingOrder = readingOrder;
+  evidence.characterError = characterError;
+  evidence.textPrecision =
+    textCoverage.actualTokens === 0
+      ? textCoverage.oracleTokens === 0
+        ? 1
+        : 0
+      : textCoverage.matchedTokens / textCoverage.actualTokens;
+  evidence.textCoveragePassed =
+    acceptance.minTextCoverage !== null &&
+    textCoverage.coverage + Number.EPSILON >= acceptance.minTextCoverage;
+  evidence.readingOrderPassed =
+    acceptance.maxReadingOrderDistance === null
+      ? evidence.expectedMarkdownMatch
+      : readingOrder.readingOrderDistance <=
+        acceptance.maxReadingOrderDistance + Number.EPSILON;
+  evidence.characterErrorPassed =
+    acceptance.maxCharacterErrorRate === null
+      ? evidence.expectedMarkdownMatch
+      : characterError.characterErrorRate <=
+        acceptance.maxCharacterErrorRate + Number.EPSILON;
+
+  if (acceptance.minTextCoverage === null) {
+    errors.push("missing executable metrics.minTextCoverage threshold");
+  } else if (!evidence.textCoveragePassed) {
+    errors.push(
+      `text coverage ${formatNumber(textCoverage.coverage)} below ${formatNumber(
+        acceptance.minTextCoverage
+      )} (${textCoverage.matchedTokens}/${textCoverage.oracleTokens} oracle tokens matched)`
+    );
+  }
+  details.push(
+    `textCoverage=${formatNumber(textCoverage.coverage)} min=${formatNumber(
+      acceptance.minTextCoverage
+    )} precision=${formatNumber(evidence.textPrecision)}`
+  );
+
+  if (
+    acceptance.maxReadingOrderDistance !== null &&
+    !evidence.readingOrderPassed
+  ) {
+    errors.push(
+      `reading order distance ${formatNumber(readingOrder.readingOrderDistance)} above ${formatNumber(
+        acceptance.maxReadingOrderDistance
+      )}`
+    );
+  }
+  if (acceptance.maxReadingOrderDistance !== null) {
+    details.push(
+      `readingOrderDistance=${formatNumber(readingOrder.readingOrderDistance)} max=${formatNumber(
+        acceptance.maxReadingOrderDistance
+      )}`
+    );
+  }
+
+  if (acceptance.maxCharacterErrorRate !== null && !evidence.characterErrorPassed) {
+    errors.push(
+      `character error rate ${formatNumber(characterError.characterErrorRate)} above ${formatNumber(
+        acceptance.maxCharacterErrorRate
+      )}`
+    );
+  }
+  if (acceptance.maxCharacterErrorRate !== null) {
+    details.push(
+      `characterErrorRate=${formatNumber(characterError.characterErrorRate)} max=${formatNumber(
+        acceptance.maxCharacterErrorRate
+      )}`
+    );
+  }
+
+  enforceMaximumMetric(
+    errors,
+    details,
+    "rssDeltaBytes",
+    evidence.rssDeltaBytes,
+    acceptance.maxRssDeltaBytes
+  );
+  enforceMaximumMetric(
+    errors,
+    details,
+    "heapUsedDeltaBytes",
+    evidence.heapUsedDeltaBytes,
+    acceptance.maxHeapUsedDeltaBytes
+  );
+
+  const renderedHtml = evaluateRenderedHtml(
+    analyzeRenderedHtml(renderMarkdownToHtml(result.markdown)),
+    acceptance
+  );
+  evidence.renderedHtml = renderedHtml;
+  if (hasRenderedHtmlMetrics(acceptance)) {
+    for (const failure of renderedHtml.failures) {
+      errors.push(
+        `rendered HTML ${failure.metric} ${failure.actual} must be ${failure.operator} ${failure.limit}`
+      );
+    }
+    details.push(
+      `renderedHtml=text:${renderedHtml.textChars} headings:${renderedHtml.headingCount} paragraphs:${renderedHtml.paragraphCount}`
+    );
+  }
+
+  const taggedStructure = compareTaggedStructure(result.diagnostics.extraction, acceptance);
+  evidence.taggedStructure = taggedStructure;
+  if (hasTaggedStructureMetrics(acceptance) && !taggedStructure.passed) {
+    errors.push(
+      `tagged structure failed: tagged=${taggedStructure.tagged} markedContent=${taggedStructure.markedContent}/${formatNumber(
+        acceptance.minTaggedMarkedContent
+      )} conflicts=${taggedStructure.taggedStructureConflicts}/${formatNumber(
+        acceptance.maxTaggedStructureConflicts
+      )}`
+    );
+  }
+
+  if (hasRunningContentLabels(acceptance)) {
+    const runningContent = compareRunningContent(
+      sourceOracleText,
+      result.markdown,
+      acceptance.runningContent
+    );
+    const minPrecision = acceptance.minRunningContentPrecision ?? 1;
+    const minRecall = acceptance.minRunningContentRecall ?? 1;
+    runningContent.passed =
+      runningContent.precision + Number.EPSILON >= minPrecision &&
+      runningContent.recall + Number.EPSILON >= minRecall;
+    evidence.runningContent = runningContent;
+    if (!runningContent.passed) {
+      errors.push(
+        `running-content precision/recall ${formatNumber(runningContent.precision)}/${formatNumber(
+          runningContent.recall
+        )} below ${formatNumber(minPrecision)}/${formatNumber(minRecall)}`
+      );
+    }
+    details.push(
+      `runningContent=${formatNumber(runningContent.precision)}/${formatNumber(
+        runningContent.recall
+      )}`
+    );
+  }
+
   if (acceptance.maxOcrCharacterErrorRate !== null || acceptance.maxOcrWordErrorRate !== null) {
-    const ocrAccuracy = compareOcrAccuracy(expected, result.markdown);
+    const ocrAccuracy = compareOcrAccuracy(comparisonText, result.markdown);
+    evidence.ocrAccuracy = ocrAccuracy;
+    evidence.ocrAccuracyPassed = true;
     if (
       acceptance.maxOcrCharacterErrorRate !== null &&
       ocrAccuracy.characterErrorRate - Number.EPSILON > acceptance.maxOcrCharacterErrorRate
     ) {
+      evidence.ocrAccuracyPassed = false;
       errors.push(
         `OCR character error rate ${formatNumber(ocrAccuracy.characterErrorRate)} above ${formatNumber(
           acceptance.maxOcrCharacterErrorRate
@@ -527,6 +622,7 @@ async function runCase(corpusCase) {
       acceptance.maxOcrWordErrorRate !== null &&
       ocrAccuracy.wordErrorRate - Number.EPSILON > acceptance.maxOcrWordErrorRate
     ) {
+      evidence.ocrAccuracyPassed = false;
       errors.push(
         `OCR word error rate ${formatNumber(ocrAccuracy.wordErrorRate)} above ${formatNumber(
           acceptance.maxOcrWordErrorRate
@@ -546,57 +642,75 @@ async function runCase(corpusCase) {
   }
 
   if (acceptance.minTableCellAdjacency !== null) {
-    const adjacency = compareTableCellAdjacency(expected, result.markdown);
-    if (adjacency.score + Number.EPSILON < acceptance.minTableCellAdjacency) {
-      errors.push(
-        `table cell adjacency ${formatNumber(adjacency.score)} below ${formatNumber(
+    const adjacency = expected === null
+      ? null
+      : compareTableCellAdjacency(expected, result.markdown);
+    if (!adjacency) {
+      errors.push("table adjacency requires a reviewed Markdown snapshot");
+    } else {
+      evidence.tableCellAdjacency = adjacency;
+      if (adjacency.score + Number.EPSILON < acceptance.minTableCellAdjacency) {
+        errors.push(
+          `table cell adjacency ${formatNumber(adjacency.score)} below ${formatNumber(
+            acceptance.minTableCellAdjacency
+          )} (${adjacency.matchedPairs}/${adjacency.expectedPairs} expected pairs matched)`
+        );
+      }
+      details.push(
+        `tableCellAdjacency=${formatNumber(adjacency.score)} min=${formatNumber(
           acceptance.minTableCellAdjacency
-        )} (${adjacency.matchedPairs}/${adjacency.expectedPairs} expected pairs matched)`
+        )} matched=${adjacency.matchedPairs}/${adjacency.expectedPairs}`
       );
     }
-    details.push(
-      `tableCellAdjacency=${formatNumber(adjacency.score)} min=${formatNumber(
-        acceptance.minTableCellAdjacency
-      )} matched=${adjacency.matchedPairs}/${adjacency.expectedPairs}`
-    );
   }
 
   if (acceptance.minTableSpanAccuracy !== null) {
-    const spanAccuracy = compareTableSpanAccuracy(expected, result.markdown);
-    if (spanAccuracy.score + Number.EPSILON < acceptance.minTableSpanAccuracy) {
-      errors.push(
-        `table span accuracy ${formatNumber(spanAccuracy.score)} below ${formatNumber(
+    const spanAccuracy = expected === null
+      ? null
+      : compareTableSpanAccuracy(expected, result.markdown);
+    if (!spanAccuracy) {
+      errors.push("table span accuracy requires a reviewed Markdown snapshot");
+    } else {
+      evidence.tableSpanAccuracy = spanAccuracy;
+      if (spanAccuracy.score + Number.EPSILON < acceptance.minTableSpanAccuracy) {
+        errors.push(
+          `table span accuracy ${formatNumber(spanAccuracy.score)} below ${formatNumber(
+            acceptance.minTableSpanAccuracy
+          )} (${spanAccuracy.matchedCells}/${spanAccuracy.expectedCells} expected cells matched)`
+        );
+      }
+      details.push(
+        `tableSpanAccuracy=${formatNumber(spanAccuracy.score)} min=${formatNumber(
           acceptance.minTableSpanAccuracy
-        )} (${spanAccuracy.matchedCells}/${spanAccuracy.expectedCells} expected cells matched)`
+        )} matched=${spanAccuracy.matchedCells}/${spanAccuracy.expectedCells}`
       );
     }
-    details.push(
-      `tableSpanAccuracy=${formatNumber(spanAccuracy.score)} min=${formatNumber(
-        acceptance.minTableSpanAccuracy
-      )} matched=${spanAccuracy.matchedCells}/${spanAccuracy.expectedCells}`
-    );
   }
 
   if (acceptance.minTableCsvCellTextAccuracy !== null) {
-    const csvAccuracy = compareTableCsvCellTextAccuracy(expected, result.assets);
-    if (csvAccuracy.score + Number.EPSILON < acceptance.minTableCsvCellTextAccuracy) {
-      errors.push(
-        `table CSV cell text accuracy ${formatNumber(csvAccuracy.score)} below ${formatNumber(
+    const csvAccuracy = expected === null
+      ? null
+      : compareTableCsvCellTextAccuracy(expected, result.assets);
+    if (!csvAccuracy) {
+      errors.push("table CSV accuracy requires a reviewed Markdown snapshot");
+    } else {
+      evidence.tableCsvCellTextAccuracy = csvAccuracy;
+      if (csvAccuracy.score + Number.EPSILON < acceptance.minTableCsvCellTextAccuracy) {
+        errors.push(
+          `table CSV cell text accuracy ${formatNumber(csvAccuracy.score)} below ${formatNumber(
+            acceptance.minTableCsvCellTextAccuracy
+          )} (${csvAccuracy.matchedCells}/${csvAccuracy.expectedCells} expected cells matched)`
+        );
+      }
+      details.push(
+        `tableCsvCellTextAccuracy=${formatNumber(csvAccuracy.score)} min=${formatNumber(
           acceptance.minTableCsvCellTextAccuracy
-        )} (${csvAccuracy.matchedCells}/${csvAccuracy.expectedCells} expected cells matched)`
+        )} matched=${csvAccuracy.matchedCells}/${csvAccuracy.expectedCells}`
       );
     }
-    details.push(
-      `tableCsvCellTextAccuracy=${formatNumber(csvAccuracy.score)} min=${formatNumber(
-        acceptance.minTableCsvCellTextAccuracy
-      )} matched=${csvAccuracy.matchedCells}/${csvAccuracy.expectedCells}`
-    );
   }
 
-  const outputChecks = checkAcceptanceOutput(acceptance, result);
-  errors.push(...outputChecks.errors);
-  details.push(...outputChecks.details);
-
+  evidence.matchedForms = 0;
   if (acceptance.forms.length > 0) {
     const fieldsByName = new Map(
       result.diagnostics.extraction.forms.fields.map((field) => [field.name, field])
@@ -623,7 +737,48 @@ async function runCase(corpusCase) {
         matchedForms += 1;
       }
     }
+    evidence.matchedForms = matchedForms;
     details.push(`forms=${matchedForms}/${acceptance.forms.length}`);
+  }
+
+  const criterionContext = {
+    acceptance,
+    entry,
+    evidence,
+    result
+  };
+  const outputChecks = checkAcceptanceOutput(acceptance, result, criterionContext);
+  errors.push(...outputChecks.errors);
+  details.push(...outputChecks.details);
+
+  const expectedModeErrors = evaluateExpectedMode(acceptance.expectedMode, criterionContext);
+  errors.push(...expectedModeErrors);
+  if (expectedModeErrors.length === 0) {
+    details.push(`expectedMode=${acceptance.expectedMode}`);
+  }
+
+  const structureChecks = evaluateStructureExpectations(
+    acceptance.structureExpected,
+    criterionContext
+  );
+  errors.push(...structureChecks.errors);
+  if (acceptance.structureExpected.length > 0) {
+    details.push(`structure=${structureChecks.checked}/${acceptance.structureExpected.length}`);
+  }
+
+  const assetChecks = checkRequiredAssets(acceptance.assetsRequired, result.assets ?? []);
+  errors.push(...assetChecks.errors);
+  if (acceptance.assetsRequired.length > 0) {
+    details.push(`assets=${assetChecks.matched}/${acceptance.assetsRequired.length}`);
+  }
+
+  errors.push(...checkNamedStructureText(acceptance, result));
+
+  if (
+    acceptance.gating &&
+    (!acceptance.humanReviewedBy || !/^\d{4}-\d{2}-\d{2}$/.test(acceptance.reviewedAt))
+  ) {
+    errors.push("gating acceptance requires executable review provenance");
   }
 
   if (errors.length > 0) {
@@ -637,11 +792,20 @@ async function runCase(corpusCase) {
   );
 }
 
-export function checkAcceptanceOutput(acceptance, result) {
+export function checkAcceptanceOutput(acceptance, result, criterionContext = null) {
   const errors = [];
   const details = [];
-  errors.push(...findUnsupportedCriteria(acceptance.must, supportedMustCriteria, "must"));
-  errors.push(...findUnsupportedCriteria(acceptance.mustNot, supportedMustNotCriteria, "mustNot"));
+  const context = criterionContext ?? {
+    acceptance,
+    entry: { features: [] },
+    evidence: {
+      textCoveragePassed: /[\p{L}\p{N}]/u.test(result.markdown ?? ""),
+      textPrecision: /[\p{L}\p{N}]/u.test(result.markdown ?? "") ? 1 : 0
+    },
+    result
+  };
+  const criteriaResult = evaluateAcceptanceCriteria(acceptance, context);
+  errors.push(...criteriaResult.errors);
 
   const snippetResult = checkSnippets(acceptance.snippets, result);
   errors.push(...snippetResult.errors);
@@ -658,19 +822,12 @@ export function checkAcceptanceOutput(acceptance, result) {
   }
 
   if (acceptance.must.length > 0 || acceptance.mustNot.length > 0) {
-    details.push(`criteria=must:${acceptance.must.length} mustNot:${acceptance.mustNot.length}`);
+    details.push(
+      `criteria=${criteriaResult.checked}/${acceptance.must.length + acceptance.mustNot.length}`
+    );
   }
 
   return { errors, details };
-}
-
-function findUnsupportedCriteria(criteria, supported, blockName) {
-  return criteria
-    .filter((criterion) => !supported.has(criterion))
-    .map(
-      (criterion) =>
-        `unsupported acceptance ${blockName} criterion "${criterion}" without a corpus runner checker`
-    );
 }
 
 function checkSnippets(snippets, result) {
@@ -750,12 +907,106 @@ function checkWarnings(acceptance, warnings) {
   };
 }
 
-async function readExpectedMarkdown(entry) {
+function enforceMaximumMetric(errors, details, name, actual, maximum) {
+  if (maximum === null) {
+    return;
+  }
+  if (actual > maximum) {
+    errors.push(`${name} ${actual} above ${maximum}`);
+  }
+  details.push(`${name}=${actual} max=${maximum}`);
+}
+
+function hasRenderedHtmlMetrics(acceptance) {
+  return [
+    acceptance.minRenderedHtmlTextChars,
+    acceptance.minRenderedHtmlHeadings,
+    acceptance.minRenderedHtmlParagraphs,
+    acceptance.maxRenderedHtmlParagraphChars
+  ].some(Number.isFinite);
+}
+
+function hasTaggedStructureMetrics(acceptance) {
+  return (
+    Number.isFinite(acceptance.minTaggedMarkedContent) ||
+    Number.isFinite(acceptance.maxTaggedStructureConflicts)
+  );
+}
+
+function hasRunningContentLabels(acceptance) {
+  return (
+    acceptance.runningContent.expectedRemoved.length > 0 ||
+    acceptance.runningContent.expectedRetained.length > 0
+  );
+}
+
+function checkRequiredAssets(requiredAssets, assets) {
+  const errors = [];
+  let matched = 0;
+  for (const required of requiredAssets) {
+    const asset = assets.find(
+      (candidate) =>
+        candidate.id === required || candidate.kind === required || candidate.path === required
+    );
+    if (!asset) {
+      errors.push(`missing required asset ${JSON.stringify(required)}`);
+    } else {
+      matched += 1;
+    }
+  }
+  return { errors, matched };
+}
+
+function checkNamedStructureText(acceptance, result) {
+  const errors = [];
+  for (const heading of acceptance.structureHeadings) {
+    const escaped = escapeRegExp(heading);
+    if (!new RegExp(`^#{1,6}\\s+${escaped}(?:\\s|$)`, "mi").test(result.markdown)) {
+      errors.push(`missing required structure heading ${JSON.stringify(heading)}`);
+    }
+  }
+  for (const tableText of acceptance.structureTables) {
+    if (!result.markdown.includes(tableText)) {
+      errors.push(`missing required structure table text ${JSON.stringify(tableText)}`);
+    }
+  }
+  return errors;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function readOptionalExpectedMarkdown(entry) {
   const expectedPath = path.join(repoRoot, "corpus", "expected", `${entry.id}.md`);
   try {
     return await readFile(expectedPath, "utf8");
   } catch (error) {
-    throw new Error(`${entry.id}: expected Markdown is not readable at ${expectedPath}: ${error.message}`);
+    if (error.code === "ENOENT") {
+      return null;
+    }
+    throw new Error(
+      `${entry.id}: expected Markdown is not readable at ${expectedPath}: ${error.message}`
+    );
+  }
+}
+
+async function readTextOracle(entry, expected) {
+  const oraclePath = path.join(
+    repoRoot,
+    "corpus",
+    "baselines",
+    entry.id,
+    "oracles",
+    "pdftotext.txt"
+  );
+  try {
+    return await readFile(oraclePath, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT" && expected !== null) {
+      return expected;
+    }
+    throw new Error(`${entry.id}: text oracle is not readable at ${oraclePath}: ${error.message}`);
   }
 }
 

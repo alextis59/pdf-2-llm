@@ -91,7 +91,10 @@ The `corpus/` directory is part of the product contract.
 `scripts/corpus/` owns corpus retrieval, generation, analysis, preview, oracle,
 manifest, acceptance, and review-audit workflows. `scripts/qa/` owns targeted
 quality gates for rendered Markdown, oracle comparisons, tables, warnings,
-security, WebGPU, package size, model size, dependencies, and performance.
+security, WebGPU, package size, model size, dependencies, and performance. The
+corpus runner maps every accepted behavior and structure label to an executable
+predicate and rejects unknown labels instead of treating recognition as a
+pass.
 
 ## CI And Release Shape
 

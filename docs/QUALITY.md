@@ -44,6 +44,13 @@ fuzz smoke, build, and API tests.
   fallback is documented.
 - `--update-snapshots` in `scripts/qa/run-corpus.mjs` is reserved and currently
   rejected; update corpus fixtures through reviewed file changes.
+- Gating corpus runs execute every declared `must`, `mustNot`, metric,
+  structure, asset, snippet, warning, source-type, and expected-mode assertion.
+  Unknown criteria fail closed; recognizing a criterion name is not evidence
+  that it passed.
+- Text coverage uses a reviewed Markdown snapshot when one exists and otherwise
+  falls back to the stored text oracle. Raw text oracles remain the reference
+  for repeated running-content removal checks.
 - Text-only corpus runs can emit baseline warnings such as `ocr.disabled` and
   `text.heuristic_content_stream`; do not treat those as unexpected unless the
   acceptance file or test says so.
