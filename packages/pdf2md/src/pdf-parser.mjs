@@ -94,7 +94,8 @@ export function parsePdfDocument(bytes, options = {}) {
       maxDecodedStreamBytes,
       maxDepth,
       mode,
-      encryption
+      encryption,
+      entries
     });
     objects.set(objectKey(object.objectNumber, object.generationNumber), object);
     if (object.stream) {
@@ -831,19 +832,9 @@ function xrefStreamEntry(objectNumber, type, field2, field3) {
 }
 
 function parseIndirectObjectAt(source, bytes, offset, options = {}) {
-  const header = source.slice(offset).match(/^(\d+)\s+(\d+)\s+obj\b/);
-  if (!header) {
-    throw new PdfSyntaxError("Expected indirect object.", {
-      offset,
-      code: "pdf.object.expected"
-    });
-  }
-
-  const objectNumber = Number.parseInt(header[1], 10);
-  const generationNumber = Number.parseInt(header[2], 10);
-  let cursor = offset + header[0].length;
-  const parsed = parsePdfValue(source, cursor, { maxDepth: options.maxDepth });
-  cursor = skipWhitespaceAndComments(source, parsed.offset);
+  const parsedObject = parseIndirectObjectHeaderAndValue(source, offset, options);
+  const { objectNumber, generationNumber } = parsedObject;
+  let cursor = skipWhitespaceAndComments(source, parsedObject.valueEndOffset);
 
   let stream = null;
   if (source.startsWith("stream", cursor)) {
@@ -861,16 +852,21 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
     }
 
     const streamStart = cursor;
-    const streamEnd = resolveStreamEnd(source, bytes, streamStart, parsed.value, options.mode);
+    const streamEnd = resolveStreamEnd(source, bytes, streamStart, parsedObject.value, {
+      mode: options.mode,
+      entries: options.entries,
+      maxDepth: options.maxDepth,
+      streamLengthStack: new Set([objectKey(objectNumber, generationNumber)])
+    });
 
     const streamBytes = bytes.subarray(streamStart, streamEnd);
     const decodedInputBytes =
-      options.encryption && shouldDecryptStream(parsed.value)
+      options.encryption && shouldDecryptStream(parsedObject.value)
         ? options.encryption.decryptStreamBytes(objectNumber, generationNumber, streamBytes)
         : streamBytes;
     let decoded;
     try {
-      decoded = decodeStreamBytes(decodedInputBytes, parsed.value, {
+      decoded = decodeStreamBytes(decodedInputBytes, parsedObject.value, {
         maxBytes: options.maxDecodedStreamBytes ?? 50 * 1024 * 1024
       });
     } catch (error) {
@@ -919,10 +915,32 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
   return {
     objectNumber,
     generationNumber,
-    value: parsed.value,
+    value: parsedObject.value,
     stream,
     offset,
     endOffset: endObjectOffset + "endobj".length
+  };
+}
+
+function parseIndirectObjectHeaderAndValue(source, offset, options = {}) {
+  const header = source.slice(offset).match(/^(\d+)\s+(\d+)\s+obj\b/);
+  if (!header) {
+    throw new PdfSyntaxError("Expected indirect object.", {
+      offset,
+      code: "pdf.object.expected"
+    });
+  }
+
+  const objectNumber = Number.parseInt(header[1], 10);
+  const generationNumber = Number.parseInt(header[2], 10);
+  const cursor = offset + header[0].length;
+  const parsed = parsePdfValue(source, cursor, { maxDepth: options.maxDepth });
+  return {
+    objectNumber,
+    generationNumber,
+    value: parsed.value,
+    offset,
+    valueEndOffset: parsed.offset
   };
 }
 
@@ -1014,8 +1032,9 @@ function readObjectStreamOffsets(text, count, offset) {
   return offsets;
 }
 
-function resolveStreamEnd(source, bytes, streamStart, dictionary, mode = "strict") {
-  const streamLength = readDirectStreamLength(dictionary);
+function resolveStreamEnd(source, bytes, streamStart, dictionary, options = {}) {
+  const mode = options.mode ?? "strict";
+  const { length: streamLength, error: lengthError } = readStreamLength(dictionary, source, options);
   if (Number.isInteger(streamLength) && streamLength >= 0) {
     const streamEnd = streamStart + streamLength;
     if (streamEnd <= bytes.byteLength) {
@@ -1028,6 +1047,9 @@ function resolveStreamEnd(source, bytes, streamStart, dictionary, mode = "strict
       });
     }
   }
+  if (lengthError && mode !== "tolerant") {
+    throw lengthError;
+  }
 
   const endstreamOffset = source.indexOf("endstream", streamStart);
   if (endstreamOffset === -1) {
@@ -1039,12 +1061,121 @@ function resolveStreamEnd(source, bytes, streamStart, dictionary, mode = "strict
   return trimTrailingLineEnding(source, endstreamOffset);
 }
 
+function readStreamLength(dictionary, source, options = {}) {
+  const streamLength = readDirectStreamLength(dictionary);
+  if (Number.isInteger(streamLength) && streamLength >= 0) {
+    return {
+      length: streamLength,
+      error: null
+    };
+  }
+
+  if (!isDict(dictionary) || dictionary.entries.Length?.type !== "ref") {
+    return {
+      length: null,
+      error: null
+    };
+  }
+
+  return readIndirectStreamLength(dictionary.entries.Length, source, options);
+}
+
 function readDirectStreamLength(value) {
   if (!value || value.type !== "dict") {
     return null;
   }
   const length = value.entries.Length;
   return typeof length === "number" ? length : null;
+}
+
+function readIndirectStreamLength(reference, source, options = {}) {
+  const stack = options.streamLengthStack ?? new Set();
+  const key = objectKey(reference.objectNumber, reference.generationNumber);
+  if (stack.has(key)) {
+    return {
+      length: null,
+      error: new PdfSyntaxError("Indirect stream Length contains a reference cycle.", {
+        code: "pdf.stream.length_cycle"
+      })
+    };
+  }
+
+  const offset = findIndirectStreamLengthObjectOffset(reference, source, options.entries);
+  if (!Number.isInteger(offset)) {
+    return {
+      length: null,
+      error: new PdfSyntaxError("Indirect stream Length object is unavailable.", {
+        code: "pdf.stream.length_unresolved"
+      })
+    };
+  }
+
+  let object;
+  try {
+    object = parseIndirectObjectHeaderAndValue(source, offset, { maxDepth: options.maxDepth });
+  } catch (error) {
+    if (!(error instanceof PdfSyntaxError)) {
+      throw error;
+    }
+    return {
+      length: null,
+      error: new PdfSyntaxError("Indirect stream Length object could not be parsed.", {
+        offset,
+        code: "pdf.stream.length_unresolved"
+      })
+    };
+  }
+
+  if (Number.isInteger(object.value) && object.value >= 0) {
+    return {
+      length: object.value,
+      error: null
+    };
+  }
+
+  if (object.value?.type === "ref") {
+    const nextStack = new Set(stack);
+    nextStack.add(key);
+    return readIndirectStreamLength(object.value, source, {
+      ...options,
+      streamLengthStack: nextStack
+    });
+  }
+
+  return {
+    length: null,
+    error: new PdfSyntaxError("Indirect stream Length object must resolve to a non-negative integer.", {
+      offset: object.offset,
+      code: "pdf.stream.length_invalid"
+    })
+  };
+}
+
+function findIndirectStreamLengthObjectOffset(reference, source, entries) {
+  if (Array.isArray(entries)) {
+    const entry = entries.find(
+      (item) =>
+        item.inUse &&
+        item.objectNumber === reference.objectNumber &&
+        item.generationNumber === reference.generationNumber &&
+        item.offset > 0 &&
+        !item.compressed
+    );
+    return entry?.offset ?? null;
+  }
+
+  return findIndirectObjectOffset(source, reference);
+}
+
+function findIndirectObjectOffset(source, reference) {
+  const pattern = new RegExp(`${reference.objectNumber}\\s+${reference.generationNumber}\\s+obj\\b`, "g");
+  let match;
+  while ((match = pattern.exec(source)) !== null) {
+    if (isObjectHeaderBoundary(source, match.index)) {
+      return match.index;
+    }
+  }
+  return null;
 }
 
 function shouldDecryptStream(dictionary) {

@@ -256,6 +256,26 @@ test("parsePdfDocument decodes Flate content streams for text extraction", async
   assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
 });
 
+test("parsePdfDocument resolves indirect stream Length before slicing Flate bytes", async () => {
+  const content = "% endstream marker in deflate bytes\nBT /F1 22 Tf 20 200 Td (Indirect Length Fixture) Tj ET\n";
+  const compressed = deflateSync(Buffer.from(content, "latin1"), { level: 0 });
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObjectWithIndirectLength(compressed, 6, "/Filter /FlateDecode"),
+    String(compressed.byteLength)
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.pages[0].contentStreams[0].rawLength, compressed.byteLength);
+  assert.match(document.pages[0].contentStreams[0].text, /Indirect Length Fixture/);
+  assert.equal(result.markdown, "# Indirect Length Fixture\n");
+  assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
+});
+
 test("parsePdfDocument records metadata for raster image XObject filters", async () => {
   const bytes = createTestPdf([
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -459,6 +479,29 @@ test("parsePdfDocument supports strict and tolerant stream length handling", asy
 
   assert.match(document.pages[0].contentStreams[0].text, /Tolerant Fixture/);
   assert.equal(result.markdown, "# Tolerant Fixture\n");
+  assert.equal(result.diagnostics.options.parserMode, "tolerant");
+});
+
+test("tolerant parser falls back to endstream for invalid indirect stream Length", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObjectWithIndirectLength("BT /F1 22 Tf 20 200 Td (Invalid Indirect Length) Tj ET\n", 6),
+    "(not a length)"
+  ]);
+
+  assert.throws(
+    () => parsePdfDocument(bytes),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.stream.length_invalid"
+  );
+
+  const document = parsePdfDocument(bytes, { mode: "tolerant" });
+  const result = await convertPdfToMarkdown(bytes, { parser: { mode: "tolerant" } });
+
+  assert.match(document.pages[0].contentStreams[0].text, /Invalid Indirect Length/);
+  assert.equal(result.markdown, "# Invalid Indirect Length\n");
   assert.equal(result.diagnostics.options.parserMode, "tolerant");
 });
 
@@ -912,4 +955,9 @@ function streamObject(contents, extraDictionary = "") {
 function streamObjectWithLength(contents, length) {
   const bytes = typeof contents === "string" ? Buffer.from(contents, "binary") : Buffer.from(contents);
   return `<< /Length ${length} >>\nstream\n${bytes.toString("binary")}endstream`;
+}
+
+function streamObjectWithIndirectLength(contents, lengthObjectNumber, extraDictionary = "") {
+  const bytes = typeof contents === "string" ? Buffer.from(contents, "binary") : Buffer.from(contents);
+  return `<< /Length ${lengthObjectNumber} 0 R${extraDictionary ? ` ${extraDictionary}` : ""} >>\nstream\n${bytes.toString("binary")}endstream`;
 }
