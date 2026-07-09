@@ -315,8 +315,11 @@ node --expose-gc scripts/qa/benchmark.mjs \
 ```
 
 The benchmark comparison should report equivalent accepted output between CPU
-and WebGPU-preferred modes. In Node, the WebGPU-preferred mode is expected to
-select CPU with `node-stable-gpu-path-unavailable`.
+and WebGPU-preferred modes. It compares canonical SHA-256 hashes of the complete
+public conversion result, excluding only elapsed timing and the WebGPU request
+flags/provider diagnostics that necessarily describe the selected execution
+path. In Node, the WebGPU-preferred mode is expected to select CPU with
+`node-stable-gpu-path-unavailable`.
 
 ```sh
 npm run qa:webgpu-preprocess

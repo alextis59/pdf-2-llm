@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import process from "node:process";
 import { performance } from "node:perf_hooks";
@@ -92,6 +93,48 @@ export function summarizeGpuMemoryFromExecution(execution = null) {
   };
 }
 
+export function createAcceptedOutputHash(result) {
+  if (!result || typeof result !== "object") {
+    throw new TypeError("accepted output hashing requires a conversion result");
+  }
+
+  const { diagnostics, ...publicResult } = result;
+  const stableDiagnostics =
+    diagnostics && typeof diagnostics === "object" ? { ...diagnostics } : diagnostics;
+  if (stableDiagnostics && typeof stableDiagnostics === "object") {
+    delete stableDiagnostics.timing;
+    if (stableDiagnostics.options && typeof stableDiagnostics.options === "object") {
+      const { webgpuRequired, webgpuPreferred, ...stableOptions } = stableDiagnostics.options;
+      stableDiagnostics.options = stableOptions;
+    }
+    if (stableDiagnostics.acceleration && typeof stableDiagnostics.acceleration === "object") {
+      const { webgpu, ...stableAcceleration } = stableDiagnostics.acceleration;
+      stableDiagnostics.acceleration = stableAcceleration;
+    }
+  }
+
+  const canonicalResult = canonicalizeJson({
+    ...publicResult,
+    diagnostics: stableDiagnostics
+  });
+  return `sha256:${createHash("sha256").update(JSON.stringify(canonicalResult)).digest("hex")}`;
+}
+
+function canonicalizeJson(value) {
+  if (Array.isArray(value)) {
+    return value.map(canonicalizeJson);
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .filter((key) => value[key] !== undefined)
+      .map((key) => [key, canonicalizeJson(value[key])])
+  );
+}
+
 export function compareProviderResults(results) {
   const byId = new Map();
   for (const result of results) {
@@ -116,10 +159,11 @@ export function compareProviderResults(results) {
       cpuSelectedProvider: cpu.acceleration.selectedProvider,
       webgpuSelectedProvider: webgpu.acceleration.selectedProvider,
       webgpuFallbackReason: webgpu.acceleration.fallbackReason,
+      cpuAcceptedOutputHash: cpu.acceptedOutputHash,
+      webgpuAcceptedOutputHash: webgpu.acceptedOutputHash,
       equivalentAcceptedOutput:
-        cpu.outputChars === webgpu.outputChars &&
-        cpu.textLines === webgpu.textLines &&
-        JSON.stringify(cpu.warnings) === JSON.stringify(webgpu.warnings),
+        typeof cpu.acceptedOutputHash === "string" &&
+        cpu.acceptedOutputHash === webgpu.acceptedOutputHash,
       speedupMetric: Number.isFinite(preprocessingSpeedupRatio)
         ? "webgpu-preprocessing"
         : "pages-per-second",
@@ -516,6 +560,7 @@ async function runBenchmarkCase(repoRoot, corpusCase, { iterations, providerMode
     outputChars: lastResult?.markdown.length ?? 0,
     textLines: lastResult?.diagnostics.extraction.textLines ?? 0,
     warnings: lastResult?.warnings.map((warning) => warning.code) ?? [],
+    acceptedOutputHash: createAcceptedOutputHash(lastResult),
     ...duration,
     startup: {
       durationMs: startupMs

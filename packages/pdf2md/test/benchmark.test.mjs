@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   compareProviderResults,
+  createAcceptedOutputHash,
   createMemoryProfileSummary,
   createThroughputProfileSummary,
   evaluateMemoryLimits,
@@ -629,6 +630,50 @@ test("benchmark GPU memory summary reports planned WebGPU memory", () => {
   );
 });
 
+test("accepted output hash covers the stable public conversion result", () => {
+  const cpuResult = {
+    markdown: "ABCD",
+    sourceMap: { version: "1", mappings: [{ pageIndex: 0, outputStart: 0 }] },
+    assets: [{ id: "table-1", content: "a,b\n1,2\n" }],
+    ir: { schemaVersion: "1", pages: [{ pageIndex: 0, elements: [] }] },
+    warnings: [{ code: "sample.warning", message: "Sample warning", details: { pageIndex: 0 } }],
+    diagnostics: {
+      schemaVersion: "1",
+      options: { ocrEnabled: false, webgpuRequired: false, webgpuPreferred: false },
+      timing: { elapsedMs: 10 },
+      acceleration: { webgpu: { selectedProvider: "cpu", fallbackReason: "not-requested" } },
+      extraction: { textLines: 1 }
+    },
+    confidence: { overall: 0.9 }
+  };
+  const webgpuResult = structuredClone(cpuResult);
+  webgpuResult.diagnostics.timing.elapsedMs = 50;
+  webgpuResult.diagnostics.options.webgpuPreferred = true;
+  webgpuResult.diagnostics.acceleration.webgpu = {
+    selectedProvider: "webgpu",
+    fallbackReason: null,
+    preprocessing: { speedupRatio: 1.4 }
+  };
+
+  const expectedHash = createAcceptedOutputHash(cpuResult);
+  assert.equal(createAcceptedOutputHash(webgpuResult), expectedHash);
+
+  const correctnessMutations = [
+    ["same-length Markdown", (result) => (result.markdown = "WXYZ")],
+    ["source map", (result) => (result.sourceMap.mappings[0].outputStart = 1)],
+    ["assets", (result) => (result.assets[0].content = "a,b\n2,1\n")],
+    ["document IR", (result) => result.ir.pages[0].elements.push({ type: "paragraph" })],
+    ["warnings", (result) => (result.warnings[0].message = "Changed warning")],
+    ["diagnostics", (result) => (result.diagnostics.extraction.textLines = 2)],
+    ["confidence", (result) => (result.confidence.overall = 0.8)]
+  ];
+  for (const [label, mutate] of correctnessMutations) {
+    const changed = structuredClone(cpuResult);
+    mutate(changed);
+    assert.notEqual(createAcceptedOutputHash(changed), expectedHash, label);
+  }
+});
+
 test("benchmark provider comparison reports parity and speed ratio", () => {
   assert.deepEqual(
     compareProviderResults([
@@ -639,6 +684,7 @@ test("benchmark provider comparison reports parity and speed ratio", () => {
         outputChars: 100,
         textLines: 2,
         warnings: [],
+        acceptedOutputHash: "sha256:same",
         pagesPerSecond: 10,
         startup: { durationMs: 20 },
         modelLoad: { durationMs: 0 },
@@ -653,6 +699,7 @@ test("benchmark provider comparison reports parity and speed ratio", () => {
         outputChars: 100,
         textLines: 2,
         warnings: [],
+        acceptedOutputHash: "sha256:same",
         pagesPerSecond: 15,
         startup: { durationMs: 18 },
         modelLoad: { durationMs: 0 },
@@ -671,6 +718,8 @@ test("benchmark provider comparison reports parity and speed ratio", () => {
         cpuSelectedProvider: "cpu",
         webgpuSelectedProvider: "cpu",
         webgpuFallbackReason: "node-stable-gpu-path-unavailable",
+        cpuAcceptedOutputHash: "sha256:same",
+        webgpuAcceptedOutputHash: "sha256:same",
         equivalentAcceptedOutput: true,
         speedupMetric: "pages-per-second",
         speedupRatio: 1.5,
@@ -694,6 +743,7 @@ test("benchmark provider comparison prefers WebGPU preprocessing speed ratio", (
       outputChars: 100,
       textLines: 2,
       warnings: [],
+      acceptedOutputHash: "sha256:same",
       pagesPerSecond: 10,
       startup: { durationMs: 20 },
       modelLoad: { durationMs: 0 },
@@ -708,6 +758,7 @@ test("benchmark provider comparison prefers WebGPU preprocessing speed ratio", (
       outputChars: 100,
       textLines: 2,
       warnings: [],
+      acceptedOutputHash: "sha256:same",
       pagesPerSecond: 9,
       startup: { durationMs: 18 },
       modelLoad: { durationMs: 0 },
@@ -727,6 +778,30 @@ test("benchmark provider comparison prefers WebGPU preprocessing speed ratio", (
   assert.equal(comparison.speedupRatio, 1.4);
   assert.equal(comparison.pagesPerSecondRatio, 0.9);
   assert.equal(comparison.webgpuPreprocessingSpeedupRatio, 1.4);
+});
+
+test("benchmark provider comparison rejects matching summaries with different public outputs", () => {
+  const common = {
+    id: "sample",
+    workload: "ocr",
+    outputChars: 100,
+    textLines: 2,
+    warnings: [],
+    pagesPerSecond: 10,
+    startup: { durationMs: 20 },
+    modelLoad: { durationMs: 0 },
+    peakMemory: { rssPeakBytes: 100 },
+    acceleration: { selectedProvider: "cpu", fallbackReason: null },
+    gpuMemory: { estimatedBytes: 0 }
+  };
+  const [comparison] = compareProviderResults([
+    { ...common, providerMode: "cpu", acceptedOutputHash: "sha256:cpu" },
+    { ...common, providerMode: "webgpu-preferred", acceptedOutputHash: "sha256:webgpu" }
+  ]);
+
+  assert.equal(comparison.equivalentAcceptedOutput, false);
+  assert.equal(comparison.cpuAcceptedOutputHash, "sha256:cpu");
+  assert.equal(comparison.webgpuAcceptedOutputHash, "sha256:webgpu");
 });
 
 test("benchmark memory profile summarizes memory-gated long documents", () => {
