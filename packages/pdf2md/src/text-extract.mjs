@@ -461,14 +461,37 @@ function isCodeLikeText(text) {
 }
 
 function formatCodeBlock(lines) {
-  const fence = lines.some((line) => normalizeText(line.text ?? "").includes("```")) ? "~~~" : "```";
+  const normalizedLines = lines.map((line) => normalizeText(line.text ?? ""));
+  const fence = codeFenceForText(normalizedLines.join("\n"));
   const positions = lines.map((line) => line.x).filter(Number.isFinite);
   const left = positions.length > 0 ? Math.min(...positions) : 0;
   return [
     fence,
-    ...lines.map((line) => `${codeIndent(line, left)}${normalizeText(line.text ?? "")}`),
+    ...lines.map((line, index) => `${codeIndent(line, left)}${normalizedLines[index]}`),
     fence
   ].join("\n");
+}
+
+function codeFenceForText(text) {
+  const backtickLength = Math.max(3, longestCharacterRun(text, "`") + 1);
+  const tildeLength = Math.max(3, longestCharacterRun(text, "~") + 1);
+  return backtickLength <= tildeLength
+    ? "`".repeat(backtickLength)
+    : "~".repeat(tildeLength);
+}
+
+function longestCharacterRun(value, character) {
+  let longest = 0;
+  let current = 0;
+  for (const item of value) {
+    if (item === character) {
+      current += 1;
+      longest = Math.max(longest, current);
+    } else {
+      current = 0;
+    }
+  }
+  return longest;
 }
 
 function codeIndent(line, left) {

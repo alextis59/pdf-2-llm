@@ -24,6 +24,8 @@ document records the security behavior this repository can actually support.
 - Source-derived LTR Markdown text entity-escapes `&`, `<`, and `>` before
   rendering. Raw anchors, bidi wrappers, HTML tables, and autolinks are emitted
   only by converter-owned formatting paths.
+- Generated code fences use a delimiter longer than every matching source run,
+  so code containing backticks, tildes, or raw HTML cannot close its own block.
 
 ## Resource Limits
 

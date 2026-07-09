@@ -159,6 +159,30 @@ test("linesToMarkdown infers fenced code blocks from monospace text and indentat
   );
 });
 
+test("linesToMarkdown chooses a fence longer than mixed source fence runs", () => {
+  const codeLine = (text, y) => ({
+    text,
+    fontSize: 12,
+    fontName: "FMono",
+    font: { baseFont: "Courier" },
+    x: 96,
+    y,
+    pageIndex: 0
+  });
+  const markdown = linesToMarkdown([
+    { text: "Safe Code Fence", fontSize: 22, x: 72, y: 720, pageIndex: 0 },
+    codeLine('const ticks = "```";', 680),
+    codeLine("~~~~", 664),
+    codeLine("```", 648),
+    codeLine("<script>alert(1)</script>", 632)
+  ]);
+
+  assert.equal(
+    markdown,
+    '# Safe Code Fence\n\n````\nconst ticks = "```";\n~~~~\n```\n<script>alert(1)</script>\n````\n'
+  );
+});
+
 test("linesToMarkdownWithSourceMap preserves display equations", () => {
   const equation = "\u03a3 x_i = n(n + 1) / 2";
   const result = linesToMarkdownWithSourceMap([
