@@ -39,6 +39,10 @@ fuzz smoke, build, and API tests.
 ## Corpus Expectations
 
 - Every gating PDF must have a manifest entry and acceptance file.
+- `npm run corpus:review-audit` parses each gating case's preview index and
+  validates every declared image. PNG evidence must have valid chunk CRCs and
+  decodable scanlines; empty, corrupt, missing, oversized, or out-of-directory
+  previews fail the human-review gate.
 - External oracle outputs are review aids, not ground truth by themselves.
 - Unsupported behavior is acceptable only when the expected warning, sidecar, or
   fallback is documented.
