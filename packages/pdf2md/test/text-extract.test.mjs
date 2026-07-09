@@ -215,6 +215,7 @@ test("linesToMarkdownWithSourceMap preserves display equations", () => {
     unicodeEquations: 1,
     textEquations: 1,
     imageEquations: 0,
+    metadataOnlyEquations: 0,
     formulaOcr: {
       enabled: false,
       status: "not-configured"
@@ -237,7 +238,7 @@ test("linesToMarkdownWithSourceMap preserves display equations", () => {
   });
 });
 
-test("linesToMarkdownWithSourceMap preserves low-confidence OCR equations as images", () => {
+test("linesToMarkdownWithSourceMap reports low-confidence OCR equations as metadata-only", () => {
   const result = linesToMarkdownWithSourceMap(
     [
       textLine("Equation Fixture", 72, 720, 160, 22),
@@ -251,19 +252,18 @@ test("linesToMarkdownWithSourceMap preserves low-confidence OCR equations as ima
     ],
     {
       equations: {
-        imageFallbackConfidence: 0.75,
-        assetIdPrefix: "scan-equations"
+        imageFallbackConfidence: 0.75
       }
     }
   );
 
   assert.equal(
     result.markdown,
-    "# Equation Fixture\n\nA short lead-in.\n\n![Equation 1](assets/scan-equations-page-1-equation-1.png)\n\nAfter the equation.\n"
+    "# Equation Fixture\n\nA short lead-in.\n\n*[Equation 1 preview unavailable; low-confidence OCR retained in metadata.]*\n\nAfter the equation.\n"
   );
   assert.deepEqual(result.sourceMap.entries[2], {
     markdownStart: 38,
-    markdownEnd: 96,
+    markdownEnd: 114,
     kind: "equation",
     regions: [
       {
@@ -280,7 +280,8 @@ test("linesToMarkdownWithSourceMap preserves low-confidence OCR equations as ima
     total: 1,
     unicodeEquations: 0,
     textEquations: 0,
-    imageEquations: 1,
+    imageEquations: 0,
+    metadataOnlyEquations: 1,
     formulaOcr: {
       enabled: false,
       status: "not-configured"
@@ -298,10 +299,8 @@ test("linesToMarkdownWithSourceMap preserves low-confidence OCR equations as ima
         y: 660,
         width: 170,
         height: 12,
-        output: "image",
-        assetId: "scan-equations-page-1-equation-1",
-        assetPath: "assets/scan-equations-page-1-equation-1.png",
-        assetMediaType: "image/png",
+        output: "metadata-only",
+        previewStatus: "unavailable",
         confidence: 0.42,
         fallbackReason: "low-ocr-confidence",
         fallbackThreshold: 0.75
@@ -347,6 +346,7 @@ test("linesToMarkdownWithSourceMap applies optional formula OCR LaTeX", () => {
     unicodeEquations: 0,
     textEquations: 1,
     imageEquations: 0,
+    metadataOnlyEquations: 0,
     formulaOcr: {
       enabled: true,
       status: "selected"

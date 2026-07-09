@@ -359,8 +359,10 @@ spans require it. CSV sidecars are enabled by default unless
 ```
 
 Text equations are preserved when confidence is high. Low-confidence OCR
-equations can be preserved as image assets, and caller-supplied formula OCR
-results can provide LaTeX output.
+equations use an explicit metadata-only Markdown fallback and emit
+`equation.low_ocr_confidence`; caller-supplied formula OCR results can provide
+LaTeX output instead. The current raster planner does not return equation
+preview bytes, so these fallbacks do not create broken image links or assets.
 
 ### Attachments And Assets
 
@@ -410,7 +412,8 @@ type ConvertResult = {
 ### `markdown`
 
 The converted Markdown string. It may include GFM tables, raw HTML tables for
-spans, image links for figures/equations, and optional page anchors.
+spans, metadata-only figure/equation fallback markers, and optional page
+anchors.
 
 ### `sourceMap`
 
@@ -423,12 +426,11 @@ Sidecar assets generated during conversion. Common asset kinds include:
 
 - `table-csv`
 - `ocr-debug-json`
-- `equation-preview`
-- `figure-preview`
 - `attachment`
 
 Assets may include `content` inline, or a `path` that names the expected sidecar
-path.
+path. `equation-preview` and `figure-preview` are reserved kinds; conversion
+does not return them until the raster path can supply renderable content.
 
 ### `ir`
 

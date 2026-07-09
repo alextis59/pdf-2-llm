@@ -15,7 +15,6 @@ import {
   linesToMarkdownWithSourceMap
 } from "./text-extract.mjs";
 import {
-  createFigureAssets,
   createFigureDetections,
   figureElementsByPage,
   insertFigureMarkdown
@@ -275,20 +274,16 @@ export async function convertPdfToMarkdown(input, options = {}) {
     outlines: pdfDocument?.outlines ?? [],
     equations: {
       imageFallbackConfidence: options.equations?.imageFallbackConfidence,
-      formulaOcr: options.equations?.formulaOcr,
-      assetIdPrefix: assetSlugFromSource(normalized.source)
+      formulaOcr: options.equations?.formulaOcr
     }
   });
   const figureDetections = createFigureDetections({
     imageDraws,
     layout: markdownResult.layout,
     pages: pdfDocument?.pages ?? [],
-    rulingLines,
-    source: normalized.source
+    rulingLines
   });
   markdownResult = insertFigureMarkdown(markdownResult, figureDetections.figures);
-  const figureAssets = createFigureAssets(figureDetections.figures);
-  const equationAssets = createEquationAssets(markdownResult.equations?.equations ?? []);
   const figureElements = figureElementsByPage(figureDetections.figures);
   const equationElements = equationElementsByPage(markdownResult.equations?.equations ?? []);
   const documentInteractions = extractDocumentInteractions(pdfDocument, {
@@ -297,8 +292,6 @@ export async function convertPdfToMarkdown(input, options = {}) {
   const assets = [
     ...tableCsvSidecars.assets,
     ...ocrDebugSidecars.assets,
-    ...equationAssets,
-    ...figureAssets,
     ...documentInteractions.assets
   ];
   const markdown = markdownResult.markdown;
@@ -503,18 +496,6 @@ function equationElementsByPage(equations) {
     byPage.set(equation.pageIndex, elements);
   }
   return byPage;
-}
-
-function createEquationAssets(equations) {
-  return equations
-    .filter((equation) => equation.output === "image" && equation.assetId && equation.assetPath)
-    .map((equation) => ({
-      id: equation.assetId,
-      kind: "equation-preview",
-      path: equation.assetPath,
-      mediaType: equation.assetMediaType ?? "image/png",
-      pageIndex: equation.pageIndex
-    }));
 }
 
 function summarizeRulingLines(rulingLines) {
@@ -864,15 +845,14 @@ function lowConfidenceTableWarnings(tables) {
 
 function equationImageFallbackWarnings(equations) {
   return equations
-    .filter((equation) => equation.output === "image")
+    .filter((equation) => equation.output === "metadata-only")
     .map((equation) =>
       createWarning(
         warningCodes.EquationLowOcrConfidence,
-        "Equation OCR confidence was low; the equation was preserved as an image asset.",
+        "Equation OCR confidence was low; no renderable preview is available, so only equation metadata was retained.",
         {
           equationIndex: equation.equationIndex,
           pageIndex: equation.pageIndex,
-          assetId: equation.assetId,
           confidence: equation.confidence,
           threshold: equation.fallbackThreshold,
           reason: equation.fallbackReason
@@ -885,33 +865,16 @@ function lowSemanticFigureWarnings(figures) {
   return figures.map((figure) =>
     createWarning(
       warningCodes.FigureLowSemanticContent,
-      "Figure was preserved as a visual asset; semantic chart or diagram data was not inferred.",
+      "Figure metadata was retained, but no renderable preview or inferred semantic chart or diagram data is available.",
       {
         figureIndex: figure.figureIndex,
         pageIndex: figure.pageIndex,
-        assetId: figure.assetId,
         kind: figure.kind,
         caption: figure.caption,
-        reason: "visual-preview-only"
+        reason: figure.fallbackReason
       }
     )
   );
-}
-
-function assetSlugFromSource(source) {
-  if (source?.type === "path" && typeof source.value === "string") {
-    const basename = source.value.split(/[\\/]/).pop() ?? "document";
-    return slugifyAssetPrefix(basename.replace(/\.pdf$/i, ""));
-  }
-  return "document";
-}
-
-function slugifyAssetPrefix(value) {
-  const slug = String(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || "document";
 }
 
 function samePage(left, right) {

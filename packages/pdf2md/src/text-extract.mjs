@@ -264,9 +264,9 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
         equationSequence,
         formulaOcrState
       );
-      const imageFallback = formulaOcr
+      const metadataFallback = formulaOcr
         ? null
-        : equationImageFallbackForLines(
+        : equationMetadataFallbackForLines(
             equationBlock.sourceLines,
             options.equations ?? {},
             equationImageCountsByPage
@@ -274,8 +274,8 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       equationSequence += 1;
       previousWasList = false;
       blocks.push(
-        createMarkdownBlock(equationMarkdown(equationBlock.sourceLines, imageFallback, formulaOcr), "equation", equationBlock.sourceLines, {
-          equation: equationMetadata(equationBlock.sourceLines, imageFallback, formulaOcr)
+        createMarkdownBlock(equationMarkdown(equationBlock.sourceLines, metadataFallback, formulaOcr), "equation", equationBlock.sourceLines, {
+          equation: equationMetadata(equationBlock.sourceLines, metadataFallback, formulaOcr)
         })
       );
       index = equationBlock.endIndex - 1;
@@ -692,12 +692,12 @@ function formatEquationBlock(lines) {
   return `$$\n${body}\n$$`;
 }
 
-function equationMarkdown(lines, imageFallback, formulaOcr = null) {
+function equationMarkdown(lines, metadataFallback, formulaOcr = null) {
   if (formulaOcr?.latex) {
     return formatLatexEquationBlock(formulaOcr.latex);
   }
-  if (imageFallback) {
-    return `![Equation ${imageFallback.equationNumber}](${imageFallback.assetPath})`;
+  if (metadataFallback) {
+    return `*[Equation ${metadataFallback.equationNumber} preview unavailable; low-confidence OCR retained in metadata.]*`;
   }
   return formatEquationBlock(lines);
 }
@@ -706,7 +706,7 @@ function formatLatexEquationBlock(latex) {
   return `$$\n${latex.replace(/\$\$/g, "\\$\\$")}\n$$`;
 }
 
-function equationMetadata(lines, imageFallback = null, formulaOcr = null) {
+function equationMetadata(lines, metadataFallback = null, formulaOcr = null) {
   const bounds = boundsForLines(lines);
   const text = lines.map((line) => normalizeText(line.text ?? "")).join("\n");
   const metadata = {
@@ -724,16 +724,14 @@ function equationMetadata(lines, imageFallback = null, formulaOcr = null) {
       ...(formulaOcr.confidence != null ? { formulaOcrConfidence: formulaOcr.confidence } : {})
     };
   }
-  return imageFallback
+  return metadataFallback
     ? {
         ...metadata,
-        output: "image",
-        assetId: imageFallback.assetId,
-        assetPath: imageFallback.assetPath,
-        assetMediaType: imageFallback.assetMediaType,
-        confidence: imageFallback.confidence,
-        fallbackReason: imageFallback.fallbackReason,
-        fallbackThreshold: imageFallback.fallbackThreshold
+        output: "metadata-only",
+        previewStatus: "unavailable",
+        confidence: metadataFallback.confidence,
+        fallbackReason: metadataFallback.fallbackReason,
+        fallbackThreshold: metadataFallback.fallbackThreshold
       }
     : metadata;
 }
@@ -814,7 +812,7 @@ function formulaOcrForEquation(lines, equationIndex, state) {
   return result;
 }
 
-function equationImageFallbackForLines(lines, options, countsByPage) {
+function equationMetadataFallbackForLines(lines, options, countsByPage) {
   const confidence = equationOcrConfidence(lines);
   const threshold = equationImageFallbackConfidence(options);
   if (confidence === null || confidence >= threshold) {
@@ -824,14 +822,8 @@ function equationImageFallbackForLines(lines, options, countsByPage) {
   const pageKey = Number.isInteger(pageIndex) ? pageIndex : "unknown";
   const equationNumber = (countsByPage.get(pageKey) ?? 0) + 1;
   countsByPage.set(pageKey, equationNumber);
-  const assetPrefix = slugifyAssetPrefix(options.assetIdPrefix ?? "document");
-  const pageLabel = Number.isInteger(pageIndex) ? `page-${pageIndex + 1}` : "page-unknown";
-  const assetId = `${assetPrefix}-${pageLabel}-equation-${equationNumber}`;
   return {
     equationNumber,
-    assetId,
-    assetPath: `assets/${assetId}.png`,
-    assetMediaType: "image/png",
     confidence,
     fallbackReason: "low-ocr-confidence",
     fallbackThreshold: threshold
@@ -857,14 +849,6 @@ function equationImageFallbackConfidence(options) {
     return threshold;
   }
   return defaultEquationImageFallbackConfidence;
-}
-
-function slugifyAssetPrefix(value) {
-  const slug = String(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || "document";
 }
 
 function createHeadingModel(lines, { outlines = [] } = {}) {
@@ -1898,8 +1882,9 @@ function equationDiagnosticsFromBlocks(blocks, formulaOcrState) {
   return {
     total: equations.length,
     unicodeEquations: equations.filter((equation) => equation.containsUnicodeMath).length,
-    textEquations: equations.filter((equation) => equation.output !== "image").length,
+    textEquations: equations.filter((equation) => equation.output == null).length,
     imageEquations: equations.filter((equation) => equation.output === "image").length,
+    metadataOnlyEquations: equations.filter((equation) => equation.output === "metadata-only").length,
     formulaOcr: {
       enabled: formulaOcrState.enabled,
       status: formulaOcrState.status

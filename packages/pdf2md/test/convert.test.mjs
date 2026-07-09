@@ -1410,6 +1410,7 @@ test("convertPdfToMarkdown emits equation blocks with diagnostics and source map
     unicodeEquations: 0,
     textEquations: 1,
     imageEquations: 0,
+    metadataOnlyEquations: 0,
     formulaOcr: {
       enabled: false,
       status: "not-configured"
@@ -1451,7 +1452,7 @@ test("convertPdfToMarkdown emits equation blocks with diagnostics and source map
   );
 });
 
-test("convertPdfToMarkdown preserves low-confidence OCR equations as image assets", async () => {
+test("convertPdfToMarkdown reports low-confidence OCR equations without broken image assets", async () => {
   const result = await convertPdfToMarkdown(
     createSinglePageImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 }),
     {
@@ -1507,22 +1508,15 @@ test("convertPdfToMarkdown preserves low-confidence OCR equations as image asset
 
   assert.equal(
     result.markdown,
-    "# Equation Scan Fixture\n\nA short lead-in.\n\n![Equation 1](assets/document-page-1-equation-1.png)\n\nAfter the equation.\n"
+    "# Equation Scan Fixture\n\nA short lead-in.\n\n*[Equation 1 preview unavailable; low-confidence OCR retained in metadata.]*\n\nAfter the equation.\n"
   );
-  assert.deepEqual(result.assets, [
-    {
-      id: "document-page-1-equation-1",
-      kind: "equation-preview",
-      path: "assets/document-page-1-equation-1.png",
-      mediaType: "image/png",
-      pageIndex: 0
-    }
-  ]);
+  assert.deepEqual(result.assets, []);
   assert.deepEqual(result.diagnostics.extraction.equations, {
     total: 1,
     unicodeEquations: 0,
     textEquations: 0,
-    imageEquations: 1,
+    imageEquations: 0,
+    metadataOnlyEquations: 1,
     formulaOcr: {
       enabled: false,
       status: "not-configured"
@@ -1540,10 +1534,8 @@ test("convertPdfToMarkdown preserves low-confidence OCR equations as image asset
         y: 660,
         width: 170,
         height: 12,
-        output: "image",
-        assetId: "document-page-1-equation-1",
-        assetPath: "assets/document-page-1-equation-1.png",
-        assetMediaType: "image/png",
+        output: "metadata-only",
+        previewStatus: "unavailable",
         confidence: 0.42,
         fallbackReason: "low-ocr-confidence",
         fallbackThreshold: 0.75
@@ -1554,11 +1546,10 @@ test("convertPdfToMarkdown preserves low-confidence OCR equations as image asset
     result.warnings.find((warning) => warning.code === warningCodes.EquationLowOcrConfidence),
     {
       code: warningCodes.EquationLowOcrConfidence,
-      message: "Equation OCR confidence was low; the equation was preserved as an image asset.",
+      message: "Equation OCR confidence was low; no renderable preview is available, so only equation metadata was retained.",
       details: {
         equationIndex: 0,
         pageIndex: 0,
-        assetId: "document-page-1-equation-1",
         confidence: 0.42,
         threshold: 0.75,
         reason: "low-ocr-confidence"
@@ -1570,7 +1561,6 @@ test("convertPdfToMarkdown preserves low-confidence OCR equations as image asset
     {
       type: "equation",
       text: "E = m c^2",
-      assetId: "document-page-1-equation-1",
       x: 168,
       y: 660,
       width: 170,
@@ -1655,6 +1645,7 @@ test("convertPdfToMarkdown applies optional formula OCR LaTeX", async () => {
     unicodeEquations: 0,
     textEquations: 1,
     imageEquations: 0,
+    metadataOnlyEquations: 0,
     formulaOcr: {
       enabled: true,
       status: "selected"
@@ -1700,24 +1691,15 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
   assert.equal(page.captions[0].target, "figure");
   assert.equal(
     result.markdown,
-    "# Vector Figure Fixture\n\n![Figure 1](assets/synthetic-vector-figure-page-1-figure-1.png)\n\nFigure 1. A generated vector box.\n"
+    "# Vector Figure Fixture\n\n*[Figure 1 preview unavailable; metadata retained.]*\n\nFigure 1. A generated vector box.\n"
   );
-  assert.deepEqual(result.assets, [
-    {
-      id: "synthetic-vector-figure-page-1-figure-1",
-      kind: "figure-preview",
-      path: "assets/synthetic-vector-figure-page-1-figure-1.png",
-      mediaType: "image/png",
-      pageIndex: 0
-    }
-  ]);
+  assert.deepEqual(result.assets, []);
   assert.deepEqual(
     result.ir.pages[0].elements.filter((element) => element.type === "figure"),
     [
       {
         type: "figure",
         caption: "Figure 1. A generated vector box.",
-        assetId: "synthetic-vector-figure-page-1-figure-1",
         x: 120,
         y: 520,
         width: 240,
@@ -1742,9 +1724,8 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
         figureNumber: 1,
         captionNumber: "1",
         caption: "Figure 1. A generated vector box.",
-        assetId: "synthetic-vector-figure-page-1-figure-1",
-        assetPath: "assets/synthetic-vector-figure-page-1-figure-1.png",
-        assetMediaType: "image/png",
+        previewStatus: "unavailable",
+        fallbackReason: "preview-rendering-unavailable",
         kind: "vector",
         x: 120,
         y: 520,
@@ -1760,21 +1741,20 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
     result.warnings.find((warning) => warning.code === warningCodes.FigureLowSemanticContent),
     {
       code: warningCodes.FigureLowSemanticContent,
-      message: "Figure was preserved as a visual asset; semantic chart or diagram data was not inferred.",
+      message: "Figure metadata was retained, but no renderable preview or inferred semantic chart or diagram data is available.",
       details: {
         figureIndex: 0,
         pageIndex: 0,
-        assetId: "synthetic-vector-figure-page-1-figure-1",
         kind: "vector",
         caption: "Figure 1. A generated vector box.",
-        reason: "visual-preview-only"
+        reason: "preview-rendering-unavailable"
       }
     }
   );
   const figureSource = result.sourceMap.entries.find((entry) => entry.kind === "figure");
   assert.deepEqual(figureSource, {
     markdownStart: 25,
-    markdownEnd: 88,
+    markdownEnd: 77,
     kind: "figure",
     regions: [
       {
@@ -1794,26 +1774,15 @@ test("convertPdfToMarkdown preserves tagged figure alt text", async () => {
 
   assert.equal(
     result.markdown,
-    "# Tagged Figure Alt Fixture\n\n![Flow diagram showing intake and review](assets/document-page-1-figure-1.png)\n\nFigure 1. Flow diagram.\n"
+    "# Tagged Figure Alt Fixture\n\n*[Figure 1 preview unavailable; metadata retained.]*\n\nFigure 1. Flow diagram.\n"
   );
-  assert.deepEqual(result.assets, [
-    {
-      id: "document-page-1-figure-1",
-      kind: "figure-preview",
-      path: "assets/document-page-1-figure-1.png",
-      mediaType: "image/png",
-      pageIndex: 0,
-      altText: "Flow diagram showing intake and review",
-      altTextSource: "tagged-pdf"
-    }
-  ]);
+  assert.deepEqual(result.assets, []);
   assert.deepEqual(
     result.ir.pages[0].elements.filter((element) => element.type === "figure"),
     [
       {
         type: "figure",
         caption: "Figure 1. Flow diagram.",
-        assetId: "document-page-1-figure-1",
         altText: "Flow diagram showing intake and review",
         altTextSource: "tagged-pdf",
         x: 120,
@@ -1835,9 +1804,8 @@ test("convertPdfToMarkdown preserves tagged figure alt text", async () => {
     figureNumber: 1,
     captionNumber: "1",
     caption: "Figure 1. Flow diagram.",
-    assetId: "document-page-1-figure-1",
-    assetPath: "assets/document-page-1-figure-1.png",
-    assetMediaType: "image/png",
+    previewStatus: "unavailable",
+    fallbackReason: "preview-rendering-unavailable",
     kind: "vector",
     x: 120,
     y: 520,

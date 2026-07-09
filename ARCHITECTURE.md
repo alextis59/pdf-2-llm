@@ -49,7 +49,9 @@ The main orchestration path is `convertPdfToMarkdown()` in
    running content, and page source types.
 8. Serialize Markdown and source maps from the reconciled content blocks. The
    same selected text lines and emitted tables populate page IR so suppressed
-   PDF/OCR duplicates and table-cell text are not emitted twice.
+   PDF/OCR duplicates and table-cell text are not emitted twice. Detected
+   figures and low-confidence OCR equations use explicit metadata-only markers
+   until a renderer can return actual preview bytes.
 9. Assemble sidecar assets, warnings, diagnostics, IR, and confidence scores.
 
 Timeout and abort checkpoints throw `TimeoutError` or `AbortError`. Most
@@ -67,7 +69,7 @@ can make policy decisions without losing the result object.
 | `font-encoding.mjs` | ToUnicode CMap parsing, encoding fallbacks, and trusted/simple encoding checks. |
 | `text-extract.mjs` | Text extraction, layout grouping, Markdown/source-map serialization, page text/table IR projection, headings, lists, running content, equations, and table insertion. |
 | `table-grid.mjs` | Ruling-line grid inference, cell assignment, spans, and table geometry. |
-| `figure-detection.mjs` | Figure region detection, caption placement, figure Markdown insertion, and preview sidecars. |
+| `figure-detection.mjs` | Figure region detection, caption placement, metadata-only Markdown fallback, and figure IR projection. |
 | `document-interactions.mjs` | Form, annotation, attachment, and signature metadata extraction. |
 | `scan-detection.mjs` | Page source-type classification for digital, scanned, and hybrid pages. |
 | `raster-plan.mjs` | Metadata-only page/thumbnail raster planning and pixel-limit diagnostics. |

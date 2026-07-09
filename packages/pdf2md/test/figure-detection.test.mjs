@@ -20,21 +20,21 @@ test("insertFigureMarkdown attaches duplicate captions to their source-map pages
       }
     },
     [
-      figure({ pageIndex: 0, assetPath: "assets/page-1-figure.png" }),
-      figure({ pageIndex: 1, assetPath: "assets/page-2-figure.png" })
+      figure({ pageIndex: 0 }),
+      figure({ pageIndex: 1 })
     ]
   );
 
   assert.equal(
     result.markdown,
     [
-      "![Figure 1](assets/page-1-figure.png)",
+      "*[Figure 1 preview unavailable; metadata retained.]*",
       "",
       "Figure 1. Duplicate caption.",
       "",
       "Body text.",
       "",
-      "![Figure 1](assets/page-2-figure.png)",
+      "*[Figure 1 preview unavailable; metadata retained.]*",
       "",
       "Figure 1. Duplicate caption.",
       ""
@@ -46,8 +46,8 @@ test("insertFigureMarkdown attaches duplicate captions to their source-map pages
       markdownStart: entry.markdownStart
     })),
     [
-      { pageIndex: 0, markdownStart: result.markdown.indexOf("![Figure 1](assets/page-1-figure.png)") },
-      { pageIndex: 1, markdownStart: result.markdown.indexOf("![Figure 1](assets/page-2-figure.png)") }
+      { pageIndex: 0, markdownStart: result.markdown.indexOf("*[Figure 1 preview unavailable") },
+      { pageIndex: 1, markdownStart: result.markdown.lastIndexOf("*[Figure 1 preview unavailable") }
     ]
   );
 });
@@ -61,13 +61,12 @@ function sourceMapEntry(markdownStart, markdownEnd, pageIndex) {
   };
 }
 
-function figure({ pageIndex, assetPath }) {
+function figure({ pageIndex }) {
   return {
     pageIndex,
     captionNumber: "1",
     figureNumber: 1,
     caption: "Figure 1. Duplicate caption.",
-    assetPath,
     kind: "vector",
     x: 10,
     y: 20,

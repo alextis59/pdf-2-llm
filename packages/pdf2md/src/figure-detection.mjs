@@ -1,14 +1,11 @@
 const figureCaptionPattern = /^Figure\s+([A-Za-z0-9.-]+)/i;
-const defaultSourceSlug = "document";
 
 export function createFigureDetections({
   imageDraws = [],
   layout = null,
   pages = [],
-  rulingLines = [],
-  source = null
+  rulingLines = []
 } = {}) {
-  const sourceSlug = slugFromSource(source);
   const pageByIndex = new Map(pages.map((page) => [page.pageIndex, page]));
   const linesByPage = groupByPage(rulingLines);
   const imagesByPage = groupByPage(imageDraws);
@@ -26,16 +23,14 @@ export function createFigureDetections({
         continue;
       }
       const figureNumber = figures.filter((figure) => figure.pageIndex === pageIndex).length + 1;
-      const assetId = `${sourceSlug}-page-${(pageIndex ?? 0) + 1}-figure-${figureNumber}`;
       figures.push({
         figureIndex: figures.length,
         pageIndex,
         figureNumber,
         captionNumber,
         caption: caption.text ?? null,
-        assetId,
-        assetPath: `assets/${assetId}.png`,
-        assetMediaType: "image/png",
+        previewStatus: "unavailable",
+        fallbackReason: "preview-rendering-unavailable",
         kind: visualRegion.kind,
         x: visualRegion.x,
         y: visualRegion.y,
@@ -57,17 +52,6 @@ export function createFigureDetections({
   };
 }
 
-export function createFigureAssets(figures) {
-  return figures.map((figure) => ({
-    id: figure.assetId,
-    kind: "figure-preview",
-    path: figure.assetPath,
-    mediaType: figure.assetMediaType,
-    pageIndex: figure.pageIndex,
-    ...figureAltTextProperties(figure)
-  }));
-}
-
 export function figureElementsByPage(figures) {
   const byPage = new Map();
   for (const figure of figures) {
@@ -75,7 +59,6 @@ export function figureElementsByPage(figures) {
     elements.push({
       type: "figure",
       caption: figure.caption ?? undefined,
-      assetId: figure.assetId,
       ...figureAltTextProperties(figure),
       x: figure.x,
       y: figure.y,
@@ -165,7 +148,7 @@ function createFigureMarkdownInsertion(markdownResult, figure, usedCaptionRanges
     },
     figure,
     index,
-    text: `![${markdownImageAltText(figure)}](${figure.assetPath})\n\n`
+    text: `*[Figure ${figure.captionNumber ?? figure.figureNumber} preview unavailable; metadata retained.]*\n\n`
   };
 }
 
@@ -276,16 +259,6 @@ function figureAltTextProperties(item) {
   };
 }
 
-function markdownImageAltText(figure) {
-  return escapeMarkdownImageAlt(
-    normalizeAltText(figure.altText) ?? `Figure ${figure.captionNumber ?? figure.figureNumber}`
-  );
-}
-
-function escapeMarkdownImageAlt(value) {
-  return value.replace(/\s+/g, " ").trim().replace(/\\/g, "\\\\").replace(/]/g, "\\]");
-}
-
 function normalizeAltText(value) {
   if (typeof value !== "string") {
     return null;
@@ -321,22 +294,6 @@ function groupByPage(items) {
     byPage.set(pageIndex, pageItems);
   }
   return byPage;
-}
-
-function slugFromSource(source) {
-  if (source?.type === "path" && typeof source.value === "string") {
-    const basename = source.value.split(/[\\/]/).pop() ?? defaultSourceSlug;
-    return slugify(basename.replace(/\.pdf$/i, ""));
-  }
-  return defaultSourceSlug;
-}
-
-function slugify(value) {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || defaultSourceSlug;
 }
 
 function normalizeNumber(value) {

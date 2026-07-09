@@ -139,8 +139,9 @@ fixtures:
 
 - Complex tables may use HTML fallback and CSV sidecars. Low-confidence table
   candidates are reported with `table.low_confidence`.
-- Low-confidence OCR equations can be preserved as image assets and reported
-  with `equation.low_ocr_confidence`.
+- Low-confidence OCR equations are reported with
+  `equation.low_ocr_confidence`; while preview rendering is unavailable, their
+  text and geometry remain as metadata without a broken image asset link.
 - Figure regions with weak semantic content are reported with
   `figure.low_semantic_content`.
 

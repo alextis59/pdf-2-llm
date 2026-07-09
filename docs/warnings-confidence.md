@@ -196,8 +196,10 @@ table block:
 
 ### `equation.low_ocr_confidence`
 
-Emitted when an OCR-derived equation is below the image fallback threshold and
-is preserved as an image asset:
+Emitted when an OCR-derived equation is below the fallback threshold. Because
+the current raster planner does not return preview bytes, Markdown receives an
+explicit metadata-only marker and the OCR text and geometry remain in IR and
+diagnostics:
 
 ```json
 {
@@ -205,7 +207,6 @@ is preserved as an image asset:
   "details": {
     "equationIndex": 0,
     "pageIndex": 0,
-    "assetId": "document-page-1-equation-1",
     "confidence": 0.42,
     "threshold": 0.75,
     "reason": "low-ocr-confidence"
@@ -215,8 +216,8 @@ is preserved as an image asset:
 
 ### `figure.low_semantic_content`
 
-Emitted for visual figures that are preserved as assets without inferred
-semantic chart or diagram data:
+Emitted for visual figures whose caption, alt text, and geometry are retained
+without a renderable preview or inferred semantic chart/diagram data:
 
 ```json
 {
@@ -224,10 +225,9 @@ semantic chart or diagram data:
   "details": {
     "figureIndex": 0,
     "pageIndex": 0,
-    "assetId": "synthetic-vector-figure-page-1-figure-1",
     "kind": "vector",
     "caption": "Figure 1. A generated vector box.",
-    "reason": "visual-preview-only"
+    "reason": "preview-rendering-unavailable"
   }
 }
 ```
@@ -353,8 +353,8 @@ candidates are reported separately in
 
 ## Equation Confidence
 
-Equation image fallback uses OCR line confidence when an equation came from OCR
-text. The default image fallback threshold is `0.75`; it can be changed with:
+Equation fallback uses OCR line confidence when an equation came from OCR text.
+The default fallback threshold is `0.75`; it can be changed with:
 
 ```js
 const result = await convertPdfToMarkdown(bytes, {
@@ -364,8 +364,10 @@ const result = await convertPdfToMarkdown(bytes, {
 });
 ```
 
-When equation confidence is below the threshold, the equation is preserved as an
-image asset and `equation.low_ocr_confidence` is emitted.
+When equation confidence is below the threshold, the equation uses a
+metadata-only Markdown marker and `equation.low_ocr_confidence` is emitted. Its
+OCR text and bounds remain available in document IR and diagnostics; no preview
+asset is returned without renderable bytes.
 
 ## Diagnostics To Pair With Warnings
 

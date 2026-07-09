@@ -750,9 +750,8 @@ export type FigureRegionDiagnostics = {
   figureNumber: number;
   captionNumber: string | null;
   caption: string | null;
-  assetId: string;
-  assetPath: string;
-  assetMediaType: "image/png";
+  previewStatus: "unavailable";
+  fallbackReason: "preview-rendering-unavailable";
   kind: "vector" | "image";
   x: number;
   y: number;
@@ -770,6 +769,7 @@ export type EquationDiagnostics = {
   unicodeEquations: number;
   textEquations: number;
   imageEquations: number;
+  metadataOnlyEquations: number;
   formulaOcr: {
     enabled: boolean;
     status: "not-configured" | "selected" | "disabled";
@@ -783,7 +783,8 @@ export type EquationRegionDiagnostics = {
   source: "pdf-text" | "content-stream" | "ocr" | "image";
   text: string;
   latex: string | null;
-  output?: "image";
+  output?: "image" | "metadata-only";
+  previewStatus?: "unavailable";
   assetId?: string;
   assetPath?: string;
   assetMediaType?: "image/png";
