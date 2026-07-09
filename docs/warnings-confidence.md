@@ -145,6 +145,12 @@ Unicode map:
 Use this warning to route output through review or OCR reconciliation when
 gibberish text would be costly.
 
+Fonts declared with `WinAnsiEncoding`, `MacRomanEncoding`, or
+`StandardEncoding` are decoded with their PDF byte maps. Their Encoding
+`Differences` entries remain trusted when every glyph name has a known Unicode
+mapping; an unsupported difference makes the mapping suspect and emits this
+warning.
+
 ### `text.ordering_uncertain`
 
 Emitted when adjacent text lines show geometry jumps that suggest content

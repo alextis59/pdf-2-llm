@@ -66,7 +66,7 @@ can make policy decisions without losing the result object.
 | `pdf-parser.mjs` | PDF byte reading, xref/object parsing and repair, encryption checks, page tree, outlines, structure, resources, and security parser limits. |
 | `stream-filters.mjs` | Stream filter decoding and decoded-stream byte caps. |
 | `content-stream.mjs` | Incremental PDF graphics/text operator interpretation with operation, output, and stack budgets for text, geometry, and drawing signals. |
-| `font-encoding.mjs` | ToUnicode CMap parsing, encoding fallbacks, and trusted/simple encoding checks. |
+| `font-encoding.mjs` | ToUnicode CMap parsing, standard simple-font encoding tables and `Differences`, encoding fallbacks, and trust checks. |
 | `text-extract.mjs` | Text extraction, layout grouping, Markdown/source-map serialization, page text/table IR projection, headings, lists, running content, equations, and table insertion. |
 | `table-grid.mjs` | Ruling-line grid inference, cell assignment, spans, and table geometry. |
 | `figure-detection.mjs` | Figure region detection, caption placement, metadata-only Markdown fallback, and figure IR projection. |

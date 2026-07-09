@@ -447,6 +447,28 @@ test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.TextUnicodeMappingSuspect));
 });
 
+test("parsePdfDocument applies simple font Encoding Differences", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Custom /Encoding << /BaseEncoding /WinAnsiEncoding /Differences [65 /Euro 67 /uni03A9] >> >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject("BT /F1 22 Tf 20 200 Td <414243> Tj ET\n")
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+
+  assert.equal(document.pages[0].resources.fonts.F1.encoding, "WinAnsiEncoding");
+  assert.deepEqual(document.pages[0].resources.fonts.F1.encodingDifferences, {
+    65: "Euro",
+    67: "uni03A9"
+  });
+  assert.equal(result.markdown, "# €BΩ\n");
+  assert.ok(
+    !result.warnings.some((warning) => warning.code === warningCodes.TextUnicodeMappingSuspect)
+  );
+});
+
 test("convertPdfToMarkdown warns for suspicious font mappings without ToUnicode", async () => {
   const bytes = createTestPdf([
     "<< /Type /Catalog /Pages 2 0 R >>",

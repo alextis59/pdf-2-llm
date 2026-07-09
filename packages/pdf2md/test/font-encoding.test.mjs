@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   decodePdfStringWithFont,
+  isTrustedSimpleEncoding,
   PdfCMapParseError,
   parseToUnicodeCMap
 } from "../src/font-encoding.mjs";
@@ -18,6 +19,51 @@ test("decodePdfStringWithFont renders unmapped control bytes as visible control 
       }
     }),
     "A\u2415\u2401\u2421B"
+  );
+});
+
+test("decodePdfStringWithFont applies WinAnsi, MacRoman, and Standard encodings", () => {
+  assert.equal(
+    decodePdfStringWithFont(
+      { type: "string", bytes: [0x80, 0x91, 0x97] },
+      { encoding: "WinAnsiEncoding" }
+    ),
+    "€‘—"
+  );
+  assert.equal(
+    decodePdfStringWithFont(
+      { type: "string", bytes: [0x80, 0xa7, 0xd0] },
+      { encoding: "MacRomanEncoding" }
+    ),
+    "Äß–"
+  );
+  assert.equal(
+    decodePdfStringWithFont(
+      { type: "string", bytes: [0x27, 0x60, 0xa4] },
+      { encoding: "StandardEncoding" }
+    ),
+    "’‘⁄"
+  );
+});
+
+test("decodePdfStringWithFont applies supported Encoding Differences", () => {
+  const font = {
+    encoding: "WinAnsiEncoding",
+    encodingDifferences: {
+      0x41: "Euro",
+      0x42: "uni03A9",
+      0x43: "A.swash"
+    }
+  };
+
+  assert.equal(decodePdfStringWithFont({ type: "string", bytes: [0x41, 0x42, 0x43] }, font), "€ΩA");
+  assert.equal(isTrustedSimpleEncoding(font), true);
+  assert.equal(
+    isTrustedSimpleEncoding({
+      encoding: "WinAnsiEncoding",
+      encodingDifferences: { 0x41: "NotInAdobeGlyphList" }
+    }),
+    false
   );
 });
 

@@ -1777,12 +1777,14 @@ function resolveResources(resourcesValue, getObject, maxCMapMappings) {
           throw error;
         }
       }
+      const encoding = fontEncoding(fontDict, getObject);
       fonts[name] = {
         objectNumber: fontObject?.objectNumber ?? null,
         generationNumber: fontObject?.generationNumber ?? null,
         subtype: nameValue(fontDict?.entries?.Subtype),
         baseFont: nameValue(fontDict?.entries?.BaseFont),
-        encoding: nameValue(fontDict?.entries?.Encoding),
+        encoding: encoding.name,
+        ...(encoding.differences ? { encodingDifferences: encoding.differences } : {}),
         firstChar: fontFirstChar(fontDict, getObject),
         lastChar: fontLastChar(fontDict, getObject),
         widths: fontWidths(fontDict, getObject),
@@ -1894,6 +1896,37 @@ function fontLastChar(fontDict, getObject) {
 function fontWidths(fontDict, getObject) {
   const widths = numberArray(resolveValue(fontDict?.entries?.Widths, getObject));
   return widths?.length > 0 ? widths : null;
+}
+
+function fontEncoding(fontDict, getObject) {
+  const encoding = resolveValue(fontDict?.entries?.Encoding, getObject);
+  if (encoding?.type === "name") {
+    return { name: encoding.value, differences: null };
+  }
+  if (!isDict(encoding)) {
+    return { name: null, differences: null };
+  }
+  const baseEncoding = resolveValue(encoding.entries.BaseEncoding, getObject);
+  const differencesValue = resolveValue(encoding.entries.Differences, getObject);
+  const differences = {};
+  let code = null;
+  if (differencesValue?.type === "array") {
+    for (const item of differencesValue.items) {
+      const resolved = resolveValue(item, getObject);
+      if (Number.isInteger(resolved)) {
+        code = resolved >= 0 && resolved <= 255 ? resolved : null;
+        continue;
+      }
+      if (resolved?.type === "name" && Number.isInteger(code) && code <= 255) {
+        differences[code] = resolved.value;
+        code += 1;
+      }
+    }
+  }
+  return {
+    name: nameValue(baseEncoding),
+    differences: Object.keys(differences).length > 0 ? differences : null
+  };
 }
 
 function numberArray(value) {

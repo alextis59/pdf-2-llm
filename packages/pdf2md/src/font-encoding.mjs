@@ -1,3 +1,9 @@
+import {
+  isSupportedSimpleEncoding,
+  simpleEncodingCodePoint,
+  unicodeForGlyphName
+} from "./simple-font-encodings.mjs";
+
 export class PdfCMapParseError extends Error {
   constructor(message, { code = "pdf.cmap_parse_failed" } = {}) {
     super(message);
@@ -64,7 +70,9 @@ export function decodePdfStringWithFont(token, font) {
   const bytes = token.bytes ?? latin1Bytes(token.value);
   const toUnicode = font?.toUnicode;
   if (!toUnicode?.map || toUnicode.map.size === 0) {
-    return bytesToFallbackText(bytes);
+    return isSupportedSimpleEncoding(font?.encoding)
+      ? decodeBytesWithSimpleEncoding(bytes, font)
+      : bytesToFallbackText(bytes);
   }
 
   return decodeBytesWithCMap(bytes, toUnicode);
@@ -72,10 +80,25 @@ export function decodePdfStringWithFont(token, font) {
 
 export function isTrustedSimpleEncoding(font) {
   return (
-    font?.encoding === "WinAnsiEncoding" ||
-    font?.encoding === "StandardEncoding" ||
-    font?.encoding === "MacRomanEncoding"
+    isSupportedSimpleEncoding(font?.encoding) &&
+    Object.values(font?.encodingDifferences ?? {}).every(
+      (glyphName) => unicodeForGlyphName(glyphName) !== null
+    )
   );
+}
+
+function decodeBytesWithSimpleEncoding(bytes, font) {
+  const differences = font.encodingDifferences ?? {};
+  return [...bytes]
+    .map((byte) => {
+      const glyphName = differences[byte];
+      if (glyphName !== undefined) {
+        return unicodeForGlyphName(glyphName) ?? fallbackByteToText(byte);
+      }
+      const codePoint = simpleEncodingCodePoint(font.encoding, byte);
+      return codePoint >= 0 ? String.fromCodePoint(codePoint) : fallbackByteToText(byte);
+    })
+    .join("");
 }
 
 function parseBfRangeBlock(block, map, mappingBudget) {
