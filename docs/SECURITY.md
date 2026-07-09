@@ -49,7 +49,9 @@ behavior. Security-limit violations should preserve warning codes documented in
 
 `maxDecodedStreamBytes` is passed to Flate decompression as an output bound, so
 high-ratio compressed streams are rejected before the full decoded buffer is
-allocated.
+allocated. Node uses its bounded native inflater; browser and worker runtimes
+use a chunked synchronous portable inflater with the same limit and checksum
+validation.
 
 `maxTotalDecodedStreamBytes` caps retained decoded bytes across all stream
 objects, while stream text is materialized lazily so binary image streams do not
@@ -89,6 +91,8 @@ work so compact font CMaps cannot expand into unbounded entries.
 - Project package manifests use the `0BSD` license.
 - `scripts/qa/check-dependencies.mjs` validates manifest license fields and
   dependency license metadata from `package-lock.json`.
+- The MIT-licensed `fflate` runtime dependency provides bounded portable Flate
+  decoding where Node's native `zlib` module is unavailable.
 - `npm run qa:dependencies` also runs `npm audit --audit-level=moderate
   --omit=dev`.
 - OCR model binaries should not be added to the package. `npm run

@@ -8,6 +8,7 @@ import test from "node:test";
 import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
 import { convertPdfToMarkdown as convertPdfToMarkdownFromNode } from "../src/node.mjs";
 import { convertPdfToMarkdown as convertPdfToMarkdownFromBrowser } from "../src/browser.mjs";
+import { convertPdfToMarkdown as convertPdfToMarkdownFromWorker } from "../src/worker.mjs";
 import { binarizeRgbaCpu } from "../src/webgpu-preprocess.mjs";
 
 const fixturePath = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
@@ -37,6 +38,10 @@ const rotatedPageFixturePath = new URL(
 );
 const croppedPageFixturePath = new URL(
   "../../../corpus/generated/synthetic-cropped-page.pdf",
+  import.meta.url
+);
+const compressedFixturePath = new URL(
+  "../../../corpus/generated/synthetic-qpdf-object-stream.pdf",
   import.meta.url
 );
 
@@ -1196,6 +1201,26 @@ test("browser and Node entrypoints convert a scanned OCR fixture", async () => {
     assert.match(result.markdown, /Runtime OCR fixture text/);
   }
   assert.equal(browserResult.markdown, nodeResult.markdown);
+});
+
+test("browser and worker entrypoints decode compressed PDFs without Node builtins", async () => {
+  const bytes = new Uint8Array(await readFile(compressedFixturePath));
+  const originalGetBuiltinModule = process.getBuiltinModule;
+  process.getBuiltinModule = undefined;
+  try {
+    const browserResult = await convertPdfToMarkdownFromBrowser(bytes);
+    const workerResult = await convertPdfToMarkdownFromWorker(bytes);
+
+    for (const result of [browserResult, workerResult]) {
+      assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
+      assert.equal(result.diagnostics.extraction.textLines, 3);
+      assert.match(result.markdown, /^# Synthetic Simple Text/);
+      assert.equal(result.ir.pages[0].elements.length, 3);
+    }
+    assert.equal(workerResult.markdown, browserResult.markdown);
+  } finally {
+    process.getBuiltinModule = originalGetBuiltinModule;
+  }
 });
 
 test("CLI emits JSON scaffold output", () => {

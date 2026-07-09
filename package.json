@@ -47,6 +47,9 @@
   "workspaces": [
     "packages/*"
   ],
+  "dependencies": {
+    "fflate": "^0.8.3"
+  },
   "scripts": {
     "build": "npm run build --workspace @pdf-2-llm/pdf2md",
     "check": "npm run rust:test && npm run wasm:build && npm run qa:wasm-size && npm run lint && npm run corpus:validate && npm run corpus:candidates && npm run corpus:analyze && npm run corpus:oracles && npm run corpus:previews && npm run corpus:acceptance && npm run corpus:review-audit && npm run corpus:run && npm run corpus:run:all && npm run corpus:run:text && npm run corpus:run:tables && npm run corpus:run:layout && npm run corpus:run:multilingual && npm run qa:diff-html && npm run qa:diff-html-tables && npm run qa:public-tables && npm run qa:rendered-html && npm run qa:markdown-ast && npm run qa:compare-oracles && npm run qa:reading-order && npm run qa:character-error && npm run qa:unicode-mapping && npm run qa:paragraph-grouping && npm run qa:hyphenation && npm run qa:table-detection && npm run qa:warning-codes && npm run qa:asset-links && npm run qa:running-content && npm run qa:tagged-structure && npm run qa:layout-overlay:smoke && npm run qa:benchmark:smoke && npm run qa:benchmark:table-throughput && npm run qa:benchmark:ocr-throughput && npm run qa:benchmark:startup && npm run qa:benchmark:long-memory && npm run qa:webgpu-comparison && npm run qa:webgpu-preprocess && npm run qa:agent-coordination && npm run qa:malformed && npm run qa:dependencies && npm run qa:package-size && npm run qa:model-size && npm run qa:performance-regression && npm run fuzz:smoke && npm run build && npm run test:api",

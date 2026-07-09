@@ -1,3 +1,9 @@
+import { Unzlib } from "fflate";
+
+const portableFlateInputChunkBytes = 1024;
+const adler32Modulo = 65521;
+const adler32ChunkBytes = 5552;
+
 export function now() {
   return globalThis.performance?.now?.() ?? Date.now();
 }
@@ -35,11 +41,87 @@ export function md5Digest(input) {
 }
 
 export function inflateFlateSync(input, { maxOutputLength } = {}) {
+  const bytes = toUint8Array(input);
   const zlib = getNodeBuiltin("zlib");
-  if (!zlib?.inflateSync) {
-    throw new Error("FlateDecode requires a synchronous inflater in this runtime.");
+  if (zlib?.inflateSync) {
+    return new Uint8Array(zlib.inflateSync(bytes, { maxOutputLength }));
   }
-  return new Uint8Array(zlib.inflateSync(toUint8Array(input), { maxOutputLength }));
+  return inflateFlatePortableSync(bytes, { maxOutputLength });
+}
+
+function inflateFlatePortableSync(bytes, { maxOutputLength } = {}) {
+  const limit = maxOutputLength ?? Number.POSITIVE_INFINITY;
+  const chunks = [];
+  let outputLength = 0;
+  const inflater = new Unzlib((chunk) => {
+    if (chunk.byteLength > limit - outputLength) {
+      throw createFlateOutputLimitError(limit);
+    }
+    chunks.push(chunk);
+    outputLength += chunk.byteLength;
+  });
+
+  if (bytes.byteLength === 0) {
+    inflater.push(bytes, true);
+  } else {
+    for (let offset = 0; offset < bytes.byteLength; offset += portableFlateInputChunkBytes) {
+      const end = Math.min(bytes.byteLength, offset + portableFlateInputChunkBytes);
+      inflater.push(bytes.subarray(offset, end), end === bytes.byteLength);
+    }
+  }
+
+  const output = concatenateByteChunks(chunks, outputLength);
+  assertZlibChecksum(bytes, output);
+  return output;
+}
+
+function createFlateOutputLimitError(maxOutputLength) {
+  const error = new RangeError(
+    `Cannot create a Buffer larger than ${maxOutputLength} bytes`
+  );
+  error.code = "ERR_BUFFER_TOO_LARGE";
+  return error;
+}
+
+function concatenateByteChunks(chunks, length) {
+  const output = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return output;
+}
+
+function assertZlibChecksum(input, output) {
+  if (input.byteLength < 6) {
+    throw new Error("Invalid zlib stream: missing Adler-32 checksum.");
+  }
+  const offset = input.byteLength - 4;
+  const expected = (
+    (input[offset] << 24) |
+    (input[offset + 1] << 16) |
+    (input[offset + 2] << 8) |
+    input[offset + 3]
+  ) >>> 0;
+  if (adler32(output) !== expected) {
+    throw new Error("Invalid zlib stream: Adler-32 checksum mismatch.");
+  }
+}
+
+function adler32(bytes) {
+  let first = 1;
+  let second = 0;
+  for (let offset = 0; offset < bytes.byteLength; offset += adler32ChunkBytes) {
+    const end = Math.min(bytes.byteLength, offset + adler32ChunkBytes);
+    for (let index = offset; index < end; index += 1) {
+      first += bytes[index];
+      second += first;
+    }
+    first %= adler32Modulo;
+    second %= adler32Modulo;
+  }
+  return ((second << 16) | first) >>> 0;
 }
 
 export function bytesToLatin1(input) {

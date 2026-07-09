@@ -43,6 +43,23 @@ test("FlateDecode rejects high-ratio output through the bounded inflater", () =>
   );
 });
 
+test("FlateDecode portable inflater decodes and bounds browser output", () => {
+  const encodedText = deflateSync(Buffer.from("Portable Flate text", "latin1"));
+  const expanded = Buffer.alloc(1024 * 1024, 0x41);
+  const encodedBomb = deflateSync(expanded, { level: 9 });
+
+  withoutNodeBuiltins(() => {
+    assert.equal(text(decode(encodedText, "/FlateDecode")), "Portable Flate text");
+    assert.throws(
+      () => decode(encodedBomb, "/FlateDecode", { maxBytes: 1024 }),
+      (error) =>
+        error instanceof PdfStreamDecodeError &&
+        error.code === "pdf.stream.decoded_too_large" &&
+        error.message === "FlateDecode decoded output exceeds byte limit."
+    );
+  });
+});
+
 test("filter chains decode in declared order", () => {
   const compressed = deflateSync(Buffer.from("Chained text", "latin1"));
   const hex = Buffer.from(compressed).toString("hex") + ">";
@@ -229,4 +246,14 @@ function packLzwCodes(codes, codeSize = 9) {
 
 function text(bytes) {
   return Buffer.from(bytes).toString("latin1");
+}
+
+function withoutNodeBuiltins(callback) {
+  const originalGetBuiltinModule = process.getBuiltinModule;
+  process.getBuiltinModule = undefined;
+  try {
+    return callback();
+  } finally {
+    process.getBuiltinModule = originalGetBuiltinModule;
+  }
 }
