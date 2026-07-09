@@ -106,13 +106,13 @@ package, and runs API tests.
 The package exposes a `pdf-2-llm` command, with `pdf2md` retained as an alias:
 
 ```sh
-pdf-2-llm <input.pdf> [--output <path>] [--json]
+pdf-2-llm <input.pdf> [--output <path>] [--json] [--debug]
 ```
 
 Local development command from a checkout:
 
 ```sh
-npm exec -- pdf-2-llm <input.pdf> [--output <path>] [--json]
+npm exec -- pdf-2-llm <input.pdf> [--output <path>] [--json] [--debug]
 ```
 
 By default, the CLI writes Markdown to stdout:
@@ -126,6 +126,10 @@ Use `--json` to emit the full `ConvertResult` object:
 ```sh
 pdf-2-llm corpus/generated/synthetic-simple-text.pdf --json
 ```
+
+Use `--debug` when a run fails or produces no useful terminal output. It writes
+an NDJSON trace under the system temp directory and prints the trace path to
+stderr. Use `--debug-trace <path>` to choose the destination.
 
 The CLI currently accepts local paths only and does not expose flags for OCR
 result injection, password callbacks, parser mode, security limits, raster

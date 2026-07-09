@@ -40,6 +40,18 @@ const croppedPageFixturePath = new URL(
   import.meta.url
 );
 
+function parseNdjsonTrace(value) {
+  return value
+    .trim()
+    .split(/\n+/)
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", async () => {
   const bytes = await readFile(fixturePath);
   const progress = [];
@@ -1201,6 +1213,88 @@ test("CLI consumes output path before selecting positional input", async () => {
     assert.equal(run.stdout, "");
     const markdown = await readFile(outputPath, "utf8");
     assert.match(markdown, /^# Synthetic Simple Text/);
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI debug writes an NDJSON trace with conversion diagnostics", async () => {
+  const cliPath = new URL("../src/cli.mjs", import.meta.url);
+  const outputDir = await mkdtemp(join(tmpdir(), "pdf-2-llm-cli-debug-"));
+  const outputPath = join(outputDir, "out.json");
+  const tracePath = join(outputDir, "trace.ndjson");
+
+  try {
+    const run = spawnSync(
+      process.execPath,
+      [
+        cliPath.pathname,
+        fixturePath.pathname,
+        "--json",
+        "--output",
+        outputPath,
+        "--debug-trace",
+        tracePath
+      ],
+      {
+        encoding: "utf8"
+      }
+    );
+    assert.equal(run.status, 0, run.stderr);
+    assert.equal(run.stdout, "");
+    assert.match(run.stderr, new RegExp(`Debug trace: ${escapeRegExp(tracePath)}`));
+
+    const result = JSON.parse(await readFile(outputPath, "utf8"));
+    assert.equal(result.diagnostics.input.pdfVersion, "1.4");
+
+    const events = parseNdjsonTrace(await readFile(tracePath, "utf8"));
+    const eventNames = events.map((event) => event.event);
+    assert.ok(eventNames.includes("cli.start"));
+    assert.ok(eventNames.includes("input.stat_complete"));
+    assert.ok(eventNames.includes("conversion.complete"));
+    assert.ok(eventNames.includes("output.write_complete"));
+    assert.ok(eventNames.includes("cli.complete"));
+
+    const conversion = events.find((event) => event.event === "conversion.complete");
+    assert.equal(conversion.details.diagnostics.input.pdfVersion, "1.4");
+    assert.equal(conversion.details.diagnostics.options.passwordProvided, false);
+    assert.equal(conversion.details.diagnostics.extraction.parser.pages, 1);
+    assert.ok(
+      conversion.details.warnings.some(
+        (warning) => warning.code === warningCodes.HeuristicTextExtraction
+      )
+    );
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI debug traces thrown failures before exiting non-zero", async () => {
+  const cliPath = new URL("../src/cli.mjs", import.meta.url);
+  const outputDir = await mkdtemp(join(tmpdir(), "pdf-2-llm-cli-debug-error-"));
+  const tracePath = join(outputDir, "trace.ndjson");
+  const missingPath = join(outputDir, "missing.pdf");
+
+  try {
+    const run = spawnSync(
+      process.execPath,
+      [cliPath.pathname, missingPath, "--debug-trace", tracePath],
+      {
+        encoding: "utf8"
+      }
+    );
+    assert.equal(run.status, 1);
+    assert.match(run.stderr, /pdf-2-llm failed: Error: ENOENT/);
+    assert.match(run.stderr, new RegExp(`Debug trace: ${escapeRegExp(tracePath)}`));
+
+    const events = parseNdjsonTrace(await readFile(tracePath, "utf8"));
+    const eventNames = events.map((event) => event.event);
+    assert.ok(eventNames.includes("input.stat_error"));
+    assert.ok(eventNames.includes("conversion.error"));
+    assert.ok(eventNames.includes("cli.error"));
+
+    const conversionError = events.find((event) => event.event === "conversion.error");
+    assert.equal(conversionError.details.error.code, "ENOENT");
   } finally {
     await rm(outputDir, { recursive: true, force: true });
   }

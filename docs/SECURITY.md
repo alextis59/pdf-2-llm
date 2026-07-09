@@ -14,7 +14,9 @@ document records the security behavior this repository can actually support.
 - Timeout and abort checkpoints throw `TimeoutError` and `AbortError`; callers
   must catch those separately from `ConvertResult` warnings.
 - The CLI reads one local PDF path and writes to stdout or an optional local
-  output path. It does not fetch URLs, spawn shell commands, or expose advanced
+  output path. With `--debug`, it also writes a local NDJSON trace under the
+  system temp directory, or to an explicit `--debug-trace <path>` destination.
+  It does not fetch URLs, spawn shell commands, or expose advanced
   parser/OCR/security controls.
 - The library does not download OCR models, execute OCR engines, or read/write
   OCR caches today. OCR model and cache options are recorded as diagnostics.
@@ -42,7 +44,10 @@ behavior. Security-limit violations should preserve warning codes documented in
 
 - Passwords may be supplied as strings or callbacks for encrypted PDFs.
 - Password values must not be copied into warnings, diagnostics, logs, report
-  files, snapshots, or corpus fixtures.
+  files, snapshots, trace output, or corpus fixtures. CLI debug traces redact
+  password, passphrase, and secret value fields before serialization while
+  preserving non-secret metadata such as `passwordProvided` and
+  `passwordSource`.
 - Missing, incorrect, and unsupported encryption are represented with
   `security.password_required`, `security.password_incorrect`, and
   `security.unsupported_encryption`.

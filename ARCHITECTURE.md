@@ -18,7 +18,7 @@ contracts, not incidental debug output.
 | Node entrypoint | `packages/pdf2md/src/node.mjs` | Re-exports the converter for Node callers and supports local path input. |
 | Browser entrypoint | `packages/pdf2md/src/browser.mjs` | Re-exports the converter for browser `ArrayBuffer` and `Uint8Array` inputs. |
 | Worker entrypoint | `packages/pdf2md/src/worker.mjs` | Re-exports the converter for module worker integrations. |
-| CLI | `packages/pdf2md/src/cli.mjs` | Local-file conversion only: `<input.pdf>`, `--output`, and `--json`. |
+| CLI | `packages/pdf2md/src/cli.mjs` | Local-file conversion only: `<input.pdf>`, `--output`, `--json`, and debug trace flags. |
 | Schema entrypoint | `packages/pdf2md/src/schema.mjs` | Exports schema version, warning codes, document IR schema, and source-map schema. |
 | WASM entrypoint | `packages/pdf2md/src/wasm-loader.mjs` | Loads the packaged Rust/WASM preflight module and resolves single/threaded load plans. |
 | Rust crate | `crates/pdf2md-core/` | Current `rlib`/`cdylib` preflight bridge for PDF header/version checks, not the full parser. |

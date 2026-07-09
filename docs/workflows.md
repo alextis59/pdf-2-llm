@@ -11,7 +11,7 @@ Goal: convert one local PDF file to Markdown or JSON from a shell.
 Primary command:
 
 ```sh
-pdf-2-llm <input.pdf> [--output <path>] [--json]
+pdf-2-llm <input.pdf> [--output <path>] [--json] [--debug]
 ```
 
 Local checkout command:
@@ -26,6 +26,8 @@ Behavior:
 - Markdown is written to stdout unless `--output <path>` is supplied.
 - `--json` writes the full `ConvertResult` object.
 - Document-level PDF problems are normally represented as warnings in output.
+- `--debug` writes an NDJSON trace under the system temp directory and prints
+  the path to stderr. Use `--debug-trace <path>` for an explicit destination.
 - Missing input or invalid CLI arguments exit non-zero.
 
 Validation:
@@ -33,6 +35,7 @@ Validation:
 ```sh
 node packages/pdf2md/src/cli.mjs --help
 npm exec -- pdf-2-llm corpus/generated/synthetic-simple-text.pdf
+npm exec -- pdf-2-llm corpus/generated/synthetic-simple-text.pdf --debug --output .temp/simple.md
 ```
 
 Use the JavaScript API instead when callers need password callbacks, custom

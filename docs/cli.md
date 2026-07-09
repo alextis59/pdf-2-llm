@@ -7,13 +7,13 @@ an alias.
 ## Usage
 
 ```sh
-pdf-2-llm <input.pdf> [--output <path>] [--json]
+pdf-2-llm <input.pdf> [--output <path>] [--json] [--debug] [--debug-trace <path>]
 ```
 
 Local development command from a checkout:
 
 ```sh
-npm exec -- pdf-2-llm <input.pdf> [--output <path>] [--json]
+npm exec -- pdf-2-llm <input.pdf> [--output <path>] [--json] [--debug]
 ```
 
 ## Arguments
@@ -33,6 +33,8 @@ or custom security limits, use the JavaScript API documented in
 | --- | --- |
 | `--output <path>` | Write output to a file instead of stdout. |
 | `--json` | Emit the full `ConvertResult` JSON instead of only Markdown. |
+| `--debug` | Write an NDJSON trace file under the system temp directory and print its path to stderr. |
+| `--debug-trace <path>` | Write the debug NDJSON trace to an explicit file path. This also enables `--debug`. |
 | `--help`, `-h` | Print usage and exit successfully. |
 
 ## Markdown Output
@@ -83,6 +85,32 @@ To write JSON to a file:
 pdf-2-llm corpus/generated/synthetic-simple-text.pdf --json --output .temp/simple.json
 ```
 
+## Debug Traces
+
+Use `--debug` when conversion fails on another machine or when stdout does not
+explain what happened:
+
+```sh
+pdf-2-llm document.pdf --debug --output out.md
+```
+
+The CLI prints the trace path to stderr, for example:
+
+```text
+Debug trace: /tmp/pdf-2-llm-traces/convert-2026-07-08T12-00-00-000Z-1234.ndjson
+```
+
+Each line is one JSON event. The trace records CLI arguments, runtime metadata,
+input file stat results, conversion progress, warnings, diagnostics, confidence
+scores, output writes, and thrown errors with stack traces. The trace does not
+include the generated Markdown body.
+
+To control the destination:
+
+```sh
+pdf-2-llm document.pdf --debug-trace .temp/pdf-2-llm-debug.ndjson
+```
+
 ## Exit Behavior
 
 The CLI exits successfully when conversion completes and output is written.
@@ -92,6 +120,10 @@ Document-level PDF problems generally appear as structured warnings in
 Markdown/JSON output rather than process failures. Examples include parse
 warnings, unsupported encryption, password failures, image pixel limits, and
 security limit warnings.
+
+Unexpected process-level failures print a concise error to stderr and exit
+non-zero. Rerun with `--debug` to capture the stack trace and conversion context
+in an NDJSON trace file.
 
 ## Current Limitations
 
