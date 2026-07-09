@@ -20,9 +20,9 @@ metrics:
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
-    contains: "Revenue <Total>"
+    contains: "Revenue &lt;Total&gt;"
   - page: 1
-    contains: "100 \"net\""
+    contains: '100 &quot;net&quot;'
 structure:
   expected:
     - html_table
