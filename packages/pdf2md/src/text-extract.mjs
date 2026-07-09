@@ -1811,9 +1811,71 @@ function irTextSpansForLine(line) {
   const sourceSpans = Array.isArray(line.spans) && line.spans.length > 0
     ? line.spans
     : [line];
-  return sourceSpans
-    .map((span) => createIrTextSpan(span, line))
-    .filter(Boolean);
+  return coalesceIrTextSpans(
+    sourceSpans
+      .map((span) => createIrTextSpan(span, line))
+      .filter(Boolean)
+  );
+}
+
+function coalesceIrTextSpans(spans) {
+  const coalesced = [];
+  for (const span of spans) {
+    const previous = coalesced.at(-1);
+    if (!previous || !canCoalesceIrTextSpans(previous, span)) {
+      coalesced.push(span);
+      continue;
+    }
+    const minX = Math.min(previous.x, span.x);
+    const minY = Math.min(previous.y, span.y);
+    const maxX = Math.max(previous.x + previous.width, span.x + span.width);
+    const maxY = Math.max(previous.y + previous.height, span.y + span.height);
+    previous.text += span.text;
+    if (previous.glyphIds) {
+      previous.glyphIds.push(...span.glyphIds);
+    }
+    previous.x = roundNumber(minX);
+    previous.y = roundNumber(minY);
+    previous.width = roundNumber(maxX - minX);
+    previous.height = roundNumber(maxY - minY);
+  }
+  return coalesced;
+}
+
+function canCoalesceIrTextSpans(left, right) {
+  if (
+    left.fontName !== right.fontName ||
+    left.direction !== right.direction ||
+    left.confidence !== right.confidence ||
+    left.source !== right.source ||
+    Boolean(left.glyphIds) !== Boolean(right.glyphIds)
+  ) {
+    return false;
+  }
+  const vertical = left.direction === "vertical";
+  const leftCrossSize = vertical ? left.width : left.height;
+  const rightCrossSize = vertical ? right.width : right.height;
+  const tolerance = Math.max(0.5, Math.min(leftCrossSize, rightCrossSize) * 0.1);
+  if (vertical) {
+    return (
+      Math.abs(left.x - right.x) <= tolerance &&
+      Math.abs(left.width - right.width) <= tolerance &&
+      intervalGap(left.y, left.height, right.y, right.height) <= tolerance
+    );
+  }
+  return (
+    Math.abs(left.y - right.y) <= tolerance &&
+    Math.abs(left.height - right.height) <= tolerance &&
+    intervalGap(left.x, left.width, right.x, right.width) <= tolerance
+  );
+}
+
+function intervalGap(leftStart, leftLength, rightStart, rightLength) {
+  return Math.max(
+    0,
+    Math.max(leftStart, rightStart) -
+      Math.min(leftStart + leftLength, rightStart + rightLength)
+  );
 }
 
 function createIrTextSpan(span, line) {

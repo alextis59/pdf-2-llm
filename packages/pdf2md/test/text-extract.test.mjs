@@ -1175,6 +1175,52 @@ test("linesToMarkdownWithSourceMap maps Markdown blocks back to page regions", (
   assert.equal(result.sourceMap.entries[2].regions.length, 2);
 });
 
+test("linesToMarkdownWithSourceMap coalesces compatible adjacent IR spans", () => {
+  const line = textLine("NIST Other", 72, 680, 76, 12);
+  line.source = "tagged-pdf";
+  line.direction = "ltr";
+  line.confidence = 0.95;
+  line.spans = [
+    { text: "NIS", fontName: "F1", glyphIds: [1, 2, 3], x: 72, y: 680, width: 18, height: 12 },
+    { text: "T", fontName: "F1", glyphIds: [4], x: 90, y: 680, width: 6, height: 12 },
+    { text: " Other", fontName: "F1", glyphIds: [5, 6], x: 112, y: 680, width: 36, height: 12 }
+  ];
+
+  const result = linesToMarkdownWithSourceMap([line]);
+
+  assert.deepEqual(result.irElementsByPage.get(0), [
+    {
+      type: "text",
+      spans: [
+        {
+          text: "NIST",
+          glyphIds: [1, 2, 3, 4],
+          fontName: "F1",
+          x: 72,
+          y: 680,
+          width: 24,
+          height: 12,
+          direction: "ltr",
+          confidence: 0.95,
+          source: "tagged-pdf"
+        },
+        {
+          text: " Other",
+          glyphIds: [5, 6],
+          fontName: "F1",
+          x: 112,
+          y: 680,
+          width: 36,
+          height: 12,
+          direction: "ltr",
+          confidence: 0.95,
+          source: "tagged-pdf"
+        }
+      ]
+    }
+  ]);
+});
+
 function textLine(text, x, y, width, fontSize) {
   return {
     text,
