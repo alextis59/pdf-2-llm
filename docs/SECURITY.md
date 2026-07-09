@@ -40,6 +40,8 @@ Resource limits are enabled by default through `options.security`:
 | `maxObjects` | `100000` |
 | `maxDepth` | `100` |
 | `maxCMapMappings` | `65536` |
+| `maxContentStreamOperations` | `1000000` |
+| `maxContentStreamOutputs` | `1000000` |
 | `maxImagePixels` | `100000000` |
 | `timeoutMs` | `120000` |
 
@@ -59,6 +61,12 @@ also retain an unnecessary Latin-1 copy.
 
 `maxCMapMappings` bounds both individual ToUnicode ranges and aggregate mapping
 work so compact font CMaps cannot expand into unbounded entries.
+
+Content stream interpretation tokenizes incrementally. The operation and
+output budgets apply across the document for each text, ruling-line, and image
+extraction channel; `maxDepth` also caps graphics-state and marked-content
+stacks. Limit failures return `pdf.parse_failed` with a specific
+`pdf.content_stream.*_limit_exceeded` detail code.
 
 ## Passwords And Encryption
 

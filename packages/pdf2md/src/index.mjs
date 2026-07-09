@@ -9,6 +9,7 @@ import {
   warningCodes
 } from "./schema.mjs";
 import { isTrustedSimpleEncoding } from "./font-encoding.mjs";
+import { PdfContentStreamLimitError } from "./content-stream.mjs";
 import {
   extractDocumentContent,
   linesToMarkdownWithSourceMap
@@ -46,6 +47,8 @@ const defaultSecurityLimits = Object.freeze({
   maxObjects: 100000,
   maxDepth: 100,
   maxCMapMappings: 65_536,
+  maxContentStreamOperations: 1_000_000,
+  maxContentStreamOutputs: 1_000_000,
   maxImagePixels: 100_000_000,
   timeoutMs: 120000
 });
@@ -182,9 +185,27 @@ export async function convertPdfToMarkdown(input, options = {}) {
     parseWarning?.code === warningCodes.PasswordIncorrect ||
     parseWarning?.code === warningCodes.UnsupportedEncryption;
   const canExtractPdfContent = pdfVersion && !encryptedWithoutText && !extractionBlockedBySecurityLimit;
-  const extractedContent = canExtractPdfContent
-    ? extractDocumentContent(normalized.bytes, { document: pdfDocument })
-    : { textLines: [], rulingLines: [], imageDraws: [] };
+  let extractedContent = { textLines: [], rulingLines: [], imageDraws: [] };
+  if (canExtractPdfContent) {
+    try {
+      extractedContent = extractDocumentContent(normalized.bytes, {
+        document: pdfDocument,
+        contentStreamLimits: {
+          maxOperations: security.maxContentStreamOperations,
+          maxOutputs: security.maxContentStreamOutputs,
+          maxDepth: security.maxDepth
+        }
+      });
+    } catch (error) {
+      if (!(error instanceof PdfContentStreamLimitError)) {
+        throw error;
+      }
+      parseWarning = createParseWarning(error);
+      warnings.push(parseWarning);
+      pdfDocument = null;
+      extractionBlockedBySecurityLimit = true;
+    }
+  }
   const { textLines, rulingLines, imageDraws } = extractedContent;
   const rulingGrids = inferRulingGrids(rulingLines);
   const rulingTables = detectTableCellSpans(
@@ -975,6 +996,8 @@ function summarizeOptions(options, rasterPlan, ocrAdapter, security) {
     maxObjects: security.maxObjects,
     maxDepth: security.maxDepth,
     maxCMapMappings: security.maxCMapMappings,
+    maxContentStreamOperations: security.maxContentStreamOperations,
+    maxContentStreamOutputs: security.maxContentStreamOutputs,
     maxImagePixels: rasterPlan.maxPixels,
     ocrDebugSidecars: options.ocr?.debugSidecars === true,
     assetsEnabled: options.assets?.enabled ?? null
@@ -1149,6 +1172,7 @@ function createParseWarning(error, extraDetails = {}) {
   return createWarning(warningCodes.PdfParseFailed, error.message, {
     code: error.code,
     offset: error.offset,
+    ...error.details,
     ...extraDetails
   });
 }
@@ -1237,6 +1261,18 @@ function validateSecurityLimits(security) {
   }
   if (!Number.isInteger(security.maxCMapMappings) || security.maxCMapMappings < 0) {
     throw new RangeError("security.maxCMapMappings must be a non-negative integer");
+  }
+  if (
+    !Number.isInteger(security.maxContentStreamOperations) ||
+    security.maxContentStreamOperations < 0
+  ) {
+    throw new RangeError("security.maxContentStreamOperations must be a non-negative integer");
+  }
+  if (
+    !Number.isInteger(security.maxContentStreamOutputs) ||
+    security.maxContentStreamOutputs < 0
+  ) {
+    throw new RangeError("security.maxContentStreamOutputs must be a non-negative integer");
   }
 }
 

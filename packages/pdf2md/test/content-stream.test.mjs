@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  PdfContentStreamLimitError,
   extractContentStreamImageDraws,
   extractContentStreamRulingLines,
   extractContentStreamTextLines,
@@ -82,6 +83,122 @@ test("tokenizeContentStream decodes strings, names, arrays, numbers, and comment
     }
   });
   assert.deepEqual(tokens[7], { type: "word", value: "BDC" });
+});
+
+test("content stream operation limits accept the boundary and reject the next operator", () => {
+  assert.deepEqual(
+    extractContentStreamTextLines("BT ET", {
+      contentStreamLimits: { maxOperations: 2 }
+    }),
+    []
+  );
+  assert.throws(
+    () =>
+      extractContentStreamTextLines("BT ET", {
+        contentStreamLimits: { maxOperations: 1 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.operation_limit_exceeded" &&
+      error.details.limit === 1 &&
+      error.details.actual === 2 &&
+      error.details.extractor === "text"
+  );
+});
+
+test("content stream depth limits cover graphics and marked-content stacks", () => {
+  assert.doesNotThrow(() =>
+    extractContentStreamTextLines("q q Q Q", {
+      contentStreamLimits: { maxDepth: 2 }
+    })
+  );
+  assert.throws(
+    () =>
+      extractContentStreamTextLines("q q Q Q", {
+        contentStreamLimits: { maxDepth: 1 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.depth_limit_exceeded" &&
+      error.details.stackType === "graphics" &&
+      error.details.actual === 2
+  );
+  assert.doesNotThrow(() =>
+    extractContentStreamTextLines("/Span BMC /Span BMC EMC EMC", {
+      contentStreamLimits: { maxDepth: 2 }
+    })
+  );
+  assert.throws(
+    () =>
+      extractContentStreamTextLines("/Span BMC /Span BMC EMC EMC", {
+        contentStreamLimits: { maxDepth: 1 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.depth_limit_exceeded" &&
+      error.details.stackType === "marked-content" &&
+      error.details.actual === 2
+  );
+});
+
+test("content stream output limits bound text, path, and image expansion", () => {
+  assert.equal(
+    extractContentStreamTextLines("BT (AB) Tj ET", {
+      resources,
+      contentStreamLimits: { maxOutputs: 2 }
+    })[0].text,
+    "AB"
+  );
+  assert.throws(
+    () =>
+      extractContentStreamTextLines("BT (AB) Tj ET", {
+        resources,
+        contentStreamLimits: { maxOutputs: 1 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.output_limit_exceeded" &&
+      error.details.extractor === "text" &&
+      error.details.actual === 2
+  );
+
+  assert.equal(
+    extractContentStreamRulingLines("0 0 m 10 0 l S", {
+      contentStreamLimits: { maxOutputs: 2 }
+    }).length,
+    1
+  );
+  assert.throws(
+    () =>
+      extractContentStreamRulingLines("0 0 m 10 0 l S", {
+        contentStreamLimits: { maxOutputs: 1 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.output_limit_exceeded" &&
+      error.details.extractor === "ruling" &&
+      error.details.actual === 2
+  );
+
+  assert.equal(
+    extractContentStreamImageDraws("/ImScan Do", {
+      resources,
+      contentStreamLimits: { maxOutputs: 1 }
+    }).length,
+    1
+  );
+  assert.throws(
+    () =>
+      extractContentStreamImageDraws("/ImScan Do", {
+        resources,
+        contentStreamLimits: { maxOutputs: 0 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.output_limit_exceeded" &&
+      error.details.extractor === "image" &&
+      error.details.actual === 1
+  );
 });
 
 test("extractContentStreamTextLines interprets text showing operators", () => {

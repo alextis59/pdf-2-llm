@@ -39,9 +39,9 @@ The main orchestration path is `convertPdfToMarkdown()` in
    header and security checks allow it.
 4. Resolve password callbacks only for encrypted PDFs that request a password.
    Password values must not be copied into diagnostics.
-5. Extract parsed content streams, page geometry, text lines, ruling lines,
-   images, outlines, structure signals, forms, annotations, attachments, and
-   signature metadata where supported.
+5. Incrementally tokenize bounded content streams and extract page geometry,
+   text lines, ruling lines, images, outlines, structure signals, forms,
+   annotations, attachments, and signature metadata where supported.
 6. Plan OCR, raster, WebGPU, and preprocessing diagnostics. OCR model loading
    is currently contract-first; OCR text comes from caller-supplied
    `options.ocr.results`.
@@ -63,7 +63,7 @@ can make policy decisions without losing the result object.
 | `runtime.mjs` | Runtime-neutral byte helpers, hashing, bounded native/portable Flate decoding, Node builtin access, encoding helpers, and fallback MD5. |
 | `pdf-parser.mjs` | PDF byte reading, xref/object parsing and repair, encryption checks, page tree, outlines, structure, resources, and security parser limits. |
 | `stream-filters.mjs` | Stream filter decoding and decoded-stream byte caps. |
-| `content-stream.mjs` | PDF graphics/text operator interpretation for text, geometry, and drawing signals. |
+| `content-stream.mjs` | Incremental PDF graphics/text operator interpretation with operation, output, and stack budgets for text, geometry, and drawing signals. |
 | `font-encoding.mjs` | ToUnicode CMap parsing, encoding fallbacks, and trusted/simple encoding checks. |
 | `text-extract.mjs` | Text extraction, layout grouping, Markdown/source-map serialization, page text/table IR projection, headings, lists, running content, equations, and table insertion. |
 | `table-grid.mjs` | Ruling-line grid inference, cell assignment, spans, and table geometry. |

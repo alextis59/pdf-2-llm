@@ -42,6 +42,8 @@ export type ConvertOptions = {
     maxObjects?: number;
     maxDepth?: number;
     maxCMapMappings?: number;
+    maxContentStreamOperations?: number;
+    maxContentStreamOutputs?: number;
     maxImagePixels?: number;
     timeoutMs?: number;
   };

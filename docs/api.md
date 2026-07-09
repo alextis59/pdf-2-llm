@@ -166,6 +166,8 @@ reported as `security.password_required`.
     maxObjects?: number;
     maxDepth?: number;
     maxCMapMappings?: number;
+    maxContentStreamOperations?: number;
+    maxContentStreamOutputs?: number;
     maxImagePixels?: number;
     timeoutMs?: number;
   };
@@ -183,6 +185,8 @@ Defaults:
 | `maxObjects` | `100000` |
 | `maxDepth` | `100` |
 | `maxCMapMappings` | `65536` |
+| `maxContentStreamOperations` | `1000000` |
+| `maxContentStreamOutputs` | `1000000` |
 | `maxImagePixels` | `100000000` |
 | `timeoutMs` | `120000` |
 

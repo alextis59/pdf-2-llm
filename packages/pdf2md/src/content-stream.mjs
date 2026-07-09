@@ -5,33 +5,42 @@ const whitespacePattern = /\s/;
 const delimiterChars = new Set(["(", ")", "<", ">", "[", "]", "{", "}", "/", "%"]);
 const identityMatrix = Object.freeze([1, 0, 0, 1, 0, 0]);
 
+export class PdfContentStreamLimitError extends Error {
+  constructor(message, { code, limit, actual, extractor, stackType = null } = {}) {
+    super(message);
+    this.name = "PdfContentStreamLimitError";
+    this.code = code;
+    this.offset = null;
+    this.details = {
+      limit,
+      actual,
+      extractor,
+      ...(stackType ? { stackType } : {})
+    };
+  }
+}
+
 export function extractContentStreamTextLines(streamText, options = {}) {
-  const tokens = tokenizeContentStream(streamText);
   const state = createInitialState(options.resources);
   const stack = [];
   const operands = [];
   const lines = [];
-  let textObjectId = 0;
-  let lineSerial = 0;
+  const context = createExecutionContext("text", options, {
+    lines,
+    operands,
+    stack,
+    state,
+    textObjectId: 0,
+    lineSerial: 0
+  });
 
-  for (const token of tokens) {
+  for (const token of iterateContentStreamTokens(streamText)) {
     if (token.type !== "word") {
       operands.push(token);
       continue;
     }
-
-    const context = {
-      lines,
-      operands,
-      options,
-      stack,
-      state,
-      textObjectId,
-      lineSerial
-    };
+    consumeContentStreamOperation(context);
     executeOperator(token.value, context);
-    textObjectId = context.textObjectId;
-    lineSerial = context.lineSerial;
     operands.length = 0;
   }
 
@@ -39,25 +48,24 @@ export function extractContentStreamTextLines(streamText, options = {}) {
 }
 
 export function extractContentStreamRulingLines(streamText, options = {}) {
-  const tokens = tokenizeContentStream(streamText);
   const state = createInitialPathState();
   const stack = [];
   const operands = [];
   const lines = [];
+  const context = createExecutionContext("ruling", options, {
+    lines,
+    operands,
+    stack,
+    state
+  });
 
-  for (const token of tokens) {
+  for (const token of iterateContentStreamTokens(streamText)) {
     if (token.type !== "word") {
       operands.push(token);
       continue;
     }
-
-    executePathOperator(token.value, {
-      lines,
-      operands,
-      options,
-      stack,
-      state
-    });
+    consumeContentStreamOperation(context);
+    executePathOperator(token.value, context);
     operands.length = 0;
   }
 
@@ -65,25 +73,24 @@ export function extractContentStreamRulingLines(streamText, options = {}) {
 }
 
 export function extractContentStreamImageDraws(streamText, options = {}) {
-  const tokens = tokenizeContentStream(streamText);
   const state = createInitialImageState(options.resources);
   const stack = [];
   const operands = [];
   const images = [];
+  const context = createExecutionContext("image", options, {
+    images,
+    operands,
+    stack,
+    state
+  });
 
-  for (const token of tokens) {
+  for (const token of iterateContentStreamTokens(streamText)) {
     if (token.type !== "word") {
       operands.push(token);
       continue;
     }
-
-    executeImageOperator(token.value, {
-      images,
-      operands,
-      options,
-      stack,
-      state
-    });
+    consumeContentStreamOperation(context);
+    executeImageOperator(token.value, context);
     operands.length = 0;
   }
 
@@ -133,8 +140,11 @@ export function mergeRulingLines(rulingLines, options = {}) {
 }
 
 export function tokenizeContentStream(streamText) {
+  return [...iterateContentStreamTokens(streamText)];
+}
+
+function* iterateContentStreamTokens(streamText) {
   const source = typeof streamText === "string" ? streamText : runtimeBytesToLatin1(streamText);
-  const tokens = [];
   let offset = 0;
 
   while (offset < source.length) {
@@ -146,38 +156,38 @@ export function tokenizeContentStream(streamText) {
     const char = source[offset];
     if (char === "/") {
       const token = readName(source, offset);
-      tokens.push(token.value);
+      yield token.value;
       offset = token.offset;
       continue;
     }
     if (char === "(") {
       const token = readLiteralString(source, offset);
-      tokens.push(token.value);
+      yield token.value;
       offset = token.offset;
       continue;
     }
     if (char === "<" && source[offset + 1] !== "<") {
       const token = readHexString(source, offset);
-      tokens.push(token.value);
+      yield token.value;
       offset = token.offset;
       continue;
     }
     if (char === "<" && source[offset + 1] === "<") {
       const token = readDictionary(source, offset);
-      tokens.push(token.value);
+      yield token.value;
       offset = token.offset;
       continue;
     }
     if (char === "[") {
       const token = readArray(source, offset);
-      tokens.push(token.value);
+      yield token.value;
       offset = token.offset;
       continue;
     }
 
     const numberToken = readNumber(source, offset);
     if (numberToken) {
-      tokens.push(numberToken.value);
+      yield numberToken.value;
       offset = numberToken.offset;
       continue;
     }
@@ -187,18 +197,85 @@ export function tokenizeContentStream(streamText) {
       offset += 1;
       continue;
     }
-    tokens.push(word.value);
+    yield word.value;
     offset = word.offset;
   }
+}
 
-  return tokens;
+function createExecutionContext(extractor, options, values) {
+  return {
+    ...values,
+    extractor,
+    options,
+    budget: options.contentStreamBudget ?? { operations: 0, outputs: 0 },
+    limits: options.contentStreamLimits ?? {}
+  };
+}
+
+function consumeContentStreamOperation(context) {
+  consumeContentStreamBudget(
+    context,
+    "operations",
+    1,
+    context.limits.maxOperations,
+    "pdf.content_stream.operation_limit_exceeded",
+    "Content stream operation limit exceeded."
+  );
+}
+
+function consumeContentStreamOutput(context, amount = 1) {
+  consumeContentStreamBudget(
+    context,
+    "outputs",
+    amount,
+    context.limits.maxOutputs,
+    "pdf.content_stream.output_limit_exceeded",
+    "Content stream output limit exceeded."
+  );
+}
+
+function consumeContentStreamBudget(context, field, amount, configuredLimit, code, message) {
+  const limit = configuredLimit ?? Number.POSITIVE_INFINITY;
+  const actual = context.budget[field] + amount;
+  if (actual > limit) {
+    throw new PdfContentStreamLimitError(message, {
+      code,
+      limit,
+      actual,
+      extractor: context.extractor
+    });
+  }
+  context.budget[field] = actual;
+}
+
+function pushGraphicsState(context, state) {
+  enforceContentStreamDepth(context, context.stack.length + 1, "graphics");
+  context.stack.push(state);
+}
+
+function pushMarkedContent(context, item) {
+  enforceContentStreamDepth(context, context.state.markedContent.length + 1, "marked-content");
+  context.state.markedContent.push(item);
+}
+
+function enforceContentStreamDepth(context, actual, stackType) {
+  const limit = context.limits.maxDepth ?? Number.POSITIVE_INFINITY;
+  if (actual > limit) {
+    throw new PdfContentStreamLimitError("Content stream stack depth limit exceeded.", {
+      code: "pdf.content_stream.depth_limit_exceeded",
+      limit,
+      actual,
+      extractor: context.extractor,
+      stackType
+    });
+  }
 }
 
 function executePathOperator(operator, context) {
   const { operands, state } = context;
 
   if (operator === "q") {
-    context.stack.push(clonePathGraphicsState(state));
+    pushGraphicsState(context, clonePathGraphicsState(state));
     return;
   }
   if (operator === "Q") {
@@ -212,7 +289,7 @@ function executePathOperator(operator, context) {
     return;
   }
   if (operator === "BMC" || operator === "BDC") {
-    state.markedContent.push(readMarkedContent(operands, operator, context.options));
+    pushMarkedContent(context, readMarkedContent(operands, operator, context.options));
     return;
   }
   if (operator === "EMC") {
@@ -246,6 +323,7 @@ function executePathOperator(operator, context) {
     const [x, y] = lastNumbers(operands, 2);
     if (Number.isFinite(x) && Number.isFinite(y) && state.currentPoint) {
       const point = transformPoint(state.ctm, x, y);
+      consumeContentStreamOutput(context);
       state.segments.push({
         from: state.currentPoint,
         to: point,
@@ -256,13 +334,13 @@ function executePathOperator(operator, context) {
     return;
   }
   if (operator === "h") {
-    closeCurrentSubpath(state);
+    closeCurrentSubpath(context);
     return;
   }
   if (operator === "re") {
     const [x, y, width, height] = lastNumbers(operands, 4);
     if ([x, y, width, height].every(Number.isFinite)) {
-      appendRectanglePath(state, x, y, width, height);
+      appendRectanglePath(context, x, y, width, height);
     }
     return;
   }
@@ -272,7 +350,7 @@ function executePathOperator(operator, context) {
     return;
   }
   if (operator === "s" || operator === "b" || operator === "b*") {
-    closeCurrentSubpath(state);
+    closeCurrentSubpath(context);
     emitRulingSegments(context);
     clearCurrentPath(state);
     return;
@@ -287,6 +365,7 @@ function emitRulingSegments(context) {
   for (const segment of context.state.segments) {
     const rulingLine = normalizeRulingSegment(segment, context.options, structure);
     if (rulingLine) {
+      consumeContentStreamOutput(context);
       context.lines.push(rulingLine);
     }
   }
@@ -424,13 +503,15 @@ function lineEnd(line) {
     : Math.max(line.y1, line.y2);
 }
 
-function appendRectanglePath(state, x, y, width, height) {
+function appendRectanglePath(context, x, y, width, height) {
+  const { state } = context;
   const bottomLeft = transformPoint(state.ctm, x, y);
   const bottomRight = transformPoint(state.ctm, x + width, y);
   const topRight = transformPoint(state.ctm, x + width, y + height);
   const topLeft = transformPoint(state.ctm, x, y + height);
   const points = [bottomLeft, bottomRight, topRight, topLeft];
 
+  consumeContentStreamOutput(context, points.length);
   for (let index = 0; index < points.length; index += 1) {
     state.segments.push({
       from: points[index],
@@ -442,7 +523,8 @@ function appendRectanglePath(state, x, y, width, height) {
   state.subpathStart = bottomLeft;
 }
 
-function closeCurrentSubpath(state) {
+function closeCurrentSubpath(context) {
+  const { state } = context;
   if (!state.currentPoint || !state.subpathStart) {
     return;
   }
@@ -450,6 +532,7 @@ function closeCurrentSubpath(state) {
     state.currentPoint.x !== state.subpathStart.x ||
     state.currentPoint.y !== state.subpathStart.y
   ) {
+    consumeContentStreamOutput(context);
     state.segments.push({
       from: state.currentPoint,
       to: state.subpathStart,
@@ -487,7 +570,7 @@ function executeImageOperator(operator, context) {
   const { operands, state } = context;
 
   if (operator === "q") {
-    context.stack.push(cloneImageGraphicsState(state));
+    pushGraphicsState(context, cloneImageGraphicsState(state));
     return;
   }
   if (operator === "Q") {
@@ -500,7 +583,7 @@ function executeImageOperator(operator, context) {
     return;
   }
   if (operator === "BMC" || operator === "BDC") {
-    state.markedContent.push(readMarkedContent(operands, operator, context.options));
+    pushMarkedContent(context, readMarkedContent(operands, operator, context.options));
     return;
   }
   if (operator === "EMC") {
@@ -525,6 +608,7 @@ function emitImageDraw(context) {
   if (!name || image?.subtype !== "Image") {
     return;
   }
+  consumeContentStreamOutput(context);
 
   const points = [
     transformPoint(context.state.ctm, 0, 0),
@@ -581,7 +665,7 @@ function executeOperator(operator, context) {
   const { operands, state } = context;
 
   if (operator === "q") {
-    context.stack.push(cloneState(state));
+    pushGraphicsState(context, cloneState(state));
     return;
   }
   if (operator === "Q") {
@@ -594,7 +678,7 @@ function executeOperator(operator, context) {
     return;
   }
   if (operator === "BMC" || operator === "BDC") {
-    state.markedContent.push(readMarkedContent(operands, operator, context.options));
+    pushMarkedContent(context, readMarkedContent(operands, operator, context.options));
     return;
   }
   if (operator === "EMC") {
@@ -739,6 +823,7 @@ function emitText(text, context) {
     return;
   }
 
+  consumeContentStreamOutput(context, text.length);
   const position = currentTextPosition(context.state);
   const metrics = measureText(context.state, text, position);
   const direction = textDirectionFromContent(context.state, text);
@@ -747,7 +832,17 @@ function emitText(text, context) {
   const mergeKey = currentMergeKey(context);
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
-    appendInferredInterSpanSpace(lastLine, text, context.state, position, metrics, confidence, structure, direction);
+    appendInferredInterSpanSpace(
+      context,
+      lastLine,
+      text,
+      context.state,
+      position,
+      metrics,
+      confidence,
+      structure,
+      direction
+    );
     const span = createSpan(text, context.state, position, metrics, confidence, structure, direction);
     lastLine.text += text;
     lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
@@ -825,6 +920,7 @@ function emitSyntheticSpace(context, width) {
   const mergeKey = currentMergeKey(context);
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
+    consumeContentStreamOutput(context);
     const span = createSpan(" ", context.state, position, metrics, confidence, structure, direction);
     lastLine.text += " ";
     lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
@@ -838,11 +934,22 @@ function emitSyntheticSpace(context, width) {
   advanceTextPositionBy(context.state, width);
 }
 
-function appendInferredInterSpanSpace(line, text, state, position, metrics, confidence, structure, direction) {
+function appendInferredInterSpanSpace(
+  context,
+  line,
+  text,
+  state,
+  position,
+  metrics,
+  confidence,
+  structure,
+  direction
+) {
   if (!shouldInferInterSpanSpace(line, text, state, position, metrics)) {
     return;
   }
 
+  consumeContentStreamOutput(context);
   const width = inferredSpaceWidth(line, position, metrics.fontSize);
   const x = Math.max(line.x, Math.min(position.x, line.x + line.width));
   const spaceMetrics = {

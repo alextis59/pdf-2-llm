@@ -16,6 +16,8 @@ const result = await convertPdfToMarkdown(bytes, {
     maxObjects: 100000,
     maxDepth: 100,
     maxCMapMappings: 65_536,
+    maxContentStreamOperations: 1_000_000,
+    maxContentStreamOutputs: 1_000_000,
     maxImagePixels: 100_000_000,
     timeoutMs: 120000
   }
@@ -33,6 +35,8 @@ const result = await convertPdfToMarkdown(bytes, {
 | `maxObjects` | `100000` | XRef/object count during parsing and repair. |
 | `maxDepth` | `100` | PDF value parsing, page tree, outlines, and structure traversal. |
 | `maxCMapMappings` | `65536` | Per-range and aggregate ToUnicode CMap mappings. |
+| `maxContentStreamOperations` | `1000000` | Operator tokens interpreted per document extraction channel. |
+| `maxContentStreamOutputs` | `1000000` | Text units and path/image records expanded per document extraction channel. |
 | `maxImagePixels` | `100000000` | Raster page and thumbnail planning. |
 | `timeoutMs` | `120000` | Conversion checkpoints. |
 
@@ -151,6 +155,25 @@ pdf.stream.total_decoded_too_large
 ```
 
 This blocks fallback extraction and returns empty Markdown.
+
+### Content stream work limits
+
+`maxContentStreamOperations` caps operator tokens interpreted across the
+document for each text, ruling-line, and image extraction channel.
+`maxContentStreamOutputs` caps decoded text code units plus stored/emitted path
+and image records before large output arrays are constructed. Content stream
+tokens are consumed incrementally instead of first materializing the full token
+list.
+
+The existing `maxDepth` value also applies to content stream graphics-state and
+marked-content stacks. Limit failures block extraction and use one of these
+parser warning detail codes:
+
+```txt
+pdf.content_stream.operation_limit_exceeded
+pdf.content_stream.output_limit_exceeded
+pdf.content_stream.depth_limit_exceeded
+```
 
 ### `maxObjects`
 
@@ -292,6 +315,8 @@ Some invalid security values throw `RangeError` before conversion starts:
 | `maxTotalDecodedStreamBytes` | Non-negative integer. |
 | `maxPages` | Non-negative integer. |
 | `maxDepth` | Non-negative integer. |
+| `maxContentStreamOperations` | Non-negative integer. |
+| `maxContentStreamOutputs` | Non-negative integer. |
 | `timeoutMs` | Non-negative finite number. |
 | `maxImagePixels` | Positive finite number when raster planning is created. |
 
@@ -310,6 +335,8 @@ const uploadResult = await convertPdfToMarkdown(bytes, {
     maxPages: 250,
     maxObjects: 25000,
     maxDepth: 50,
+    maxContentStreamOperations: 250_000,
+    maxContentStreamOutputs: 250_000,
     maxImagePixels: 25_000_000,
     timeoutMs: 30_000
   }
@@ -350,7 +377,8 @@ The focused tests cover:
 - `maxBytes` structured warnings.
 - `maxPages` blocking before extraction.
 - `maxDecodedStreamBytes`, `maxTotalDecodedStreamBytes`, `maxObjects`,
-  `maxDepth`, and `maxCMapMappings` parser failures.
+  `maxDepth`, `maxCMapMappings`, `maxContentStreamOperations`, and
+  `maxContentStreamOutputs` parser failures.
 - `maxImagePixels` page and thumbnail skips.
 - Abort and timeout thrown errors.
 - Malicious fixture regressions for deep page trees, object floods, compressed

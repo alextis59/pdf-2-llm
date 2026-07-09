@@ -105,6 +105,61 @@ test("converter validates maxCMapMappings", async () => {
   );
 });
 
+test("converter validates content stream work limits", async () => {
+  const bytes = await readFile(fixturePath);
+
+  await assert.rejects(
+    () => convertPdfToMarkdown(bytes, { security: { maxContentStreamOperations: -1 } }),
+    (error) =>
+      error instanceof RangeError &&
+      error.message === "security.maxContentStreamOperations must be a non-negative integer"
+  );
+  await assert.rejects(
+    () => convertPdfToMarkdown(bytes, { security: { maxContentStreamOutputs: -1 } }),
+    (error) =>
+      error instanceof RangeError &&
+      error.message === "security.maxContentStreamOutputs must be a non-negative integer"
+  );
+});
+
+test("converter reports content stream operation limits without expanding output", async () => {
+  const bytes = await readFile(fixturePath);
+  const result = await convertPdfToMarkdown(bytes, {
+    ocr: { enabled: false },
+    security: { maxContentStreamOperations: 0 }
+  });
+  const parseFailure = result.warnings.find(
+    (warning) => warning.code === warningCodes.PdfParseFailed
+  );
+
+  assert.equal(parseFailure?.details.code, "pdf.content_stream.operation_limit_exceeded");
+  assert.equal(parseFailure?.details.limit, 0);
+  assert.equal(parseFailure?.details.actual, 1);
+  assert.equal(parseFailure?.details.extractor, "text");
+  assert.equal(result.diagnostics.options.maxContentStreamOperations, 0);
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.markdown, "");
+});
+
+test("converter reports content stream output limits before glyph expansion", async () => {
+  const bytes = await readFile(fixturePath);
+  const result = await convertPdfToMarkdown(bytes, {
+    ocr: { enabled: false },
+    security: { maxContentStreamOutputs: 0 }
+  });
+  const parseFailure = result.warnings.find(
+    (warning) => warning.code === warningCodes.PdfParseFailed
+  );
+
+  assert.equal(parseFailure?.details.code, "pdf.content_stream.output_limit_exceeded");
+  assert.equal(parseFailure?.details.limit, 0);
+  assert.ok(parseFailure?.details.actual > 0);
+  assert.equal(parseFailure?.details.extractor, "text");
+  assert.equal(result.diagnostics.options.maxContentStreamOutputs, 0);
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(result.markdown, "");
+});
+
 test("converter enforces maxImagePixels for raster page targets", async () => {
   const bytes = await readFile(fixturePath);
   const result = await convertPdfToMarkdown(bytes, {

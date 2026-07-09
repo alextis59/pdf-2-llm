@@ -21,8 +21,14 @@ export function extractImageDraws(bytes, { document = null } = {}) {
   return extractDocumentContent(bytes, { document }).imageDraws;
 }
 
-export function extractDocumentContent(bytes, { document = null } = {}) {
-  return document ? extractParsedDocumentContent(document) : extractScannedStreamContent(bytes);
+export function extractDocumentContent(
+  bytes,
+  { document = null, contentStreamLimits = null } = {}
+) {
+  const contentStreamBudgets = createContentStreamBudgets();
+  return document
+    ? extractParsedDocumentContent(document, { contentStreamBudgets, contentStreamLimits })
+    : extractScannedStreamContent(bytes, { contentStreamBudgets, contentStreamLimits });
 }
 
 function findStreamTextsByScan(bytes) {
@@ -35,17 +41,22 @@ function findStreamTextsByScan(bytes) {
   return streamTexts;
 }
 
-function extractScannedStreamContent(bytes) {
+function extractScannedStreamContent(bytes, { contentStreamBudgets, contentStreamLimits }) {
   const content = createEmptyExtractedContent();
   const streamTexts = findStreamTextsByScan(bytes);
   for (let streamIndex = 0; streamIndex < streamTexts.length; streamIndex += 1) {
-    appendContentStreamExtraction(content, streamTexts[streamIndex], { streamIndex });
+    appendContentStreamExtraction(
+      content,
+      streamTexts[streamIndex],
+      { streamIndex },
+      { contentStreamBudgets, contentStreamLimits }
+    );
   }
   content.rulingLines = mergeRulingLines(content.rulingLines);
   return content;
 }
 
-function extractParsedDocumentContent(document) {
+function extractParsedDocumentContent(document, { contentStreamBudgets, contentStreamLimits }) {
   const content = createEmptyExtractedContent();
   if (document.pages?.length > 0) {
     const structureByPage = structureSignalsByPage(document.structure);
@@ -53,12 +64,17 @@ function extractParsedDocumentContent(document) {
       const structureByMcid = structureByPage.get(page.pageIndex) ?? new Map();
       for (let streamIndex = 0; streamIndex < page.contentStreams.length; streamIndex += 1) {
         const stream = page.contentStreams[streamIndex];
-        appendContentStreamExtraction(content, stream.text, {
-          pageIndex: page.pageIndex,
-          resources: page.resources,
-          streamIndex,
-          structureByMcid
-        });
+        appendContentStreamExtraction(
+          content,
+          stream.text,
+          {
+            pageIndex: page.pageIndex,
+            resources: page.resources,
+            streamIndex,
+            structureByMcid
+          },
+          { contentStreamBudgets, contentStreamLimits }
+        );
       }
     }
     content.rulingLines = mergeRulingLines(content.rulingLines);
@@ -66,7 +82,12 @@ function extractParsedDocumentContent(document) {
   }
 
   for (let streamIndex = 0; streamIndex < document.streams.length; streamIndex += 1) {
-    appendContentStreamExtraction(content, document.streams[streamIndex].text, { streamIndex });
+    appendContentStreamExtraction(
+      content,
+      document.streams[streamIndex].text,
+      { streamIndex },
+      { contentStreamBudgets, contentStreamLimits }
+    );
   }
   content.rulingLines = mergeRulingLines(content.rulingLines);
   return content;
@@ -80,15 +101,42 @@ function createEmptyExtractedContent() {
   };
 }
 
-function appendContentStreamExtraction(content, streamText, options) {
-  content.textLines.push(...extractContentStreamTextLines(streamText, options));
+function appendContentStreamExtraction(
+  content,
+  streamText,
+  options,
+  { contentStreamBudgets, contentStreamLimits }
+) {
+  content.textLines.push(
+    ...extractContentStreamTextLines(streamText, {
+      ...options,
+      contentStreamBudget: contentStreamBudgets.text,
+      contentStreamLimits
+    })
+  );
   content.rulingLines.push(
     ...extractContentStreamRulingLines(streamText, {
       ...options,
+      contentStreamBudget: contentStreamBudgets.ruling,
+      contentStreamLimits,
       mergeRulingLines: false
     })
   );
-  content.imageDraws.push(...extractContentStreamImageDraws(streamText, options));
+  content.imageDraws.push(
+    ...extractContentStreamImageDraws(streamText, {
+      ...options,
+      contentStreamBudget: contentStreamBudgets.image,
+      contentStreamLimits
+    })
+  );
+}
+
+function createContentStreamBudgets() {
+  return {
+    text: { operations: 0, outputs: 0 },
+    ruling: { operations: 0, outputs: 0 },
+    image: { operations: 0, outputs: 0 }
+  };
 }
 
 function structureSignalsByPage(structure) {

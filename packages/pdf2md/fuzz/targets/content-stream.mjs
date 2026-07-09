@@ -1,6 +1,7 @@
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 import {
+  PdfContentStreamLimitError,
   extractContentStreamTextLines,
   tokenizeContentStream
 } from "../../src/content-stream.mjs";
@@ -23,6 +24,7 @@ export function runContentStreamFuzz({ iterations = 200, seed = 0xc0ffee } = {})
   let tokenized = 0;
   let interpreted = 0;
   let emittedLines = 0;
+  const limitBoundaries = exerciseLimitBoundaries();
 
   for (let index = 0; index < iterations; index += 1) {
     const stream = randomContentStream(rng);
@@ -38,8 +40,44 @@ export function runContentStreamFuzz({ iterations = 200, seed = 0xc0ffee } = {})
     iterations,
     tokenized,
     interpreted,
-    emittedLines
+    emittedLines,
+    limitBoundaries
   };
+}
+
+function exerciseLimitBoundaries() {
+  extractContentStreamTextLines("q q Q Q", {
+    contentStreamLimits: { maxOperations: 4, maxDepth: 2 }
+  });
+  expectContentStreamLimit("pdf.content_stream.operation_limit_exceeded", () =>
+    extractContentStreamTextLines("q q Q Q q", {
+      contentStreamLimits: { maxOperations: 4, maxDepth: 2 }
+    })
+  );
+  expectContentStreamLimit("pdf.content_stream.depth_limit_exceeded", () =>
+    extractContentStreamTextLines("q q q", {
+      contentStreamLimits: { maxDepth: 2 }
+    })
+  );
+  expectContentStreamLimit("pdf.content_stream.output_limit_exceeded", () =>
+    extractContentStreamTextLines("BT (ABC) Tj ET", {
+      resources,
+      contentStreamLimits: { maxOutputs: 2 }
+    })
+  );
+  return 3;
+}
+
+function expectContentStreamLimit(code, callback) {
+  try {
+    callback();
+  } catch (error) {
+    if (error instanceof PdfContentStreamLimitError && error.code === code) {
+      return;
+    }
+    throw error;
+  }
+  throw new Error(`Expected content stream fuzz boundary to reject with ${code}`);
 }
 
 function readOption(name) {
