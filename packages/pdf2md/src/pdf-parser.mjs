@@ -62,6 +62,12 @@ export class ByteReader {
 export function parsePdfDocument(bytes, options = {}) {
   const reader = new ByteReader(bytes, options);
   const maxDecodedStreamBytes = options.maxDecodedStreamBytes ?? options.maxBytes ?? 50 * 1024 * 1024;
+  const maxTotalDecodedStreamBytes = readMaxTotalDecodedStreamBytes(options.maxTotalDecodedStreamBytes);
+  const decodedStreamBudget = {
+    max: maxTotalDecodedStreamBytes,
+    used: 0,
+    byObject: new Map()
+  };
   const maxObjects = readMaxObjects(options.maxObjects);
   const maxDepth = readMaxDepth(options.maxDepth);
   const maxCMapMappings = readMaxCMapMappings(options.maxCMapMappings);
@@ -71,6 +77,7 @@ export function parsePdfDocument(bytes, options = {}) {
   throwIfParserTimedOut(options.deadline);
   const xref = readXrefData(source, reader.bytes, {
     maxDecodedStreamBytes,
+    decodedStreamBudget,
     maxObjects,
     maxDepth,
     deadline: options.deadline,
@@ -80,6 +87,7 @@ export function parsePdfDocument(bytes, options = {}) {
   enforceObjectLimit(entries.length, maxObjects);
   const encryption = createEncryptionContext(trailer, entries, source, reader.bytes, {
     maxDecodedStreamBytes,
+    decodedStreamBudget,
     mode,
     password: options.password
   });
@@ -93,6 +101,7 @@ export function parsePdfDocument(bytes, options = {}) {
     }
     const object = parseIndirectObjectAt(source, reader.bytes, entry.offset, {
       maxDecodedStreamBytes,
+      decodedStreamBudget,
       maxDepth,
       mode,
       encryption,
@@ -132,6 +141,7 @@ export function parsePdfDocument(bytes, options = {}) {
     outlines,
     structure,
     pages,
+    decodedStreamBytes: decodedStreamBudget.used,
     getObject
   };
 }
@@ -195,6 +205,7 @@ function resolveEncryptionDictionary(encryptValue, entries, source, bytes, optio
 
   const object = parseIndirectObjectAt(source, bytes, entry.offset, {
     maxDecodedStreamBytes: options.maxDecodedStreamBytes,
+    decodedStreamBudget: options.decodedStreamBudget,
     mode: options.mode
   });
   if (!isDict(object.value)) {
@@ -431,6 +442,7 @@ function scanObjectsForRepair(source, bytes, options, cause) {
     try {
       const object = parseIndirectObjectAt(source, bytes, offset, {
         maxDecodedStreamBytes: options.maxDecodedStreamBytes,
+        decodedStreamBudget: options.decodedStreamBudget,
         maxDepth: options.maxDepth,
         mode: options.mode
       });
@@ -507,6 +519,14 @@ function readMaxObjects(maxObjects) {
   return value;
 }
 
+function readMaxTotalDecodedStreamBytes(maxTotalDecodedStreamBytes) {
+  const value = maxTotalDecodedStreamBytes ?? 200 * 1024 * 1024;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new RangeError("maxTotalDecodedStreamBytes must be a non-negative integer");
+  }
+  return value;
+}
+
 function readMaxDepth(maxDepth) {
   const value = maxDepth ?? 100;
   if (!Number.isInteger(value) || value < 0) {
@@ -550,7 +570,9 @@ function isRepairFatalError(error) {
   return (
     error instanceof DOMException ||
     (error instanceof PdfSyntaxError &&
-      (error.code === "pdf.object_limit_exceeded" || error.code === "pdf.depth_limit_exceeded"))
+      (error.code === "pdf.object_limit_exceeded" ||
+        error.code === "pdf.depth_limit_exceeded" ||
+        error.code === "pdf.stream.total_decoded_too_large"))
   );
 }
 
@@ -873,20 +895,59 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
       options.encryption && shouldDecryptStream(parsedObject.value)
         ? options.encryption.decryptStreamBytes(objectNumber, generationNumber, streamBytes)
         : streamBytes;
+    const maxDecodedStreamBytes = options.maxDecodedStreamBytes ?? 50 * 1024 * 1024;
+    const maxDecodedBytesForObject = remainingDecodedBytesForObject(
+      options.decodedStreamBudget,
+      objectNumber,
+      generationNumber
+    );
+    const effectiveMaxDecodedStreamBytes = Math.min(
+      maxDecodedStreamBytes,
+      maxDecodedBytesForObject
+    );
+    const boundedDecoderMaxBytes = Math.max(1, effectiveMaxDecodedStreamBytes);
     let decoded;
     try {
       decoded = decodeStreamBytes(decodedInputBytes, parsedObject.value, {
-        maxBytes: options.maxDecodedStreamBytes ?? 50 * 1024 * 1024
+        maxBytes: boundedDecoderMaxBytes
       });
     } catch (error) {
       if (error instanceof PdfStreamDecodeError) {
-        throw new PdfSyntaxError(error.message, {
+        const totalLimitExceeded =
+          error.code === "pdf.stream.decoded_too_large" &&
+          maxDecodedBytesForObject < maxDecodedStreamBytes;
+        throw new PdfSyntaxError(
+          totalLimitExceeded ? "PDF decoded streams exceed document byte limit." : error.message,
+          {
           offset: error.offset ?? streamStart,
-          code: error.code
-        });
+          code: totalLimitExceeded ? "pdf.stream.total_decoded_too_large" : error.code
+          }
+        );
       }
       throw error;
     }
+    if (decoded.bytes.byteLength > effectiveMaxDecodedStreamBytes) {
+      const totalLimitExceeded = maxDecodedBytesForObject < maxDecodedStreamBytes;
+      throw new PdfSyntaxError(
+        totalLimitExceeded
+          ? "PDF decoded streams exceed document byte limit."
+          : "Decoded stream output exceeds byte limit.",
+        {
+          offset: streamStart,
+          code: totalLimitExceeded
+            ? "pdf.stream.total_decoded_too_large"
+            : "pdf.stream.decoded_too_large"
+        }
+      );
+    }
+    consumeDecodedStreamBudget(
+      options.decodedStreamBudget,
+      objectNumber,
+      generationNumber,
+      decoded.bytes.byteLength,
+      streamStart
+    );
+    let decodedText;
     stream = {
       objectNumber,
       generationNumber,
@@ -900,7 +961,10 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
       filters: decoded.filters,
       decodeParms: decoded.decodeParms,
       skippedFilters: decoded.skippedFilters,
-      text: bytesToLatin1(decoded.bytes)
+      get text() {
+        decodedText ??= bytesToLatin1(decoded.bytes);
+        return decodedText;
+      }
     };
 
     const endstreamOffset = source.indexOf("endstream", streamEnd);
@@ -929,6 +993,32 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
     offset,
     endOffset: endObjectOffset + "endobj".length
   };
+}
+
+function consumeDecodedStreamBudget(budget, objectNumber, generationNumber, decodedBytes, offset) {
+  if (!budget) {
+    return;
+  }
+  const key = objectKey(objectNumber, generationNumber);
+  const previousBytes = budget.byObject.get(key) ?? 0;
+  const retainedBytes = Math.max(previousBytes, decodedBytes);
+  const additionalBytes = retainedBytes - previousBytes;
+  if (additionalBytes > budget.max - budget.used) {
+    throw new PdfSyntaxError("PDF decoded streams exceed document byte limit.", {
+      offset,
+      code: "pdf.stream.total_decoded_too_large"
+    });
+  }
+  budget.byObject.set(key, retainedBytes);
+  budget.used += additionalBytes;
+}
+
+function remainingDecodedBytesForObject(budget, objectNumber, generationNumber) {
+  if (!budget) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const previousBytes = budget.byObject.get(objectKey(objectNumber, generationNumber)) ?? 0;
+  return budget.max - budget.used + previousBytes;
 }
 
 function parseIndirectObjectHeaderAndValue(source, offset, options = {}) {

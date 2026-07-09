@@ -58,6 +58,7 @@ test("parsePdfDocument resolves classic xref entries, trailer, objects, and stre
   assert.equal(document.xrefEntries.length, 6);
   assert.equal(document.objects.size, 5);
   assert.equal(document.streams.length, 1);
+  assert.equal(document.decodedStreamBytes, document.streams[0].decodedLength);
   assert.equal(document.pages.length, 1);
   assert.equal(document.pages[0].widthPt, 612);
   assert.equal(document.pages[0].heightPt, 792);
@@ -256,6 +257,21 @@ test("parsePdfDocument decodes Flate content streams for text extraction", async
   assert.equal(result.diagnostics.extraction.mode, "parsed-content-streams");
 });
 
+test("parsePdfDocument permits an empty Flate stream at zero decoded-byte budgets", () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+    streamObject(deflateSync(Buffer.alloc(0)), "/Filter /FlateDecode")
+  ]);
+  const document = parsePdfDocument(bytes, {
+    maxDecodedStreamBytes: 0,
+    maxTotalDecodedStreamBytes: 0
+  });
+
+  assert.equal(document.streams[0].decodedLength, 0);
+  assert.equal(document.decodedStreamBytes, 0);
+});
+
 test("parsePdfDocument resolves indirect stream Length before slicing Flate bytes", async () => {
   const content = "% endstream marker in deflate bytes\nBT /F1 22 Tf 20 200 Td (Indirect Length Fixture) Tj ET\n";
   const compressed = deflateSync(Buffer.from(content, "latin1"), { level: 0 });
@@ -304,6 +320,10 @@ test("parsePdfDocument records metadata for raster image XObject filters", async
   assert.deepEqual(
     Object.values(images).map((image) => image.skippedFilters[0].reason),
     ["metadata-only", "metadata-only", "metadata-only", "metadata-only"]
+  );
+  assert.equal(
+    typeof Object.getOwnPropertyDescriptor(document.getObject(6).stream, "text")?.get,
+    "function"
   );
   assert.equal(result.markdown, "# Image Metadata Fixture\n");
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
@@ -725,6 +745,7 @@ test("public converter uses parsed content streams for generated PDFs", async ()
   assert.equal(result.diagnostics.extraction.parser.mode, "classic-xref");
   assert.equal(result.diagnostics.extraction.parser.objects, 5);
   assert.equal(result.diagnostics.extraction.parser.streams, 1);
+  assert.ok(result.diagnostics.extraction.parser.decodedStreamBytes > 0);
   assert.equal(result.diagnostics.extraction.parser.pages, 1);
   assert.equal(result.ir.pages.length, 1);
   assert.equal(result.ir.pages[0].widthPt, 612);

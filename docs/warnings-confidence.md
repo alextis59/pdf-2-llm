@@ -89,8 +89,8 @@ Treat these warnings as hard blockers for unattended ingestion:
 - `security.unsupported_encryption`
 - `pdf.parse_failed` when `details.code` is a security parser code such as
   `pdf.input_too_large`, `pdf.stream.decoded_too_large`,
-  `pdf.object_limit_exceeded`, `pdf.depth_limit_exceeded`, or
-  `pdf.cmap_mapping_limit_exceeded`
+  `pdf.stream.total_decoded_too_large`, `pdf.object_limit_exceeded`,
+  `pdf.depth_limit_exceeded`, or `pdf.cmap_mapping_limit_exceeded`
 
 Treat these warnings as review signals:
 
@@ -402,6 +402,7 @@ function assessConversion(result) {
       [
         "pdf.input_too_large",
         "pdf.stream.decoded_too_large",
+        "pdf.stream.total_decoded_too_large",
         "pdf.object_limit_exceeded",
         "pdf.depth_limit_exceeded",
         "pdf.cmap_mapping_limit_exceeded"

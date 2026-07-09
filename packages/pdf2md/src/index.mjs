@@ -41,6 +41,7 @@ import { bytesToAscii, now, readFileBytes, sha256Hex } from "./runtime.mjs";
 const defaultSecurityLimits = Object.freeze({
   maxBytes: 100 * 1024 * 1024,
   maxDecodedStreamBytes: 50 * 1024 * 1024,
+  maxTotalDecodedStreamBytes: 200 * 1024 * 1024,
   maxPages: 5000,
   maxObjects: 100000,
   maxDepth: 100,
@@ -96,6 +97,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     const parserOptions = {
       maxBytes: security.maxBytes,
       maxDecodedStreamBytes: security.maxDecodedStreamBytes,
+      maxTotalDecodedStreamBytes: security.maxTotalDecodedStreamBytes,
       maxObjects: security.maxObjects,
       maxDepth: security.maxDepth,
       maxCMapMappings: security.maxCMapMappings,
@@ -402,6 +404,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
               mode: pdfDocument.xrefMode,
               objects: pdfDocument.objects.size,
               streams: pdfDocument.streams.length,
+              decodedStreamBytes: pdfDocument.decodedStreamBytes,
               pages: pdfDocument.pages.length,
               startXref: pdfDocument.startXref,
               repaired: pdfDocument.repaired,
@@ -966,6 +969,7 @@ function summarizeOptions(options, rasterPlan, ocrAdapter, security) {
     rasterThumbnailDpi: rasterPlan.thumbnailDpi,
     maxBytes: security.maxBytes,
     maxDecodedStreamBytes: security.maxDecodedStreamBytes,
+    maxTotalDecodedStreamBytes: security.maxTotalDecodedStreamBytes,
     maxPages: security.maxPages,
     maxObjects: security.maxObjects,
     maxDepth: security.maxDepth,
@@ -1173,6 +1177,7 @@ function isSecurityLimitParseWarning(warning) {
   return (
     warning?.details?.code === "pdf.input_too_large" ||
     warning?.details?.code === "pdf.stream.decoded_too_large" ||
+    warning?.details?.code === "pdf.stream.total_decoded_too_large" ||
     warning?.details?.code === "pdf.object_limit_exceeded" ||
     warning?.details?.code === "pdf.depth_limit_exceeded" ||
     warning?.details?.code === "pdf.cmap_mapping_limit_exceeded" ||
@@ -1216,6 +1221,12 @@ function throwIfAborted(signal) {
 function validateSecurityLimits(security) {
   if (!Number.isInteger(security.maxDecodedStreamBytes) || security.maxDecodedStreamBytes < 0) {
     throw new RangeError("security.maxDecodedStreamBytes must be a non-negative integer");
+  }
+  if (
+    !Number.isInteger(security.maxTotalDecodedStreamBytes) ||
+    security.maxTotalDecodedStreamBytes < 0
+  ) {
+    throw new RangeError("security.maxTotalDecodedStreamBytes must be a non-negative integer");
   }
   if (!Number.isInteger(security.maxPages) || security.maxPages < 0) {
     throw new RangeError("security.maxPages must be a non-negative integer");

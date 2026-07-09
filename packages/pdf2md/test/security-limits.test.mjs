@@ -54,6 +54,17 @@ test("converter enforces maxDecodedStreamBytes before fallback extraction", asyn
   assert.equal(result.diagnostics.extraction.textLines, 0);
 });
 
+test("converter validates maxTotalDecodedStreamBytes", async () => {
+  const bytes = await readFile(fixturePath);
+
+  await assert.rejects(
+    () => convertPdfToMarkdown(bytes, { security: { maxTotalDecodedStreamBytes: -1 } }),
+    (error) =>
+      error instanceof RangeError &&
+      error.message === "security.maxTotalDecodedStreamBytes must be a non-negative integer"
+  );
+});
+
 test("converter enforces maxDepth before fallback extraction", async () => {
   const bytes = await readFile(fixturePath);
   const result = await convertPdfToMarkdown(bytes, {

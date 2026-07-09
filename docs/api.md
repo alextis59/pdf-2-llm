@@ -161,6 +161,7 @@ reported as `security.password_required`.
   security?: {
     maxBytes?: number;
     maxDecodedStreamBytes?: number;
+    maxTotalDecodedStreamBytes?: number;
     maxPages?: number;
     maxObjects?: number;
     maxDepth?: number;
@@ -177,6 +178,7 @@ Defaults:
 | --- | ---: |
 | `maxBytes` | `104857600` |
 | `maxDecodedStreamBytes` | `52428800` |
+| `maxTotalDecodedStreamBytes` | `209715200` |
 | `maxPages` | `5000` |
 | `maxObjects` | `100000` |
 | `maxDepth` | `100` |

@@ -11,6 +11,7 @@ const result = await convertPdfToMarkdown(bytes, {
   security: {
     maxBytes: 100 * 1024 * 1024,
     maxDecodedStreamBytes: 50 * 1024 * 1024,
+    maxTotalDecodedStreamBytes: 200 * 1024 * 1024,
     maxPages: 5000,
     maxObjects: 100000,
     maxDepth: 100,
@@ -27,6 +28,7 @@ const result = await convertPdfToMarkdown(bytes, {
 | --- | ---: | --- |
 | `maxBytes` | `104857600` | Input byte length and parser byte reader. |
 | `maxDecodedStreamBytes` | `52428800` | Decoded PDF streams and stream filter expansion. |
+| `maxTotalDecodedStreamBytes` | `209715200` | Retained decoded bytes across all stream objects. |
 | `maxPages` | `5000` | Parsed page count before page extraction. |
 | `maxObjects` | `100000` | XRef/object count during parsing and repair. |
 | `maxDepth` | `100` | PDF value parsing, page tree, outlines, and structure traversal. |
@@ -92,7 +94,7 @@ Security-blocked parsing reports:
 | `security.input_too_large` | Input byte length exceeds `maxBytes`. |
 | `security.page_count_exceeded` | Parsed page count exceeds `maxPages`. |
 | `security.image_pixels_exceeded` | Raster page or thumbnail target exceeds `maxImagePixels`. |
-| `pdf.parse_failed` | Parser stops on a security-related parser error such as decoded stream, object, or depth limits. |
+| `pdf.parse_failed` | Parser stops on a security-related stream, object, depth, or CMap limit. |
 
 Password and encryption security warnings are documented in the API reference,
 but they are separate from resource limits:
@@ -133,6 +135,22 @@ pdf.stream.decoded_too_large
 
 The converter blocks fallback text extraction for this security parse warning
 and returns empty Markdown.
+
+### `maxTotalDecodedStreamBytes`
+
+`maxTotalDecodedStreamBytes` caps cumulative decoded bytes retained across
+distinct stream objects. The remaining document budget is also passed into
+bounded filter decoding, so the stream that crosses the limit cannot first
+allocate its full decoded output. Stream text is decoded lazily; binary image
+streams retain bytes without an automatic Latin-1 string copy.
+
+When exceeded, parser warning details use:
+
+```txt
+pdf.stream.total_decoded_too_large
+```
+
+This blocks fallback extraction and returns empty Markdown.
 
 ### `maxObjects`
 
@@ -271,6 +289,7 @@ Some invalid security values throw `RangeError` before conversion starts:
 | Option | Validation |
 | --- | --- |
 | `maxDecodedStreamBytes` | Non-negative integer. |
+| `maxTotalDecodedStreamBytes` | Non-negative integer. |
 | `maxPages` | Non-negative integer. |
 | `maxDepth` | Non-negative integer. |
 | `timeoutMs` | Non-negative finite number. |
@@ -287,6 +306,7 @@ const uploadResult = await convertPdfToMarkdown(bytes, {
   security: {
     maxBytes: 25 * 1024 * 1024,
     maxDecodedStreamBytes: 10 * 1024 * 1024,
+    maxTotalDecodedStreamBytes: 50 * 1024 * 1024,
     maxPages: 250,
     maxObjects: 25000,
     maxDepth: 50,
@@ -329,8 +349,8 @@ The focused tests cover:
 
 - `maxBytes` structured warnings.
 - `maxPages` blocking before extraction.
-- `maxDecodedStreamBytes`, `maxObjects`, `maxDepth`, and `maxCMapMappings`
-  parser failures.
+- `maxDecodedStreamBytes`, `maxTotalDecodedStreamBytes`, `maxObjects`,
+  `maxDepth`, and `maxCMapMappings` parser failures.
 - `maxImagePixels` page and thumbnail skips.
 - Abort and timeout thrown errors.
 - Malicious fixture regressions for deep page trees, object floods, compressed

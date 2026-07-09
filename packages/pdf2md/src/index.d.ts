@@ -37,6 +37,7 @@ export type ConvertOptions = {
   security?: {
     maxBytes?: number;
     maxDecodedStreamBytes?: number;
+    maxTotalDecodedStreamBytes?: number;
     maxPages?: number;
     maxObjects?: number;
     maxDepth?: number;

@@ -32,6 +32,15 @@ const maliciousFixtures = [
     blocksFallback: true
   },
   {
+    id: "many-stream-expansion",
+    bytes: createManyStreamExpansionPdf(),
+    options: {
+      security: { maxDecodedStreamBytes: 256, maxTotalDecodedStreamBytes: 512 }
+    },
+    expectedCode: "pdf.stream.total_decoded_too_large",
+    blocksFallback: true
+  },
+  {
     id: "cmap-range-expansion",
     bytes: createCMapExpansionPdf(),
     options: { security: { maxCMapMappings: 8 } },
@@ -108,6 +117,15 @@ function createFlateExpansionPdf() {
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 400] /Resources << >> /Contents 4 0 R >>",
     streamObject(compressed, "/Filter /FlateDecode")
+  ]);
+}
+
+function createManyStreamExpansionPdf() {
+  const compressed = deflateSync(Buffer.alloc(128, 0x41));
+  return createPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+    ...Array.from({ length: 8 }, () => streamObject(compressed, "/Filter /FlateDecode"))
   ]);
 }
 
