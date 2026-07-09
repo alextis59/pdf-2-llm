@@ -79,6 +79,12 @@ Performance-sensitive changes need one of:
 - A short not-applicable rationale when the change cannot affect runtime,
   memory, or package size.
 
+`npm run qa:performance-regression:report` always generates fresh text, OCR,
+startup, and long-memory measurements under `.temp/qa/`, compares them with the
+checked-in baselines under `corpus/reports/`, and only then writes the committed
+regression summary. The checker rejects any current/baseline path pair that
+resolves to the same file.
+
 ## Release Readiness
 
 Before claiming that the package can be published or installed:

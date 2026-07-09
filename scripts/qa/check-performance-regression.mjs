@@ -68,6 +68,29 @@ export function createPerformanceRegressionReport(
   };
 }
 
+export function findPerformanceInputSelfComparisons(inputs, repoRoot = process.cwd()) {
+  return [
+    ["text-throughput", "currentText", "baselineText"],
+    ["ocr-throughput", "currentOcr", "baselineOcr"],
+    ["entrypoint-startup", "currentStartup", "baselineStartup"],
+    ["long-memory", "currentMemory", "baselineMemory"]
+  ]
+    .filter(([, currentKey, baselineKey]) => {
+      const currentPath = inputs[currentKey];
+      const baselinePath = inputs[baselineKey];
+      return (
+        typeof currentPath === "string" &&
+        typeof baselinePath === "string" &&
+        path.resolve(repoRoot, currentPath) === path.resolve(repoRoot, baselinePath)
+      );
+    })
+    .map(([profile, currentKey, baselineKey]) => ({
+      profile,
+      current: inputs[currentKey],
+      baseline: inputs[baselineKey]
+    }));
+}
+
 function throughputChecks({ currentReport, baselineReport, profileName, budget }) {
   const checks = [
     profilePassedCheck({
@@ -295,6 +318,14 @@ async function main() {
     currentMemory: readOption("--current-memory") ?? defaultInputs.currentMemory,
     baselineMemory: readOption("--baseline-memory") ?? defaultInputs.baselineMemory
   };
+  const selfComparisons = findPerformanceInputSelfComparisons(inputs, repoRoot);
+  if (selfComparisons.length > 0) {
+    throw new Error(
+      `Current performance inputs must differ from their baselines: ${selfComparisons
+        .map((comparison) => `${comparison.profile} (${comparison.current})`)
+        .join(", ")}`
+    );
+  }
   const budget = {
     minPagesPerSecondRatio: readNumberOption(
       "--min-pages-per-second-ratio",

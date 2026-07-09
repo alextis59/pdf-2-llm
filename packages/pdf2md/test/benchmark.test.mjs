@@ -24,7 +24,8 @@ import {
 } from "../../../scripts/qa/check-model-size.mjs";
 import {
   createPerformanceRegressionReport,
-  evaluatePerformanceRegression
+  evaluatePerformanceRegression,
+  findPerformanceInputSelfComparisons
 } from "../../../scripts/qa/check-performance-regression.mjs";
 import {
   createWasmSizeReport,
@@ -512,6 +513,31 @@ test("performance regression report evaluates throughput startup and memory budg
   assert.equal(report.passed, false);
   assert.equal(report.violations.length, 2);
   assert.equal(report.inputs.currentText, "current.json");
+});
+
+test("performance regression inputs reject current report self-comparisons", () => {
+  assert.deepEqual(
+    findPerformanceInputSelfComparisons(
+      {
+        currentText: ".temp/qa/text.json",
+        baselineText: "corpus/reports/text.json",
+        currentOcr: "corpus/reports/ocr.json",
+        baselineOcr: "corpus/reports/ocr.json",
+        currentStartup: ".temp/qa/startup.json",
+        baselineStartup: "corpus/reports/startup.json",
+        currentMemory: ".temp/qa/memory.json",
+        baselineMemory: "corpus/reports/memory.json"
+      },
+      "/repo"
+    ),
+    [
+      {
+        profile: "ocr-throughput",
+        current: "corpus/reports/ocr.json",
+        baseline: "corpus/reports/ocr.json"
+      }
+    ]
+  );
 });
 
 test("benchmark memory summary reports deltas", () => {

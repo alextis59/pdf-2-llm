@@ -114,7 +114,7 @@
     "qa:paragraph-grouping": "node scripts/qa/check-paragraph-grouping.mjs --report .temp/qa/paragraph-grouping-f1.json",
     "qa:paragraph-grouping:report": "node scripts/qa/check-paragraph-grouping.mjs --report corpus/reports/paragraph-grouping-f1.json",
     "qa:performance-regression": "node scripts/qa/check-performance-regression.mjs --report .temp/qa/performance-regression.json",
-    "qa:performance-regression:report": "node scripts/qa/check-performance-regression.mjs --current-text corpus/reports/text-throughput-benchmark.json --current-ocr corpus/reports/ocr-throughput-benchmark.json --current-startup corpus/reports/startup-benchmark.json --current-memory corpus/reports/long-memory-profile.json --report corpus/reports/performance-regression.json",
+    "qa:performance-regression:report": "npm run qa:benchmark:text-throughput && npm run qa:benchmark:ocr-throughput && npm run qa:benchmark:startup && npm run qa:benchmark:long-memory && node scripts/qa/check-performance-regression.mjs --report corpus/reports/performance-regression.json",
     "qa:reading-order": "node scripts/qa/compare-oracles.mjs --reading-order-gated",
     "qa:rendered-html": "node scripts/qa/check-rendered-html.mjs --rendered-html-gated",
     "qa:running-content": "node scripts/qa/compare-running-content.mjs --gate layout-v1",
