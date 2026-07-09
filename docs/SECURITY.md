@@ -72,6 +72,12 @@ extraction channel; `maxDepth` also caps graphics-state and marked-content
 stacks. Limit failures return `pdf.parse_failed` with a specific
 `pdf.content_stream.*_limit_exceeded` detail code.
 
+Inline-image data is consumed as one binary token inside the already bounded
+decoded content stream. Exact unfiltered byte lengths are used when the image
+dictionary supplies enough information; other payloads require a delimited
+`EI` operator, and unterminated payloads consume the remainder of the stream
+instead of being reinterpreted as text or graphics operators.
+
 ## Passwords And Encryption
 
 - Passwords may be supplied as strings or callbacks for encrypted PDFs.

@@ -163,7 +163,9 @@ document for each text, ruling-line, and image extraction channel.
 `maxContentStreamOutputs` caps decoded text code units plus stored/emitted path
 and image records before large output arrays are constructed. Content stream
 tokens are consumed incrementally instead of first materializing the full token
-list.
+list. Inline-image binary payloads are kept out of the operator stream and stay
+bounded by the decoded-stream byte limits; an unterminated payload is skipped
+through the end of its content stream.
 
 The existing `maxDepth` value also applies to content stream graphics-state and
 marked-content stacks. Limit failures block extraction and use one of these

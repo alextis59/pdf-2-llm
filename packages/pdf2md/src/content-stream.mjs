@@ -35,6 +35,11 @@ export function extractContentStreamTextLines(streamText, options = {}) {
   });
 
   for (const token of iterateContentStreamTokens(streamText)) {
+    if (token.type === "inline-image") {
+      consumeContentStreamOperation(context);
+      operands.length = 0;
+      continue;
+    }
     if (token.type !== "word") {
       operands.push(token);
       continue;
@@ -60,6 +65,11 @@ export function extractContentStreamRulingLines(streamText, options = {}) {
   });
 
   for (const token of iterateContentStreamTokens(streamText)) {
+    if (token.type === "inline-image") {
+      consumeContentStreamOperation(context);
+      operands.length = 0;
+      continue;
+    }
     if (token.type !== "word") {
       operands.push(token);
       continue;
@@ -85,6 +95,12 @@ export function extractContentStreamImageDraws(streamText, options = {}) {
   });
 
   for (const token of iterateContentStreamTokens(streamText)) {
+    if (token.type === "inline-image") {
+      consumeContentStreamOperation(context);
+      emitInlineImageDraw(token, context);
+      operands.length = 0;
+      continue;
+    }
     if (token.type !== "word") {
       operands.push(token);
       continue;
@@ -195,6 +211,12 @@ function* iterateContentStreamTokens(streamText) {
     const word = readWord(source, offset);
     if (word.offset === offset) {
       offset += 1;
+      continue;
+    }
+    if (word.value.value === "BI") {
+      const inlineImage = readInlineImage(source, word.offset);
+      yield inlineImage.value;
+      offset = inlineImage.offset;
       continue;
     }
     yield word.value;
@@ -610,18 +632,7 @@ function emitImageDraw(context) {
   }
   consumeContentStreamOutput(context);
 
-  const points = [
-    transformPoint(context.state.ctm, 0, 0),
-    transformPoint(context.state.ctm, 1, 0),
-    transformPoint(context.state.ctm, 1, 1),
-    transformPoint(context.state.ctm, 0, 1)
-  ];
-  const xs = points.map((point) => point.x);
-  const ys = points.map((point) => point.y);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  const width = Math.max(...xs) - x;
-  const height = Math.max(...ys) - y;
+  const geometry = imageDrawGeometry(context.state.ctm);
   const structure = currentStructureSignal(context.state);
   const pixels =
     Number.isFinite(image.width) && Number.isFinite(image.height)
@@ -632,11 +643,7 @@ function emitImageDraw(context) {
     type: "image-draw",
     name,
     objectNumber: image.objectNumber ?? null,
-    x: normalizeCoordinate(x),
-    y: normalizeCoordinate(y),
-    width: normalizeCoordinate(width),
-    height: normalizeCoordinate(height),
-    area: normalizeCoordinate(polygonArea(points)),
+    ...geometry,
     imageWidth: image.width ?? null,
     imageHeight: image.height ?? null,
     imagePixels: pixels,
@@ -645,6 +652,56 @@ function emitImageDraw(context) {
     source: "xobject-do",
     ...markedContentProperties(structure)
   });
+}
+
+function emitInlineImageDraw(token, context) {
+  if (!token.complete) {
+    return;
+  }
+  consumeContentStreamOutput(context);
+
+  const geometry = imageDrawGeometry(context.state.ctm);
+  const imageWidth = inlineImageNumber(token.entries, "Width", "W");
+  const imageHeight = inlineImageNumber(token.entries, "Height", "H");
+  const imagePixels =
+    Number.isFinite(imageWidth) && Number.isFinite(imageHeight)
+      ? imageWidth * imageHeight
+      : null;
+  const structure = currentStructureSignal(context.state);
+
+  context.images.push({
+    type: "image-draw",
+    name: "inline-image",
+    objectNumber: null,
+    ...geometry,
+    imageWidth,
+    imageHeight,
+    imagePixels,
+    pageIndex: context.options.pageIndex ?? null,
+    streamIndex: context.options.streamIndex ?? null,
+    source: "inline-image",
+    ...markedContentProperties(structure)
+  });
+}
+
+function imageDrawGeometry(ctm) {
+  const points = [
+    transformPoint(ctm, 0, 0),
+    transformPoint(ctm, 1, 0),
+    transformPoint(ctm, 1, 1),
+    transformPoint(ctm, 0, 1)
+  ];
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return {
+    x: normalizeCoordinate(x),
+    y: normalizeCoordinate(y),
+    width: normalizeCoordinate(Math.max(...xs) - x),
+    height: normalizeCoordinate(Math.max(...ys) - y),
+    area: normalizeCoordinate(polygonArea(points))
+  };
 }
 
 function createInitialImageState(resources = null) {
@@ -1429,6 +1486,181 @@ function dictionaryNumber(token, key) {
 
 function decodeStringToken(token, font) {
   return decodePdfStringWithFont(token, font);
+}
+
+function readInlineImage(source, startOffset) {
+  const entries = {};
+  let offset = startOffset;
+
+  while (offset < source.length) {
+    offset = skipWhitespaceAndComments(source, offset);
+    const marker = readWord(source, offset);
+    if (marker.value.value === "ID") {
+      const separator = consumeInlineImageDataSeparator(source, marker.offset);
+      const dataStart = separator.offset;
+      const end = findInlineImageEnd(source, dataStart, entries);
+      return {
+        value: {
+          type: "inline-image",
+          entries,
+          dataLength: end.dataEnd - dataStart,
+          complete: separator.valid && end.complete
+        },
+        offset: end.offset
+      };
+    }
+
+    if (source[offset] !== "/") {
+      const skipped = readValue(source, offset);
+      offset = skipped?.offset > offset ? skipped.offset : offset + 1;
+      continue;
+    }
+
+    const key = readName(source, offset);
+    offset = skipWhitespaceAndComments(source, key.offset);
+    const value = readValue(source, offset);
+    if (!value || value.offset === offset) {
+      offset += 1;
+      continue;
+    }
+    entries[key.value.value] = value.value;
+    offset = value.offset;
+  }
+
+  return {
+    value: {
+      type: "inline-image",
+      entries,
+      dataLength: 0,
+      complete: false
+    },
+    offset: source.length
+  };
+}
+
+function consumeInlineImageDataSeparator(source, offset) {
+  if (source[offset] === "\r" && source[offset + 1] === "\n") {
+    return { offset: offset + 2, valid: true };
+  }
+  if (isWhitespace(source[offset])) {
+    return { offset: offset + 1, valid: true };
+  }
+  return { offset, valid: false };
+}
+
+function findInlineImageEnd(source, dataStart, entries) {
+  const expectedLength = inlineImageExpectedDataLength(entries);
+  if (expectedLength !== null && expectedLength <= source.length - dataStart) {
+    const exactEnd = inlineImageEndAtExpectedLength(source, dataStart + expectedLength);
+    if (exactEnd) {
+      return exactEnd;
+    }
+  }
+
+  let markerOffset = source.indexOf("EI", dataStart);
+  while (markerOffset >= 0) {
+    if (
+      isWhitespace(source[markerOffset - 1]) &&
+      isInlineImageOperatorBoundary(source[markerOffset + 2])
+    ) {
+      return {
+        dataEnd: Math.max(dataStart, markerOffset - 1),
+        offset: markerOffset + 2,
+        complete: true
+      };
+    }
+    markerOffset = source.indexOf("EI", markerOffset + 2);
+  }
+
+  return {
+    dataEnd: source.length,
+    offset: source.length,
+    complete: false
+  };
+}
+
+function inlineImageEndAtExpectedLength(source, dataEnd) {
+  if (!isWhitespace(source[dataEnd])) {
+    return null;
+  }
+  let markerOffset = dataEnd;
+  while (isWhitespace(source[markerOffset])) {
+    markerOffset += 1;
+  }
+  if (
+    source.slice(markerOffset, markerOffset + 2) !== "EI" ||
+    !isInlineImageOperatorBoundary(source[markerOffset + 2])
+  ) {
+    return null;
+  }
+  return {
+    dataEnd,
+    offset: markerOffset + 2,
+    complete: true
+  };
+}
+
+function isInlineImageOperatorBoundary(char) {
+  return char === undefined || isWhitespace(char) || delimiterChars.has(char);
+}
+
+function inlineImageExpectedDataLength(entries) {
+  if (inlineImageEntry(entries, "Filter", "F") !== undefined) {
+    return null;
+  }
+  const width = inlineImageNumber(entries, "Width", "W");
+  const height = inlineImageNumber(entries, "Height", "H");
+  const imageMask = tokenBoolean(inlineImageEntry(entries, "ImageMask", "IM"));
+  const bitsPerComponent = imageMask
+    ? 1
+    : inlineImageNumber(entries, "BitsPerComponent", "BPC");
+  const components = imageMask ? 1 : inlineImageColorComponents(entries);
+  if (
+    !Number.isInteger(width) ||
+    width <= 0 ||
+    !Number.isInteger(height) ||
+    height <= 0 ||
+    !Number.isInteger(bitsPerComponent) ||
+    bitsPerComponent <= 0 ||
+    !Number.isInteger(components) ||
+    components <= 0
+  ) {
+    return null;
+  }
+  const rowBits = width * components * bitsPerComponent;
+  const rowBytes = Math.ceil(rowBits / 8);
+  const totalBytes = rowBytes * height;
+  return Number.isSafeInteger(totalBytes) ? totalBytes : null;
+}
+
+function inlineImageColorComponents(entries) {
+  const colorSpace = inlineImageEntry(entries, "ColorSpace", "CS");
+  const name =
+    tokenName(colorSpace) ??
+    (colorSpace?.type === "array" ? tokenName(colorSpace.items[0]) : null);
+  if (name === "DeviceGray" || name === "G" || name === "Indexed" || name === "I") {
+    return 1;
+  }
+  if (name === "DeviceRGB" || name === "RGB") {
+    return 3;
+  }
+  if (name === "DeviceCMYK" || name === "CMYK") {
+    return 4;
+  }
+  return null;
+}
+
+function inlineImageNumber(entries, longName, abbreviation) {
+  const value = tokenNumber(inlineImageEntry(entries, longName, abbreviation));
+  return Number.isFinite(value) ? value : null;
+}
+
+function inlineImageEntry(entries, longName, abbreviation) {
+  return entries[longName] ?? entries[abbreviation];
+}
+
+function tokenBoolean(token) {
+  return token?.type === "word" && token.value === "true";
 }
 
 function readArray(source, startOffset) {

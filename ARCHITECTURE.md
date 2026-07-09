@@ -65,7 +65,7 @@ can make policy decisions without losing the result object.
 | `runtime.mjs` | Runtime-neutral byte helpers, hashing, bounded native/portable Flate decoding, Node builtin access, encoding helpers, and fallback MD5. |
 | `pdf-parser.mjs` | PDF byte reading, xref/object parsing and repair, encryption checks, page tree, outlines, structure, resources, and security parser limits. |
 | `stream-filters.mjs` | Stream filter decoding and decoded-stream byte caps. |
-| `content-stream.mjs` | Incremental PDF graphics/text operator interpretation with operation, output, and stack budgets for text, geometry, and drawing signals. |
+| `content-stream.mjs` | Incremental PDF graphics/text operator interpretation, bounded inline-image payload handling, and operation, output, and stack budgets for text, geometry, and drawing signals. |
 | `font-encoding.mjs` | ToUnicode CMap parsing, standard simple-font encoding tables and `Differences`, encoding fallbacks, and trust checks. |
 | `text-extract.mjs` | Text extraction, layout grouping, Markdown/source-map serialization, page text/table IR projection, headings, lists, running content, equations, and table insertion. |
 | `table-grid.mjs` | Ruling-line grid inference, cell assignment, spans, and table geometry. |

@@ -684,7 +684,7 @@ export type ImageDrawDiagnostics = {
   imageHeight: number | null;
   imagePixels: number | null;
   streamIndex: number | null;
-  source: "xobject-do";
+  source: "xobject-do" | "inline-image";
 };
 
 export type OutlineDiagnostics = {

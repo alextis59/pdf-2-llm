@@ -85,6 +85,82 @@ test("tokenizeContentStream decodes strings, names, arrays, numbers, and comment
   assert.deepEqual(tokens[7], { type: "word", value: "BDC" });
 });
 
+test("inline images skip binary operators and expose transformed image geometry", () => {
+  const payload = "BT (phantom) Tj";
+  const stream = [
+    `q 20 0 0 10 5 7 cm BI /W ${payload.length} /H 1 /BPC 8 /CS /G ID ${payload}`,
+    "EI Q",
+    "BT /F1 12 Tf 10 20 Td (real) Tj ET"
+  ].join("\n");
+  const inlineImage = tokenizeContentStream(stream).find(
+    (token) => token.type === "inline-image"
+  );
+
+  assert.deepEqual(inlineImage, {
+    type: "inline-image",
+    entries: {
+      W: { type: "number", value: payload.length },
+      H: { type: "number", value: 1 },
+      BPC: { type: "number", value: 8 },
+      CS: { type: "name", value: "G" }
+    },
+    dataLength: payload.length,
+    complete: true
+  });
+  assert.deepEqual(
+    extractContentStreamTextLines(stream, { resources }).map((line) => line.text),
+    ["real"]
+  );
+  assert.deepEqual(extractContentStreamImageDraws(stream, { pageIndex: 2, streamIndex: 3 }), [
+    {
+      type: "image-draw",
+      name: "inline-image",
+      objectNumber: null,
+      x: 5,
+      y: 7,
+      width: 20,
+      height: 10,
+      area: 200,
+      imageWidth: payload.length,
+      imageHeight: 1,
+      imagePixels: payload.length,
+      pageIndex: 2,
+      streamIndex: 3,
+      source: "inline-image"
+    }
+  ]);
+});
+
+test("filtered inline images require a valid EI operator boundary", () => {
+  const payload = "abc EIx BT (phantom) Tj";
+  const stream = [
+    `BI /W 1 /H 1 /BPC 8 /CS /G /F /Fl ID ${payload}`,
+    "EI",
+    "BT /F1 12 Tf 10 20 Td (real) Tj ET"
+  ].join("\n");
+  const inlineImage = tokenizeContentStream(stream).find(
+    (token) => token.type === "inline-image"
+  );
+
+  assert.equal(inlineImage.dataLength, payload.length);
+  assert.equal(inlineImage.complete, true);
+  assert.deepEqual(
+    extractContentStreamTextLines(stream, { resources }).map((line) => line.text),
+    ["real"]
+  );
+});
+
+test("unterminated inline image data is never interpreted as content operators", () => {
+  const stream = "BI /W 1 /H 1 /BPC 8 /CS /G ID BT /F1 12 Tf (phantom) Tj";
+  const inlineImage = tokenizeContentStream(stream).find(
+    (token) => token.type === "inline-image"
+  );
+
+  assert.equal(inlineImage.complete, false);
+  assert.deepEqual(extractContentStreamTextLines(stream, { resources }), []);
+  assert.deepEqual(extractContentStreamImageDraws(stream), []);
+});
+
 test("content stream operation limits accept the boundary and reject the next operator", () => {
   assert.deepEqual(
     extractContentStreamTextLines("BT ET", {

@@ -620,6 +620,33 @@ test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", a
   assert.equal(smallImage.diagnostics.extraction.scanDetection.pages[0].imageCoverageRatio, 0.010695);
 });
 
+test("convertPdfToMarkdown includes inline images in scan diagnostics", async () => {
+  const result = await convertPdfToMarkdown(
+    createSinglePageInlineImagePdf({ x: 0, y: 0, widthPt: 612, heightPt: 792 })
+  );
+  const page = result.diagnostics.extraction.scanDetection.pages[0];
+
+  assert.equal(result.ir.sourceType, "scanned");
+  assert.equal(page.imageResourceCount, 0);
+  assert.equal(page.imageDrawCount, 1);
+  assert.deepEqual(page.imageDraws, [
+    {
+      name: "inline-image",
+      objectNumber: null,
+      x: 0,
+      y: 0,
+      width: 612,
+      height: 792,
+      area: 484704,
+      imageWidth: 1,
+      imageHeight: 1,
+      imagePixels: 1,
+      streamIndex: 0,
+      source: "inline-image"
+    }
+  ]);
+});
+
 test("convertPdfToMarkdown reports little and no-text scan detection diagnostics", async () => {
   const tinyText = await convertPdfToMarkdown(
     createSinglePageTextPdf([textOperation(72, 720, 12, "Tiny")])
@@ -2313,6 +2340,16 @@ function createSinglePageImagePdf({ x, y, widthPt, heightPt, rotation = 0, textO
     )
   ];
   return createPdf(objects);
+}
+
+function createSinglePageInlineImagePdf({ x, y, widthPt, heightPt }) {
+  const content = `q ${widthPt} 0 0 ${heightPt} ${x} ${y} cm BI /W 1 /H 1 /BPC 8 /CS /RGB ID abc\nEI Q\n`;
+  return createPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << >> /Contents 4 0 R >>",
+    streamObject(content)
+  ]);
 }
 
 function createTaggedFigureAltPdf() {
