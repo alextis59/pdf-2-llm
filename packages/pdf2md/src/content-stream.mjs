@@ -1,4 +1,4 @@
-import { decodePdfStringWithFont } from "./font-encoding.mjs";
+import { decodePdfGlyphsWithFont } from "./font-encoding.mjs";
 import { bytesToLatin1 as runtimeBytesToLatin1 } from "./runtime.mjs";
 
 const whitespacePattern = /\s/;
@@ -826,7 +826,7 @@ function executeOperator(operator, context) {
     return;
   }
   if (operator === "Tj") {
-    emitText(decodeStringToken(operands.at(-1), state.font), context);
+    emitText(decodeGlyphToken(operands.at(-1), state.font), context);
     return;
   }
   if (operator === "TJ") {
@@ -839,7 +839,7 @@ function executeOperator(operator, context) {
   if (operator === "'") {
     moveTextPosition(state, 0, -state.leading);
     context.lineSerial += 1;
-    emitText(decodeStringToken(operands.at(-1), state.font), context);
+    emitText(decodeGlyphToken(operands.at(-1), state.font), context);
     return;
   }
   if (operator === "\"") {
@@ -853,7 +853,7 @@ function executeOperator(operator, context) {
     }
     moveTextPosition(state, 0, -state.leading);
     context.lineSerial += 1;
-    emitText(decodeStringToken(operands.at(-1), state.font), context);
+    emitText(decodeGlyphToken(operands.at(-1), state.font), context);
   }
 }
 
@@ -871,18 +871,23 @@ function emitTextArray(array, context) {
       }
       continue;
     }
-    emitText(decodeStringToken(item, context.state.font), context);
+    emitText(decodeGlyphToken(item, context.state.font), context);
   }
 }
 
-function emitText(text, context) {
-  if (!context.state.inText || !text) {
+function emitText(decodedGlyphs, context) {
+  if (!context.state.inText || decodedGlyphs.length === 0) {
     return;
   }
 
+  const text = decodedGlyphText(decodedGlyphs);
+  if (!text) {
+    advanceTextPosition(context.state, decodedGlyphs);
+    return;
+  }
   consumeContentStreamOutput(context, text.length);
   const position = currentTextPosition(context.state);
-  const metrics = measureText(context.state, text, position);
+  const metrics = measureText(context.state, decodedGlyphs, position);
   const direction = textDirectionFromContent(context.state, text);
   const confidence = textConfidence(context.state.font);
   const structure = currentStructureSignal(context.state);
@@ -908,7 +913,7 @@ function emitText(text, context) {
     lastLine.glyphs.push(...metrics.glyphs);
     mergeLineVisibility(lastLine, span);
     mergeLineStructure(lastLine, structure);
-    advanceTextPosition(context.state, text);
+    advanceTextPosition(context.state, decodedGlyphs);
     return;
   }
 
@@ -939,7 +944,7 @@ function emitText(text, context) {
     structurePath: structure?.path ?? [],
     mergeKey
   });
-  advanceTextPosition(context.state, text);
+  advanceTextPosition(context.state, decodedGlyphs);
 }
 
 function canAppendTextToLine(line, context, metrics, direction, mergeKey) {
@@ -977,7 +982,7 @@ function emitSyntheticSpace(context, width) {
   const confidence = textConfidence(context.state.font);
   const structure = currentStructureSignal(context.state);
   const direction = textDirectionFromContent(context.state, " ");
-  const metrics = measureText(context.state, " ", position, width);
+  const metrics = measureText(context.state, [syntheticDecodedGlyph(" ")], position, width);
   const mergeKey = currentMergeKey(context);
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
@@ -1135,7 +1140,7 @@ function shouldInsertSyntheticWordSpace(context, delta, nextText) {
 
 function nextDecodedText(items, startIndex, font) {
   for (let index = startIndex; index < items.length; index += 1) {
-    const text = decodeStringToken(items[index], font);
+    const text = decodedGlyphText(decodeGlyphToken(items[index], font));
     if (text) {
       return text;
     }
@@ -1292,8 +1297,8 @@ function mergeTextDirection(left, right) {
   return left === right ? left : "unknown";
 }
 
-function advanceTextPosition(state, text) {
-  const width = measureTextWidth(state, text);
+function advanceTextPosition(state, decodedGlyphs) {
+  const width = measureTextWidth(state, decodedGlyphs);
   advanceTextPositionBy(state, width);
 }
 
@@ -1311,19 +1316,19 @@ function wordGapThreshold(state) {
   return Math.max(state.fontSize * scale * 0.25, 0.5);
 }
 
-function measureText(state, text, position, explicitAdvance = null) {
+function measureText(state, decodedGlyphs, position, explicitAdvance = null) {
   const glyphs = [];
   const confidence = textConfidence(state.font);
   const fontSize = effectiveFontSize(state);
   const matrix = effectiveTextMatrix(state);
   let textOffset = 0;
   let bounds = null;
-  for (const char of text) {
-    const advance = explicitAdvance ?? measureGlyphWidth(state, char);
+  for (const decodedGlyph of decodedGlyphs) {
+    const advance = explicitAdvance ?? measureGlyphWidth(state, decodedGlyph);
     const glyphBounds = transformedTextBounds(matrix, textOffset, advance, state);
     glyphs.push({
-      text: char,
-      codePoint: char.codePointAt(0),
+      text: decodedGlyph.text,
+      codePoint: decodedGlyph.text.codePointAt(0) ?? null,
       ...glyphBounds,
       fontName: state.fontName,
       fontSize,
@@ -1409,26 +1414,27 @@ function mergeLineVisibility(line, span) {
   line.hasHiddenText = line.spans.some((item) => item.hidden === true);
 }
 
-function measureTextWidth(state, text) {
+function measureTextWidth(state, decodedGlyphs) {
   let width = 0;
-  for (const char of text) {
-    width += measureGlyphWidth(state, char);
+  for (const decodedGlyph of decodedGlyphs) {
+    width += measureGlyphWidth(state, decodedGlyph);
   }
   return width;
 }
 
-function measureGlyphWidth(state, char) {
+function measureGlyphWidth(state, decodedGlyph) {
   const scale = (state.horizontalScaling || 100) / 100;
-  const wordSpacing = char === " " ? state.wordSpacing : 0;
-  return (fontGlyphWidth(state, char) + state.charSpacing + wordSpacing) * scale;
+  const wordSpacing = decodedGlyph.sourceCodeHex === "20" ? state.wordSpacing : 0;
+  return (
+    fontGlyphWidth(state, decodedGlyph.sourceCode) + state.charSpacing + wordSpacing
+  ) * scale;
 }
 
-function fontGlyphWidth(state, char) {
+function fontGlyphWidth(state, sourceCode) {
   const firstChar = state.font?.firstChar;
   const widths = state.font?.widths;
-  const codePoint = char.codePointAt(0);
-  if (Number.isInteger(firstChar) && Array.isArray(widths) && Number.isInteger(codePoint)) {
-    const width = widths[codePoint - firstChar];
+  if (Number.isInteger(firstChar) && Array.isArray(widths) && Number.isInteger(sourceCode)) {
+    const width = widths[sourceCode - firstChar];
     if (Number.isFinite(width)) {
       return (width / 1000) * state.fontSize;
     }
@@ -1506,8 +1512,20 @@ function dictionaryNumber(token, key) {
   return tokenNumber(value);
 }
 
-function decodeStringToken(token, font) {
-  return decodePdfStringWithFont(token, font);
+function decodeGlyphToken(token, font) {
+  return decodePdfGlyphsWithFont(token, font);
+}
+
+function decodedGlyphText(glyphs) {
+  return glyphs.map((glyph) => glyph.text).join("");
+}
+
+function syntheticDecodedGlyph(text) {
+  return {
+    text,
+    sourceCode: null,
+    sourceCodeHex: null
+  };
 }
 
 function readInlineImage(source, startOffset) {

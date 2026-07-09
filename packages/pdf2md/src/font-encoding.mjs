@@ -63,19 +63,25 @@ export function parseToUnicodeCMap(cmapText, { maxMappings = 65_536 } = {}) {
 }
 
 export function decodePdfStringWithFont(token, font) {
+  return decodePdfGlyphsWithFont(token, font)
+    .map((glyph) => glyph.text)
+    .join("");
+}
+
+export function decodePdfGlyphsWithFont(token, font) {
   if (!token || token.type !== "string") {
-    return "";
+    return [];
   }
 
   const bytes = token.bytes ?? latin1Bytes(token.value);
   const toUnicode = font?.toUnicode;
   if (!toUnicode?.map || toUnicode.map.size === 0) {
     return isSupportedSimpleEncoding(font?.encoding)
-      ? decodeBytesWithSimpleEncoding(bytes, font)
-      : bytesToFallbackText(bytes);
+      ? decodeBytesWithSimpleEncodingGlyphs(bytes, font)
+      : [...bytes].map((byte) => decodedGlyph(fallbackByteToText(byte), [byte]));
   }
 
-  return decodeBytesWithCMap(bytes, toUnicode);
+  return decodeBytesWithCMapGlyphs(bytes, toUnicode);
 }
 
 export function isTrustedSimpleEncoding(font) {
@@ -87,18 +93,18 @@ export function isTrustedSimpleEncoding(font) {
   );
 }
 
-function decodeBytesWithSimpleEncoding(bytes, font) {
+function decodeBytesWithSimpleEncodingGlyphs(bytes, font) {
   const differences = font.encodingDifferences ?? {};
   return [...bytes]
     .map((byte) => {
       const glyphName = differences[byte];
       if (glyphName !== undefined) {
-        return unicodeForGlyphName(glyphName) ?? fallbackByteToText(byte);
+        return decodedGlyph(unicodeForGlyphName(glyphName) ?? fallbackByteToText(byte), [byte]);
       }
       const codePoint = simpleEncodingCodePoint(font.encoding, byte);
-      return codePoint >= 0 ? String.fromCodePoint(codePoint) : fallbackByteToText(byte);
-    })
-    .join("");
+      const text = codePoint >= 0 ? String.fromCodePoint(codePoint) : fallbackByteToText(byte);
+      return decodedGlyph(text, [byte]);
+    });
 }
 
 function parseBfRangeBlock(block, map, mappingBudget) {
@@ -155,7 +161,7 @@ function consumeMappingBudget(budget, count) {
   budget.used += count;
 }
 
-function decodeBytesWithCMap(bytes, cmap) {
+function decodeBytesWithCMapGlyphs(bytes, cmap) {
   const candidates = cmap.codespaces
     .filter((codespace) => Number.isInteger(codespace.length) && codespace.length > 0)
     .sort((left, right) => right.length - left.length);
@@ -177,7 +183,7 @@ function decodeBytesWithCMap(bytes, cmap) {
 
       const mapped = cmap.map.get(key);
       if (mapped !== undefined) {
-        output.push(mapped);
+        output.push(decodedGlyph(mapped, codeBytes));
         offset += codespace.length;
         matched = true;
         break;
@@ -185,12 +191,22 @@ function decodeBytesWithCMap(bytes, cmap) {
     }
 
     if (!matched) {
-      output.push(fallbackByteToText(bytes[offset]));
+      output.push(decodedGlyph(fallbackByteToText(bytes[offset]), [bytes[offset]]));
       offset += 1;
     }
   }
 
-  return output.join("");
+  return output;
+}
+
+function decodedGlyph(text, bytes) {
+  const sourceCodeHex = bytesToHex(bytes);
+  const sourceCode = Number.parseInt(sourceCodeHex, 16);
+  return {
+    text,
+    sourceCode: Number.isSafeInteger(sourceCode) ? sourceCode : null,
+    sourceCodeHex
+  };
 }
 
 function readCMapBlocks(text, beginMarker, endMarker) {
@@ -234,10 +250,6 @@ function normalizeHex(value) {
 
 function bytesToHex(bytes) {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0").toUpperCase()).join("");
-}
-
-function bytesToFallbackText(bytes) {
-  return [...bytes].map(fallbackByteToText).join("");
 }
 
 function fallbackByteToText(byte) {

@@ -1,11 +1,36 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  decodePdfGlyphsWithFont,
   decodePdfStringWithFont,
   isTrustedSimpleEncoding,
   PdfCMapParseError,
   parseToUnicodeCMap
 } from "../src/font-encoding.mjs";
+
+test("decodePdfGlyphsWithFont preserves source codes across Unicode mappings", () => {
+  const font = {
+    toUnicode: {
+      codespaces: [
+        { start: "00", end: "FF", length: 1 },
+        { start: "0200", end: "02FF", length: 2 }
+      ],
+      map: new Map([
+        ["01", "ffi"],
+        ["0203", "Ω"]
+      ])
+    }
+  };
+
+  assert.deepEqual(decodePdfGlyphsWithFont({ type: "string", bytes: [0x01, 0x02, 0x03] }, font), [
+    { text: "ffi", sourceCode: 1, sourceCodeHex: "01" },
+    { text: "Ω", sourceCode: 515, sourceCodeHex: "0203" }
+  ]);
+  assert.equal(
+    decodePdfStringWithFont({ type: "string", bytes: [0x01, 0x02, 0x03] }, font),
+    "ffiΩ"
+  );
+});
 
 test("decodePdfStringWithFont renders unmapped control bytes as visible control pictures", () => {
   const token = { type: "string", bytes: [0x41, 0x15, 0x01, 0x7f, 0x42] };

@@ -420,7 +420,10 @@ anchors.
 Maps Markdown string offsets back to page regions. The schema is exported as
 `markdownSourceMapJsonSchema`. Text, span, glyph, and source-map regions use
 axis-aligned page-space bounds after applying the content stream's text matrix
-and current transformation matrix, including rotation and skew.
+and current transformation matrix, including rotation and skew. Font advances
+come from each original PDF character code before its ToUnicode text is placed
+in that region, including mappings that expand one glyph into multiple Unicode
+characters.
 
 ### `assets`
 

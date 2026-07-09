@@ -434,7 +434,7 @@ test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {
   const bytes = createTestPdf([
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [5 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Custom /Encoding /CustomEncoding /ToUnicode 4 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Custom /Encoding /CustomEncoding /FirstChar 1 /LastChar 1 /Widths [250] /ToUnicode 4 0 R >>",
     streamObject(toUnicode),
     "<< /Type /Page /Parent 2 0 R /Contents 6 0 R >>",
     streamObject("BT /F1 22 Tf 20 200 Td <01> Tj ET\n")
@@ -444,6 +444,7 @@ test("parsePdfDocument applies ToUnicode CMaps during conversion", async () => {
 
   assert.equal(document.pages[0].resources.fonts.F1.toUnicodeEntries, 1);
   assert.equal(result.markdown, "# A\n");
+  assert.equal(result.ir.pages[0].elements[0].spans[0].width, 5.5);
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.TextUnicodeMappingSuspect));
 });
 

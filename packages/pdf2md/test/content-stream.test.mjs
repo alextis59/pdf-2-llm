@@ -40,6 +40,22 @@ const resources = {
       toUnicode: null,
       firstChar: 32,
       widths: Array.from({ length: 95 }, () => 500)
+    },
+    FRemap: {
+      subtype: "Type1",
+      baseFont: "Custom",
+      encoding: "CustomEncoding",
+      hasToUnicode: true,
+      toUnicode: {
+        entries: 2,
+        codespaces: [{ start: "00", end: "FF", length: 1 }],
+        map: new Map([
+          ["01", "W"],
+          ["03", "ffi"]
+        ])
+      },
+      firstChar: 1,
+      widths: [250, 1_000, 750]
     }
   },
   xobjects: {
@@ -661,6 +677,23 @@ test("extractContentStreamTextLines applies ToUnicode font maps to string bytes"
 
   assert.equal(lines[0].text, "AB");
   assert.equal(lines[0].confidence, 0.95);
+});
+
+test("extractContentStreamTextLines measures remapped text from source character codes", () => {
+  const [line] = extractContentStreamTextLines(
+    "BT /FRemap 12 Tf 10 20 Td <0103> Tj ET",
+    { resources }
+  );
+
+  assert.equal(line.text, "Wffi");
+  assert.equal(line.width, 12);
+  assert.deepEqual(
+    line.glyphs.map((glyph) => [glyph.text, glyph.x, glyph.width]),
+    [
+      ["W", 10, 3],
+      ["ffi", 13, 9]
+    ]
+  );
 });
 
 test("extractContentStreamTextLines marks decoded RTL script text", () => {
