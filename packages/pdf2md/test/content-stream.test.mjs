@@ -715,6 +715,22 @@ test("extractContentStreamTextLines stores effective font metrics under scaled C
   );
 });
 
+test("extractContentStreamTextLines joins adjacent fragments across text objects", () => {
+  const lines = extractContentStreamTextLines(
+    [
+      "BT /FWidth 10 Tf 200 300 Td (Syste) Tj ET",
+      "BT /FWidth 10 Tf 225.1 300 Td (ms Technology) Tj ET",
+      "BT /FWidth 10 Tf 400 300 Td (Separate) Tj ET"
+    ].join("\n"),
+    { resources }
+  );
+
+  assert.deepEqual(
+    lines.map((line) => line.text),
+    ["Systems Technology", "Separate"]
+  );
+});
+
 test("extractContentStreamTextLines spaces positioned one-letter words without splitting fragments", () => {
   const spaced = extractContentStreamTextLines(
     [
@@ -742,6 +758,12 @@ test("extractContentStreamTextLines spaces positioned one-letter words without s
     ),
     { resources }
   );
+  const overlappingFragments = extractContentStreamTextLines(
+    ["BT", "/F1 10 Tf", "200 300 Td", "(Digit) Tj", "24.9 0 Td", "(al) Tj", "ET"].join(
+      "\n"
+    ),
+    { resources }
+  );
 
   assert.equal(spaced.length, 1);
   assert.equal(spaced[0].text, "showed a result");
@@ -749,4 +771,5 @@ test("extractContentStreamTextLines spaces positioned one-letter words without s
   assert.equal(glued[0].text, "example");
   assert.equal(possessive.length, 1);
   assert.equal(possessive[0].text, "brain's inductive");
+  assert.equal(overlappingFragments[0].text, "Digital");
 });

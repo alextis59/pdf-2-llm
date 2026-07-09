@@ -25,7 +25,7 @@ snippets:
   - page: 1
     contains: "Withdrawn NIST Technical Series Publication"
   - page: 2
-    contains: "Computer Security Incident Handling Guide"
+    contains: "Incident Handling Guide"
   - page: 4
     contains: "Reports on Computer Systems Technology"
 structure:

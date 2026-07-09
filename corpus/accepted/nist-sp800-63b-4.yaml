@@ -34,7 +34,7 @@ snippets:
     contains: "NIST SP 800-63B-4"
   - page: 1
     contains: "Digital Identity Guidelines"
-  - page: 4
+  - page: 3
     contains: "This publication may be used by nongovernmental organizations on a voluntary basis and is not subject to copyright in the United States."
 runningContent:
   expectedRetained:

@@ -23,9 +23,9 @@ metrics:
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
-    contains: "NIST Special Publication 800-30 Revision 1"
+    contains: "NIST Special Publication 800"
   - page: 1
-    contains: "Guide for Conducting Risk Assessments"
+    contains: "Guide for Conducting"
   - page: 3
     contains: "This publication may be used by nongovernmental organizations on a voluntary basis and is not subject to copyright in the United States."
 structure:

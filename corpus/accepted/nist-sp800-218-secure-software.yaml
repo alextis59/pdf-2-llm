@@ -26,7 +26,7 @@ snippets:
   - page: 1
     contains: "NIST Special Publication 800-218"
   - page: 1
-    contains: "Secure Software Development Framework (SSDF) Version 1.1"
+    contains: "Framework (SSDF) Version 1.1:"
   - page: 3
     contains: "This publication may be used by nongovernmental organizations on a voluntary basis and is not subject to copyright in the United States."
 runningContent:

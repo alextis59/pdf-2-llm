@@ -831,7 +831,7 @@ function emitText(text, context) {
   const structure = currentStructureSignal(context.state);
   const mergeKey = currentMergeKey(context);
   const lastLine = context.lines.at(-1);
-  if (lastLine?.mergeKey === mergeKey) {
+  if (canAppendTextToLine(lastLine, context, position, metrics, direction, mergeKey)) {
     appendInferredInterSpanSpace(
       context,
       lastLine,
@@ -884,6 +884,31 @@ function emitText(text, context) {
     mergeKey
   });
   advanceTextPosition(context.state, text);
+}
+
+function canAppendTextToLine(line, context, position, metrics, direction, mergeKey) {
+  if (!line) {
+    return false;
+  }
+  if (line.mergeKey === mergeKey) {
+    return true;
+  }
+  if (
+    line.pageIndex !== (context.options.pageIndex ?? null) ||
+    line.streamIndex !== (context.options.streamIndex ?? null) ||
+    line.fontName !== context.state.fontName ||
+    line.direction !== direction ||
+    direction === "vertical"
+  ) {
+    return false;
+  }
+  const fontSize = metrics.fontSize || line.fontSize || 10;
+  const gap = position.x - (line.x + line.width);
+  return (
+    Math.abs(position.y - line.y) <= Math.max(0.5, fontSize * 0.05) &&
+    gap >= -fontSize * 0.1 &&
+    gap <= fontSize * 0.1
+  );
 }
 
 function emitSyntheticSpace(context, width) {
@@ -1015,6 +1040,12 @@ function shouldGlueAdjacentTextFragments(previousText, nextText, gap, fontSize) 
   const next = leadingWordFragment(nextText);
   if (!previous || !next) {
     return /^[,.;:!?%)\]\}]/.test(nextText);
+  }
+  if (/(?:['\u2019]s|['\u2019"\u201d])$/.test(previousText)) {
+    return false;
+  }
+  if (gap <= 0) {
+    return true;
   }
   if (/^[a-z]$/.test(next) || /^[a-z][,.;:]$/.test(next)) {
     return gap < fontSize * 0.16;
