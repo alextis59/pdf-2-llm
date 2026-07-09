@@ -437,6 +437,39 @@ test("linesToMarkdown escapes Markdown metacharacters in text and tables", () =>
   );
 });
 
+test("linesToMarkdown escapes source HTML in headings, lists, paragraphs, and tables", () => {
+  const markdown = linesToMarkdown([
+    {
+      text: "Unsafe <img src=x onerror=alert(1)> & heading",
+      fontSize: 22,
+      x: 10,
+      y: 100
+    },
+    {
+      text: "- Item <svg onload=alert(1)> & safe",
+      fontSize: 12,
+      x: 10,
+      y: 80
+    },
+    {
+      text: "Paragraph <script>alert(1)</script> & safe.",
+      fontSize: 12,
+      x: 10,
+      y: 60
+    },
+    { text: "Name <raw>", fontSize: 12, x: 10, y: 40 },
+    { text: "Value & total", fontSize: 12, x: 200, y: 40 },
+    { text: "<img src=x onerror=alert(1)>", fontSize: 12, x: 10, y: 20 },
+    { text: "3", fontSize: 12, x: 200, y: 20 }
+  ]);
+
+  assert.equal(
+    markdown,
+    "# Unsafe &lt;img src=x onerror=alert(1)&gt; &amp; heading\n\n- Item &lt;svg onload=alert(1)&gt; &amp; safe\n\nParagraph &lt;script&gt;alert(1)&lt;/script&gt; &amp; safe.\n\n| Name &lt;raw&gt; | Value &amp; total |\n| --- | ---: |\n| &lt;img src=x onerror=alert(1)&gt; | 3 |\n"
+  );
+  assert.doesNotMatch(markdown, /<(?:img|script|svg)\b/i);
+});
+
 test("linesToMarkdownWithSourceMap exports no-span ruling tables as GFM", () => {
   const title = textLine("Ruled Table Fixture", 72, 720, 140, 22);
   const quarter = textLine("Quarter", 82, 684, 38, 11);
@@ -695,7 +728,7 @@ test("linesToMarkdownWithSourceMap exports one-row ruling tables as body-only HT
 test("linesToMarkdown preserves URL and email links", () => {
   const markdown = linesToMarkdown([
     {
-      text: "Visit https://example.com/docs and contact support@example.com.",
+      text: "Visit <unsafe> & https://example.com/docs and contact support@example.com.",
       fontSize: 12,
       x: 72,
       y: 720,
@@ -712,7 +745,7 @@ test("linesToMarkdown preserves URL and email links", () => {
 
   assert.equal(
     markdown,
-    "Visit <https://example.com/docs> and contact <support@example.com>.\n\nMirror at <https://www.example.org/path>.\n"
+    "Visit &lt;unsafe&gt; &amp; <https://example.com/docs> and contact <support@example.com>.\n\nMirror at <https://www.example.org/path>.\n"
   );
 });
 

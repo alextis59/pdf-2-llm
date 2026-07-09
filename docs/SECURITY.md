@@ -21,6 +21,9 @@ document records the security behavior this repository can actually support.
 - The library does not download OCR models, execute OCR engines, or read/write
   OCR caches today. OCR model and cache options are recorded as diagnostics.
 - WebGPU is optional. CPU fallback remains the correctness baseline.
+- Source-derived LTR Markdown text entity-escapes `&`, `<`, and `>` before
+  rendering. Raw anchors, bidi wrappers, HTML tables, and autolinks are emitted
+  only by converter-owned formatting paths.
 
 ## Resource Limits
 

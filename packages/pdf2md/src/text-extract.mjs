@@ -538,6 +538,7 @@ function isEquationLine(line, equationModel) {
     text.length > 180 ||
     isLikelyCodeText(text) ||
     isLikelyLinkText(text) ||
+    isLikelyRawHtmlText(text) ||
     isLikelyProseSentence(text)
   ) {
     return false;
@@ -590,6 +591,10 @@ function isLikelyCodeText(text) {
 
 function isLikelyLinkText(text) {
   return /(https?:\/\/|www\.|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i.test(text);
+}
+
+function isLikelyRawHtmlText(text) {
+  return /<\/?[A-Za-z][^>]*>|<!--|<![A-Z]|<\?/i.test(text);
 }
 
 function isLikelyProseSentence(text) {
@@ -974,7 +979,12 @@ function escapeMarkdownInline(value) {
 }
 
 function escapeMarkdownText(value) {
-  return value.replace(/\\/g, "\\\\").replace(/([`*_[\]])/g, "\\$1");
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\\/g, "\\\\")
+    .replace(/([`*_[\]])/g, "\\$1");
 }
 
 function splitLinkTrailingPunctuation(value) {
