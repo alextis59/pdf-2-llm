@@ -111,7 +111,9 @@ npm run corpus:run:text
 ```
 
 Use a narrower `node scripts/qa/run-corpus.mjs --id <id> --assert-markdown`
-command when reviewing one case.
+command when reviewing one case with a deliberate full-document snapshot. Do
+not require exact snapshots from public corpus cases whose reviewed contract is
+expressed through snippets, metrics, structure checks, and focused oracles.
 
 ## Release Verification Workflow
 

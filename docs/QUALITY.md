@@ -52,6 +52,10 @@ fuzz smoke, build, and API tests.
   `warningCodes` registry. `maxUnexpectedWarnings` is a non-negative instance
   budget for emitted non-baseline warning codes that are not explicitly
   allowlisted.
+- `npm run corpus:run:tables` exact-matches the reviewed deterministic
+  synthetic snapshots, then runs every `tables-v1` acceptance contract. Public
+  documents remain table-criterion and oracle driven unless a full-document
+  Markdown snapshot has been deliberately reviewed.
 - Text coverage uses a reviewed Markdown snapshot when one exists and otherwise
   falls back to the stored text oracle. Raw text oracles remain the reference
   for repeated running-content removal checks.
