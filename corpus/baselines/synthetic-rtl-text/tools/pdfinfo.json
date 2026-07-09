@@ -7,6 +7,6 @@
   "status": 0,
   "signal": null,
   "truncated": false,
-  "stdout": "Custom Metadata: no\nMetadata Stream: no\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           1\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       1211 bytes\nOptimized:       no\nPDF version:     1.4\n",
+  "stdout": "Custom Metadata: no\nMetadata Stream: no\nTagged:          no\nUserProperties:  no\nSuspects:        no\nForm:            none\nJavaScript:      no\nPages:           1\nEncrypted:       no\nPage size:       612 x 792 pts (letter)\nPage rot:        0\nFile size:       3324 bytes\nOptimized:       no\nPDF version:     1.4\n",
   "stderr": ""
 }

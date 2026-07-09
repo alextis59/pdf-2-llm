@@ -29,5 +29,5 @@ assets:
   required: []
 review:
   humanReviewedBy: "codex"
-  reviewedAt: "2026-07-02"
-  notes: "Generated ToUnicode fixture requires exact CJK text extraction without inserted spaces across wrapped lines."
+  reviewedAt: "2026-07-10"
+  notes: "Reviewed ToUnicode fixture requires exact CJK joining without inserted spaces; embedded vector glyphs keep both Japanese lines visible in rendered previews."

@@ -863,27 +863,28 @@
       "path": "corpus/generated/synthetic-rtl-text.pdf",
       "source": {
         "type": "generated",
-        "description": "Right-to-left text fixture with ToUnicode font mappings and row-order checks.",
+        "description": "Right-to-left text fixture with ToUnicode mappings, visible vector glyphs, and row-order checks.",
         "command": "npm run corpus:generate"
       },
-      "retrievedAt": "2026-07-02",
+      "retrievedAt": "2026-07-10",
       "license": {
-        "name": "Generated test fixture",
-        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+        "name": "Generated fixture with Apache-2.0 and Bitstream Vera derived glyph masks",
+        "notes": "Visible CJK masks derive from Droid Sans Fallback and Hebrew masks derive from DejaVu Sans; notices are in corpus/licenses/."
       },
       "redistributable": true,
-      "sha256": "fcb5cf826d1c33c8504efcd24bcf6b36b28ab74b98d66204afcabbc0b944efc9",
-      "bytes": 1211,
+      "sha256": "d1ada8f3d54b61af4bd71872d55eebd235eefbe2a1c5a86abbd04cf0e4418460",
+      "bytes": 3324,
       "pages": 1,
       "pdfVersion": "1.4",
       "features": [
         "born-digital",
         "to-unicode",
         "rtl",
-        "bidi"
+        "bidi",
+        "visible-vector-glyphs"
       ],
       "acceptanceFile": "corpus/accepted/synthetic-rtl-text.yaml",
-      "notes": "Right-to-left text fixture with ToUnicode font mappings and row-order checks."
+      "notes": "Right-to-left text fixture with ToUnicode mappings, visible vector glyphs, and row-order checks."
     },
     {
       "id": "synthetic-cjk-text",
@@ -891,27 +892,28 @@
       "path": "corpus/generated/synthetic-cjk-text.pdf",
       "source": {
         "type": "generated",
-        "description": "CJK text fixture with ToUnicode mappings and wrapped-line paragraph joining.",
+        "description": "CJK text fixture with ToUnicode mappings, visible vector glyphs, and wrapped-line paragraph joining.",
         "command": "npm run corpus:generate"
       },
-      "retrievedAt": "2026-07-02",
+      "retrievedAt": "2026-07-10",
       "license": {
-        "name": "Generated test fixture",
-        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+        "name": "Generated fixture with Apache-2.0 and Bitstream Vera derived glyph masks",
+        "notes": "Visible CJK masks derive from Droid Sans Fallback and Hebrew masks derive from DejaVu Sans; notices are in corpus/licenses/."
       },
       "redistributable": true,
-      "sha256": "6b46c52c1099955970c723ae5a10fb8c1dd2cba0550b9fccd0a2ec18578b43fb",
-      "bytes": 1267,
+      "sha256": "8e9d9b1cfb266cfdfe40025c5fab7e9f4c289ab789f289eb88e0bd234a0ff342",
+      "bytes": 7774,
       "pages": 1,
       "pdfVersion": "1.4",
       "features": [
         "born-digital",
         "to-unicode",
         "cjk",
-        "wrapped-lines"
+        "wrapped-lines",
+        "visible-vector-glyphs"
       ],
       "acceptanceFile": "corpus/accepted/synthetic-cjk-text.yaml",
-      "notes": "CJK text fixture with ToUnicode mappings and wrapped-line paragraph joining."
+      "notes": "CJK text fixture with ToUnicode mappings, visible vector glyphs, and wrapped-line paragraph joining."
     },
     {
       "id": "synthetic-vertical-writing",
@@ -919,27 +921,28 @@
       "path": "corpus/generated/synthetic-vertical-writing.pdf",
       "source": {
         "type": "generated",
-        "description": "Vertical writing fixture with ToUnicode mappings and vertical-rl column ordering.",
+        "description": "Vertical writing fixture with ToUnicode mappings, visible vector glyphs, and vertical-rl column ordering.",
         "command": "npm run corpus:generate"
       },
-      "retrievedAt": "2026-07-02",
+      "retrievedAt": "2026-07-10",
       "license": {
-        "name": "Generated test fixture",
-        "notes": "Created from repository fixture-generation code for unrestricted project testing."
+        "name": "Generated fixture with Apache-2.0 and Bitstream Vera derived glyph masks",
+        "notes": "Visible CJK masks derive from Droid Sans Fallback and Hebrew masks derive from DejaVu Sans; notices are in corpus/licenses/."
       },
       "redistributable": true,
-      "sha256": "f9ca3b21b10ab781adbcdd5a1cd4b564c34ebb4b3b511a20eb1234f686af5748",
-      "bytes": 1250,
+      "sha256": "2424794db934f6a26039f82fe5477c621102fa961664e51227872e855eb73b7d",
+      "bytes": 5429,
       "pages": 1,
       "pdfVersion": "1.4",
       "features": [
         "born-digital",
         "to-unicode",
         "cjk",
-        "vertical-writing"
+        "vertical-writing",
+        "visible-vector-glyphs"
       ],
       "acceptanceFile": "corpus/accepted/synthetic-vertical-writing.yaml",
-      "notes": "Vertical writing fixture with ToUnicode mappings and vertical-rl column ordering."
+      "notes": "Vertical writing fixture with ToUnicode mappings, visible vector glyphs, and vertical-rl column ordering."
     },
     {
       "id": "synthetic-hyphenated-line",

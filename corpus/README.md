@@ -20,6 +20,7 @@ corpus/
   accepted/
   expected/
   baselines/
+  licenses/
   reports/
 ```
 
@@ -34,6 +35,8 @@ corpus/
 - `expected/` contains reviewed expected Markdown, IR, or sidecar snapshots.
 - `baselines/` contains analysis, oracle outputs, and low-resolution page
   previews for human review.
+- `licenses/` contains notices for third-party material incorporated into
+  generated or redistributed corpus artifacts.
 - `reports/` contains corpus inventory and benchmark reports.
 
 ## Entry Policy

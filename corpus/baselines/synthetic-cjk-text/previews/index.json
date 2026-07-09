@@ -1,14 +1,14 @@
 {
   "id": "synthetic-cjk-text",
-  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "generatedAt": "2026-07-10T00:00:00.000Z",
   "renderer": {
     "command": "pdftoppm",
-    "dpi": 36,
+    "dpi": 72,
     "format": "png"
   },
   "source": {
     "path": "corpus/generated/synthetic-cjk-text.pdf",
-    "sha256": "6b46c52c1099955970c723ae5a10fb8c1dd2cba0550b9fccd0a2ec18578b43fb",
+    "sha256": "8e9d9b1cfb266cfdfe40025c5fab7e9f4c289ab789f289eb88e0bd234a0ff342",
     "pages": 1
   },
   "previews": [

@@ -1,9 +1,9 @@
 {
   "id": "synthetic-cjk-text",
-  "analyzedAt": "2026-07-04T06:19:32.609Z",
+  "analyzedAt": "2026-07-10T00:00:00.000Z",
   "path": "corpus/generated/synthetic-cjk-text.pdf",
-  "bytes": 1267,
-  "sha256": "6b46c52c1099955970c723ae5a10fb8c1dd2cba0550b9fccd0a2ec18578b43fb",
+  "bytes": 7774,
+  "sha256": "8e9d9b1cfb266cfdfe40025c5fab7e9f4c289ab789f289eb88e0bd234a0ff342",
   "manifest": {
     "kind": "cjk",
     "pages": 1,
@@ -11,7 +11,8 @@
       "born-digital",
       "to-unicode",
       "cjk",
-      "wrapped-lines"
+      "wrapped-lines",
+      "visible-vector-glyphs"
     ],
     "redistributable": true,
     "acceptanceFile": "corpus/accepted/synthetic-cjk-text.yaml"
@@ -64,7 +65,7 @@
     "endTextOps": 3,
     "textShowOps": 3,
     "imageXObjects": 0,
-    "pathOperators": 8,
+    "pathOperators": 275,
     "fontObjects": 3,
     "cidFonts": 0,
     "cidSystemInfo": 0,
@@ -73,7 +74,7 @@
     "missingToUnicodeLikely": false,
     "estimatedTextShowOpsPerPage": 3,
     "imageDominantLikely": false,
-    "pathHeavyLikely": false
+    "pathHeavyLikely": true
   },
   "ocrOverlaySignals": {
     "toolBacked": true,

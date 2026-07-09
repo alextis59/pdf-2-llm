@@ -94,6 +94,11 @@ stacks. Limit failures return `pdf.parse_failed` with a specific
   license notes, hashes, and redistribution status are reviewed.
 - Generated and mutated corpus PDFs need reproducible commands in
   `corpus/manifest.json`.
+- Generated fixtures that incorporate third-party font-derived glyph masks
+  must record that provenance in the manifest and keep the applicable notices
+  under `corpus/licenses/`. The multilingual fixtures use vector rectangles
+  derived from the permissively licensed DejaVu Sans and Droid Sans Fallback
+  glyphs; no system font file is read when fixtures are regenerated.
 - Asset paths returned by the API are logical sidecar paths unless the caller
   writes returned assets. The conversion API does not currently write asset
   files to `assets.outputDir`.

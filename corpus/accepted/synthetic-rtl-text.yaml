@@ -31,5 +31,5 @@ assets:
   required: []
 review:
   humanReviewedBy: "codex"
-  reviewedAt: "2026-07-02"
-  notes: "Generated ToUnicode fixture requires exact RTL row ordering and dir=rtl paragraph output."
+  reviewedAt: "2026-07-10"
+  notes: "Reviewed ToUnicode fixture requires exact RTL row ordering and dir=rtl output; embedded vector glyphs keep the Hebrew target visible in rendered previews."

@@ -1,14 +1,14 @@
 {
   "id": "synthetic-rtl-text",
-  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "generatedAt": "2026-07-10T00:00:00.000Z",
   "renderer": {
     "command": "pdftoppm",
-    "dpi": 36,
+    "dpi": 72,
     "format": "png"
   },
   "source": {
     "path": "corpus/generated/synthetic-rtl-text.pdf",
-    "sha256": "fcb5cf826d1c33c8504efcd24bcf6b36b28ab74b98d66204afcabbc0b944efc9",
+    "sha256": "d1ada8f3d54b61af4bd71872d55eebd235eefbe2a1c5a86abbd04cf0e4418460",
     "pages": 1
   },
   "previews": [

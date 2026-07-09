@@ -3,6 +3,10 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { deflateSync } from "node:zlib";
+import {
+  visibleUnicodeText,
+  visibleVerticalUnicodeText
+} from "./visible-unicode-glyphs.mjs";
 
 const repoRoot = process.cwd();
 const generatedAt = "2026-07-02";
@@ -185,11 +189,11 @@ function utf16BeHex(value) {
 }
 
 function unicodeText(x, y, size, value, encoder) {
-  return `BT /F2 ${size} Tf ${x} ${y} Td <${encoder.hex(value)}> Tj ET`;
+  return `q 1 g BT /F2 ${size} Tf ${x} ${y} Td <${encoder.hex(value)}> Tj ET Q`;
 }
 
 function verticalUnicodeText(x, y, size, value, encoder) {
-  return `BT /F2 ${size} Tf 0 1 -1 0 ${x} ${y} Tm <${encoder.hex(value)}> Tj ET`;
+  return `q 1 g BT /F2 ${size} Tf 0 1 -1 0 ${x} ${y} Tm <${encoder.hex(value)}> Tj ET Q`;
 }
 
 function createUnicodeTextPdf(operations, encoder) {
@@ -211,7 +215,9 @@ function createRtlTextPdf() {
     [
       text(72, 720, 22, "Synthetic RTL Text"),
       unicodeText(260, 680, 12, rtlLeftFragment, encoder),
-      unicodeText(320, 680, 12, rtlRightFragment, encoder)
+      unicodeText(320, 680, 12, rtlRightFragment, encoder),
+      visibleUnicodeText(260, 674, 18, rtlLeftFragment, { rtl: true }),
+      visibleUnicodeText(320, 674, 18, rtlRightFragment, { rtl: true })
     ],
     encoder
   );
@@ -223,7 +229,9 @@ function createCjkTextPdf() {
     [
       text(72, 720, 22, "Synthetic CJK Text"),
       unicodeText(72, 680, 12, cjkFirstLine, encoder),
-      unicodeText(72, 666, 12, cjkSecondLine, encoder)
+      unicodeText(72, 666, 12, cjkSecondLine, encoder),
+      visibleUnicodeText(72, 674, 18, cjkFirstLine),
+      visibleUnicodeText(72, 650, 18, cjkSecondLine)
     ],
     encoder
   );
@@ -241,7 +249,9 @@ function createVerticalWritingPdf() {
       verticalUnicodeText(260, 666, 12, verticalLeftBottom, encoder),
       verticalUnicodeText(320, 666, 12, verticalRightBottom, encoder),
       verticalUnicodeText(260, 680, 12, verticalLeftTop, encoder),
-      verticalUnicodeText(320, 680, 12, verticalRightTop, encoder)
+      verticalUnicodeText(320, 680, 12, verticalRightTop, encoder),
+      visibleVerticalUnicodeText(260, 680, 18, `${verticalLeftTop}${verticalLeftBottom}`),
+      visibleVerticalUnicodeText(320, 680, 18, `${verticalRightTop}${verticalRightBottom}`)
     ],
     encoder
   );
@@ -595,7 +605,7 @@ assets:
   required: []
 review:
   humanReviewedBy: "codex"
-  reviewedAt: "${generatedAt}"
+  reviewedAt: "${fixture.reviewedAt ?? generatedAt}"
   notes: ${yamlQuoted(fixture.reviewNotes)}
 `;
 }
@@ -610,8 +620,8 @@ function manifestEntry(fixture, pdfBytes) {
       description: fixture.description,
       command
     },
-    retrievedAt: generatedAt,
-    license: {
+    retrievedAt: fixture.generatedAt ?? generatedAt,
+    license: fixture.license ?? {
       name: "Generated test fixture",
       notes: "Created from repository fixture-generation code for unrestricted project testing."
     },
@@ -635,6 +645,11 @@ const verticalRightTop = "\u7e26";
 const verticalRightBottom = "\u66f8\u304d";
 const verticalLeftTop = "\u5217";
 const verticalLeftBottom = "\u4e8c";
+const visibleUnicodeGlyphLicense = {
+  name: "Generated fixture with Apache-2.0 and Bitstream Vera derived glyph masks",
+  notes:
+    "Visible CJK masks derive from Droid Sans Fallback and Hebrew masks derive from DejaVu Sans; notices are in corpus/licenses/."
+};
 
 const fixtures = [
   {
@@ -1374,8 +1389,11 @@ const fixtures = [
     id: "synthetic-rtl-text",
     kind: "rtl",
     gate: "advanced-v1",
-    features: ["born-digital", "to-unicode", "rtl", "bidi"],
-    description: "Right-to-left text fixture with ToUnicode font mappings and row-order checks.",
+    features: ["born-digital", "to-unicode", "rtl", "bidi", "visible-vector-glyphs"],
+    description: "Right-to-left text fixture with ToUnicode mappings, visible vector glyphs, and row-order checks.",
+    generatedAt: "2026-07-10",
+    reviewedAt: "2026-07-10",
+    license: visibleUnicodeGlyphLicense,
     minTextCoverage: 1,
     must: ["extract_rtl_text", "preserve_rtl_reading_order", "emit_bidi_markup"],
     mustNot: ["drop_bidi_markup", "reverse_rtl_fragments"],
@@ -1385,7 +1403,7 @@ const fixtures = [
       { page: 1, contains: rtlRightFragment }
     ],
     reviewNotes:
-      "Generated ToUnicode fixture requires exact RTL row ordering and dir=rtl paragraph output.",
+      "Reviewed ToUnicode fixture requires exact RTL row ordering and dir=rtl output; embedded vector glyphs keep the Hebrew target visible in rendered previews.",
     expectedMarkdown: `# Synthetic RTL Text\n\n<p dir="rtl">${rtlRightFragment} ${rtlLeftFragment}</p>\n`,
     createPdf: createRtlTextPdf,
     pages: [
@@ -1398,8 +1416,11 @@ const fixtures = [
     id: "synthetic-cjk-text",
     kind: "cjk",
     gate: "advanced-v1",
-    features: ["born-digital", "to-unicode", "cjk", "wrapped-lines"],
-    description: "CJK text fixture with ToUnicode mappings and wrapped-line paragraph joining.",
+    features: ["born-digital", "to-unicode", "cjk", "wrapped-lines", "visible-vector-glyphs"],
+    description: "CJK text fixture with ToUnicode mappings, visible vector glyphs, and wrapped-line paragraph joining.",
+    generatedAt: "2026-07-10",
+    reviewedAt: "2026-07-10",
+    license: visibleUnicodeGlyphLicense,
     minTextCoverage: 1,
     must: ["extract_cjk_text", "join_cjk_wrapped_lines_without_spaces"],
     mustNot: ["insert_synthetic_cjk_spaces", "split_wrapped_cjk_paragraph"],
@@ -1409,7 +1430,7 @@ const fixtures = [
       { page: 1, contains: cjkFirstLine }
     ],
     reviewNotes:
-      "Generated ToUnicode fixture requires exact CJK text extraction without inserted spaces across wrapped lines.",
+      "Reviewed ToUnicode fixture requires exact CJK joining without inserted spaces; embedded vector glyphs keep both Japanese lines visible in rendered previews.",
     expectedMarkdown: `# Synthetic CJK Text\n\n${cjkFirstLine}${cjkSecondLine}\n`,
     createPdf: createCjkTextPdf,
     pages: [
@@ -1422,8 +1443,11 @@ const fixtures = [
     id: "synthetic-vertical-writing",
     kind: "vertical-writing",
     gate: "advanced-v1",
-    features: ["born-digital", "to-unicode", "cjk", "vertical-writing"],
-    description: "Vertical writing fixture with ToUnicode mappings and vertical-rl column ordering.",
+    features: ["born-digital", "to-unicode", "cjk", "vertical-writing", "visible-vector-glyphs"],
+    description: "Vertical writing fixture with ToUnicode mappings, visible vector glyphs, and vertical-rl column ordering.",
+    generatedAt: "2026-07-10",
+    reviewedAt: "2026-07-10",
+    license: visibleUnicodeGlyphLicense,
     minTextCoverage: 1,
     must: ["extract_vertical_text", "preserve_vertical_column_order", "emit_vertical_writing_markup"],
     mustNot: ["flatten_vertical_columns", "drop_vertical_writing_markup"],
@@ -1433,7 +1457,7 @@ const fixtures = [
       { page: 1, contains: verticalLeftTop }
     ],
     reviewNotes:
-      "Generated ToUnicode fixture requires right-to-left vertical column order and writing-mode markup.",
+      "Reviewed ToUnicode fixture requires right-to-left vertical column order and writing-mode markup; embedded vector glyphs keep both columns visible in rendered previews.",
     expectedMarkdown: `<p style="writing-mode: vertical-rl">${verticalRightTop}${verticalRightBottom}</p>\n\n<p style="writing-mode: vertical-rl">${verticalLeftTop}${verticalLeftBottom}</p>\n`,
     createPdf: createVerticalWritingPdf,
     pages: [

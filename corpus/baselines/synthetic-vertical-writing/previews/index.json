@@ -1,14 +1,14 @@
 {
   "id": "synthetic-vertical-writing",
-  "generatedAt": "2026-07-03T00:00:00.000Z",
+  "generatedAt": "2026-07-10T00:00:00.000Z",
   "renderer": {
     "command": "pdftoppm",
-    "dpi": 36,
+    "dpi": 72,
     "format": "png"
   },
   "source": {
     "path": "corpus/generated/synthetic-vertical-writing.pdf",
-    "sha256": "f9ca3b21b10ab781adbcdd5a1cd4b564c34ebb4b3b511a20eb1234f686af5748",
+    "sha256": "2424794db934f6a26039f82fe5477c621102fa961664e51227872e855eb73b7d",
     "pages": 1
   },
   "previews": [
