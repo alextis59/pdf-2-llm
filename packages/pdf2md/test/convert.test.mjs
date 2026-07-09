@@ -68,6 +68,21 @@ test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", asyn
   assert.equal(result.ir.pages.length, 1);
   assert.equal(result.ir.pages[0].widthPt, 612);
   assert.equal(result.ir.pages[0].heightPt, 792);
+  assert.deepEqual(result.ir.pages[0].elements.map((element) => element.type), [
+    "text",
+    "text",
+    "text"
+  ]);
+  assert.deepEqual(
+    result.ir.pages[0].elements.flatMap((element) =>
+      element.type === "text" ? element.spans.map((span) => span.text) : []
+    ),
+    [
+      "Synthetic Simple Text",
+      "This fixture validates basic paragraph extraction.",
+      "The expected output is deterministic."
+    ]
+  );
   assert.equal(result.sourceMap.schemaVersion, "0.1.0");
   assert.equal(result.sourceMap.target, "markdown");
   assert.equal(result.sourceMap.entries[0].kind, "heading");
@@ -1390,16 +1405,25 @@ test("convertPdfToMarkdown emits equation blocks with diagnostics and source map
       }
     ]
   });
-  assert.deepEqual(result.ir.pages[0].elements, [
-    {
-      type: "equation",
-      text: "E = m c^2",
-      x: result.diagnostics.extraction.equations.equations[0].x,
-      y: result.diagnostics.extraction.equations.equations[0].y,
-      width: result.diagnostics.extraction.equations.equations[0].width,
-      height: result.diagnostics.extraction.equations.equations[0].height
-    }
-  ]);
+  assert.deepEqual(
+    result.ir.pages[0].elements.filter((element) => element.type === "equation"),
+    [
+      {
+        type: "equation",
+        text: "E = m c^2",
+        x: result.diagnostics.extraction.equations.equations[0].x,
+        y: result.diagnostics.extraction.equations.equations[0].y,
+        width: result.diagnostics.extraction.equations.equations[0].width,
+        height: result.diagnostics.extraction.equations.equations[0].height
+      }
+    ]
+  );
+  assert.deepEqual(
+    result.ir.pages[0].elements.flatMap((element) =>
+      element.type === "text" ? element.spans.map((span) => span.text) : []
+    ),
+    ["Equation Fixture", "A short lead-in.", "After the equation."]
+  );
 });
 
 test("convertPdfToMarkdown preserves low-confidence OCR equations as image assets", async () => {
@@ -1662,17 +1686,26 @@ test("convertPdfToMarkdown reports figure caption layout regions", async () => {
       pageIndex: 0
     }
   ]);
-  assert.deepEqual(result.ir.pages[0].elements, [
-    {
-      type: "figure",
-      caption: "Figure 1. A generated vector box.",
-      assetId: "synthetic-vector-figure-page-1-figure-1",
-      x: 120,
-      y: 520,
-      width: 240,
-      height: 120
-    }
-  ]);
+  assert.deepEqual(
+    result.ir.pages[0].elements.filter((element) => element.type === "figure"),
+    [
+      {
+        type: "figure",
+        caption: "Figure 1. A generated vector box.",
+        assetId: "synthetic-vector-figure-page-1-figure-1",
+        x: 120,
+        y: 520,
+        width: 240,
+        height: 120
+      }
+    ]
+  );
+  assert.deepEqual(
+    result.ir.pages[0].elements.flatMap((element) =>
+      element.type === "text" ? element.spans.map((span) => span.text) : []
+    ),
+    ["Vector Figure Fixture", "Figure 1. A generated vector box."]
+  );
   assert.deepEqual(result.diagnostics.extraction.figures, {
     total: 1,
     vectorFigures: 1,
@@ -1749,19 +1782,28 @@ test("convertPdfToMarkdown preserves tagged figure alt text", async () => {
       altTextSource: "tagged-pdf"
     }
   ]);
-  assert.deepEqual(result.ir.pages[0].elements, [
-    {
-      type: "figure",
-      caption: "Figure 1. Flow diagram.",
-      assetId: "document-page-1-figure-1",
-      altText: "Flow diagram showing intake and review",
-      altTextSource: "tagged-pdf",
-      x: 120,
-      y: 520,
-      width: 240,
-      height: 120
-    }
-  ]);
+  assert.deepEqual(
+    result.ir.pages[0].elements.filter((element) => element.type === "figure"),
+    [
+      {
+        type: "figure",
+        caption: "Figure 1. Flow diagram.",
+        assetId: "document-page-1-figure-1",
+        altText: "Flow diagram showing intake and review",
+        altTextSource: "tagged-pdf",
+        x: 120,
+        y: 520,
+        width: 240,
+        height: 120
+      }
+    ]
+  );
+  assert.deepEqual(
+    result.ir.pages[0].elements.flatMap((element) =>
+      element.type === "text" ? element.spans.map((span) => span.text) : []
+    ),
+    ["Tagged Figure Alt Fixture", "Figure 1. Flow diagram."]
+  );
   assert.deepEqual(result.diagnostics.extraction.figures.figures[0], {
     figureIndex: 0,
     pageIndex: 0,
@@ -1954,7 +1996,9 @@ test("convertPdfToMarkdown extracts form, annotation, attachment, and signature 
       pageIndex: null
     }
   ]);
-  assert.deepEqual(result.ir.pages[0].elements, [
+  assert.deepEqual(
+    result.ir.pages[0].elements.filter((element) => element.type !== "text"),
+    [
     {
       type: "form-field",
       name: "full_name",
@@ -2021,7 +2065,14 @@ test("convertPdfToMarkdown extracts form, annotation, attachment, and signature 
       width: 20,
       height: 20
     }
-  ]);
+    ]
+  );
+  assert.deepEqual(
+    result.ir.pages[0].elements.flatMap((element) =>
+      element.type === "text" ? element.spans.map((span) => span.text) : []
+    ),
+    ["Interactive Document Fixture"]
+  );
 });
 
 test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async () => {
@@ -2059,6 +2110,25 @@ test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async
     }
   ]);
   assert.deepEqual(result.ir.assets, result.assets);
+  assert.deepEqual(
+    result.ir.pages[0].elements.find((element) => element.type === "table"),
+    {
+      type: "table",
+      rows: [
+        ["Quarter", "Revenue", "Cost"],
+        ["Q1", "100", "50"],
+        ["Q2", "120", "60"]
+      ].map((row) => row.map((text) => ({ text, rowSpan: 1, colSpan: 1 }))),
+      confidence: 0.95,
+      csvSidecarAssetId: "table-page-1-1-csv"
+    }
+  );
+  assert.deepEqual(
+    result.ir.pages[0].elements.flatMap((element) =>
+      element.type === "text" ? element.spans.map((span) => span.text) : []
+    ),
+    ["Visible Table"]
+  );
   assert.equal(rulingLines.total, 8);
   assert.equal(rulingLines.horizontal, 4);
   assert.equal(rulingLines.vertical, 4);

@@ -429,7 +429,10 @@ path.
 ### `ir`
 
 Structured document IR with pages, page elements, assets, metadata, and
-warnings. The schema is exported as `documentIrJsonSchema`.
+warnings. Page text elements come from the reconciled PDF/OCR lines selected
+for Markdown, and emitted tables become table elements instead of duplicated
+text elements. Table elements reference their CSV sidecar asset when one is
+enabled. The schema is exported as `documentIrJsonSchema`.
 
 ### `warnings`
 

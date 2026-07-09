@@ -123,7 +123,11 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const listIndentModel = createListIndentModel(lines);
   const codeModel = createCodeModel(lines);
   const equationModel = createEquationModel(lines);
-  const rulingTableExports = createRulingTableExports(lines, options.rulingTables ?? []);
+  const rulingTableExports = createRulingTableExports(
+    lines,
+    options.rulingTables ?? [],
+    options.tableCsvSidecarsByTable
+  );
   const lowConfidenceTables = [];
   const lowConfidenceTableLines = new Set();
   const blocks = [];
@@ -139,6 +143,8 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       appendPageAnchor(blocks, rulingTable.pageIndex, options, anchoredPages);
       blocks.push(
         createMarkdownBlock(rulingTable.markdown, "table", rulingTable.sourceLines, {
+          irRows: rulingTable.irRows,
+          csvSidecarAssetId: rulingTable.csvSidecarAssetId,
           table: {
             source: "ruling-grid",
             pageIndex: rulingTable.pageIndex,
@@ -166,6 +172,13 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       appendPageAnchor(blocks, table.rows[0][0]?.pageIndex, options, anchoredPages);
       blocks.push(
         createMarkdownBlock(formatTable(table.rows), "table", table.rows.flat(), {
+          irRows: table.rows.map((row) =>
+            row.map((line) => ({
+              text: normalizeText(line.text ?? ""),
+              rowSpan: 1,
+              colSpan: 1
+            }))
+          ),
           table: {
             source: "borderless-heuristic",
             pageIndex: table.rows[0][0]?.pageIndex ?? null,
@@ -275,6 +288,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
 
   return {
     ...serializeMarkdownBlocks(blocks),
+    irElementsByPage: irElementsByPageFromBlocks(blocks),
     tables: tableDiagnosticsFromBlocks(blocks),
     equations: equationDiagnosticsFromBlocks(blocks, formulaOcrState),
     lowConfidenceTables,
@@ -1712,6 +1726,100 @@ function createMarkdownBlock(text, kind, sourceLines = [], metadata = {}) {
   };
 }
 
+function irElementsByPageFromBlocks(blocks) {
+  const elementsByPage = new Map();
+  for (const block of blocks) {
+    if (block.kind === "table") {
+      appendTableIrElement(elementsByPage, block);
+      continue;
+    }
+    if (block.kind === "equation" || block.kind === "page_anchor") {
+      continue;
+    }
+    for (const line of block.sourceLines) {
+      if (!Number.isInteger(line?.pageIndex)) {
+        continue;
+      }
+      const spans = irTextSpansForLine(line);
+      if (spans.length === 0) {
+        continue;
+      }
+      appendIrElement(elementsByPage, line.pageIndex, {
+        type: "text",
+        spans
+      });
+    }
+  }
+  return elementsByPage;
+}
+
+function appendTableIrElement(elementsByPage, block) {
+  const pageIndex = block.metadata?.table?.pageIndex;
+  if (!Number.isInteger(pageIndex) || !Array.isArray(block.metadata?.irRows)) {
+    return;
+  }
+  appendIrElement(elementsByPage, pageIndex, {
+    type: "table",
+    rows: block.metadata.irRows.map((row) => row.map((cell) => ({ ...cell }))),
+    confidence: block.metadata.table.confidence,
+    ...(block.metadata.table.output === "html" ? { htmlFallback: block.text } : {}),
+    ...(typeof block.metadata.csvSidecarAssetId === "string"
+      ? { csvSidecarAssetId: block.metadata.csvSidecarAssetId }
+      : {})
+  });
+}
+
+function appendIrElement(elementsByPage, pageIndex, element) {
+  const elements = elementsByPage.get(pageIndex) ?? [];
+  elements.push(element);
+  elementsByPage.set(pageIndex, elements);
+}
+
+function irTextSpansForLine(line) {
+  const sourceSpans = Array.isArray(line.spans) && line.spans.length > 0
+    ? line.spans
+    : [line];
+  return sourceSpans
+    .map((span) => createIrTextSpan(span, line))
+    .filter(Boolean);
+}
+
+function createIrTextSpan(span, line) {
+  const text = String(span?.text ?? line?.text ?? "");
+  if (text.length === 0) {
+    return null;
+  }
+  const fontName = span?.fontName ?? line?.fontName;
+  const glyphIds = Array.isArray(span?.glyphIds) ? [...span.glyphIds] : null;
+  return {
+    text,
+    ...(glyphIds ? { glyphIds } : {}),
+    ...(typeof fontName === "string" && fontName.length > 0 ? { fontName } : {}),
+    x: roundNumber(finiteOr(span?.x, finiteOr(line?.x, 0))),
+    y: roundNumber(finiteOr(span?.y, finiteOr(line?.y, 0))),
+    width: roundNumber(Math.max(0, finiteOr(span?.width, finiteOr(line?.width, 0)))),
+    height: roundNumber(Math.max(0, finiteOr(span?.height, finiteOr(line?.height, 0)))),
+    direction: irTextDirection(span?.direction ?? line?.direction),
+    confidence: normalizedIrConfidence(span?.confidence ?? line?.confidence),
+    source: irTextSource(span?.source ?? line?.source)
+  };
+}
+
+function irTextDirection(value) {
+  return value === "ltr" || value === "rtl" || value === "vertical" ? value : "unknown";
+}
+
+function normalizedIrConfidence(value) {
+  const confidence = Number(value);
+  return Number.isFinite(confidence)
+    ? roundNumber(Math.min(1, Math.max(0, confidence > 1 ? confidence / 100 : confidence)))
+    : 0;
+}
+
+function irTextSource(value) {
+  return value === "ocr" || value === "tagged-pdf" ? value : "pdf-text";
+}
+
 function tableDiagnosticsFromBlocks(blocks) {
   const tables = [];
   for (const block of blocks) {
@@ -1903,7 +2011,7 @@ function endsWithParagraphTerminal(text) {
   return /[.!?:;)\u3002\uff01\uff1f\uff0e\uff61]$/.test(text);
 }
 
-function createRulingTableExports(lines, rulingTables) {
+function createRulingTableExports(lines, rulingTables, tableCsvSidecarsByTable = new Map()) {
   const exportsByStart = new Map();
   if (!Array.isArray(rulingTables) || rulingTables.length === 0) {
     return {
@@ -1914,7 +2022,11 @@ function createRulingTableExports(lines, rulingTables) {
 
   const lineIndexes = new Map(lines.map((line, index) => [line, index]));
   for (const table of rulingTables) {
-    const tableExport = createRulingTableExport(table, lineIndexes);
+    const tableExport = createRulingTableExport(
+      table,
+      lineIndexes,
+      tableCsvSidecarsByTable?.get(table)?.id
+    );
     if (!tableExport) {
       continue;
     }
@@ -1935,7 +2047,7 @@ function createRulingTableExports(lines, rulingTables) {
   };
 }
 
-function createRulingTableExport(table, lineIndexes) {
+function createRulingTableExport(table, lineIndexes, csvSidecarAssetId = null) {
   if (!isRulingTableExportable(table)) {
     return null;
   }
@@ -1978,6 +2090,8 @@ function createRulingTableExport(table, lineIndexes) {
     columns: output.columns,
     output: outputAsHtml ? "html" : "gfm",
     confidence: rulingTableConfidence(hasSpans),
+    irRows: rulingTableIrRows(table, rows, { outputAsHtml }),
+    csvSidecarAssetId,
     hasSpans,
     numericColumns: numericColumnIndexes(rows),
     markdown: output.markdown,
@@ -1986,6 +2100,25 @@ function createRulingTableExport(table, lineIndexes) {
       (left, right) => lineIndexes.get(left) - lineIndexes.get(right)
     )
   };
+}
+
+function rulingTableIrRows(table, rows, { outputAsHtml }) {
+  if (!outputAsHtml) {
+    return rows.map((row) =>
+      row.map((text) => ({
+        text,
+        rowSpan: 1,
+        colSpan: 1
+      }))
+    );
+  }
+  return expandedRulingTableCellRows(table).map((row) =>
+    row.map((cell) => ({
+      text: normalizeText(cell.text ?? ""),
+      rowSpan: Math.max(1, cell.rowSpan ?? 1),
+      colSpan: Math.max(1, cell.columnSpan ?? 1)
+    }))
+  );
 }
 
 function rulingTableConfidence(hasSpans) {

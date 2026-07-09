@@ -250,6 +250,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     pageAnchors: options.markdown?.pageAnchors === true,
     preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
     rulingTables,
+    tableCsvSidecarsByTable: tableCsvSidecars.byTable,
     outlines: pdfDocument?.outlines ?? [],
     equations: {
       imageFallbackConfidence: options.equations?.imageFallbackConfidence,
@@ -328,7 +329,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
         rotation: page.rotation,
         sourceType: scanPagesByIndex.get(page.pageIndex)?.sourceType ?? "unknown",
         elements: [
-          ...(ocrTextExtraction.elementsByPage.get(page.pageIndex) ?? []),
+          ...(markdownResult.irElementsByPage.get(page.pageIndex) ?? []),
           ...(equationElements.get(page.pageIndex) ?? []),
           ...(figureElements.get(page.pageIndex) ?? []),
           ...(documentInteractions.elementsByPage.get(page.pageIndex) ?? [])

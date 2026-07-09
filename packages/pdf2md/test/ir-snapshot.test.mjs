@@ -14,5 +14,15 @@ test("serialized IR matches reviewed snapshot for synthetic simple text", async 
   const result = await convertPdfToMarkdown(fixturePath.pathname);
   const actual = JSON.parse(JSON.stringify(result.ir));
 
+  assert.deepEqual(
+    actual.pages[0].elements.flatMap((element) =>
+      element.type === "text" ? element.spans.map((span) => span.text) : []
+    ),
+    [
+      "Synthetic Simple Text",
+      "This fixture validates basic paragraph extraction.",
+      "The expected output is deterministic."
+    ]
+  );
   assert.deepEqual(actual, expected);
 });

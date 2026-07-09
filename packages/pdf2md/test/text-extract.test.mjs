@@ -548,6 +548,22 @@ test("linesToMarkdownWithSourceMap exports no-span ruling tables as GFM", () => 
       sourceLines: 6
     }
   ]);
+  const irElements = result.irElementsByPage.get(0);
+  assert.deepEqual(irElements.map((element) => element.type), ["text", "table"]);
+  assert.deepEqual(irElements[1], {
+    type: "table",
+    rows: [
+      ["Quarter", "Revenue", "Cost"],
+      ["Q1", "100", "50"]
+    ].map((row) => row.map((text) => ({ text, rowSpan: 1, colSpan: 1 }))),
+    confidence: 0.95
+  });
+  assert.deepEqual(
+    irElements.flatMap((element) =>
+      element.type === "text" ? element.spans.map((span) => span.text) : []
+    ),
+    ["Ruled Table Fixture"]
+  );
 });
 
 test("linesToMarkdownWithSourceMap exports ruling tables with non-contiguous reading-order lines", () => {
@@ -638,6 +654,21 @@ test("linesToMarkdownWithSourceMap exports span-bearing ruling tables as HTML", 
   assert.equal(result.sourceMap.entries.length, 2);
   assert.equal(result.sourceMap.entries[1].kind, "table");
   assert.equal(result.sourceMap.entries[1].regions.length, 3);
+  assert.deepEqual(
+    result.irElementsByPage.get(0).find((element) => element.type === "table"),
+    {
+      type: "table",
+      rows: [
+        [{ text: "Revenue <Total>", rowSpan: 1, colSpan: 2 }],
+        [
+          { text: "Q1 & Q2", rowSpan: 1, colSpan: 1 },
+          { text: '100 "net"', rowSpan: 1, colSpan: 1 }
+        ]
+      ],
+      confidence: 0.9,
+      htmlFallback: result.markdown.slice(result.markdown.indexOf("<table>")).trimEnd()
+    }
+  );
 });
 
 test("linesToMarkdownWithSourceMap splits aligned visual rows inside merged ruled cells", () => {

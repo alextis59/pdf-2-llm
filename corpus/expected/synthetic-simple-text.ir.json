@@ -8,7 +8,56 @@
       "heightPt": 792,
       "rotation": 0,
       "sourceType": "digital",
-      "elements": []
+      "elements": [
+        {
+          "type": "text",
+          "spans": [
+            {
+              "text": "Synthetic Simple Text",
+              "fontName": "F1",
+              "x": 72,
+              "y": 720,
+              "width": 231,
+              "height": 22,
+              "direction": "ltr",
+              "confidence": 0.75,
+              "source": "pdf-text"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "spans": [
+            {
+              "text": "This fixture validates basic paragraph extraction.",
+              "fontName": "F1",
+              "x": 72,
+              "y": 680,
+              "width": 300,
+              "height": 12,
+              "direction": "ltr",
+              "confidence": 0.75,
+              "source": "pdf-text"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "spans": [
+            {
+              "text": "The expected output is deterministic.",
+              "fontName": "F1",
+              "x": 72,
+              "y": 660,
+              "width": 222,
+              "height": 12,
+              "direction": "ltr",
+              "confidence": 0.75,
+              "source": "pdf-text"
+            }
+          ]
+        }
+      ]
     }
   ],
   "metadata": {},

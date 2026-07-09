@@ -47,8 +47,10 @@ The main orchestration path is `convertPdfToMarkdown()` in
    `options.ocr.results`.
 7. Reconcile PDF text and OCR text, infer layout, tables, figures, equations,
    running content, and page source types.
-8. Serialize Markdown, source maps, sidecar assets, warnings, diagnostics, IR,
-   and confidence scores.
+8. Serialize Markdown and source maps from the reconciled content blocks. The
+   same selected text lines and emitted tables populate page IR so suppressed
+   PDF/OCR duplicates and table-cell text are not emitted twice.
+9. Assemble sidecar assets, warnings, diagnostics, IR, and confidence scores.
 
 Timeout and abort checkpoints throw `TimeoutError` or `AbortError`. Most
 document-level failures return structured warnings and diagnostics so callers
@@ -63,7 +65,7 @@ can make policy decisions without losing the result object.
 | `stream-filters.mjs` | Stream filter decoding and decoded-stream byte caps. |
 | `content-stream.mjs` | PDF graphics/text operator interpretation for text, geometry, and drawing signals. |
 | `font-encoding.mjs` | ToUnicode CMap parsing, encoding fallbacks, and trusted/simple encoding checks. |
-| `text-extract.mjs` | Text extraction, layout grouping, Markdown serialization, source maps, headings, lists, running content, equations, and table insertion. |
+| `text-extract.mjs` | Text extraction, layout grouping, Markdown/source-map serialization, page text/table IR projection, headings, lists, running content, equations, and table insertion. |
 | `table-grid.mjs` | Ruling-line grid inference, cell assignment, spans, and table geometry. |
 | `figure-detection.mjs` | Figure region detection, caption placement, figure Markdown insertion, and preview sidecars. |
 | `document-interactions.mjs` | Form, annotation, attachment, and signature metadata extraction. |
