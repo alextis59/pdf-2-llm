@@ -1036,6 +1036,9 @@ function inferredInterSpanMinimumGap(previousText, nextText, fontSize) {
 }
 
 function shouldGlueAdjacentTextFragments(previousText, nextText, gap, fontSize) {
+  if (/[A-Za-z]-$/.test(previousText) && /^[a-z]/.test(nextText) && gap <= 0) {
+    return true;
+  }
   const previous = trailingWordFragment(previousText);
   const next = leadingWordFragment(nextText);
   if (!previous || !next) {

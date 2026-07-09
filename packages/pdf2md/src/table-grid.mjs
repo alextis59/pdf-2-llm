@@ -391,7 +391,16 @@ function splitLineIntoCellFragments(line, grid, rowIndex, tolerance) {
   for (const span of spans) {
     const text = normalizeText(span.text);
     const center = lineCenter(span);
-    const columnIndex = columnIndexForTableFragment(center.x, grid.xEdges, tolerance);
+    const anchorX = Number.isFinite(span.x) ? span.x : center.x;
+    const boundaryTolerance = Math.max(
+      tolerance,
+      Number.isFinite(span.fontSize) ? span.fontSize * 0.35 : tolerance
+    );
+    const columnIndex = columnIndexForTableFragment(
+      anchorX,
+      grid.xEdges,
+      boundaryTolerance
+    );
     if (columnIndex === null) {
       continue;
     }

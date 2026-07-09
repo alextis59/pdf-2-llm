@@ -209,6 +209,39 @@ test("assignTextLinesToGridCells preserves adjacent spans within one ruled cell"
   );
 });
 
+test("assignTextLinesToGridCells keeps trailing word fragments in the preceding cell", () => {
+  const [grid] = inferRulingGrids([
+    horizontal(100, 100, 350, 100),
+    horizontal(100, 130, 350, 130),
+    vertical(100, 100, 100, 130),
+    vertical(200, 100, 200, 130),
+    vertical(350, 100, 350, 130)
+  ]);
+  const [table] = assignTextLinesToGridCells(
+    [grid],
+    [
+      {
+        ...textLine("Activation secret A password", 110, 112, 170, 10),
+        spans: [
+          { text: "Activation secre", x: 110, y: 112, width: 92, height: 10, fontSize: 10 },
+          { text: "t", x: 202, y: 112, width: 5, height: 10, fontSize: 10 },
+          { text: "A password", x: 207, y: 112, width: 50, height: 10, fontSize: 10 }
+        ]
+      }
+    ]
+  );
+
+  assert.deepEqual(
+    table.cells
+      .filter((cell) => cell.text)
+      .map((cell) => [cell.rowIndex, cell.columnIndex, cell.text]),
+    [
+      [0, 0, "Activation secret"],
+      [0, 1, "A password"]
+    ]
+  );
+});
+
 test("detectTableCellSpans detects column spans from missing vertical boundaries", () => {
   const lines = [
     horizontal(0, 0, 100, 0),

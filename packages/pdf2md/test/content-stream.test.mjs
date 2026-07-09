@@ -764,6 +764,12 @@ test("extractContentStreamTextLines spaces positioned one-letter words without s
     ),
     { resources }
   );
+  const overlappingHyphenatedFragments = extractContentStreamTextLines(
+    ["BT", "/F1 10 Tf", "200 300 Td", "(multi-) Tj", "29.9 0 Td", "(factor) Tj", "ET"].join(
+      "\n"
+    ),
+    { resources }
+  );
 
   assert.equal(spaced.length, 1);
   assert.equal(spaced[0].text, "showed a result");
@@ -772,4 +778,5 @@ test("extractContentStreamTextLines spaces positioned one-letter words without s
   assert.equal(possessive.length, 1);
   assert.equal(possessive[0].text, "brain's inductive");
   assert.equal(overlappingFragments[0].text, "Digital");
+  assert.equal(overlappingHyphenatedFragments[0].text, "multi-factor");
 });
