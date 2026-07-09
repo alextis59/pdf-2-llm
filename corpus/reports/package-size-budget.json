@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-09T23:23:00.482Z",
+  "generatedAt": "2026-07-09T23:36:13.558Z",
   "budget": {
     "maxPackedBytes": 524288,
     "maxUnpackedBytes": 1048576,
@@ -14,8 +14,8 @@
     "name": "pdf-2-llm",
     "version": "1.2.1",
     "filename": "pdf-2-llm-1.2.1.tgz",
-    "packedBytes": 117093,
-    "unpackedBytes": 514331,
+    "packedBytes": 117814,
+    "unpackedBytes": 515567,
     "entryCount": 38
   },
   "largestFiles": [
@@ -57,7 +57,7 @@
     },
     {
       "path": "packages/pdf2md/examples/browser-basic.html",
-      "bytes": 15359
+      "bytes": 16437
     }
   ],
   "forbiddenFiles": [],

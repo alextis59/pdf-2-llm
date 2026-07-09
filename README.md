@@ -296,6 +296,9 @@ The browser example is at:
 packages/pdf2md/examples/browser-basic.html
 ```
 
+Its **Load Fixture** action uses a sample PDF embedded in the published HTML,
+so it also works from an installed package without repository `corpus/` files.
+
 ## Repository Layout
 
 ```text

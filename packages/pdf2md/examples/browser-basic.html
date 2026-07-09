@@ -328,7 +328,8 @@
       import { convertPdfToMarkdown } from "../src/browser.mjs";
       import { loadPdf2mdCoreWasm } from "../src/wasm-loader.mjs";
 
-      const sampleUrl = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
+      // Keep the one-click sample inside the published HTML; corpus/ is not part of the package.
+      const samplePdfBase64 = "JVBERi0xLjQKJSBwZGYtMi1sbG0gZ2VuZXJhdGVkIGZpeHR1cmUKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFs0IDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL0ZvbnQgL1N1YnR5cGUgL1R5cGUxIC9CYXNlRm9udCAvSGVsdmV0aWNhIC9FbmNvZGluZyAvV2luQW5zaUVuY29kaW5nID4+CmVuZG9iago0IDAgb2JqCjw8IC9UeXBlIC9QYWdlIC9QYXJlbnQgMiAwIFIgL01lZGlhQm94IFswIDAgNjEyIDc5Ml0gL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgMyAwIFIgPj4gPj4gL0NvbnRlbnRzIDUgMCBSID4+CmVuZG9iago1IDAgb2JqCjw8IC9MZW5ndGggMjA0ID4+CnN0cmVhbQpCVCAvRjEgMjIgVGYgNzIgNzIwIFRkIChTeW50aGV0aWMgU2ltcGxlIFRleHQpIFRqIEVUCkJUIC9GMSAxMiBUZiA3MiA2ODAgVGQgKFRoaXMgZml4dHVyZSB2YWxpZGF0ZXMgYmFzaWMgcGFyYWdyYXBoIGV4dHJhY3Rpb24uKSBUaiBFVApCVCAvRjEgMTIgVGYgNzIgNjYwIFRkIChUaGUgZXhwZWN0ZWQgb3V0cHV0IGlzIGRldGVybWluaXN0aWMuKSBUaiBFVAoKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNgowMDAwMDAwMDAwIDY1NTM1IGYKMDAwMDAwMDAzOSAwMDAwMCBuCjAwMDAwMDAwODggMDAwMDAgbgowMDAwMDAwMTQ1IDAwMDAwIG4KMDAwMDAwMDI0MiAwMDAwMCBuCjAwMDAwMDAzNjggMDAwMDAgbgp0cmFpbGVyCjw8IC9TaXplIDYgL1Jvb3QgMSAwIFIgPj4Kc3RhcnR4cmVmCjYyMwolJUVPRgo=";
       const fileInput = document.querySelector("#file");
       const fileName = document.querySelector("#file-name");
       const loadSampleButton = document.querySelector("#load-sample");
@@ -374,11 +375,7 @@
       async function loadFixture() {
         setBusyState("Loading fixture");
         try {
-          const response = await fetch(sampleUrl);
-          if (!response.ok) {
-            throw new Error(`Fixture request failed with HTTP ${response.status}`);
-          }
-          selectedBuffer = await response.arrayBuffer();
+          selectedBuffer = decodeBase64(samplePdfBase64);
           selectedFile = null;
           fileInput.value = "";
           fileName.textContent = `synthetic-simple-text.pdf (${formatBytes(selectedBuffer.byteLength)})`;
@@ -521,6 +518,11 @@
           return `${(bytes / 1024).toFixed(1)} KiB`;
         }
         return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+      }
+
+      function decodeBase64(value) {
+        const binary = atob(value);
+        return Uint8Array.from(binary, (char) => char.charCodeAt(0)).buffer;
       }
 
       function percent(value) {
