@@ -164,6 +164,7 @@ reported as `security.password_required`.
     maxPages?: number;
     maxObjects?: number;
     maxDepth?: number;
+    maxCMapMappings?: number;
     maxImagePixels?: number;
     timeoutMs?: number;
   };
@@ -179,6 +180,7 @@ Defaults:
 | `maxPages` | `5000` |
 | `maxObjects` | `100000` |
 | `maxDepth` | `100` |
+| `maxCMapMappings` | `65536` |
 | `maxImagePixels` | `100000000` |
 | `timeoutMs` | `120000` |
 

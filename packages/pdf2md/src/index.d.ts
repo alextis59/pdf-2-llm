@@ -40,6 +40,7 @@ export type ConvertOptions = {
     maxPages?: number;
     maxObjects?: number;
     maxDepth?: number;
+    maxCMapMappings?: number;
     maxImagePixels?: number;
     timeoutMs?: number;
   };

@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import {
   decodePdfStringWithFont,
   isTrustedSimpleEncoding,
+  PdfCMapParseError,
   parseToUnicodeCMap
 } from "../../src/font-encoding.mjs";
 import { createRng, randomAscii, randomBytes, randomInt } from "../utils.mjs";
@@ -16,6 +17,7 @@ export function runFontEncodingFuzz({ iterations = 200, seed = 0xf07a } = {}) {
   let parsedCMaps = 0;
   let decodedStrings = 0;
   let malformedCMaps = 0;
+  let mappingLimitChecks = 0;
   let trustedSimpleEncodings = 0;
 
   for (let index = 0; index < iterations; index += 1) {
@@ -58,6 +60,20 @@ export function runFontEncodingFuzz({ iterations = 200, seed = 0xf07a } = {}) {
     malformedCMaps += 1;
   }
 
+  for (let index = 0; index < iterations; index += 1) {
+    const maxMappings = randomInt(rng, 1, 16);
+    const withinLimit = rangeCMap(0, maxMappings - 1);
+    const overLimit = rangeCMap(0, maxMappings);
+
+    assert.equal(parseToUnicodeCMap(withinLimit, { maxMappings }).entries, maxMappings);
+    assert.throws(
+      () => parseToUnicodeCMap(overLimit, { maxMappings }),
+      (error) =>
+        error instanceof PdfCMapParseError && error.code === "pdf.cmap_mapping_limit_exceeded"
+    );
+    mappingLimitChecks += 1;
+  }
+
   return {
     target: "font-encoding",
     seed,
@@ -65,6 +81,7 @@ export function runFontEncodingFuzz({ iterations = 200, seed = 0xf07a } = {}) {
     parsedCMaps,
     decodedStrings,
     malformedCMaps,
+    mappingLimitChecks,
     trustedSimpleEncodings
   };
 }
@@ -115,6 +132,14 @@ function randomMalformedCMap(rng) {
 
 function randomUnicodeDestination(rng) {
   return unicodeDestinations[randomInt(rng, 0, unicodeDestinations.length - 1)];
+}
+
+function rangeCMap(start, end) {
+  return [
+    "1 beginbfrange",
+    `<${byteToHex(start)}> <${byteToHex(end)}> <0041>`,
+    "endbfrange"
+  ].join("\n");
 }
 
 function randomByteHex(rng, min = 0, max = 255) {

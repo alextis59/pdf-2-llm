@@ -1,8 +1,20 @@
 import { bytesToLatin1 as runtimeBytesToLatin1 } from "./runtime.mjs";
 
-export function parseToUnicodeCMap(cmapText) {
+export class PdfCMapParseError extends Error {
+  constructor(message, { code = "pdf.cmap_parse_failed" } = {}) {
+    super(message);
+    this.name = "PdfCMapParseError";
+    this.code = code;
+  }
+}
+
+export function parseToUnicodeCMap(cmapText, { maxMappings = 65_536 } = {}) {
+  if (!Number.isInteger(maxMappings) || maxMappings < 0) {
+    throw new RangeError("maxMappings must be a non-negative integer");
+  }
   const map = new Map();
   const codespaces = [];
+  const mappingBudget = { used: 0, max: maxMappings };
 
   for (const block of readCMapBlocks(cmapText, "begincodespacerange", "endcodespacerange")) {
     for (const match of block.matchAll(/<([0-9a-fA-F\s]+)>\s*<([0-9a-fA-F\s]+)>/g)) {
@@ -20,12 +32,13 @@ export function parseToUnicodeCMap(cmapText) {
 
   for (const block of readCMapBlocks(cmapText, "beginbfchar", "endbfchar")) {
     for (const match of block.matchAll(/<([0-9a-fA-F\s]+)>\s*<([0-9a-fA-F\s]+)>/g)) {
+      consumeMappingBudget(mappingBudget, 1);
       map.set(normalizeHex(match[1]), utf16BeHexToString(match[2]));
     }
   }
 
   for (const block of readCMapBlocks(cmapText, "beginbfrange", "endbfrange")) {
-    parseBfRangeBlock(block, map);
+    parseBfRangeBlock(block, map, mappingBudget);
   }
 
   if (codespaces.length === 0) {
@@ -67,7 +80,7 @@ export function isTrustedSimpleEncoding(font) {
   );
 }
 
-function parseBfRangeBlock(block, map) {
+function parseBfRangeBlock(block, map, mappingBudget) {
   const rangePattern =
     /<([0-9a-fA-F\s]+)>\s*<([0-9a-fA-F\s]+)>\s*(?:<([0-9a-fA-F\s]+)>|\[((?:\s*<[\dA-Fa-f\s]+>\s*)+)\])/g;
 
@@ -86,6 +99,8 @@ function parseBfRangeBlock(block, map) {
       if (!Number.isSafeInteger(destinationCode)) {
         continue;
       }
+      const rangeMappings = endCode - startCode + 1;
+      consumeMappingBudget(mappingBudget, rangeMappings);
       for (let code = startCode; code <= endCode; code += 1) {
         const source = code.toString(16).padStart(startHex.length, "0").toUpperCase();
         const destination = (destinationCode + code - startCode)
@@ -97,14 +112,26 @@ function parseBfRangeBlock(block, map) {
       continue;
     }
 
-    const destinations = [...match[4].matchAll(/<([0-9a-fA-F\s]+)>/g)].map((item) =>
-      normalizeHex(item[1])
-    );
-    for (let index = 0; index < destinations.length && startCode + index <= endCode; index += 1) {
+    let index = 0;
+    for (const destination of match[4].matchAll(/<([0-9a-fA-F\s]+)>/g)) {
+      if (startCode + index > endCode) {
+        break;
+      }
+      consumeMappingBudget(mappingBudget, 1);
       const source = (startCode + index).toString(16).padStart(startHex.length, "0").toUpperCase();
-      map.set(source, utf16BeHexToString(destinations[index]));
+      map.set(source, utf16BeHexToString(normalizeHex(destination[1])));
+      index += 1;
     }
   }
+}
+
+function consumeMappingBudget(budget, count) {
+  if (!Number.isSafeInteger(count) || count < 0 || count > budget.max - budget.used) {
+    throw new PdfCMapParseError("ToUnicode CMap mappings exceed parser limit.", {
+      code: "pdf.cmap_mapping_limit_exceeded"
+    });
+  }
+  budget.used += count;
 }
 
 function decodeBytesWithCMap(bytes, cmap) {

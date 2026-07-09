@@ -1,4 +1,4 @@
-import { parseToUnicodeCMap } from "./font-encoding.mjs";
+import { PdfCMapParseError, parseToUnicodeCMap } from "./font-encoding.mjs";
 import {
   bytesToLatin1,
   hexToBytes,
@@ -64,6 +64,7 @@ export function parsePdfDocument(bytes, options = {}) {
   const maxDecodedStreamBytes = options.maxDecodedStreamBytes ?? options.maxBytes ?? 50 * 1024 * 1024;
   const maxObjects = readMaxObjects(options.maxObjects);
   const maxDepth = readMaxDepth(options.maxDepth);
+  const maxCMapMappings = readMaxCMapMappings(options.maxCMapMappings);
   const mode = options.mode ?? options.parseMode ?? "strict";
   const source = bytesToLatin1(reader.bytes);
   const version = readPdfVersion(source);
@@ -113,7 +114,7 @@ export function parsePdfDocument(bytes, options = {}) {
 
   const catalog = resolveCatalog(trailer, getObject);
   const outlines = resolveOutlines(catalog.outlinesRef, getObject, maxDepth);
-  const pages = resolvePages(catalog, getObject, maxDepth);
+  const pages = resolvePages(catalog, getObject, maxDepth, maxCMapMappings);
   const structure = resolveStructureTree(catalog.structureTreeRootRef, getObject, pages, maxDepth);
 
   return {
@@ -510,6 +511,14 @@ function readMaxDepth(maxDepth) {
   const value = maxDepth ?? 100;
   if (!Number.isInteger(value) || value < 0) {
     throw new RangeError("maxDepth must be a non-negative integer");
+  }
+  return value;
+}
+
+function readMaxCMapMappings(maxCMapMappings) {
+  const value = maxCMapMappings ?? 65_536;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new RangeError("maxCMapMappings must be a non-negative integer");
   }
   return value;
 }
@@ -1512,7 +1521,7 @@ function mapStructureRole(role, roleMap) {
   return current;
 }
 
-function resolvePages(catalog, getObject, maxDepth = 100) {
+function resolvePages(catalog, getObject, maxDepth = 100, maxCMapMappings = 65_536) {
   const rootPages = getObject(catalog.pagesRef);
   if (!rootPages || !isDict(rootPages.value)) {
     throw new PdfSyntaxError("Pages tree root is missing or invalid.", {
@@ -1524,6 +1533,7 @@ function resolvePages(catalog, getObject, maxDepth = 100) {
   walkPageNode(rootPages, {}, getObject, pages, {
     depth: 0,
     maxDepth,
+    maxCMapMappings,
     seen: new Set()
   });
   return pages.map((page, index) => ({
@@ -1597,7 +1607,7 @@ function walkPageNode(object, inherited, getObject, pages, context) {
   const rotation = typeof nextInherited.rotate === "number" ? nextInherited.rotate : 0;
   const userUnit = typeof nextInherited.userUnit === "number" ? nextInherited.userUnit : 1;
   const contentStreams = resolveContentStreams(dict.entries.Contents, getObject);
-  const resources = resolveResources(nextInherited.resources, getObject);
+  const resources = resolveResources(nextInherited.resources, getObject, context.maxCMapMappings);
 
   pages.push({
     objectNumber: object.objectNumber,
@@ -1643,7 +1653,7 @@ function resolveContentStreams(contents, getObject) {
   return streams;
 }
 
-function resolveResources(resourcesValue, getObject) {
+function resolveResources(resourcesValue, getObject, maxCMapMappings) {
   const resources = resolveValue(resourcesValue, getObject);
   const fonts = {};
   const xobjects = {};
@@ -1661,9 +1671,22 @@ function resolveResources(resourcesValue, getObject) {
       const fontObject = getObject(fontValue);
       const fontDict = resolveValue(fontValue, getObject);
       const toUnicodeObject = getObject(fontDict?.entries?.ToUnicode);
-      const toUnicode = toUnicodeObject?.stream
-        ? parseToUnicodeCMap(toUnicodeObject.stream.text)
-        : null;
+      let toUnicode = null;
+      if (toUnicodeObject?.stream) {
+        try {
+          toUnicode = parseToUnicodeCMap(toUnicodeObject.stream.text, {
+            maxMappings: maxCMapMappings
+          });
+        } catch (error) {
+          if (error instanceof PdfCMapParseError) {
+            throw new PdfSyntaxError(error.message, {
+              offset: toUnicodeObject.offset,
+              code: error.code
+            });
+          }
+          throw error;
+        }
+      }
       fonts[name] = {
         objectNumber: fontObject?.objectNumber ?? null,
         generationNumber: fontObject?.generationNumber ?? null,

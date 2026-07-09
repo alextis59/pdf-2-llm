@@ -83,6 +83,17 @@ test("converter reports maxObjects violations without panicking", async () => {
   assert.equal(result.diagnostics.extraction.textLines, 0);
 });
 
+test("converter validates maxCMapMappings", async () => {
+  const bytes = await readFile(fixturePath);
+
+  await assert.rejects(
+    () => convertPdfToMarkdown(bytes, { security: { maxCMapMappings: -1 } }),
+    (error) =>
+      error instanceof RangeError &&
+      error.message === "security.maxCMapMappings must be a non-negative integer"
+  );
+});
+
 test("converter enforces maxImagePixels for raster page targets", async () => {
   const bytes = await readFile(fixturePath);
   const result = await convertPdfToMarkdown(bytes, {

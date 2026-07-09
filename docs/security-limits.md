@@ -14,6 +14,7 @@ const result = await convertPdfToMarkdown(bytes, {
     maxPages: 5000,
     maxObjects: 100000,
     maxDepth: 100,
+    maxCMapMappings: 65_536,
     maxImagePixels: 100_000_000,
     timeoutMs: 120000
   }
@@ -29,6 +30,7 @@ const result = await convertPdfToMarkdown(bytes, {
 | `maxPages` | `5000` | Parsed page count before page extraction. |
 | `maxObjects` | `100000` | XRef/object count during parsing and repair. |
 | `maxDepth` | `100` | PDF value parsing, page tree, outlines, and structure traversal. |
+| `maxCMapMappings` | `65536` | Per-range and aggregate ToUnicode CMap mappings. |
 | `maxImagePixels` | `100000000` | Raster page and thumbnail planning. |
 | `timeoutMs` | `120000` | Conversion checkpoints. |
 
@@ -151,6 +153,19 @@ parser warning details use:
 
 ```txt
 pdf.depth_limit_exceeded
+```
+
+This blocks fallback extraction and returns empty Markdown.
+
+### `maxCMapMappings`
+
+`maxCMapMappings` caps mapping work in embedded ToUnicode CMaps, including a
+single sequential `beginbfrange` and the aggregate mappings declared across
+`beginbfchar` and `beginbfrange` blocks. When exceeded, parser warning details
+use:
+
+```txt
+pdf.cmap_mapping_limit_exceeded
 ```
 
 This blocks fallback extraction and returns empty Markdown.
@@ -314,7 +329,8 @@ The focused tests cover:
 
 - `maxBytes` structured warnings.
 - `maxPages` blocking before extraction.
-- `maxDecodedStreamBytes`, `maxObjects`, and `maxDepth` parser failures.
+- `maxDecodedStreamBytes`, `maxObjects`, `maxDepth`, and `maxCMapMappings`
+  parser failures.
 - `maxImagePixels` page and thumbnail skips.
 - Abort and timeout thrown errors.
 - Malicious fixture regressions for deep page trees, object floods, compressed

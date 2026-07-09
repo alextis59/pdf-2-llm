@@ -44,6 +44,7 @@ const defaultSecurityLimits = Object.freeze({
   maxPages: 5000,
   maxObjects: 100000,
   maxDepth: 100,
+  maxCMapMappings: 65_536,
   maxImagePixels: 100_000_000,
   timeoutMs: 120000
 });
@@ -97,6 +98,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       maxDecodedStreamBytes: security.maxDecodedStreamBytes,
       maxObjects: security.maxObjects,
       maxDepth: security.maxDepth,
+      maxCMapMappings: security.maxCMapMappings,
       deadline,
       mode: options.parser?.mode ?? "strict"
     };
@@ -967,6 +969,7 @@ function summarizeOptions(options, rasterPlan, ocrAdapter, security) {
     maxPages: security.maxPages,
     maxObjects: security.maxObjects,
     maxDepth: security.maxDepth,
+    maxCMapMappings: security.maxCMapMappings,
     maxImagePixels: rasterPlan.maxPixels,
     ocrDebugSidecars: options.ocr?.debugSidecars === true,
     assetsEnabled: options.assets?.enabled ?? null
@@ -1172,6 +1175,7 @@ function isSecurityLimitParseWarning(warning) {
     warning?.details?.code === "pdf.stream.decoded_too_large" ||
     warning?.details?.code === "pdf.object_limit_exceeded" ||
     warning?.details?.code === "pdf.depth_limit_exceeded" ||
+    warning?.details?.code === "pdf.cmap_mapping_limit_exceeded" ||
     warning?.details?.code === warningCodes.PageCountExceeded
   );
 }
@@ -1218,6 +1222,9 @@ function validateSecurityLimits(security) {
   }
   if (!Number.isInteger(security.maxDepth) || security.maxDepth < 0) {
     throw new RangeError("security.maxDepth must be a non-negative integer");
+  }
+  if (!Number.isInteger(security.maxCMapMappings) || security.maxCMapMappings < 0) {
+    throw new RangeError("security.maxCMapMappings must be a non-negative integer");
   }
 }
 

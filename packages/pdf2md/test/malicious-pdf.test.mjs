@@ -32,6 +32,13 @@ const maliciousFixtures = [
     blocksFallback: true
   },
   {
+    id: "cmap-range-expansion",
+    bytes: createCMapExpansionPdf(),
+    options: { security: { maxCMapMappings: 8 } },
+    expectedCode: "pdf.cmap_mapping_limit_exceeded",
+    blocksFallback: true
+  },
+  {
     id: "malformed-xref-stream-widths",
     bytes: createMalformedXrefStreamPdf(),
     expectedCode: "pdf.xref.stream_w_malformed",
@@ -101,6 +108,25 @@ function createFlateExpansionPdf() {
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 400] /Resources << >> /Contents 4 0 R >>",
     streamObject(compressed, "/Filter /FlateDecode")
+  ]);
+}
+
+function createCMapExpansionPdf() {
+  const toUnicode = [
+    "1 begincodespacerange",
+    "<00000000> <FFFFFFFF>",
+    "endcodespacerange",
+    "1 beginbfrange",
+    "<00000000> <FFFFFFFF> <0041>",
+    "endbfrange"
+  ].join("\n");
+  return createPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [5 0 R] /Count 1 /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Custom /ToUnicode 4 0 R >>",
+    streamObject(toUnicode),
+    "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>",
+    streamObject("BT /F1 12 Tf 20 200 Td <00000000> Tj ET\n")
   ]);
 }
 

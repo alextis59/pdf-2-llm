@@ -33,6 +33,7 @@ Resource limits are enabled by default through `options.security`:
 | `maxPages` | `5000` |
 | `maxObjects` | `100000` |
 | `maxDepth` | `100` |
+| `maxCMapMappings` | `65536` |
 | `maxImagePixels` | `100000000` |
 | `timeoutMs` | `120000` |
 
@@ -43,6 +44,9 @@ behavior. Security-limit violations should preserve warning codes documented in
 `maxDecodedStreamBytes` is passed to Flate decompression as an output bound, so
 high-ratio compressed streams are rejected before the full decoded buffer is
 allocated.
+
+`maxCMapMappings` bounds both individual ToUnicode ranges and aggregate mapping
+work so compact font CMaps cannot expand into unbounded entries.
 
 ## Passwords And Encryption
 
