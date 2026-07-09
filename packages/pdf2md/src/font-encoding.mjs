@@ -1,5 +1,3 @@
-import { bytesToLatin1 as runtimeBytesToLatin1 } from "./runtime.mjs";
-
 export class PdfCMapParseError extends Error {
   constructor(message, { code = "pdf.cmap_parse_failed" } = {}) {
     super(message);
@@ -66,7 +64,7 @@ export function decodePdfStringWithFont(token, font) {
   const bytes = token.bytes ?? latin1Bytes(token.value);
   const toUnicode = font?.toUnicode;
   if (!toUnicode?.map || toUnicode.map.size === 0) {
-    return bytesToLatin1(bytes);
+    return bytesToFallbackText(bytes);
   }
 
   return decodeBytesWithCMap(bytes, toUnicode);
@@ -164,7 +162,7 @@ function decodeBytesWithCMap(bytes, cmap) {
     }
 
     if (!matched) {
-      output.push(String.fromCharCode(bytes[offset]));
+      output.push(fallbackByteToText(bytes[offset]));
       offset += 1;
     }
   }
@@ -215,8 +213,18 @@ function bytesToHex(bytes) {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, "0").toUpperCase()).join("");
 }
 
-function bytesToLatin1(bytes) {
-  return runtimeBytesToLatin1(bytes);
+function bytesToFallbackText(bytes) {
+  return [...bytes].map(fallbackByteToText).join("");
+}
+
+function fallbackByteToText(byte) {
+  if (byte >= 0 && byte <= 0x1f) {
+    return String.fromCodePoint(0x2400 + byte);
+  }
+  if (byte === 0x7f) {
+    return "\u2421";
+  }
+  return String.fromCharCode(byte);
 }
 
 function latin1Bytes(value) {

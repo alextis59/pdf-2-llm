@@ -26,6 +26,10 @@ document records the security behavior this repository can actually support.
   only by converter-owned formatting paths.
 - Generated code fences use a delimiter longer than every matching source run,
   so code containing backticks, tildes, or raw HTML cannot close its own block.
+- When an untrusted font has no usable Unicode mapping, raw C0 and DEL bytes are
+  rendered as visible Unicode control-picture symbols instead of invisible
+  control characters. The result still carries `text.unicode_mapping_suspect`
+  so callers can treat that text as lossy.
 
 ## Resource Limits
 
