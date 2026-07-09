@@ -1,61 +1,66 @@
 {
-  "generatedAt": "2026-07-03T03:21:48.603Z",
+  "generatedAt": "2026-07-09T23:23:00.482Z",
   "budget": {
     "maxPackedBytes": 524288,
     "maxUnpackedBytes": 1048576,
     "maxEntryCount": 48
   },
+  "forbiddenPathPrefixes": [
+    "docs/",
+    ".symphony/"
+  ],
   "package": {
-    "id": "@pdf-2-llm/pdf2md@0.0.0",
-    "name": "@pdf-2-llm/pdf2md",
-    "version": "0.0.0",
-    "filename": "pdf-2-llm-pdf2md-0.0.0.tgz",
-    "packedBytes": 76565,
-    "unpackedBytes": 352819,
-    "entryCount": 28
+    "id": "pdf-2-llm@1.2.1",
+    "name": "pdf-2-llm",
+    "version": "1.2.1",
+    "filename": "pdf-2-llm-1.2.1.tgz",
+    "packedBytes": 117093,
+    "unpackedBytes": 514331,
+    "entryCount": 38
   },
   "largestFiles": [
     {
-      "path": "src/text-extract.mjs",
-      "bytes": 63756
+      "path": "packages/pdf2md/src/text-extract.mjs",
+      "bytes": 76518
     },
     {
-      "path": "src/pdf-parser.mjs",
-      "bytes": 57552
+      "path": "packages/pdf2md/src/pdf-parser.mjs",
+      "bytes": 66216
     },
     {
-      "path": "src/index.mjs",
-      "bytes": 38288
+      "path": "packages/pdf2md/src/content-stream.mjs",
+      "bytes": 47921
     },
     {
-      "path": "src/content-stream.mjs",
-      "bytes": 36065
+      "path": "packages/pdf2md/src/index.mjs",
+      "bytes": 39466
     },
     {
-      "path": "src/index.d.ts",
-      "bytes": 24095
+      "path": "packages/pdf2md/src/index.d.ts",
+      "bytes": 26245
     },
     {
-      "path": "src/document-interactions.mjs",
-      "bytes": 22113
+      "path": "packages/pdf2md/src/webgpu-preprocess.mjs",
+      "bytes": 24577
     },
     {
-      "path": "src/stream-filters.mjs",
-      "bytes": 15099
+      "path": "packages/pdf2md/src/document-interactions.mjs",
+      "bytes": 22143
     },
     {
-      "path": "src/table-grid.mjs",
-      "bytes": 15035
+      "path": "packages/pdf2md/src/wasm/pdf2md_core.wasm",
+      "bytes": 19850
     },
     {
-      "path": "src/scan-detection.mjs",
-      "bytes": 11243
+      "path": "packages/pdf2md/src/table-grid.mjs",
+      "bytes": 17845
     },
     {
-      "path": "src/ocr-reconcile.mjs",
-      "bytes": 10007
+      "path": "packages/pdf2md/examples/browser-basic.html",
+      "bytes": 15359
     }
   ],
+  "forbiddenFiles": [],
   "violations": [],
   "passed": true
 }

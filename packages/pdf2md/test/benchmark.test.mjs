@@ -14,6 +14,7 @@ import {
 } from "../../../scripts/qa/benchmark.mjs";
 import { createStartupProfile } from "../../../scripts/qa/startup-benchmark.mjs";
 import {
+  assertPackageIdentity,
   createPackageSizeReport,
   evaluatePackageSizeBudget,
   findForbiddenPackageFiles
@@ -364,6 +365,14 @@ test("package size report rejects repository-only package paths", () => {
   assert.deepEqual(report.violations, []);
   assert.deepEqual(report.forbiddenPathPrefixes, ["docs/", ".symphony/"]);
   assert.deepEqual(report.forbiddenFiles, [".symphony/workflow.md", "docs/index.md"]);
+});
+
+test("package size report pins the public package identity", () => {
+  assert.doesNotThrow(() => assertPackageIdentity({ name: "pdf-2-llm" }, "pdf-2-llm"));
+  assert.throws(
+    () => assertPackageIdentity({ name: "@pdf-2-llm/pdf2md" }, "pdf-2-llm"),
+    /measured @pdf-2-llm\/pdf2md; expected pdf-2-llm/
+  );
 });
 
 test("WASM size report evaluates artifact byte budgets", () => {

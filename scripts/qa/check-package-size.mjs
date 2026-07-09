@@ -50,6 +50,17 @@ export function findForbiddenPackageFiles(
     .sort();
 }
 
+export function assertPackageIdentity(packageInfo, expectedName) {
+  if (typeof expectedName !== "string" || expectedName.length === 0) {
+    return;
+  }
+  if (packageInfo.name !== expectedName) {
+    throw new Error(
+      `npm pack measured ${packageInfo.name ?? "an unnamed package"}; expected ${expectedName}`
+    );
+  }
+}
+
 export function createPackageSizeReport(
   packageInfo,
   { budget = defaultBudget, forbiddenPathPrefixes = defaultForbiddenPathPrefixes } = {}
@@ -113,6 +124,7 @@ function usage() {
 Options:
   --root <path>                  Repository root. Defaults to cwd.
   --workspace <name>             Optional workspace package to inspect. Defaults to the root package.
+  --expected-name <name>         Fail unless npm pack reports this package name.
   --max-packed-bytes <bytes>     Packed tarball budget. Defaults to ${defaultBudget.maxPackedBytes}.
   --max-unpacked-bytes <bytes>   Unpacked package budget. Defaults to ${defaultBudget.maxUnpackedBytes}.
   --max-entry-count <count>      Packed file entry-count budget. Defaults to ${defaultBudget.maxEntryCount}.
@@ -152,12 +164,14 @@ async function main() {
 
   const repoRoot = path.resolve(readOption("--root") ?? process.cwd());
   const workspace = readOption("--workspace");
+  const expectedName = readOption("--expected-name");
   const budget = {
     maxPackedBytes: readIntegerOption("--max-packed-bytes", defaultBudget.maxPackedBytes),
     maxUnpackedBytes: readIntegerOption("--max-unpacked-bytes", defaultBudget.maxUnpackedBytes),
     maxEntryCount: readIntegerOption("--max-entry-count", defaultBudget.maxEntryCount)
   };
   const packageInfo = runNpmPack({ repoRoot, workspace });
+  assertPackageIdentity(packageInfo, expectedName);
   const report = createPackageSizeReport(packageInfo, { budget });
   const reportPath = readOption("--report");
   if (reportPath) {

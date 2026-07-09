@@ -90,7 +90,9 @@ resolves to the same file.
 Before claiming that the package can be published or installed:
 
 1. Inspect the root `package.json`, not only `packages/pdf2md/package.json`.
-2. Run the relevant package-size and dependency checks.
+2. Run the relevant package-size and dependency checks. The package-size npm
+   scripts pin `npm pack` to the public `pdf-2-llm` identity and reject the
+   internal workspace package.
 3. Run `npm pack --dry-run` from the publish root.
 4. Install the packed tarball into a clean temp project.
 5. Verify `pdf-2-llm --help`, a real fixture conversion, and a public subpath
