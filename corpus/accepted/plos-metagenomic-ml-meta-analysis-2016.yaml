@@ -1,6 +1,6 @@
 id: plos-metagenomic-ml-meta-analysis-2016
 gate: tables-v1
-sourceType: digital
+sourceType: hybrid
 expectedMode: pdf-text
 gating: true
 must:
@@ -48,5 +48,5 @@ assets:
   required: []
 review:
   humanReviewedBy: "codex"
-  reviewedAt: "2026-07-08"
-  notes: "Accepted from the PLOS source URL after pdfinfo confirmed an unencrypted, untagged 26-page PDF 1.4. The table gate intentionally asserts GFM table emission and representative clean cells; no table-cell accuracy metric is set because the source ruling grid does not expose all visual column boundaries."
+  reviewedAt: "2026-07-10"
+  notes: "Accepted from the PLOS source URL after pdfinfo confirmed an unencrypted, untagged 26-page PDF 1.4. Runtime scan detection classifies the document as hybrid because pages 8 and 11 are image-dominant figure pages with live text. The table gate intentionally asserts GFM table emission and representative clean cells; no table-cell accuracy metric is set because the source ruling grid does not expose all visual column boundaries."
