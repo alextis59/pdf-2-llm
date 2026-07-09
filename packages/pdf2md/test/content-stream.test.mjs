@@ -364,10 +364,39 @@ test("extractContentStreamTextLines marks vertical text matrices", () => {
 
   assert.equal(lines.length, 1);
   assert.equal(lines[0].text, "AB");
-  assert.equal(lines[0].x, 300);
-  assert.equal(lines[0].y, 700);
+  assert.deepEqual(
+    [lines[0].x, lines[0].y, lines[0].width, lines[0].height],
+    [288, 700, 12, 12]
+  );
   assert.equal(lines[0].direction, "vertical");
   assert.equal(lines[0].spans[0].direction, "vertical");
+  assert.deepEqual(
+    lines[0].glyphs.map((glyph) => [glyph.text, glyph.x, glyph.y, glyph.width, glyph.height]),
+    [
+      ["A", 288, 700, 12, 6],
+      ["B", 288, 706, 12, 6]
+    ]
+  );
+});
+
+test("extractContentStreamTextLines bounds glyphs under a skewed text matrix", () => {
+  const [line] = extractContentStreamTextLines(
+    "BT /F1 12 Tf 1 0.5 0.25 1 10 20 Tm (AB) Tj ET",
+    { resources, pageIndex: 0, streamIndex: 0 }
+  );
+
+  assert.deepEqual([line.x, line.y, line.width, line.height], [10, 20, 15, 18]);
+  assert.deepEqual(
+    [line.spans[0].x, line.spans[0].y, line.spans[0].width, line.spans[0].height],
+    [10, 20, 15, 18]
+  );
+  assert.deepEqual(
+    line.glyphs.map((glyph) => [glyph.text, glyph.x, glyph.y, glyph.width, glyph.height]),
+    [
+      ["A", 10, 20, 9, 15],
+      ["B", 16, 23, 9, 15]
+    ]
+  );
 });
 
 test("extractContentStreamRulingLines detects stroked axis-aligned paths", () => {

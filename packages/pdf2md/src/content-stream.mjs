@@ -888,7 +888,7 @@ function emitText(text, context) {
   const structure = currentStructureSignal(context.state);
   const mergeKey = currentMergeKey(context);
   const lastLine = context.lines.at(-1);
-  if (canAppendTextToLine(lastLine, context, position, metrics, direction, mergeKey)) {
+  if (canAppendTextToLine(lastLine, context, metrics, direction, mergeKey)) {
     appendInferredInterSpanSpace(
       context,
       lastLine,
@@ -902,8 +902,7 @@ function emitText(text, context) {
     );
     const span = createSpan(text, context.state, position, metrics, confidence, structure, direction);
     lastLine.text += text;
-    lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
-    lastLine.height = Math.max(lastLine.height, metrics.height);
+    mergeLineBounds(lastLine, metrics);
     lastLine.direction = mergeTextDirection(lastLine.direction, direction);
     lastLine.spans.push(span);
     lastLine.glyphs.push(...metrics.glyphs);
@@ -919,8 +918,8 @@ function emitText(text, context) {
     fontSize: metrics.fontSize,
     fontName: context.state.fontName,
     font: context.state.font,
-    x: position.x,
-    y: position.y,
+    x: metrics.x,
+    y: metrics.y,
     width: metrics.width,
     height: metrics.height,
     spans: [span],
@@ -943,7 +942,7 @@ function emitText(text, context) {
   advanceTextPosition(context.state, text);
 }
 
-function canAppendTextToLine(line, context, position, metrics, direction, mergeKey) {
+function canAppendTextToLine(line, context, metrics, direction, mergeKey) {
   if (!line) {
     return false;
   }
@@ -960,9 +959,9 @@ function canAppendTextToLine(line, context, position, metrics, direction, mergeK
     return false;
   }
   const fontSize = metrics.fontSize || line.fontSize || 10;
-  const gap = position.x - (line.x + line.width);
+  const gap = metrics.x - (line.x + line.width);
   return (
-    Math.abs(position.y - line.y) <= Math.max(0.5, fontSize * 0.05) &&
+    Math.abs(metrics.y - line.y) <= Math.max(0.5, fontSize * 0.05) &&
     gap >= -fontSize * 0.1 &&
     gap <= fontSize * 0.1
   );
@@ -978,35 +977,14 @@ function emitSyntheticSpace(context, width) {
   const confidence = textConfidence(context.state.font);
   const structure = currentStructureSignal(context.state);
   const direction = textDirectionFromContent(context.state, " ");
-  const fontSize = effectiveFontSize(context.state);
-  const userWidth = textSpaceHorizontalDistance(context.state, width);
-  const metrics = {
-    width: userWidth,
-    height: fontSize,
-    fontSize,
-    xEnd: position.x + userWidth,
-    glyphs: [
-      {
-        text: " ",
-        codePoint: 32,
-        x: position.x,
-        y: position.y,
-        width: userWidth,
-        height: fontSize,
-        fontName: context.state.fontName,
-        fontSize,
-        confidence
-      }
-    ]
-  };
+  const metrics = measureText(context.state, " ", position, width);
   const mergeKey = currentMergeKey(context);
   const lastLine = context.lines.at(-1);
   if (lastLine?.mergeKey === mergeKey) {
     consumeContentStreamOutput(context);
     const span = createSpan(" ", context.state, position, metrics, confidence, structure, direction);
     lastLine.text += " ";
-    lastLine.width = Math.max(lastLine.width, metrics.xEnd - lastLine.x);
-    lastLine.height = Math.max(lastLine.height, metrics.height);
+    mergeLineBounds(lastLine, metrics);
     lastLine.direction = mergeTextDirection(lastLine.direction, direction);
     lastLine.spans.push(span);
     lastLine.glyphs.push(...metrics.glyphs);
@@ -1014,6 +992,17 @@ function emitSyntheticSpace(context, width) {
     mergeLineStructure(lastLine, structure);
   }
   advanceTextPositionBy(context.state, width);
+}
+
+function mergeLineBounds(line, bounds) {
+  const minX = Math.min(line.x, bounds.x);
+  const minY = Math.min(line.y, bounds.y);
+  const maxX = Math.max(line.x + line.width, bounds.x + bounds.width);
+  const maxY = Math.max(line.y + line.height, bounds.y + bounds.height);
+  line.x = minX;
+  line.y = minY;
+  line.width = maxX - minX;
+  line.height = maxY - minY;
 }
 
 function appendInferredInterSpanSpace(
@@ -1322,33 +1311,71 @@ function wordGapThreshold(state) {
   return Math.max(state.fontSize * scale * 0.25, 0.5);
 }
 
-function measureText(state, text, position) {
+function measureText(state, text, position, explicitAdvance = null) {
   const glyphs = [];
   const confidence = textConfidence(state.font);
   const fontSize = effectiveFontSize(state);
-  let cursor = position.x;
+  const matrix = effectiveTextMatrix(state);
+  let textOffset = 0;
+  let bounds = null;
   for (const char of text) {
-    const width = textSpaceHorizontalDistance(state, measureGlyphWidth(state, char));
+    const advance = explicitAdvance ?? measureGlyphWidth(state, char);
+    const glyphBounds = transformedTextBounds(matrix, textOffset, advance, state);
     glyphs.push({
       text: char,
       codePoint: char.codePointAt(0),
-      x: cursor,
-      y: position.y,
-      width,
-      height: fontSize,
+      ...glyphBounds,
       fontName: state.fontName,
       fontSize,
       confidence
     });
-    cursor += width;
+    bounds = bounds ? unionBounds(bounds, glyphBounds) : glyphBounds;
+    textOffset += advance;
   }
 
+  const measuredBounds = bounds ?? {
+    x: position.x,
+    y: position.y,
+    width: 0,
+    height: fontSize
+  };
+
   return {
-    width: cursor - position.x,
-    height: fontSize,
+    ...measuredBounds,
     fontSize,
-    xEnd: cursor,
     glyphs
+  };
+}
+
+function transformedTextBounds(matrix, textOffset, advance, state) {
+  const yStart = state.textRise;
+  const yEnd = state.textRise + state.fontSize;
+  const points = [
+    transformPoint(matrix, textOffset, yStart),
+    transformPoint(matrix, textOffset + advance, yStart),
+    transformPoint(matrix, textOffset + advance, yEnd),
+    transformPoint(matrix, textOffset, yEnd)
+  ];
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+  return {
+    x,
+    y,
+    width: Math.max(...xs) - x,
+    height: Math.max(...ys) - y
+  };
+}
+
+function unionBounds(left, right) {
+  const x = Math.min(left.x, right.x);
+  const y = Math.min(left.y, right.y);
+  return {
+    x,
+    y,
+    width: Math.max(left.x + left.width, right.x + right.width) - x,
+    height: Math.max(left.y + left.height, right.y + right.height) - y
   };
 }
 
@@ -1357,8 +1384,8 @@ function createSpan(text, state, position, metrics, confidence, structure = null
     text,
     fontName: state.fontName,
     fontSize: metrics.fontSize,
-    x: position.x,
-    y: position.y,
+    x: metrics.x ?? position.x,
+    y: metrics.y ?? position.y,
     width: metrics.width,
     height: metrics.height,
     confidence,
@@ -1411,11 +1438,6 @@ function fontGlyphWidth(state, char) {
 
 function effectiveTextMatrix(state) {
   return multiplyMatrices(state.ctm, state.textMatrix);
-}
-
-function textSpaceHorizontalDistance(state, width) {
-  const matrix = effectiveTextMatrix(state);
-  return Math.hypot(matrix[0] * width, matrix[1] * width);
 }
 
 function effectiveFontSize(state) {

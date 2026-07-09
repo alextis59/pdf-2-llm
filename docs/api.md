@@ -418,7 +418,9 @@ anchors.
 ### `sourceMap`
 
 Maps Markdown string offsets back to page regions. The schema is exported as
-`markdownSourceMapJsonSchema`.
+`markdownSourceMapJsonSchema`. Text, span, glyph, and source-map regions use
+axis-aligned page-space bounds after applying the content stream's text matrix
+and current transformation matrix, including rotation and skew.
 
 ### `assets`
 
