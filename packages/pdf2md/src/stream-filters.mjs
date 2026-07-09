@@ -73,8 +73,13 @@ function decodeOneFilter(bytes, filter, parms, maxBytes) {
   if (filter === "FlateDecode") {
     let inflated;
     try {
-      inflated = inflateFlateSync(bytes);
+      inflated = inflateFlateSync(bytes, { maxOutputLength: maxBytes });
     } catch (error) {
+      if (error?.code === "ERR_BUFFER_TOO_LARGE") {
+        throw new PdfStreamDecodeError("FlateDecode decoded output exceeds byte limit.", {
+          code: "pdf.stream.decoded_too_large"
+        });
+      }
       throw new PdfStreamDecodeError(`FlateDecode failed: ${error.message}`, {
         code: "pdf.stream.flate_failed"
       });

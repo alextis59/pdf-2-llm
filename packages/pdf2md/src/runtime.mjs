@@ -34,12 +34,12 @@ export function md5Digest(input) {
   return md5DigestFallback(bytes);
 }
 
-export function inflateFlateSync(input) {
+export function inflateFlateSync(input, { maxOutputLength } = {}) {
   const zlib = getNodeBuiltin("zlib");
   if (!zlib?.inflateSync) {
     throw new Error("FlateDecode requires a synchronous inflater in this runtime.");
   }
-  return new Uint8Array(zlib.inflateSync(toUint8Array(input)));
+  return new Uint8Array(zlib.inflateSync(toUint8Array(input), { maxOutputLength }));
 }
 
 export function bytesToLatin1(input) {

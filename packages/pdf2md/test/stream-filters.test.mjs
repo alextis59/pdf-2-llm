@@ -29,6 +29,20 @@ test("FlateDecode decodes compressed bytes", () => {
   assert.equal(text(decode(encoded, "/FlateDecode")), "Flate text");
 });
 
+test("FlateDecode rejects high-ratio output through the bounded inflater", () => {
+  const expanded = Buffer.alloc(1024 * 1024, 0x41);
+  const encoded = deflateSync(expanded, { level: 9 });
+
+  assert.ok(encoded.byteLength < 2048, "fixture should retain a high compression ratio");
+  assert.throws(
+    () => decode(encoded, "/FlateDecode", { maxBytes: 1024 }),
+    (error) =>
+      error instanceof PdfStreamDecodeError &&
+      error.code === "pdf.stream.decoded_too_large" &&
+      error.message === "FlateDecode decoded output exceeds byte limit."
+  );
+});
+
 test("filter chains decode in declared order", () => {
   const compressed = deflateSync(Buffer.from("Chained text", "latin1"));
   const hex = Buffer.from(compressed).toString("hex") + ">";

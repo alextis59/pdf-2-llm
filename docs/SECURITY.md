@@ -40,6 +40,10 @@ Keep these limits visible when adding parser, raster, OCR, WebGPU, or corpus
 behavior. Security-limit violations should preserve warning codes documented in
 [Security Limits](security-limits.md).
 
+`maxDecodedStreamBytes` is passed to Flate decompression as an output bound, so
+high-ratio compressed streams are rejected before the full decoded buffer is
+allocated.
+
 ## Passwords And Encryption
 
 - Passwords may be supplied as strings or callbacks for encrypted PDFs.
