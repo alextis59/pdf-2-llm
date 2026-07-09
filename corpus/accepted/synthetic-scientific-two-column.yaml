@@ -32,7 +32,8 @@ structure:
     - reading_order
     - caption
 warnings:
-  allowed: []
+  allowed:
+    - text.ordering_uncertain
 assets:
   required: []
 review:

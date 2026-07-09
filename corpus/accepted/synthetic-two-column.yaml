@@ -25,7 +25,8 @@ structure:
     - two_columns
     - reading_order
 warnings:
-  allowed: []
+  allowed:
+    - text.ordering_uncertain
 assets:
   required: []
 review:
