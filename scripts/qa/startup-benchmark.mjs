@@ -4,6 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
+import { collectExecutionEnvironment } from "./execution-environment.mjs";
 
 const args = process.argv.slice(2);
 
@@ -253,8 +254,8 @@ async function main() {
       path: fixturePath
     },
     executionEnvironment: {
-      kind: "node-esm-fresh-process",
-      node: process.version,
+      ...await collectExecutionEnvironment({ repoRoot }),
+      benchmarkMode: "node-esm-fresh-process",
       notes:
         "Browser package entrypoint startup is measured under Node ESM; real browser smoke is tracked separately in release readiness."
     },

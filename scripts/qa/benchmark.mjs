@@ -5,6 +5,7 @@ import process from "node:process";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import { convertPdfToMarkdown } from "../../packages/pdf2md/src/index.mjs";
+import { collectExecutionEnvironment } from "./execution-environment.mjs";
 
 const args = process.argv.slice(2);
 
@@ -768,6 +769,7 @@ async function main() {
   const memoryProfile = createMemoryProfileSummary(results, { scope });
   const report = {
     generatedAt: new Date().toISOString(),
+    executionEnvironment: await collectExecutionEnvironment({ repoRoot }),
     iterations,
     warmup,
     providerModes,

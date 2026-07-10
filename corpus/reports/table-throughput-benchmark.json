@@ -1,5 +1,15 @@
 {
-  "generatedAt": "2026-07-03T04:22:43.588Z",
+  "generatedAt": "2026-07-10T03:26:58.700Z",
+  "executionEnvironment": {
+    "packageName": "pdf-2-llm",
+    "packageVersion": "1.2.1",
+    "gitRevision": "2829d28b5b7e8183501cca763ddcb19e3c8cf60c",
+    "gitDirty": true,
+    "nodeVersion": "v22.19.0",
+    "platform": "linux",
+    "architecture": "x64",
+    "cpuModel": "11th Gen Intel(R) Core(TM) i5-11300H @ 3.10GHz"
+  },
   "iterations": 3,
   "warmup": 1,
   "providerModes": [
@@ -9,32 +19,32 @@
   "throughputProfile": {
     "profileType": "tables-v1-throughput",
     "scope": "gate:tables-v1",
-    "resultCount": 5,
+    "resultCount": 6,
     "passed": true,
     "totals": {
-      "pages": 6,
-      "bytes": 5791,
-      "outputChars": 823,
-      "textLines": 54
+      "pages": 32,
+      "bytes": 4238476,
+      "outputChars": 88959,
+      "textLines": 1221
     },
     "rates": {
       "pagesPerSecond": {
-        "min": 483.1038066889115,
-        "max": 1107.3780167745645,
-        "mean": 775.3354870731887,
-        "median": 725.4769739049574
+        "min": 44.441444419041325,
+        "max": 725.5248718995149,
+        "mean": 495.8124079708129,
+        "median": 542.7985357266749
       },
       "outputCharsPerSecond": {
-        "min": 54590.730155847,
-        "max": 258019.07790847353,
-        "mean": 118880.17147140516,
-        "median": 104100.2290952175
+        "min": 49325.97712270676,
+        "max": 169047.29515258697,
+        "mean": 97979.59131563791,
+        "median": 79971.76640944119
       },
       "inputBytesPerSecond": {
-        "min": 471509.3153283776,
-        "max": 929090.1560738597,
-        "mean": 743292.6064703029,
-        "median": 843004.2436775605
+        "min": 508436.9949571312,
+        "max": 7234870.583492689,
+        "mean": 1679722.1553356561,
+        "median": 585265.1212135808
       }
     },
     "cases": [
@@ -55,13 +65,13 @@
         "textLines": 10,
         "iterations": 3,
         "warmup": 1,
-        "startupMs": 2.5561149999999984,
+        "startupMs": 2.894475,
         "throughputIterations": 2,
-        "throughputMeanMs": 2.0699484999999953,
-        "throughputMedianMs": 2.0699484999999953,
-        "pagesPerSecond": 483.1038066889115,
-        "outputCharsPerSecond": 54590.730155847,
-        "inputBytesPerSecond": 471509.3153283776,
+        "throughputMeanMs": 1.9181449999999955,
+        "throughputMedianMs": 1.9181449999999955,
+        "pagesPerSecond": 521.3370209238626,
+        "outputCharsPerSecond": 58911.083364396465,
+        "inputBytesPerSecond": 508824.93242168985,
         "passed": true
       },
       {
@@ -81,13 +91,13 @@
         "textLines": 10,
         "iterations": 3,
         "warmup": 1,
-        "startupMs": 2.282907999999992,
+        "startupMs": 2.749594000000002,
         "throughputIterations": 2,
-        "throughputMeanMs": 1.7713405000000009,
-        "throughputMedianMs": 1.7713405000000009,
-        "pagesPerSecond": 564.5441968949501,
-        "outputCharsPerSecond": 58712.59647707482,
-        "inputBytesPerSecond": 605191.3790713866,
+        "throughputMeanMs": 2.108422499999996,
+        "throughputMedianMs": 2.108422499999996,
+        "pagesPerSecond": 474.28824156448803,
+        "outputCharsPerSecond": 49325.97712270676,
+        "inputBytesPerSecond": 508436.9949571312,
         "passed": true
       },
       {
@@ -109,13 +119,13 @@
         "textLines": 19,
         "iterations": 3,
         "warmup": 1,
-        "startupMs": 2.9151970000000063,
+        "startupMs": 2.907648999999992,
         "throughputIterations": 2,
-        "throughputMeanMs": 2.007680499999992,
-        "throughputMedianMs": 2.007680499999992,
-        "pagesPerSecond": 996.1744411025597,
-        "outputCharsPerSecond": 104100.2290952175,
-        "inputBytesPerSecond": 867667.9382003295,
+        "throughputMeanMs": 3.100665499999998,
+        "throughputMedianMs": 3.100665499999998,
+        "pagesPerSecond": 645.0228184884829,
+        "outputCharsPerSecond": 67404.88453204648,
+        "inputBytesPerSecond": 561814.8749034686,
         "passed": true
       },
       {
@@ -136,13 +146,13 @@
         "textLines": 11,
         "iterations": 3,
         "warmup": 1,
-        "startupMs": 1.7781340000000085,
+        "startupMs": 2.471291000000008,
         "throughputIterations": 2,
-        "throughputMeanMs": 1.3784034999999975,
-        "throughputMedianMs": 1.3784034999999975,
-        "pagesPerSecond": 725.4769739049574,
-        "outputCharsPerSecond": 118978.223720413,
-        "inputBytesPerSecond": 843004.2436775605,
+        "throughputMeanMs": 1.7722325000000012,
+        "throughputMedianMs": 1.7722325000000012,
+        "pagesPerSecond": 564.2600505294872,
+        "outputCharsPerSecond": 92538.64828683589,
+        "inputBytesPerSecond": 655670.1787152641,
         "passed": true
       },
       {
@@ -164,13 +174,43 @@
         "textLines": 4,
         "iterations": 3,
         "warmup": 1,
-        "startupMs": 1.003526000000008,
+        "startupMs": 1.573865000000012,
         "throughputIterations": 2,
-        "throughputMeanMs": 0.9030339999999981,
-        "throughputMedianMs": 0.9030339999999981,
-        "pagesPerSecond": 1107.3780167745645,
-        "outputCharsPerSecond": 258019.07790847353,
-        "inputBytesPerSecond": 929090.1560738597,
+        "throughputMeanMs": 1.3783124999999998,
+        "throughputMedianMs": 1.3783124999999998,
+        "pagesPerSecond": 725.5248718995149,
+        "outputCharsPerSecond": 169047.29515258697,
+        "inputBytesPerSecond": 608715.367523693,
+        "passed": true
+      },
+      {
+        "id": "plos-metagenomic-ml-meta-analysis-2016",
+        "gate": "tables-v1",
+        "kind": "scientific-paper",
+        "features": [
+          "born-digital",
+          "scientific-paper",
+          "two-column",
+          "visible-table",
+          "figures",
+          "references",
+          "untagged"
+        ],
+        "workload": "conversion",
+        "providerMode": "cpu",
+        "pages": 26,
+        "bytes": 4232685,
+        "outputChars": 88136,
+        "textLines": 1167,
+        "iterations": 3,
+        "warmup": 1,
+        "startupMs": 618.632269,
+        "throughputIterations": 2,
+        "throughputMeanMs": 585.0394904999999,
+        "throughputMedianMs": 585.0394904999999,
+        "pagesPerSecond": 44.441444419041325,
+        "outputCharsPerSecond": 150649.65943525484,
+        "inputBytesPerSecond": 7234870.583492689,
         "passed": true
       }
     ]
@@ -198,12 +238,13 @@
         "ocr.disabled",
         "text.heuristic_content_stream"
       ],
-      "minMs": 1.9727399999999946,
-      "maxMs": 2.5561149999999984,
-      "meanMs": 2.2320039999999963,
-      "medianMs": 2.167156999999996,
+      "acceptedOutputHash": "sha256:35e1d4cb8381a9c94c03b6e5baf4345cbf208d0aa897568342511874d2d43ab5",
+      "minMs": 1.8744389999999953,
+      "maxMs": 2.894475,
+      "meanMs": 2.24358833333333,
+      "medianMs": 1.9618509999999958,
       "startup": {
-        "durationMs": 2.5561149999999984
+        "durationMs": 2.894475
       },
       "modelLoad": {
         "durationMs": 0,
@@ -220,34 +261,57 @@
       },
       "throughput": {
         "iterations": 2,
-        "minMs": 1.9727399999999946,
-        "maxMs": 2.167156999999996,
-        "meanMs": 2.0699484999999953,
-        "medianMs": 2.0699484999999953,
-        "pagesPerSecond": 483.1038066889115
+        "minMs": 1.8744389999999953,
+        "maxMs": 1.9618509999999958,
+        "meanMs": 1.9181449999999955,
+        "medianMs": 1.9181449999999955,
+        "pagesPerSecond": 521.3370209238626
       },
-      "pagesPerSecond": 483.1038066889115,
+      "pagesPerSecond": 521.3370209238626,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
         "fallbackReason": "not-requested",
         "runtime": "node",
         "executionProvider": "cpu",
-        "executionStatus": "no-routed-pages"
+        "executionStatus": "no-routed-pages",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 0,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
       },
       "memory": {
-        "rssDeltaBytes": 1441792,
-        "heapUsedDeltaBytes": -1359904,
-        "externalDeltaBytes": -32197,
-        "arrayBuffersDeltaBytes": -42493
+        "rssDeltaBytes": 524288,
+        "heapUsedDeltaBytes": -553624,
+        "externalDeltaBytes": -27561,
+        "arrayBuffersDeltaBytes": -27601
       },
       "peakMemory": {
-        "rssPeakBytes": 60555264,
-        "heapUsedPeakBytes": 8413384,
-        "externalPeakBytes": 2008663,
-        "arrayBuffersPeakBytes": 60384,
-        "rssPeakDeltaBytes": 1441792,
-        "heapUsedPeakDeltaBytes": 0
+        "rssPeakBytes": 62476288,
+        "heapUsedPeakBytes": 9453512,
+        "externalPeakBytes": 2399074,
+        "arrayBuffersPeakBytes": 259790,
+        "rssPeakDeltaBytes": 524288,
+        "heapUsedPeakDeltaBytes": 234464
       },
       "gpuMemory": {
         "provider": "cpu",
@@ -287,12 +351,13 @@
         "ocr.disabled",
         "text.heuristic_content_stream"
       ],
-      "minMs": 1.6504790000000042,
-      "maxMs": 2.282907999999992,
-      "meanMs": 1.941862999999998,
-      "medianMs": 1.8922019999999975,
+      "acceptedOutputHash": "sha256:35f2c8aa7303f4de41afca9ee9b31da8349428c2f05bdd304e882585d09a7fa7",
+      "minMs": 2.105666999999997,
+      "maxMs": 2.749594000000002,
+      "meanMs": 2.322146333333331,
+      "medianMs": 2.1111779999999953,
       "startup": {
-        "durationMs": 2.282907999999992
+        "durationMs": 2.749594000000002
       },
       "modelLoad": {
         "durationMs": 0,
@@ -309,34 +374,57 @@
       },
       "throughput": {
         "iterations": 2,
-        "minMs": 1.6504790000000042,
-        "maxMs": 1.8922019999999975,
-        "meanMs": 1.7713405000000009,
-        "medianMs": 1.7713405000000009,
-        "pagesPerSecond": 564.5441968949501
+        "minMs": 2.105666999999997,
+        "maxMs": 2.1111779999999953,
+        "meanMs": 2.108422499999996,
+        "medianMs": 2.108422499999996,
+        "pagesPerSecond": 474.28824156448803
       },
-      "pagesPerSecond": 564.5441968949501,
+      "pagesPerSecond": 474.28824156448803,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
         "fallbackReason": "not-requested",
         "runtime": "node",
         "executionProvider": "cpu",
-        "executionStatus": "no-routed-pages"
+        "executionStatus": "no-routed-pages",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 0,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
       },
       "memory": {
         "rssDeltaBytes": 262144,
-        "heapUsedDeltaBytes": 719200,
-        "externalDeltaBytes": 4092,
-        "arrayBuffersDeltaBytes": 4092
+        "heapUsedDeltaBytes": -835416,
+        "externalDeltaBytes": 610,
+        "arrayBuffersDeltaBytes": 610
       },
       "peakMemory": {
-        "rssPeakBytes": 61210624,
-        "heapUsedPeakBytes": 8899528,
-        "externalPeakBytes": 1975434,
-        "arrayBuffersPeakBytes": 25979,
+        "rssPeakBytes": 63524864,
+        "heapUsedPeakBytes": 10128896,
+        "externalPeakBytes": 2378837,
+        "arrayBuffersPeakBytes": 238377,
         "rssPeakDeltaBytes": 262144,
-        "heapUsedPeakDeltaBytes": 839440
+        "heapUsedPeakDeltaBytes": 0
       },
       "gpuMemory": {
         "provider": "cpu",
@@ -378,12 +466,13 @@
         "ocr.disabled",
         "text.heuristic_content_stream"
       ],
-      "minMs": 1.9827949999999959,
-      "maxMs": 2.9151970000000063,
-      "meanMs": 2.3101859999999967,
-      "medianMs": 2.0325659999999885,
+      "acceptedOutputHash": "sha256:015373639d544c709eacd4871063567a9911e2ad19805a73c523e3c2733ce529",
+      "minMs": 2.864407,
+      "maxMs": 3.3369239999999962,
+      "meanMs": 3.0363266666666626,
+      "medianMs": 2.907648999999992,
       "startup": {
-        "durationMs": 2.9151970000000063
+        "durationMs": 2.907648999999992
       },
       "modelLoad": {
         "durationMs": 0,
@@ -400,34 +489,57 @@
       },
       "throughput": {
         "iterations": 2,
-        "minMs": 1.9827949999999959,
-        "maxMs": 2.0325659999999885,
-        "meanMs": 2.007680499999992,
-        "medianMs": 2.007680499999992,
-        "pagesPerSecond": 996.1744411025597
+        "minMs": 2.864407,
+        "maxMs": 3.3369239999999962,
+        "meanMs": 3.100665499999998,
+        "medianMs": 3.100665499999998,
+        "pagesPerSecond": 645.0228184884829
       },
-      "pagesPerSecond": 996.1744411025597,
+      "pagesPerSecond": 645.0228184884829,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
         "fallbackReason": "not-requested",
         "runtime": "node",
         "executionProvider": "cpu",
-        "executionStatus": "no-routed-pages"
+        "executionStatus": "no-routed-pages",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 0,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
       },
       "memory": {
-        "rssDeltaBytes": 32768,
-        "heapUsedDeltaBytes": 38416,
-        "externalDeltaBytes": 50,
-        "arrayBuffersDeltaBytes": 50
+        "rssDeltaBytes": 2228224,
+        "heapUsedDeltaBytes": 816360,
+        "externalDeltaBytes": 9389,
+        "arrayBuffersDeltaBytes": 9389
       },
       "peakMemory": {
-        "rssPeakBytes": 63438848,
-        "heapUsedPeakBytes": 9169392,
-        "externalPeakBytes": 1974530,
-        "arrayBuffersPeakBytes": 24859,
-        "rssPeakDeltaBytes": 917504,
-        "heapUsedPeakDeltaBytes": 726768
+        "rssPeakBytes": 66408448,
+        "heapUsedPeakBytes": 12608288,
+        "externalPeakBytes": 2387928,
+        "arrayBuffersPeakBytes": 247468,
+        "rssPeakDeltaBytes": 2228224,
+        "heapUsedPeakDeltaBytes": 3115016
       },
       "gpuMemory": {
         "provider": "cpu",
@@ -468,12 +580,13 @@
         "ocr.disabled",
         "text.heuristic_content_stream"
       ],
-      "minMs": 1.2016639999999938,
-      "maxMs": 1.7781340000000085,
-      "meanMs": 1.511647000000001,
-      "medianMs": 1.555143000000001,
+      "acceptedOutputHash": "sha256:3c54e9f7b8275f6b0951775cf42366756fdf89204496001e93ad70eca8212c76",
+      "minMs": 1.5405720000000116,
+      "maxMs": 2.471291000000008,
+      "meanMs": 2.0052520000000036,
+      "medianMs": 2.003892999999991,
       "startup": {
-        "durationMs": 1.7781340000000085
+        "durationMs": 2.471291000000008
       },
       "modelLoad": {
         "durationMs": 0,
@@ -490,34 +603,57 @@
       },
       "throughput": {
         "iterations": 2,
-        "minMs": 1.2016639999999938,
-        "maxMs": 1.555143000000001,
-        "meanMs": 1.3784034999999975,
-        "medianMs": 1.3784034999999975,
-        "pagesPerSecond": 725.4769739049574
+        "minMs": 1.5405720000000116,
+        "maxMs": 2.003892999999991,
+        "meanMs": 1.7722325000000012,
+        "medianMs": 1.7722325000000012,
+        "pagesPerSecond": 564.2600505294872
       },
-      "pagesPerSecond": 725.4769739049574,
+      "pagesPerSecond": 564.2600505294872,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
         "fallbackReason": "not-requested",
         "runtime": "node",
         "executionProvider": "cpu",
-        "executionStatus": "no-routed-pages"
+        "executionStatus": "no-routed-pages",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 0,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
       },
       "memory": {
-        "rssDeltaBytes": 131072,
-        "heapUsedDeltaBytes": -916656,
-        "externalDeltaBytes": -2008,
-        "arrayBuffersDeltaBytes": -2008
+        "rssDeltaBytes": 1048576,
+        "heapUsedDeltaBytes": -815848,
+        "externalDeltaBytes": 2335,
+        "arrayBuffersDeltaBytes": 2335
       },
       "peakMemory": {
-        "rssPeakBytes": 62685184,
-        "heapUsedPeakBytes": 9405656,
-        "externalPeakBytes": 1975366,
-        "arrayBuffersPeakBytes": 25911,
-        "rssPeakDeltaBytes": 131072,
-        "heapUsedPeakDeltaBytes": 0
+        "rssPeakBytes": 68505600,
+        "heapUsedPeakBytes": 12663896,
+        "externalPeakBytes": 2393855,
+        "arrayBuffersPeakBytes": 253395,
+        "rssPeakDeltaBytes": 1048576,
+        "heapUsedPeakDeltaBytes": 992896
       },
       "gpuMemory": {
         "provider": "cpu",
@@ -559,12 +695,13 @@
         "ocr.disabled",
         "text.heuristic_content_stream"
       ],
-      "minMs": 0.8605850000000004,
-      "maxMs": 1.003526000000008,
-      "meanMs": 0.9365313333333347,
-      "medianMs": 0.9454829999999959,
+      "acceptedOutputHash": "sha256:2589d42179ad17febd8a6245c5ec0ac3e3cd9946d35b8fc9413d7fee3f1cad70",
+      "minMs": 1.033391999999992,
+      "maxMs": 1.7232330000000076,
+      "meanMs": 1.4434966666666706,
+      "medianMs": 1.573865000000012,
       "startup": {
-        "durationMs": 1.003526000000008
+        "durationMs": 1.573865000000012
       },
       "modelLoad": {
         "durationMs": 0,
@@ -581,34 +718,192 @@
       },
       "throughput": {
         "iterations": 2,
-        "minMs": 0.8605850000000004,
-        "maxMs": 0.9454829999999959,
-        "meanMs": 0.9030339999999981,
-        "medianMs": 0.9030339999999981,
-        "pagesPerSecond": 1107.3780167745645
+        "minMs": 1.033391999999992,
+        "maxMs": 1.7232330000000076,
+        "meanMs": 1.3783124999999998,
+        "medianMs": 1.3783124999999998,
+        "pagesPerSecond": 725.5248718995149
       },
-      "pagesPerSecond": 1107.3780167745645,
+      "pagesPerSecond": 725.5248718995149,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
         "fallbackReason": "not-requested",
         "runtime": "node",
         "executionProvider": "cpu",
-        "executionStatus": "no-routed-pages"
+        "executionStatus": "no-routed-pages",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 0,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
       },
       "memory": {
-        "rssDeltaBytes": 0,
-        "heapUsedDeltaBytes": -377688,
-        "externalDeltaBytes": -1173,
-        "arrayBuffersDeltaBytes": -1173
+        "rssDeltaBytes": 524288,
+        "heapUsedDeltaBytes": -1671072,
+        "externalDeltaBytes": -1207,
+        "arrayBuffersDeltaBytes": -1207
       },
       "peakMemory": {
-        "rssPeakBytes": 62685184,
-        "heapUsedPeakBytes": 9451016,
-        "externalPeakBytes": 1977518,
-        "arrayBuffersPeakBytes": 28063,
-        "rssPeakDeltaBytes": 0,
-        "heapUsedPeakDeltaBytes": 474752
+        "rssPeakBytes": 69029888,
+        "heapUsedPeakBytes": 12306744,
+        "externalPeakBytes": 2398339,
+        "arrayBuffersPeakBytes": 257879,
+        "rssPeakDeltaBytes": 524288,
+        "heapUsedPeakDeltaBytes": 583832
+      },
+      "gpuMemory": {
+        "provider": "cpu",
+        "source": "webgpu-execution-plan",
+        "estimatedBytes": 0,
+        "maxBatchEstimatedBytes": 0,
+        "limitBytes": 268435456,
+        "plannedPages": 0,
+        "skippedPages": 0
+      },
+      "memoryLimits": {
+        "maxRssDeltaBytes": null,
+        "maxHeapUsedDeltaBytes": null
+      },
+      "memoryLimitViolations": [],
+      "passed": true
+    },
+    {
+      "id": "plos-metagenomic-ml-meta-analysis-2016",
+      "gate": "tables-v1",
+      "kind": "scientific-paper",
+      "features": [
+        "born-digital",
+        "scientific-paper",
+        "two-column",
+        "visible-table",
+        "figures",
+        "references",
+        "untagged"
+      ],
+      "workload": "conversion",
+      "providerMode": "cpu",
+      "bytes": 4232685,
+      "pdfVersion": "1.4",
+      "iterations": 3,
+      "warmup": 1,
+      "pages": 26,
+      "outputChars": 88136,
+      "textLines": 1167,
+      "warnings": [
+        "ocr.disabled",
+        "text.unicode_mapping_suspect",
+        "text.unicode_mapping_suspect",
+        "text.unicode_mapping_suspect",
+        "text.ordering_uncertain",
+        "text.ordering_uncertain",
+        "text.ordering_uncertain",
+        "text.ordering_uncertain",
+        "text.ordering_uncertain",
+        "text.ordering_uncertain",
+        "text.ordering_uncertain",
+        "table.low_confidence",
+        "figure.low_semantic_content",
+        "figure.low_semantic_content",
+        "figure.low_semantic_content",
+        "figure.low_semantic_content",
+        "figure.low_semantic_content",
+        "figure.low_semantic_content",
+        "figure.low_semantic_content",
+        "text.heuristic_content_stream"
+      ],
+      "acceptedOutputHash": "sha256:3e182d46d69448c5084eb7dc78daa7ce1f2ad00787aa507cd27a8ccbce8bf8ee",
+      "minMs": 570.2926979999997,
+      "maxMs": 618.632269,
+      "meanMs": 596.2370833333333,
+      "medianMs": 599.7862830000001,
+      "startup": {
+        "durationMs": 618.632269
+      },
+      "modelLoad": {
+        "durationMs": 0,
+        "measured": false,
+        "reason": "ocr-disabled-or-lazy",
+        "strategy": "lazy",
+        "source": "adapter-default",
+        "languages": [
+          "eng"
+        ],
+        "modelFiles": [
+          "eng.traineddata"
+        ]
+      },
+      "throughput": {
+        "iterations": 2,
+        "minMs": 570.2926979999997,
+        "maxMs": 599.7862830000001,
+        "meanMs": 585.0394904999999,
+        "medianMs": 585.0394904999999,
+        "pagesPerSecond": 44.441444419041325
+      },
+      "pagesPerSecond": 44.441444419041325,
+      "acceleration": {
+        "requested": "disabled",
+        "selectedProvider": "cpu",
+        "fallbackReason": "not-requested",
+        "runtime": "node",
+        "executionProvider": "cpu",
+        "executionStatus": "cpu-fallback",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 2,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
+      },
+      "memory": {
+        "rssDeltaBytes": 60280832,
+        "heapUsedDeltaBytes": 10027096,
+        "externalDeltaBytes": -4631,
+        "arrayBuffersDeltaBytes": 0
+      },
+      "peakMemory": {
+        "rssPeakBytes": 320430080,
+        "heapUsedPeakBytes": 63476600,
+        "externalPeakBytes": 93617240,
+        "arrayBuffersPeakBytes": 91444962,
+        "rssPeakDeltaBytes": 60280832,
+        "heapUsedPeakDeltaBytes": 13492160
       },
       "gpuMemory": {
         "provider": "cpu",

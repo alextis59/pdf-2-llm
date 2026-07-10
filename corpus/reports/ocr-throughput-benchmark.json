@@ -1,5 +1,15 @@
 {
-  "generatedAt": "2026-07-10T02:11:34.398Z",
+  "generatedAt": "2026-07-10T03:26:45.562Z",
+  "executionEnvironment": {
+    "packageName": "pdf-2-llm",
+    "packageVersion": "1.2.1",
+    "gitRevision": "2829d28b5b7e8183501cca763ddcb19e3c8cf60c",
+    "gitDirty": true,
+    "nodeVersion": "v22.19.0",
+    "platform": "linux",
+    "architecture": "x64",
+    "cpuModel": "11th Gen Intel(R) Core(TM) i5-11300H @ 3.10GHz"
+  },
   "iterations": 10,
   "warmup": 2,
   "providerModes": [
@@ -19,22 +29,22 @@
     },
     "rates": {
       "pagesPerSecond": {
-        "min": 709.6845365495816,
-        "max": 842.4613237707114,
-        "mean": 776.0729301601465,
-        "median": 776.0729301601465
+        "min": 695.5043372423257,
+        "max": 892.0223762821942,
+        "mean": 793.76335676226,
+        "median": 793.76335676226
       },
       "outputCharsPerSecond": {
-        "min": 40438.14354099415,
-        "max": 55355.39385086736,
-        "mean": 47896.768695930754,
-        "median": 47896.768695930754
+        "min": 42817.074061545325,
+        "max": 54249.33830490141,
+        "mean": 48533.20618322337,
+        "median": 48533.20618322337
       },
       "inputBytesPerSecond": {
-        "min": 587618.7962630534,
-        "max": 795283.4896395516,
-        "mean": 691451.1429513025,
-        "median": 691451.1429513025
+        "min": 575877.5912366457,
+        "max": 842069.1232103914,
+        "mean": 708973.3572235185,
+        "median": 708973.3572235185
       }
     },
     "cases": [
@@ -55,13 +65,13 @@
         "textLines": 3,
         "iterations": 10,
         "warmup": 2,
-        "startupMs": 2.3965889999999987,
+        "startupMs": 2.4423260000000084,
         "throughputIterations": 9,
-        "throughputMeanMs": 1.409076777777778,
-        "throughputMedianMs": 1.3727030000000013,
-        "pagesPerSecond": 709.6845365495816,
-        "outputCharsPerSecond": 55355.39385086736,
-        "inputBytesPerSecond": 587618.7962630534,
+        "throughputMeanMs": 1.4378055555555547,
+        "throughputMedianMs": 1.36780499999999,
+        "pagesPerSecond": 695.5043372423257,
+        "outputCharsPerSecond": 54249.33830490141,
+        "inputBytesPerSecond": 575877.5912366457,
         "passed": true
       },
       {
@@ -81,13 +91,13 @@
         "textLines": 2,
         "iterations": 10,
         "warmup": 2,
-        "startupMs": 1.6202260000000024,
+        "startupMs": 1.5676639999999935,
         "throughputIterations": 9,
-        "throughputMeanMs": 1.1869981111111103,
-        "throughputMedianMs": 1.0660600000000073,
-        "pagesPerSecond": 842.4613237707114,
-        "outputCharsPerSecond": 40438.14354099415,
-        "inputBytesPerSecond": 795283.4896395516,
+        "throughputMeanMs": 1.1210481111111126,
+        "throughputMedianMs": 1.0355210000000028,
+        "pagesPerSecond": 892.0223762821942,
+        "outputCharsPerSecond": 42817.074061545325,
+        "inputBytesPerSecond": 842069.1232103914,
         "passed": true
       }
     ]
@@ -113,12 +123,12 @@
       "textLines": 3,
       "warnings": [],
       "acceptedOutputHash": "sha256:c02f6425097b011c19e4beccebbd48afca1ac621ac327c683982c978e7b24acf",
-      "minMs": 1.0338489999999894,
-      "maxMs": 2.3965889999999987,
-      "meanMs": 1.507828,
-      "medianMs": 1.403042499999998,
+      "minMs": 1.0426120000000054,
+      "maxMs": 2.4423260000000084,
+      "meanMs": 1.5382576000000001,
+      "medianMs": 1.4051669999999916,
       "startup": {
-        "durationMs": 2.3965889999999987
+        "durationMs": 2.4423260000000084
       },
       "modelLoad": {
         "durationMs": 0,
@@ -135,13 +145,13 @@
       },
       "throughput": {
         "iterations": 9,
-        "minMs": 1.0338489999999894,
-        "maxMs": 2.207644000000002,
-        "meanMs": 1.409076777777778,
-        "medianMs": 1.3727030000000013,
-        "pagesPerSecond": 709.6845365495816
+        "minMs": 1.0426120000000054,
+        "maxMs": 2.098661000000007,
+        "meanMs": 1.4378055555555547,
+        "medianMs": 1.36780499999999,
+        "pagesPerSecond": 695.5043372423257
       },
-      "pagesPerSecond": 709.6845365495816,
+      "pagesPerSecond": 695.5043372423257,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
@@ -174,18 +184,18 @@
         }
       },
       "memory": {
-        "rssDeltaBytes": 1179648,
-        "heapUsedDeltaBytes": -465464,
-        "externalDeltaBytes": -21789,
-        "arrayBuffersDeltaBytes": -21829
+        "rssDeltaBytes": 1310720,
+        "heapUsedDeltaBytes": -444376,
+        "externalDeltaBytes": -23235,
+        "arrayBuffersDeltaBytes": -23275
       },
       "peakMemory": {
-        "rssPeakBytes": 62615552,
-        "heapUsedPeakBytes": 9769288,
-        "externalPeakBytes": 2288220,
-        "arrayBuffersPeakBytes": 251508,
-        "rssPeakDeltaBytes": 1179648,
-        "heapUsedPeakDeltaBytes": 863640
+        "rssPeakBytes": 63184896,
+        "heapUsedPeakBytes": 10006408,
+        "externalPeakBytes": 2400430,
+        "arrayBuffersPeakBytes": 261146,
+        "rssPeakDeltaBytes": 1310720,
+        "heapUsedPeakDeltaBytes": 864504
       },
       "gpuMemory": {
         "provider": "cpu",
@@ -225,12 +235,12 @@
         "text.heuristic_content_stream"
       ],
       "acceptedOutputHash": "sha256:258e3fcee7b60abacc5f5a7c64d019de4f2821c74e1dde485d45a4d2348edf47",
-      "minMs": 0.9691639999999921,
-      "maxMs": 1.6806429999999892,
-      "meanMs": 1.2303208999999995,
-      "medianMs": 1.1355800000000045,
+      "minMs": 0.7788490000000081,
+      "maxMs": 1.5911860000000075,
+      "meanMs": 1.1657097000000007,
+      "medianMs": 1.0382655000000014,
       "startup": {
-        "durationMs": 1.6202260000000024
+        "durationMs": 1.5676639999999935
       },
       "modelLoad": {
         "durationMs": 0,
@@ -247,13 +257,13 @@
       },
       "throughput": {
         "iterations": 9,
-        "minMs": 0.9691639999999921,
-        "maxMs": 1.6806429999999892,
-        "meanMs": 1.1869981111111103,
-        "medianMs": 1.0660600000000073,
-        "pagesPerSecond": 842.4613237707114
+        "minMs": 0.7788490000000081,
+        "maxMs": 1.5911860000000075,
+        "meanMs": 1.1210481111111126,
+        "medianMs": 1.0355210000000028,
+        "pagesPerSecond": 892.0223762821942
       },
-      "pagesPerSecond": 842.4613237707114,
+      "pagesPerSecond": 892.0223762821942,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
@@ -286,18 +296,18 @@
         }
       },
       "memory": {
-        "rssDeltaBytes": 1179648,
-        "heapUsedDeltaBytes": -851600,
-        "externalDeltaBytes": 3429,
-        "arrayBuffersDeltaBytes": 3429
+        "rssDeltaBytes": 1835008,
+        "heapUsedDeltaBytes": 1042360,
+        "externalDeltaBytes": 13621,
+        "arrayBuffersDeltaBytes": 13621
       },
       "peakMemory": {
-        "rssPeakBytes": 64057344,
-        "heapUsedPeakBytes": 10034392,
-        "externalPeakBytes": 2286127,
-        "arrayBuffersPeakBytes": 244687,
-        "rssPeakDeltaBytes": 1179648,
-        "heapUsedPeakDeltaBytes": 146312
+        "rssPeakBytes": 65150976,
+        "heapUsedPeakBytes": 11155968,
+        "externalPeakBytes": 2400043,
+        "arrayBuffersPeakBytes": 259583,
+        "rssPeakDeltaBytes": 1835008,
+        "heapUsedPeakDeltaBytes": 1042360
       },
       "gpuMemory": {
         "provider": "cpu",

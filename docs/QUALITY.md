@@ -103,6 +103,11 @@ writes only to `.temp/qa/`. Stable WebGPU evidence is produced by
 after one warmup and writes both the benchmark and evaluated summary under
 `corpus/reports/`.
 
+Every benchmark report includes the same `executionEnvironment` identity:
+package name/version, Git revision and dirty state, Node version, platform,
+architecture, and CPU model. Compare performance only when these fields make
+the producer environments meaningfully comparable.
+
 `npm run qa:performance-regression:report` always generates fresh text, OCR,
 startup, and long-memory measurements under `.temp/qa/`, compares them with the
 checked-in baselines under `corpus/reports/`, and only then writes the committed

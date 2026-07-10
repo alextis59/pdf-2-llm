@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   compareProviderResults,
   createAcceptedOutputHash,
@@ -33,6 +34,7 @@ import {
   createWasmSizeReport,
   evaluateWasmSizeBudget
 } from "../../../scripts/qa/check-wasm-size.mjs";
+import { collectExecutionEnvironment } from "../../../scripts/qa/execution-environment.mjs";
 
 const rootPackagePath = new URL("../../../package.json", import.meta.url);
 
@@ -47,6 +49,20 @@ test("WebGPU smoke and stable report scripts keep separate evidence paths", asyn
   assert.match(report, /--iterations 3 --warmup 1/);
   assert.match(report, /--report corpus\/reports\/webgpu-benchmark\.json/);
   assert.match(report, /--summary corpus\/reports\/webgpu-comparison\.json/);
+});
+
+test("benchmark execution environment identifies code and host", async () => {
+  const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
+  const environment = await collectExecutionEnvironment({ repoRoot });
+
+  assert.equal(environment.packageName, "pdf-2-llm");
+  assert.match(environment.packageVersion, /^\d+\.\d+\.\d+$/);
+  assert.match(environment.gitRevision, /^[0-9a-f]{40}$/);
+  assert.equal(typeof environment.gitDirty, "boolean");
+  assert.equal(environment.nodeVersion, process.version);
+  assert.equal(environment.platform, process.platform);
+  assert.equal(environment.architecture, process.arch);
+  assert.ok(environment.cpuModel === null || environment.cpuModel.length > 0);
 });
 
 test("benchmark duration summary reports min max mean and median", () => {

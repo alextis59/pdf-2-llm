@@ -1,13 +1,20 @@
 {
-  "generatedAt": "2026-07-03T03:18:40.179Z",
+  "generatedAt": "2026-07-10T03:26:46.191Z",
   "iterations": 3,
   "warmup": 1,
   "fixture": {
     "path": "corpus/generated/synthetic-simple-text.pdf"
   },
   "executionEnvironment": {
-    "kind": "node-esm-fresh-process",
-    "node": "v22.19.0",
+    "packageName": "pdf-2-llm",
+    "packageVersion": "1.2.1",
+    "gitRevision": "2829d28b5b7e8183501cca763ddcb19e3c8cf60c",
+    "gitDirty": true,
+    "nodeVersion": "v22.19.0",
+    "platform": "linux",
+    "architecture": "x64",
+    "cpuModel": "11th Gen Intel(R) Core(TM) i5-11300H @ 3.10GHz",
+    "benchmarkMode": "node-esm-fresh-process",
     "notes": "Browser package entrypoint startup is measured under Node ESM; real browser smoke is tracked separately in release readiness."
   },
   "startupProfile": {
@@ -28,22 +35,22 @@
         "iterations": 3,
         "warmup": 1,
         "importMs": {
-          "minMs": 11.617823999999999,
-          "maxMs": 12.474402999999999,
-          "meanMs": 12.128250999999999,
-          "medianMs": 12.292525999999999
+          "minMs": 18.48509,
+          "maxMs": 19.61994,
+          "meanMs": 18.887656333333332,
+          "medianMs": 18.557938999999998
         },
         "firstConversionMs": {
-          "minMs": 12.872514000000002,
-          "maxMs": 13.524857999999998,
-          "meanMs": 13.182851333333332,
-          "medianMs": 13.151181999999999
+          "minMs": 15.676268,
+          "maxMs": 16.830275999999998,
+          "meanMs": 16.070175,
+          "medianMs": 15.703980999999999
         },
         "totalStartupMs": {
-          "minMs": 25.143980000000003,
-          "maxMs": 25.627421000000002,
-          "meanMs": 25.312643333333337,
-          "medianMs": 25.166529
+          "minMs": 34.16278,
+          "maxMs": 35.389639,
+          "meanMs": 34.95942,
+          "medianMs": 35.325841
         },
         "outputChars": 115,
         "textLines": 3,
@@ -57,22 +64,22 @@
         "iterations": 3,
         "warmup": 1,
         "importMs": {
-          "minMs": 11.853231000000001,
-          "maxMs": 12.244606999999998,
-          "meanMs": 11.992787666666667,
-          "medianMs": 11.880524999999999
+          "minMs": 18.535527,
+          "maxMs": 19.607928,
+          "meanMs": 19.050799,
+          "medianMs": 19.008941999999998
         },
         "firstConversionMs": {
-          "minMs": 12.819389000000001,
-          "maxMs": 14.109386,
-          "meanMs": 13.422105333333334,
-          "medianMs": 13.337541000000002
+          "minMs": 16.128016000000002,
+          "maxMs": 16.907156999999998,
+          "meanMs": 16.512843666666665,
+          "medianMs": 16.503358
         },
         "totalStartupMs": {
-          "minMs": 25.065516000000002,
-          "maxMs": 25.965966,
-          "meanMs": 25.417073333333335,
-          "medianMs": 25.219738
+          "minMs": 35.040698,
+          "maxMs": 35.917632,
+          "meanMs": 35.56553366666666,
+          "medianMs": 35.738271
         },
         "outputChars": 115,
         "textLines": 3,
@@ -92,9 +99,9 @@
         {
           "id": "node-entrypoint",
           "runtime": "node",
-          "importMs": 12.474402999999999,
-          "firstConversionMs": 13.151181999999999,
-          "totalStartupMs": 25.627421000000002,
+          "importMs": 18.48509,
+          "firstConversionMs": 15.676268,
+          "totalStartupMs": 34.16278,
           "outputChars": 115,
           "textLines": 3,
           "passed": true
@@ -102,9 +109,9 @@
         {
           "id": "node-entrypoint",
           "runtime": "node",
-          "importMs": 11.617823999999999,
-          "firstConversionMs": 13.524857999999998,
-          "totalStartupMs": 25.143980000000003,
+          "importMs": 19.61994,
+          "firstConversionMs": 15.703980999999999,
+          "totalStartupMs": 35.325841,
           "outputChars": 115,
           "textLines": 3,
           "passed": true
@@ -112,9 +119,9 @@
         {
           "id": "node-entrypoint",
           "runtime": "node",
-          "importMs": 12.292525999999999,
-          "firstConversionMs": 12.872514000000002,
-          "totalStartupMs": 25.166529,
+          "importMs": 18.557938999999998,
+          "firstConversionMs": 16.830275999999998,
+          "totalStartupMs": 35.389639,
           "outputChars": 115,
           "textLines": 3,
           "passed": true
@@ -135,9 +142,9 @@
         {
           "id": "browser-entrypoint",
           "runtime": "browser",
-          "importMs": 11.880524999999999,
-          "firstConversionMs": 13.337541000000002,
-          "totalStartupMs": 25.219738,
+          "importMs": 19.607928,
+          "firstConversionMs": 16.128016000000002,
+          "totalStartupMs": 35.738271,
           "outputChars": 115,
           "textLines": 3,
           "passed": true
@@ -145,9 +152,9 @@
         {
           "id": "browser-entrypoint",
           "runtime": "browser",
-          "importMs": 11.853231000000001,
-          "firstConversionMs": 14.109386,
-          "totalStartupMs": 25.965966,
+          "importMs": 18.535527,
+          "firstConversionMs": 16.503358,
+          "totalStartupMs": 35.040698,
           "outputChars": 115,
           "textLines": 3,
           "passed": true
@@ -155,9 +162,9 @@
         {
           "id": "browser-entrypoint",
           "runtime": "browser",
-          "importMs": 12.244606999999998,
-          "firstConversionMs": 12.819389000000001,
-          "totalStartupMs": 25.065516000000002,
+          "importMs": 19.008941999999998,
+          "firstConversionMs": 16.907156999999998,
+          "totalStartupMs": 35.917632,
           "outputChars": 115,
           "textLines": 3,
           "passed": true
