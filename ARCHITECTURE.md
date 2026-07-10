@@ -70,7 +70,7 @@ can make policy decisions without losing the result object.
 | `text-extract.mjs` | Text extraction, layout grouping, Markdown/source-map serialization, page text/table IR projection, headings, lists, running content, equations, and table insertion. |
 | `table-grid.mjs` | Ruling-line grid inference, cell assignment, spans, and table geometry. |
 | `figure-detection.mjs` | Figure region detection, caption placement, metadata-only Markdown fallback, and figure IR projection. |
-| `document-interactions.mjs` | Form, annotation, attachment, and signature metadata extraction. |
+| `document-interactions.mjs` | Depth-bounded form and attachment trees plus annotation and signature metadata extraction. |
 | `scan-detection.mjs` | Page source-type classification for digital, scanned, and hybrid pages. |
 | `raster-plan.mjs` | Metadata-only page/thumbnail raster planning and pixel-limit diagnostics. |
 | `ocr-*.mjs` | OCR adapter metadata, language/model planning, preprocessing planning, caller-supplied OCR text, and PDF/OCR reconciliation. |

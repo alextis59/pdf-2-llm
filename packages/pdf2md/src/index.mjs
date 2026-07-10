@@ -19,7 +19,10 @@ import {
   figureElementsByPage,
   insertFigureMarkdown
 } from "./figure-detection.mjs";
-import { extractDocumentInteractions } from "./document-interactions.mjs";
+import {
+  extractDocumentInteractions,
+  PdfDocumentInteractionLimitError
+} from "./document-interactions.mjs";
 import {
   assignTextLinesToGridCells,
   detectTableCellSpans,
@@ -155,6 +158,24 @@ export async function convertPdfToMarkdown(input, options = {}) {
       extractionBlockedBySecurityLimit = true;
     }
   }
+  let documentInteractions = extractDocumentInteractions(null);
+  if (pdfDocument) {
+    try {
+      documentInteractions = extractDocumentInteractions(pdfDocument, {
+        extractAttachmentAssets: options.attachments?.extract === true,
+        maxDepth: security.maxDepth
+      });
+    } catch (error) {
+      if (!(error instanceof PdfDocumentInteractionLimitError)) {
+        throw error;
+      }
+      parseWarning = createParseWarning(error);
+      warnings.push(parseWarning);
+      pdfDocument = null;
+      documentInteractions = extractDocumentInteractions(null);
+      extractionBlockedBySecurityLimit = true;
+    }
+  }
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
 
@@ -202,6 +223,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       parseWarning = createParseWarning(error);
       warnings.push(parseWarning);
       pdfDocument = null;
+      documentInteractions = extractDocumentInteractions(null);
       extractionBlockedBySecurityLimit = true;
     }
   }
@@ -286,9 +308,6 @@ export async function convertPdfToMarkdown(input, options = {}) {
   markdownResult = insertFigureMarkdown(markdownResult, figureDetections.figures);
   const figureElements = figureElementsByPage(figureDetections.figures);
   const equationElements = equationElementsByPage(markdownResult.equations?.equations ?? []);
-  const documentInteractions = extractDocumentInteractions(pdfDocument, {
-    extractAttachmentAssets: options.attachments?.extract === true
-  });
   const assets = [
     ...tableCsvSidecars.assets,
     ...ocrDebugSidecars.assets,
@@ -1168,6 +1187,7 @@ function isSecurityLimitParseWarning(warning) {
     warning?.details?.code === "pdf.stream.total_decoded_too_large" ||
     warning?.details?.code === "pdf.object_limit_exceeded" ||
     warning?.details?.code === "pdf.depth_limit_exceeded" ||
+    warning?.details?.code === "pdf.interactions.depth_limit_exceeded" ||
     warning?.details?.code === "pdf.cmap_mapping_limit_exceeded" ||
     warning?.details?.code === warningCodes.PageCountExceeded
   );

@@ -89,6 +89,11 @@ page stream. Form resource graphs and execution are capped by `maxDepth`, and
 an object/generation stack rejects recursive Form cycles with
 `pdf.content_stream.form_cycle_detected`.
 
+AcroForm field trees and EmbeddedFiles name trees are cycle-safe and share the
+same `maxDepth` boundary. Exceeding it blocks extraction with
+`pdf.interactions.depth_limit_exceeded` rather than recursively walking the
+remaining objects.
+
 ## Passwords And Encryption
 
 - Passwords may be supplied as strings or callbacks for encrypted PDFs.

@@ -14,6 +14,16 @@ const fieldFlagBits = Object.freeze({
   pushButton: 1 << 16
 });
 
+export class PdfDocumentInteractionLimitError extends Error {
+  constructor(tree, limit, actual) {
+    super(`${tree} tree depth exceeds the document interaction limit.`);
+    this.name = "PdfDocumentInteractionLimitError";
+    this.code = "pdf.interactions.depth_limit_exceeded";
+    this.offset = null;
+    this.details = { tree, limit, actual };
+  }
+}
+
 export function extractDocumentInteractions(pdfDocument, options = {}) {
   if (!pdfDocument) {
     return emptyDocumentInteractions();
@@ -21,10 +31,12 @@ export function extractDocumentInteractions(pdfDocument, options = {}) {
 
   const annotationIndex = createAnnotationPageIndex(pdfDocument);
   const annotations = extractAnnotations(pdfDocument, annotationIndex);
-  const forms = extractForms(pdfDocument, annotationIndex);
+  const maxDepth = options.maxDepth ?? 100;
+  const forms = extractForms(pdfDocument, annotationIndex, maxDepth);
   const signatures = extractSignatures(forms.fields);
   const attachments = extractAttachments(pdfDocument, {
-    extractAssets: options.extractAttachmentAssets === true
+    extractAssets: options.extractAttachmentAssets === true,
+    maxDepth
   });
   const elementsByPage = mergeElementMaps(forms.elementsByPage, annotations.elementsByPage);
 
@@ -106,7 +118,7 @@ function mergeElementMaps(...maps) {
   return merged;
 }
 
-function extractForms(pdfDocument, annotationIndex) {
+function extractForms(pdfDocument, annotationIndex, maxDepth) {
   const acroFormObject = resolveDictionaryObject(
     pdfDocument.catalog?.value?.entries?.AcroForm,
     pdfDocument.getObject
@@ -123,7 +135,16 @@ function extractForms(pdfDocument, annotationIndex) {
   const seen = new Set();
   const fieldRefs = arrayItems(acroForm.entries.Fields, pdfDocument.getObject);
   for (const fieldRef of fieldRefs) {
-    walkFieldTree(fieldRef, inheritedFieldState(), pdfDocument, annotationIndex, fields, seen);
+    walkFieldTree(
+      fieldRef,
+      inheritedFieldState(),
+      pdfDocument,
+      annotationIndex,
+      fields,
+      seen,
+      0,
+      maxDepth
+    );
   }
 
   fields.forEach((field, index) => {
@@ -161,7 +182,16 @@ function inheritedFieldState() {
   };
 }
 
-function walkFieldTree(fieldRef, inherited, pdfDocument, annotationIndex, fields, seen) {
+function walkFieldTree(
+  fieldRef,
+  inherited,
+  pdfDocument,
+  annotationIndex,
+  fields,
+  seen,
+  depth,
+  maxDepth
+) {
   const fieldObject = resolveDictionaryObject(fieldRef, pdfDocument.getObject);
   if (!fieldObject) {
     return;
@@ -173,6 +203,7 @@ function walkFieldTree(fieldRef, inherited, pdfDocument, annotationIndex, fields
   if (key) {
     seen.add(key);
   }
+  enforceInteractionDepth("AcroForm", depth, maxDepth);
 
   const field = fieldObject.value;
   const localName = textValue(field.entries.T, pdfDocument.getObject);
@@ -200,7 +231,16 @@ function walkFieldTree(fieldRef, inherited, pdfDocument, annotationIndex, fields
   }
 
   for (const child of structuralChildren) {
-    walkFieldTree(child.ref, nextInherited, pdfDocument, annotationIndex, fields, seen);
+    walkFieldTree(
+      child.ref,
+      nextInherited,
+      pdfDocument,
+      annotationIndex,
+      fields,
+      seen,
+      depth + 1,
+      maxDepth
+    );
   }
 }
 
@@ -519,7 +559,13 @@ function extractAttachments(pdfDocument, options) {
     };
   }
 
-  const entries = collectNameTreeEntries(embeddedFiles, pdfDocument.getObject);
+  const entries = collectNameTreeEntries(
+    embeddedFiles,
+    pdfDocument.getObject,
+    new Set(),
+    0,
+    options.maxDepth
+  );
   const assets = [];
   const files = entries.map((entry, index) => {
     const file = fileSpecDiagnostic(entry.value, entry.name, index, pdfDocument.getObject);
@@ -545,7 +591,7 @@ function extractAttachments(pdfDocument, options) {
   };
 }
 
-function collectNameTreeEntries(rootValue, getObject, seen = new Set()) {
+function collectNameTreeEntries(rootValue, getObject, seen, depth, maxDepth) {
   const root = resolveDictionaryObject(rootValue, getObject);
   const key = objectKey(root) ?? refKey(rootValue);
   if (!root || (key && seen.has(key))) {
@@ -554,6 +600,7 @@ function collectNameTreeEntries(rootValue, getObject, seen = new Set()) {
   if (key) {
     seen.add(key);
   }
+  enforceInteractionDepth("EmbeddedFiles", depth, maxDepth);
 
   const entries = [];
   const names = arrayItems(root.value.entries.Names, getObject);
@@ -564,9 +611,15 @@ function collectNameTreeEntries(rootValue, getObject, seen = new Set()) {
     });
   }
   for (const kid of arrayItems(root.value.entries.Kids, getObject)) {
-    entries.push(...collectNameTreeEntries(kid, getObject, seen));
+    entries.push(...collectNameTreeEntries(kid, getObject, seen, depth + 1, maxDepth));
   }
   return entries;
+}
+
+function enforceInteractionDepth(tree, depth, maxDepth) {
+  if (depth > maxDepth) {
+    throw new PdfDocumentInteractionLimitError(tree, maxDepth, depth);
+  }
 }
 
 function fileSpecDiagnostic(fileSpecValue, name, index, getObject) {

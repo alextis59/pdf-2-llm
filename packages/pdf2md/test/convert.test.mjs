@@ -2095,6 +2095,35 @@ test("convertPdfToMarkdown extracts form, annotation, attachment, and signature 
   );
 });
 
+test("convertPdfToMarkdown bounds AcroForm and EmbeddedFiles trees with maxDepth", async () => {
+  const maxDepth = 4;
+  const fieldBoundary = await convertPdfToMarkdown(createDeepFieldTreePdf(maxDepth + 1), {
+    security: { maxDepth }
+  });
+  const nameBoundary = await convertPdfToMarkdown(createDeepNameTreePdf(maxDepth + 1), {
+    security: { maxDepth }
+  });
+
+  assert.equal(fieldBoundary.diagnostics.extraction.forms.total, 1);
+  assert.equal(nameBoundary.diagnostics.extraction.attachments.total, 1);
+
+  for (const [tree, bytes] of [
+    ["AcroForm", createDeepFieldTreePdf(maxDepth + 2)],
+    ["EmbeddedFiles", createDeepNameTreePdf(maxDepth + 2)]
+  ]) {
+    const result = await convertPdfToMarkdown(bytes, { security: { maxDepth } });
+    const warning = result.warnings.find(
+      (item) => item.code === warningCodes.PdfParseFailed
+    );
+
+    assert.equal(warning?.details.code, "pdf.interactions.depth_limit_exceeded");
+    assert.equal(warning?.details.tree, tree);
+    assert.equal(warning?.details.limit, maxDepth);
+    assert.equal(warning?.details.actual, maxDepth + 1);
+    assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  }
+});
+
 test("convertPdfToMarkdown reports visible table ruling-line diagnostics", async () => {
   const result = await convertPdfToMarkdown(visibleTableFixturePath.pathname);
   const rulingLines = result.diagnostics.extraction.rulingLines;
@@ -2393,6 +2422,41 @@ function createInteractiveDocumentPdf() {
     streamObject("attached report\n", "/Type /EmbeddedFile /Subtype /text#2Fplain /Params << /Size 16 >>")
   ];
   return createPdf(objects);
+}
+
+function createDeepFieldTreePdf(levels) {
+  const firstFieldObject = 4;
+  const fields = Array.from({ length: levels }, (_, index) => {
+    const objectNumber = firstFieldObject + index;
+    if (index === levels - 1) {
+      return `<< /FT /Tx /T (level-${index}) /V (bounded) >>`;
+    }
+    return `<< /T (level-${index}) /Kids [${objectNumber + 1} 0 R] >>`;
+  });
+  return createPdf([
+    "<< /Type /Catalog /Pages 2 0 R /AcroForm 3 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+    `<< /Fields [${firstFieldObject} 0 R] >>`,
+    ...fields
+  ]);
+}
+
+function createDeepNameTreePdf(levels) {
+  const firstTreeObject = 3;
+  const fileSpecObject = firstTreeObject + levels;
+  const nodes = Array.from({ length: levels }, (_, index) => {
+    const objectNumber = firstTreeObject + index;
+    if (index === levels - 1) {
+      return `<< /Names [(bounded.txt) ${fileSpecObject} 0 R] >>`;
+    }
+    return `<< /Kids [${objectNumber + 1} 0 R] >>`;
+  });
+  return createPdf([
+    `<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles ${firstTreeObject} 0 R >> >>`,
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+    ...nodes,
+    "<< /Type /Filespec /F (bounded.txt) >>"
+  ]);
 }
 
 function createPdf(objects) {
