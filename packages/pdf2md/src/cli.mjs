@@ -163,6 +163,7 @@ async function writeOutputWithTrace({ body, outputPath, trace }) {
       outputPath,
       bytes
     });
+    await mkdir(dirname(resolve(outputPath)), { recursive: true });
     await writeFile(outputPath, body);
     await trace?.event("output.write_complete", {
       target: "file",

@@ -1304,6 +1304,25 @@ test("CLI consumes output path before selecting positional input", async () => {
   }
 });
 
+test("CLI creates nested output directories", async () => {
+  const cliPath = new URL("../src/cli.mjs", import.meta.url);
+  const outputDir = await mkdtemp(join(tmpdir(), "pdf-2-llm-cli-nested-"));
+  const outputPath = join(outputDir, "nested", "reports", "out.md");
+
+  try {
+    const run = spawnSync(
+      process.execPath,
+      [cliPath.pathname, fixturePath.pathname, "--output", outputPath],
+      { encoding: "utf8" }
+    );
+    assert.equal(run.status, 0, run.stderr);
+    assert.equal(run.stdout, "");
+    assert.match(await readFile(outputPath, "utf8"), /^# Synthetic Simple Text/);
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+});
+
 test("CLI debug writes an NDJSON trace with conversion diagnostics", async () => {
   const cliPath = new URL("../src/cli.mjs", import.meta.url);
   const outputDir = await mkdtemp(join(tmpdir(), "pdf-2-llm-cli-debug-"));

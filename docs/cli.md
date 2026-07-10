@@ -31,7 +31,7 @@ or custom security limits, use the JavaScript API documented in
 
 | Option | Description |
 | --- | --- |
-| `--output <path>` | Write output to a file instead of stdout. |
+| `--output <path>` | Write output to a file instead of stdout, creating missing parent directories. |
 | `--json` | Emit the full `ConvertResult` JSON instead of only Markdown. |
 | `--debug` | Write an NDJSON trace file under the system temp directory and print its path to stderr. |
 | `--debug-trace <path>` | Write the debug NDJSON trace to an explicit file path. This also enables `--debug`. |
