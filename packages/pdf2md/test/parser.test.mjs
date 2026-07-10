@@ -452,6 +452,45 @@ test("parsePdfDocument resolves xref stream entries", async () => {
   assert.equal(result.diagnostics.extraction.parser.mode, "xref-stream");
 });
 
+test("parsePdfDocument enforces maxObjects before decoding complete xref sections", () => {
+  const classic = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>"
+  ]);
+  const malformedClassic = Buffer.from(
+    classic
+      .toString("binary")
+      .replace(/\d{10} 00000 n\ntrailer/, "xxxxxxxxxx 00000 n\ntrailer"),
+    "binary"
+  );
+  const truncatedStream = createTruncatedXrefStreamPdf();
+
+  assert.throws(
+    () => parsePdfDocument(malformedClassic, { maxObjects: 2 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.object_limit_exceeded"
+  );
+  assert.throws(
+    () => parsePdfDocument(malformedClassic, { maxObjects: 2, mode: "tolerant" }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.object_limit_exceeded"
+  );
+  assert.throws(
+    () => parsePdfDocument(malformedClassic, { maxObjects: 3 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.xref.entry_malformed"
+  );
+  assert.throws(
+    () => parsePdfDocument(truncatedStream, { maxObjects: 2 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.object_limit_exceeded"
+  );
+  assert.throws(
+    () => parsePdfDocument(truncatedStream, { maxObjects: 2, mode: "tolerant" }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.object_limit_exceeded"
+  );
+  assert.throws(
+    () => parsePdfDocument(truncatedStream, { maxObjects: 4 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.xref.stream_truncated"
+  );
+});
+
 test("parsePdfDocument resolves compressed object streams", async () => {
   const bytes = createObjectStreamTestPdf();
   const document = parsePdfDocument(bytes);
@@ -479,6 +518,25 @@ test("parsePdfDocument resolves incremental xref Prev chains with newest objects
   assert.equal(document.pages.length, 1);
   assert.equal(document.pages[0].objectNumber, 7);
   assert.equal(result.markdown, "# Updated Incremental Fixture\n");
+});
+
+test("parsePdfDocument enforces maxObjects while merging Prev sections", async () => {
+  const bytes = await readFile(incrementalFixturePath);
+  const poisonedPreviousTrailer = Buffer.from(
+    bytes
+      .toString("binary")
+      .replace("/Size 6 /Root 1 0 R", "/Prev 0 /Root 1 0 R"),
+    "binary"
+  );
+
+  assert.throws(
+    () => parsePdfDocument(poisonedPreviousTrailer, { maxObjects: 6 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.object_limit_exceeded"
+  );
+  assert.throws(
+    () => parsePdfDocument(poisonedPreviousTrailer, { maxObjects: 20 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.object.expected"
+  );
 });
 
 test("parsePdfDocument resolves hybrid-reference xref streams", async () => {
@@ -1103,6 +1161,19 @@ function createXrefStreamTestPdf(objects) {
   body += `<< /Type /XRef /Size ${xrefObjectId + 1} /Root 1 0 R /W [1 4 2] /Length ${xrefStream.byteLength} >>\n`;
   body += `stream\n${xrefStream.toString("binary")}endstream\nendobj\n`;
   body += `startxref\n${offsets[xrefObjectId]}\n%%EOF\n`;
+  return Buffer.from(body, "binary");
+}
+
+function createTruncatedXrefStreamPdf() {
+  let body = "%PDF-1.5\n";
+  const xrefOffset = Buffer.byteLength(body, "binary");
+  body += "1 0 obj\n";
+  body += `${streamObject(
+    Buffer.alloc(14),
+    "/Type /XRef /Size 4 /Index [0 4] /W [1 4 2]"
+  )}\n`;
+  body += "endobj\n";
+  body += `startxref\n${xrefOffset}\n%%EOF\n`;
   return Buffer.from(body, "binary");
 }
 

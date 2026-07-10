@@ -79,6 +79,10 @@ stream bytes are sliced.
 page beyond the configured budget, before resolving that page's resources or
 associating its content streams with a page record.
 
+`maxObjects` is enforced before each classic or stream xref subsection is
+decoded and while unique entries are merged across hybrid and incremental xref
+sections, so over-budget indexes stop before object materialization.
+
 `maxCMapMappings` bounds both individual ToUnicode ranges and aggregate mapping
 work so compact font CMaps cannot expand into unbounded entries.
 

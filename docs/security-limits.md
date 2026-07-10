@@ -184,7 +184,9 @@ pdf.content_stream.form_cycle_detected
 ### `maxObjects`
 
 `maxObjects` limits the number of objects discovered through normal parsing and
-repair paths. When exceeded, the parser warning details use:
+repair paths. Classic and stream xref subsections are checked before all their
+entries are decoded, and unique entries are checked incrementally while hybrid
+and `Prev` sections are merged. When exceeded, the parser warning details use:
 
 ```txt
 pdf.object_limit_exceeded

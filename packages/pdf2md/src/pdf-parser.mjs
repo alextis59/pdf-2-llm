@@ -479,7 +479,11 @@ function readXrefData(source, bytes, options = {}) {
       repairReason: null
     };
   } catch (error) {
-    if (options.mode !== "tolerant" || !(error instanceof PdfSyntaxError)) {
+    if (
+      options.mode !== "tolerant" ||
+      !(error instanceof PdfSyntaxError) ||
+      isRepairFatalError(error)
+    ) {
       throw error;
     }
     return scanObjectsForRepair(source, bytes, options, error);
@@ -644,9 +648,11 @@ function isRepairFatalError(error) {
 }
 
 function parseXrefChain(source, bytes, startOffset, options = {}) {
-  const parsedSections = [];
+  const entries = [];
+  const seenEntryKeys = new Set();
   const sectionSummaries = [];
   const seenOffsets = new Set();
+  let trailer = null;
   let offset = startOffset;
 
   while (Number.isInteger(offset) && offset >= 0) {
@@ -659,7 +665,8 @@ function parseXrefChain(source, bytes, startOffset, options = {}) {
     seenOffsets.add(offset);
 
     const section = parseHybridXrefSection(source, bytes, parseXref(source, bytes, offset, options), options);
-    parsedSections.push(section);
+    trailer ??= section.trailer;
+    appendXrefEntries(entries, seenEntryKeys, section.entries, options.maxObjects);
     sectionSummaries.push({
       offset,
       mode: section.xrefMode,
@@ -669,8 +676,8 @@ function parseXrefChain(source, bytes, startOffset, options = {}) {
     const previousOffset = section.trailer?.entries?.Prev;
     if (!Number.isInteger(previousOffset)) {
       return {
-        entries: mergeXrefEntries(parsedSections),
-        trailer: parsedSections[0].trailer,
+        entries,
+        trailer,
         xrefMode: formatXrefMode(sectionSummaries),
         sections: sectionSummaries
       };
@@ -684,20 +691,25 @@ function parseXrefChain(source, bytes, startOffset, options = {}) {
   });
 }
 
-function mergeXrefEntries(sections) {
+function mergeXrefEntries(sections, maxObjects = 100000) {
   const entries = [];
   const seen = new Set();
   for (const section of sections) {
-    for (const entry of section.entries) {
-      const key = objectKey(entry.objectNumber, entry.generationNumber);
-      if (seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      entries.push(entry);
-    }
+    appendXrefEntries(entries, seen, section.entries, maxObjects);
   }
   return entries;
+}
+
+function appendXrefEntries(entries, seen, candidates, maxObjects) {
+  for (const entry of candidates) {
+    const key = objectKey(entry.objectNumber, entry.generationNumber);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    entries.push(entry);
+    enforceObjectLimit(entries.length, maxObjects);
+  }
 }
 
 function createXrefEntryIndex(entries) {
@@ -762,13 +774,17 @@ function parseHybridXrefSection(source, bytes, section, options = {}) {
 
   const streamSection = parseXrefStream(source, bytes, xrefStreamOffset, options);
   return {
-    entries: mergeXrefEntries([streamSection, section]),
+    entries: mergeXrefEntries([streamSection, section], options.maxObjects),
     trailer: section.trailer,
     xrefMode: `${section.xrefMode}+hybrid-xref-stream`
   };
 }
 
-function parseClassicXref(source, offset, { mode = "strict", maxDepth = 100 } = {}) {
+function parseClassicXref(
+  source,
+  offset,
+  { mode = "strict", maxDepth = 100, maxObjects = 100000 } = {}
+) {
   let cursor = offset;
   if (!source.startsWith("xref", cursor)) {
     if (mode === "tolerant") {
@@ -804,6 +820,7 @@ function parseClassicXref(source, offset, { mode = "strict", maxDepth = 100 } = 
     cursor = skipWhitespaceAndComments(source, firstObject.offset);
     const count = readInteger(source, cursor, "xref subsection count");
     cursor = count.offset;
+    enforceObjectLimit(entries.length + count.value, maxObjects);
 
     for (let index = 0; index < count.value; index += 1) {
       cursor = skipWhitespaceAndComments(source, cursor);
@@ -840,13 +857,18 @@ function parseXrefStream(source, bytes, offset, options = {}) {
   }
 
   return {
-    entries: readXrefStreamEntries(object.value, object.stream.bytes, object.offset),
+    entries: readXrefStreamEntries(
+      object.value,
+      object.stream.bytes,
+      object.offset,
+      options.maxObjects
+    ),
     trailer: object.value,
     xrefMode: "xref-stream"
   };
 }
 
-function readXrefStreamEntries(dictionary, bytes, offset) {
+function readXrefStreamEntries(dictionary, bytes, offset, maxObjects = 100000) {
   const size = dictionary.entries.Size;
   if (!Number.isInteger(size) || size < 0) {
     throw new PdfSyntaxError("XRef stream is missing a valid Size entry.", {
@@ -884,6 +906,7 @@ function readXrefStreamEntries(dictionary, bytes, offset) {
   for (let pairIndex = 0; pairIndex < index.length; pairIndex += 2) {
     const firstObject = index[pairIndex];
     const count = index[pairIndex + 1];
+    enforceObjectLimit(entries.length + count, maxObjects);
     for (let itemIndex = 0; itemIndex < count; itemIndex += 1) {
       if (cursor + entryWidth > bytes.byteLength) {
         throw new PdfSyntaxError("XRef stream ended before all entries were decoded.", {
