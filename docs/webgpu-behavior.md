@@ -331,7 +331,9 @@ This browser harness serves the preprocessing module from localhost, launches
 Chrome with WebGPU flags, and runs the adaptive-threshold RGBA preprocessing
 kernel when `requestAdapter()` succeeds. The harness includes
 `--disable-vulkan-surface` because Chrome 126 headless can otherwise fail Vulkan
-initialization on Linux. Without a usable adapter it writes an explicit
+initialization on Linux. Chrome receives a two-second graceful shutdown window
+before the harness escalates to `SIGKILL`; both waits are bounded so server and
+profile cleanup still run. Without a usable adapter it writes an explicit
 not-applicable summary. On a WebGPU-capable host, use the strict form to require
 measurable speedup:
 

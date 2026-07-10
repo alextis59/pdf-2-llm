@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 const args = process.argv.slice(2);
 const defaultPixels = 589_824;
@@ -11,6 +12,8 @@ const defaultIterations = 1;
 const defaultWarmup = 1;
 const defaultMinSpeedup = 1.05;
 const defaultTimeoutMs = 60_000;
+const defaultShutdownGraceMs = 2_000;
+const defaultShutdownKillWaitMs = 2_000;
 const adaptiveThresholdWorkload = "adaptive-threshold-rgba";
 const binarizeWorkload = "binarize-rgba";
 const defaultWorkload = adaptiveThresholdWorkload;
@@ -338,6 +341,14 @@ async function runChrome(chrome, url, { timeoutMs = defaultTimeoutMs } = {}) {
   let stdout = "";
   let stderr = "";
   let exitStatus = null;
+  let stopRequested = false;
+  const stop = async () => {
+    if (!stopRequested) {
+      stopRequested = true;
+      exitStatus = await stopChrome(child);
+    }
+    return exitStatus;
+  };
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
   child.stdout.on("data", (chunk) => {
@@ -355,12 +366,10 @@ async function runChrome(chrome, url, { timeoutMs = defaultTimeoutMs } = {}) {
     });
     const page = await waitForPageTarget(port, url, timeoutMs);
     const summary = await waitForPageSummary(page.webSocketDebuggerUrl, timeoutMs);
-    exitStatus = await stopChrome(child);
+    exitStatus = await stop();
     return { status: exitStatus, stdout, stderr, summary };
   } finally {
-    if (exitStatus === null) {
-      exitStatus = await stopChrome(child);
-    }
+    await stop();
     await rm(userDataDir, { force: true, recursive: true });
   }
 }
@@ -494,14 +503,38 @@ function connectCdp(webSocketDebuggerUrl) {
   });
 }
 
-function stopChrome(child) {
+export function stopChrome(
+  child,
+  {
+    gracePeriodMs = defaultShutdownGraceMs,
+    killWaitMs = defaultShutdownKillWaitMs
+  } = {}
+) {
   if (child.exitCode !== null) {
     return Promise.resolve(child.exitCode);
   }
   return new Promise((resolve) => {
-    child.once("close", (status) => {
+    let settled = false;
+    let timeout = null;
+    const finish = (status) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      child.off("close", finish);
       resolve(status);
-    });
+    };
+    const forceKill = () => {
+      if (child.exitCode !== null) {
+        finish(child.exitCode);
+        return;
+      }
+      timeout = setTimeout(() => finish(child.exitCode), killWaitMs);
+      child.kill("SIGKILL");
+    };
+    child.once("close", finish);
+    timeout = setTimeout(forceKill, gracePeriodMs);
     child.kill("SIGTERM");
   });
 }
@@ -594,4 +627,6 @@ async function main() {
   }
 }
 
-await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}
