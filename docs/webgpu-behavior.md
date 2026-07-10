@@ -102,7 +102,8 @@ When all checks pass, diagnostics use:
 
 Adapter diagnostics include optional adapter name, adapter info, sorted feature
 names, and numeric limits. Device diagnostics report `available` when the
-requested device is healthy.
+requested device is healthy. Capability detection destroys its diagnostics-only
+device probe before returning; it does not retain a hidden browser GPU resource.
 
 ## Supplied Device
 
@@ -123,7 +124,7 @@ const result = await convertPdfToMarkdown(bytes, {
 When a device is supplied, the converter selects `webgpu` before Node fallback
 checks and records `device.source: "supplied"` in diagnostics. This path is
 intended for browser or worker integrations that manage adapter/device lifetime
-outside the converter.
+outside the converter. The converter never destroys a caller-supplied device.
 
 ## Node Behavior
 

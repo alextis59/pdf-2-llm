@@ -34,6 +34,7 @@ test("detectWebGpuCapabilities keeps CPU selected when WebGPU is not requested",
 });
 
 test("detectWebGpuCapabilities reports browser WebGPU adapter features and limits", async () => {
+  let destroyedDevices = 0;
   const result = await detectWebGpuCapabilities(
     { preferred: true },
     {
@@ -58,6 +59,9 @@ test("detectWebGpuCapabilities reports browser WebGPU adapter features and limit
               },
               async requestDevice() {
                 return {
+                  destroy() {
+                    destroyedDevices += 1;
+                  },
                   lost: new Promise(() => {})
                 };
               }
@@ -107,6 +111,7 @@ test("detectWebGpuCapabilities reports browser WebGPU adapter features and limit
     },
     error: null
   });
+  assert.equal(destroyedDevices, 1);
 });
 
 test("detectWebGpuCapabilities falls back to CPU when browser WebGPU is unavailable", async () => {
@@ -150,11 +155,15 @@ test("detectWebGpuCapabilities keeps Node on CPU without a stable GPU path", asy
 });
 
 test("detectWebGpuCapabilities selects supplied WebGPU devices before Node fallback", async () => {
+  let destroyedDevices = 0;
   const result = await detectWebGpuCapabilities(
     {
       preferred: true,
       device: {
-        label: "supplied test device"
+        label: "supplied test device",
+        destroy() {
+          destroyedDevices += 1;
+        }
       }
     },
     {
@@ -173,9 +182,11 @@ test("detectWebGpuCapabilities selects supplied WebGPU devices before Node fallb
   assert.equal(result.fallbackReason, null);
   assert.equal(result.device.status, "available");
   assert.equal(result.device.source, "supplied");
+  assert.equal(destroyedDevices, 0);
 });
 
 test("detectWebGpuCapabilities falls back to CPU when a WebGPU device is already lost", async () => {
+  let destroyedDevices = 0;
   const result = await detectWebGpuCapabilities(
     { preferred: true },
     {
@@ -188,6 +199,9 @@ test("detectWebGpuCapabilities falls back to CPU when a WebGPU device is already
               limits: {},
               async requestDevice() {
                 return {
+                  destroy() {
+                    destroyedDevices += 1;
+                  },
                   lost: Promise.resolve({
                     reason: "destroyed",
                     message: "device was lost during setup"
@@ -212,4 +226,5 @@ test("detectWebGpuCapabilities falls back to CPU when a WebGPU device is already
     lostMessage: "device was lost during setup",
     error: null
   });
+  assert.equal(destroyedDevices, 1);
 });

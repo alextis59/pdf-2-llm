@@ -206,8 +206,9 @@ async function requestDeviceDiagnostics(adapter) {
   if (typeof adapter.requestDevice !== "function") {
     return createDeviceDiagnostics("not-requested");
   }
+  let device = null;
   try {
-    const device = await adapter.requestDevice();
+    device = await adapter.requestDevice();
     const lost = await alreadySettledDeviceLoss(device?.lost);
     if (lost) {
       return createDeviceDiagnostics("lost", {
@@ -223,6 +224,16 @@ async function requestDeviceDiagnostics(adapter) {
         message: error.message ?? String(error)
       }
     });
+  } finally {
+    destroyDetectedDevice(device);
+  }
+}
+
+function destroyDetectedDevice(device) {
+  try {
+    device?.destroy?.();
+  } catch {
+    // Capability diagnostics must remain stable even if a non-conforming probe throws on cleanup.
   }
 }
 
