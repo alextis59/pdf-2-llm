@@ -127,6 +127,19 @@ test("convertPdfToMarkdown returns the scaffold contract for a corpus PDF", asyn
   );
 });
 
+test("convertPdfToMarkdown classifies a header-only parse failure as unknown", async () => {
+  const result = await convertPdfToMarkdown(Buffer.from("%PDF-1.4\n", "latin1"));
+  const parseWarning = result.warnings.find(
+    (warning) => warning.code === warningCodes.PdfParseFailed
+  );
+
+  assert.equal(result.ir.sourceType, "unknown");
+  assert.deepEqual(result.ir.pages, []);
+  assert.equal(result.diagnostics.extraction.scanDetection.sourceType, "unknown");
+  assert.equal(result.diagnostics.extraction.parser.mode, "unavailable");
+  assert.equal(parseWarning?.details.code, "pdf.startxref.missing");
+});
+
 test("convertPdfToMarkdown supports path input", async () => {
   const result = await convertPdfToMarkdown(fixturePath.pathname);
   assert.equal(result.diagnostics.input.source.type, "path");

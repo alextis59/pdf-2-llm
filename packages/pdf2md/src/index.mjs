@@ -350,11 +350,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
     scanDetection.pages.map((page) => [page.pageIndex, page])
   );
   const ir = createDocumentIr({
-    sourceType: pdfDocument?.pages?.length
-      ? scanDetection.sourceType
-      : pdfVersion
-        ? "digital"
-        : "unknown"
+    sourceType: scanDetection.sourceType
   });
   if (pdfDocument?.pages) {
     ir.pages = pdfDocument.pages.map((page) =>
