@@ -82,10 +82,14 @@ to ask for Markdown, assets, structured JSON, diagnostics, and optional OCR/GPU
 features without caring how the internals are split across Rust, WebAssembly,
 workers, or model runtimes.
 
-Example API:
+Target API sketch (not the current option surface):
+
+The package import below is real, but the option groups illustrate the study's
+long-term design. For the shipped contract and copyable examples, use
+[the current API reference](api.md).
 
 ```ts
-import { convertPdfToMarkdown } from "@your-scope/pdf2md";
+import { convertPdfToMarkdown } from "pdf-2-llm";
 
 const result = await convertPdfToMarkdown(pdfBytes, {
   markdown: {
@@ -753,11 +757,11 @@ packages/
   pdf2md-models-table/
 ```
 
-Package exports:
+Target package-export sketch (not the current export map):
 
 ```json
 {
-  "name": "@your-scope/pdf2md",
+  "name": "pdf-2-llm",
   "type": "module",
   "exports": {
     ".": {
@@ -1357,7 +1361,7 @@ and full ownership of the document-conversion logic.
 Build the library around this shape:
 
 ```text
-@your-scope/pdf2md
+pdf-2-llm
   TypeScript API
   browser and Node entrypoints
   worker orchestration
