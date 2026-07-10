@@ -81,7 +81,7 @@ Behavior:
 Validation:
 
 ```sh
-node packages/pdf2md/examples/node-basic.mjs
+npm run example:node
 npm run test:api
 ```
 

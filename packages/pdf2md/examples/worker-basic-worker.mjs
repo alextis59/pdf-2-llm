@@ -1,5 +1,5 @@
 import { parentPort } from "node:worker_threads";
-import { convertPdfToMarkdown } from "../src/worker.mjs";
+import { convertPdfToMarkdown } from "pdf-2-llm/worker";
 
 parentPort.on("message", async (message) => {
   if (message?.type !== "convert") {

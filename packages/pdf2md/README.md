@@ -60,8 +60,11 @@ npm run fuzz:smoke
 ## Examples
 
 ```sh
-node packages/pdf2md/examples/node-basic.mjs
-node packages/pdf2md/examples/worker-basic.mjs
+npm run example:node
+npm run example:worker
 ```
 
-The browser example is `packages/pdf2md/examples/browser-basic.html`.
+The checkout scripts register a local resolver for the same public
+`pdf-2-llm/*` imports that installed consumers resolve through the export map.
+The browser example is `packages/pdf2md/examples/browser-basic.html`; its
+import map points those public specifiers at the checkout files.

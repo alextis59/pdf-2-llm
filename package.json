@@ -78,6 +78,8 @@
     "corpus:run:tables:snapshots": "node scripts/qa/run-corpus.mjs --id synthetic-borderless-table --id synthetic-visible-table --id synthetic-split-across-page-table --id synthetic-table-with-note --id synthetic-complex-spanned-table --assert-markdown",
     "corpus:run:text": "node scripts/qa/run-corpus.mjs --gate text-mvp --assert-markdown",
     "corpus:validate": "node scripts/corpus/validate-manifest.mjs",
+    "example:node": "node --import ./scripts/examples/register-public-package.mjs packages/pdf2md/examples/node-basic.mjs",
+    "example:worker": "node --import ./scripts/examples/register-public-package.mjs packages/pdf2md/examples/worker-basic.mjs",
     "fuzz:smoke": "npm run fuzz:smoke --workspace @pdf-2-llm/pdf2md",
     "lint": "node scripts/qa/lint.mjs",
     "qa:benchmark": "node scripts/qa/benchmark.mjs --gate text-mvp",

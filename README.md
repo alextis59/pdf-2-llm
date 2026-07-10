@@ -87,7 +87,7 @@ npm exec -- pdf-2-llm corpus/generated/synthetic-simple-text.pdf --json --output
 Run the Node example:
 
 ```sh
-node packages/pdf2md/examples/node-basic.mjs
+npm run example:node
 ```
 
 Run the complete validation gate:
@@ -287,9 +287,13 @@ npm run qa:webgpu-preprocess
 Package examples:
 
 ```sh
-node packages/pdf2md/examples/node-basic.mjs
-node packages/pdf2md/examples/worker-basic.mjs
+npm run example:node
+npm run example:worker
 ```
+
+These checkout scripts install a Node resolver hook for the public
+`pdf-2-llm/*` specifiers used by the examples. Installed-package consumers use
+the package export map directly.
 
 The browser example is at:
 

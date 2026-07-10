@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { convertPdfToMarkdown } from "../src/node.mjs";
+import { convertPdfToMarkdown } from "pdf-2-llm/node";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const inputPath = process.argv[2]
