@@ -52,6 +52,58 @@ test("insertFigureMarkdown attaches duplicate captions to their source-map pages
   );
 });
 
+test("insertFigureMarkdown extends source-map entries spanning an insertion", () => {
+  const caption = "Figure 2. Spanning caption.";
+  const markdown = `Lead: ${caption} Tail.`;
+  const captionStart = markdown.indexOf(caption);
+  const result = insertFigureMarkdown(
+    {
+      markdown,
+      sourceMap: {
+        schemaVersion: "0.1.0",
+        target: "markdown",
+        entries: [
+          { ...sourceMapEntry(0, captionStart, 0), kind: "before" },
+          { ...sourceMapEntry(0, markdown.length, 0), kind: "spanning" },
+          {
+            ...sourceMapEntry(captionStart, captionStart + caption.length, 0),
+            kind: "caption"
+          }
+        ]
+      }
+    },
+    [
+      {
+        ...figure({ pageIndex: 0 }),
+        captionNumber: "2",
+        caption
+      }
+    ]
+  );
+  const insertion = "*[Figure 2 preview unavailable; metadata retained.]*\n\n";
+  const byKind = Object.fromEntries(
+    result.sourceMap.entries.map((entry) => [entry.kind, entry])
+  );
+
+  assert.equal(result.markdown, `Lead: ${insertion}${caption} Tail.`);
+  assert.deepEqual(
+    ["before", "spanning", "caption"].map((kind) => ({
+      kind,
+      markdownStart: byKind[kind].markdownStart,
+      markdownEnd: byKind[kind].markdownEnd
+    })),
+    [
+      { kind: "before", markdownStart: 0, markdownEnd: captionStart },
+      { kind: "spanning", markdownStart: 0, markdownEnd: markdown.length + insertion.length },
+      {
+        kind: "caption",
+        markdownStart: captionStart + insertion.length,
+        markdownEnd: captionStart + caption.length + insertion.length
+      }
+    ]
+  );
+});
+
 function sourceMapEntry(markdownStart, markdownEnd, pageIndex) {
   return {
     markdownStart,

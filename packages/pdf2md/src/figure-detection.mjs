@@ -186,8 +186,14 @@ function captionRangeMatchesFigurePage(entries, start, end, pageIndex) {
 
 function shiftSourceMapEntries(sourceMap, insertionIndex, length) {
   return sourceMap.map((entry) => {
-    if (entry.markdownStart < insertionIndex) {
+    if (entry.markdownEnd <= insertionIndex) {
       return entry;
+    }
+    if (entry.markdownStart < insertionIndex) {
+      return {
+        ...entry,
+        markdownEnd: entry.markdownEnd + length
+      };
     }
     return {
       ...entry,
