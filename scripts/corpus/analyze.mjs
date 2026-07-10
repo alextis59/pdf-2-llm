@@ -3,6 +3,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const args = process.argv.slice(2);
 const repoRoot = path.resolve(readOption("--root") ?? process.cwd());
@@ -14,6 +15,7 @@ const selectAll = hasFlag("--all");
 const selectedIds = readOptions("--id");
 const selectedFiles = readOptions("--file");
 const skipTools = hasFlag("--no-tools");
+const toolsOnly = hasFlag("--tools-only");
 const maxToolBytes = Number.parseInt(readOption("--max-tool-bytes") ?? `${5 * 1024 * 1024}`, 10);
 const analyzedAt = readOption("--analyzed-at") ?? new Date().toISOString();
 
@@ -51,6 +53,7 @@ Options:
   --root <path>            Repository root. Defaults to cwd.
   --max-tool-bytes <n>     Maximum captured bytes per external tool.
   --analyzed-at <iso>      Timestamp to write into analysis JSON.
+  --tools-only             Refresh selected external-tool captures without analysis or inventory files.
 `;
 }
 
@@ -417,9 +420,19 @@ async function runTool(command, argsForCommand, timeoutMs = 15000) {
       settled = true;
       clearTimeout(timer);
       if (error.code === "ENOENT") {
-        resolve({ available: false, command, args: argsForCommand, error: "not found" });
+        resolve({
+          available: false,
+          command,
+          args: argsForCommand.map((value) => portableToolArgument(value)),
+          error: "not found"
+        });
       } else {
-        resolve({ available: true, command, args: argsForCommand, error: error.message });
+        resolve({
+          available: true,
+          command,
+          args: argsForCommand.map((value) => portableToolArgument(value)),
+          error: error.message
+        });
       }
     });
     child.on("close", (status, signal) => {
@@ -431,15 +444,67 @@ async function runTool(command, argsForCommand, timeoutMs = 15000) {
       resolve({
         available: true,
         command,
-        args: argsForCommand,
+        args: argsForCommand.map((value) => portableToolArgument(value)),
         status,
         signal,
         truncated,
-        stdout: stdout.toString("utf8"),
-        stderr: stderr.toString("utf8")
+        stdout: redactRepoRoot(stdout.toString("utf8")),
+        stderr: redactRepoRoot(stderr.toString("utf8"))
       });
     });
   });
+}
+
+export function portableToolArgument(value, root = repoRoot) {
+  if (typeof value !== "string" || !path.isAbsolute(value)) {
+    return value;
+  }
+  const relative = path.relative(root, value);
+  if (relative === "") {
+    return ".";
+  }
+  return !relative.startsWith("..") && !path.isAbsolute(relative)
+    ? relative.split(path.sep).join("/")
+    : value;
+}
+
+function redactRepoRoot(value) {
+  return value.replaceAll(repoRoot, "<repo>");
+}
+
+export function toolVersionFromResult(result) {
+  if (result?.available !== true || result.status !== 0) {
+    return null;
+  }
+  return `${result.stdout ?? ""}\n${result.stderr ?? ""}`
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean) ?? null;
+}
+
+const toolVersionPromises = new Map();
+
+function readToolVersion(command, versionArgs) {
+  let promise = toolVersionPromises.get(command);
+  if (!promise) {
+    promise = runTool(command, versionArgs, 5000).then(toolVersionFromResult);
+    toolVersionPromises.set(command, promise);
+  }
+  return promise;
+}
+
+async function captureTool(command, argsForCommand, versionArgs) {
+  const [result, version] = await Promise.all([
+    runTool(command, argsForCommand),
+    readToolVersion(command, versionArgs)
+  ]);
+  const { available, command: capturedCommand, ...details } = result;
+  return {
+    available,
+    command: capturedCommand,
+    version,
+    ...details
+  };
 }
 
 async function runExternalTools(filePath) {
@@ -448,11 +513,11 @@ async function runExternalTools(filePath) {
   }
 
   const tools = {
-    pdfinfo: await runTool("pdfinfo", [filePath]),
-    pdfimages: await runTool("pdfimages", ["-list", filePath]),
-    pdftotextBbox: await runTool("pdftotext", ["-bbox", filePath, "-"]),
-    qpdfJson: await runTool("qpdf", ["--json", filePath]),
-    mutoolInfo: await runTool("mutool", ["info", filePath])
+    pdfinfo: await captureTool("pdfinfo", [filePath], ["-v"]),
+    pdfimages: await captureTool("pdfimages", ["-list", filePath], ["-v"]),
+    pdftotextBbox: await captureTool("pdftotext", ["-bbox", filePath, "-"], ["-v"]),
+    qpdfJson: await captureTool("qpdf", ["--json", filePath], ["--version"]),
+    mutoolInfo: await captureTool("mutool", ["info", filePath], ["-v"])
   };
 
   return tools;
@@ -611,16 +676,24 @@ async function main() {
 
   const analyses = [];
   for (const target of targets) {
+    if (toolsOnly) {
+      const tools = await runExternalTools(target.path);
+      await writeToolOutputs(target.id, tools);
+      console.log(`${target.id}: refreshed external tool captures`);
+      continue;
+    }
     const analysis = await analyzePdf(target);
     const analysisPath = await writeAnalysis(target.id, analysis);
     analyses.push(analysis);
     console.log(`${target.id}: wrote ${relativeToRoot(analysisPath)}`);
   }
 
-  if (fileTargets.length === 0) {
+  if (!toolsOnly && fileTargets.length === 0) {
     const reportPath = await writeInventoryReport(analyses);
     console.log(`Wrote ${relativeToRoot(reportPath)}`);
   }
 }
 
-await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

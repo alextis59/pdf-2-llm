@@ -1,9 +1,10 @@
 {
   "available": true,
   "command": "pdfimages",
+  "version": "pdfimages version 22.02.0",
   "args": [
     "-list",
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-table-with-note.pdf"
+    "corpus/generated/synthetic-table-with-note.pdf"
   ],
   "status": 0,
   "signal": null,

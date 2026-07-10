@@ -1,9 +1,10 @@
 {
   "available": false,
   "command": "mutool",
+  "version": null,
   "args": [
     "info",
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-complex-spanned-table.pdf"
+    "corpus/generated/synthetic-complex-spanned-table.pdf"
   ],
   "error": "not found"
 }

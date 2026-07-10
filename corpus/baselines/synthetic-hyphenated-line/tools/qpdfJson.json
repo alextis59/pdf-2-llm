@@ -1,9 +1,10 @@
 {
   "available": false,
   "command": "qpdf",
+  "version": null,
   "args": [
     "--json",
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-hyphenated-line.pdf"
+    "corpus/generated/synthetic-hyphenated-line.pdf"
   ],
   "error": "not found"
 }

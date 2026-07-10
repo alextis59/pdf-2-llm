@@ -1,9 +1,10 @@
 {
   "available": false,
   "command": "mutool",
+  "version": null,
   "args": [
     "info",
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-qpdf-object-stream.pdf"
+    "corpus/generated/synthetic-qpdf-object-stream.pdf"
   ],
   "error": "not found"
 }

@@ -45,7 +45,9 @@ corpus/
   `ocrResultsFile`. `npm run corpus:validate` checks that each reference is
   readable JSON, and the corpus runner injects the results during conversion.
 - `baselines/` contains analysis, oracle outputs, and low-resolution page
-  previews for human review.
+  previews for human review. External-tool captures store repository-relative
+  arguments plus the tool version (or `null` when the tool is unavailable) so
+  regenerated evidence is portable and attributable.
 - `licenses/` contains notices for third-party material incorporated into
   generated or redistributed corpus artifacts.
 - `reports/` contains corpus inventory and benchmark reports.

@@ -1,8 +1,9 @@
 {
   "available": true,
   "command": "pdfinfo",
+  "version": "pdfinfo version 22.02.0",
   "args": [
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-encrypted-rc4-40.pdf"
+    "corpus/generated/synthetic-encrypted-rc4-40.pdf"
   ],
   "status": 1,
   "signal": null,

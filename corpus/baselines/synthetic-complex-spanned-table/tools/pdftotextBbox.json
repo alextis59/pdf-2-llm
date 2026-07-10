@@ -1,9 +1,10 @@
 {
   "available": true,
   "command": "pdftotext",
+  "version": "pdftotext version 22.02.0",
   "args": [
     "-bbox",
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-complex-spanned-table.pdf",
+    "corpus/generated/synthetic-complex-spanned-table.pdf",
     "-"
   ],
   "status": 0,

@@ -1,9 +1,10 @@
 {
   "available": true,
   "command": "pdftotext",
+  "version": "pdftotext version 22.02.0",
   "args": [
     "-bbox",
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-vertical-writing.pdf",
+    "corpus/generated/synthetic-vertical-writing.pdf",
     "-"
   ],
   "status": 0,

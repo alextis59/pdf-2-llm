@@ -1,9 +1,10 @@
 {
   "available": false,
   "command": "qpdf",
+  "version": null,
   "args": [
     "--json",
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/raw/public/plos-interpretable-ml-reliability-2023.pdf"
+    "corpus/raw/public/plos-interpretable-ml-reliability-2023.pdf"
   ],
   "error": "not found"
 }

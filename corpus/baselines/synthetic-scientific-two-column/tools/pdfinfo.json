@@ -1,8 +1,9 @@
 {
   "available": true,
   "command": "pdfinfo",
+  "version": "pdfinfo version 22.02.0",
   "args": [
-    "/home/alextis/Work/Git/alextis59/pdf-2-llm/corpus/generated/synthetic-scientific-two-column.pdf"
+    "corpus/generated/synthetic-scientific-two-column.pdf"
   ],
   "status": 0,
   "signal": null,
