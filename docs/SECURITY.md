@@ -70,6 +70,10 @@ Indirect stream `/Length` references are resolved iteratively through an indexed
 xref lookup. `maxDepth` caps reference hops, and cycles are rejected before any
 stream bytes are sliced.
 
+`maxPages` is enforced while walking the page tree. Traversal stops at the first
+page beyond the configured budget, before resolving that page's resources or
+associating its content streams with a page record.
+
 `maxCMapMappings` bounds both individual ToUnicode ranges and aggregate mapping
 work so compact font CMaps cannot expand into unbounded entries.
 

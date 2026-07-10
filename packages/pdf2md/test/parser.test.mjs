@@ -748,6 +748,37 @@ test("parser enforces page tree depth limits", () => {
   );
 });
 
+test("parser stops page traversal at the first page beyond maxPages", () => {
+  const toUnicode = [
+    "begincmap",
+    "1 beginbfchar",
+    "<01> <0041>",
+    "endbfchar",
+    "endcmap"
+  ].join("\n");
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 /MediaBox [0 0 300 400] >>",
+    "<< /Type /Page /Parent 2 0 R >>",
+    "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Custom /ToUnicode 6 0 R >>",
+    streamObject(toUnicode)
+  ]);
+
+  assert.throws(
+    () => parsePdfDocument(bytes, { maxPages: 1, maxCMapMappings: 0 }),
+    (error) =>
+      error instanceof PdfSyntaxError &&
+      error.code === "security.page_count_exceeded" &&
+      error.details?.pages === 2 &&
+      error.details?.maxPages === 1
+  );
+  assert.throws(
+    () => parsePdfDocument(bytes, { maxPages: 2, maxCMapMappings: 0 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.cmap_mapping_limit_exceeded"
+  );
+});
+
 test("parser and converter reject encrypted PDFs without a password", async () => {
   const bytes = createEncryptedTestPdf("Encrypted Fixture");
 

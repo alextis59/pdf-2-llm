@@ -96,7 +96,7 @@ Security-blocked parsing reports:
 | Warning code | Trigger |
 | --- | --- |
 | `security.input_too_large` | Input byte length exceeds `maxBytes`. |
-| `security.page_count_exceeded` | Parsed page count exceeds `maxPages`. |
+| `security.page_count_exceeded` | Page-tree traversal observes more than `maxPages`. |
 | `security.image_pixels_exceeded` | Raster page or thumbnail target exceeds `maxImagePixels`. |
 | `pdf.parse_failed` | Parser stops on a security-related stream, object, depth, or CMap limit. |
 
@@ -224,9 +224,9 @@ This blocks fallback extraction and returns empty Markdown.
 
 ### `maxPages`
 
-`maxPages` is enforced after a PDF is parsed and before page extraction starts.
-If the parsed document has too many pages, the converter clears the parsed
-document and returns:
+`maxPages` is enforced during page-tree traversal. The parser stops at the first
+page beyond the configured budget, before resolving that page's resources or
+associating its content streams with a page record, and the converter returns:
 
 ```json
 {

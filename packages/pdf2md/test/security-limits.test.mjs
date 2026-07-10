@@ -20,7 +20,7 @@ test("converter reports maxBytes violations without panicking", async () => {
   assert.equal(result.diagnostics.extraction.textLines, 0);
 });
 
-test("converter enforces maxPages before page extraction", async () => {
+test("converter enforces maxPages during page-tree traversal", async () => {
   const bytes = await readFile(fixturePath);
   const result = await convertPdfToMarkdown(bytes, {
     ocr: { enabled: false },

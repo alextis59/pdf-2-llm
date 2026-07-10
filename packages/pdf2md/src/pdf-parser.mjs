@@ -18,11 +18,14 @@ const standardPasswordPadding = Uint8Array.from([
 ]);
 
 export class PdfSyntaxError extends Error {
-  constructor(message, { offset = null, code = "pdf.syntax" } = {}) {
+  constructor(message, { offset = null, code = "pdf.syntax", details = null } = {}) {
     super(message);
     this.name = "PdfSyntaxError";
     this.offset = offset;
     this.code = code;
+    if (details) {
+      this.details = details;
+    }
   }
 }
 
@@ -70,6 +73,7 @@ export function parsePdfDocument(bytes, options = {}) {
     byObject: new Map()
   };
   const maxObjects = readMaxObjects(options.maxObjects);
+  const maxPages = readMaxPages(options.maxPages);
   const maxDepth = readMaxDepth(options.maxDepth);
   const maxCMapMappings = readMaxCMapMappings(options.maxCMapMappings);
   const mode = options.mode ?? options.parseMode ?? "strict";
@@ -127,7 +131,7 @@ export function parsePdfDocument(bytes, options = {}) {
 
   const catalog = resolveCatalog(trailer, getObject);
   const outlines = resolveOutlines(catalog.outlinesRef, getObject, maxDepth);
-  const pages = resolvePages(catalog, getObject, maxDepth, maxCMapMappings);
+  const pages = resolvePages(catalog, getObject, maxDepth, maxCMapMappings, maxPages);
   const structure = resolveStructureTree(catalog.structureTreeRootRef, getObject, pages, maxDepth);
 
   return {
@@ -570,6 +574,14 @@ function readMaxObjects(maxObjects) {
   const value = maxObjects ?? 100000;
   if (!Number.isInteger(value) || value < 0) {
     throw new RangeError("maxObjects must be a non-negative integer");
+  }
+  return value;
+}
+
+function readMaxPages(maxPages) {
+  const value = maxPages ?? Number.MAX_SAFE_INTEGER;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new RangeError("maxPages must be a non-negative integer");
   }
   return value;
 }
@@ -1717,7 +1729,13 @@ function mapStructureRole(role, roleMap) {
   return current;
 }
 
-function resolvePages(catalog, getObject, maxDepth = 100, maxCMapMappings = 65_536) {
+function resolvePages(
+  catalog,
+  getObject,
+  maxDepth = 100,
+  maxCMapMappings = 65_536,
+  maxPages = Number.MAX_SAFE_INTEGER
+) {
   const rootPages = getObject(catalog.pagesRef);
   if (!rootPages || !isDict(rootPages.value)) {
     throw new PdfSyntaxError("Pages tree root is missing or invalid.", {
@@ -1730,6 +1748,7 @@ function resolvePages(catalog, getObject, maxDepth = 100, maxCMapMappings = 65_5
     depth: 0,
     maxDepth,
     maxCMapMappings,
+    maxPages,
     seen: new Set()
   });
   return pages.map((page, index) => ({
@@ -1761,6 +1780,16 @@ function walkPageNode(object, inherited, getObject, pages, context) {
     context.seen.add(key);
   }
   const type = nameValue(dict.entries.Type);
+  if (type === "Page" && pages.length >= context.maxPages) {
+    throw new PdfSyntaxError("PDF page count exceeds configured maxPages.", {
+      offset: object.offset,
+      code: "security.page_count_exceeded",
+      details: {
+        pages: pages.length + 1,
+        maxPages: context.maxPages
+      }
+    });
+  }
   const nextInherited = mergeInherited(inherited, dict, getObject);
 
   if (type === "Pages") {

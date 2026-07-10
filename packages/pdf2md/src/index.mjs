@@ -103,6 +103,7 @@ export async function convertPdfToMarkdown(input, options = {}) {
       maxBytes: security.maxBytes,
       maxDecodedStreamBytes: security.maxDecodedStreamBytes,
       maxTotalDecodedStreamBytes: security.maxTotalDecodedStreamBytes,
+      maxPages: security.maxPages,
       maxObjects: security.maxObjects,
       maxDepth: security.maxDepth,
       maxCMapMappings: security.maxCMapMappings,
@@ -1130,6 +1131,10 @@ function rasterPixelLimitWarnings(rasterPlan) {
 }
 
 function createParseWarning(error, extraDetails = {}) {
+  if (error.code === warningCodes.PageCountExceeded) {
+    return createPageCountWarning(error.details?.pages, error.details?.maxPages);
+  }
+
   if (error.code === "pdf.encryption.password_required") {
     return createWarning(warningCodes.PasswordRequired, error.message, {
       code: error.code,
