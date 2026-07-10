@@ -17,6 +17,31 @@ const standardPasswordPadding = Uint8Array.from([
   0x2f, 0x0c, 0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a
 ]);
 
+const pdfDocEncodingCodePoints = Object.freeze(
+  (() => {
+    const codePoints = Array.from({ length: 256 }, (_, byte) => byte);
+    const diacritics = [0x02d8, 0x02c7, 0x02c6, 0x02d9, 0x02dd, 0x02db, 0x02da, 0x02dc];
+    const punctuation = [
+      0x2022, 0x2020, 0x2021, 0x2026, 0x2014, 0x2013, 0x0192, 0x2044,
+      0x2039, 0x203a, 0x2212, 0x2030, 0x201e, 0x201c, 0x201d, 0x2018,
+      0x2019, 0x201a, 0x2122, 0xfb01, 0xfb02, 0x0141, 0x0152, 0x0160,
+      0x0178, 0x017d, 0x0131, 0x0142, 0x0153, 0x0161, 0x017e
+    ];
+
+    diacritics.forEach((codePoint, index) => {
+      codePoints[0x18 + index] = codePoint;
+    });
+    punctuation.forEach((codePoint, index) => {
+      codePoints[0x80 + index] = codePoint;
+    });
+    codePoints[0x7f] = 0xfffd;
+    codePoints[0x9f] = 0xfffd;
+    codePoints[0xa0] = 0x20ac;
+    codePoints[0xad] = 0xfffd;
+    return codePoints;
+  })()
+);
+
 export class PdfSyntaxError extends Error {
   constructor(message, { offset = null, code = "pdf.syntax", details = null } = {}) {
     super(message);
@@ -1525,7 +1550,15 @@ function decodePdfTextBytes(bytes) {
   if (bytes.byteLength >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
     return decodeUtf16Bytes(bytes, 2, true);
   }
-  return bytesToLatin1(bytes);
+  return decodePdfDocEncoding(bytes);
+}
+
+function decodePdfDocEncoding(bytes) {
+  let output = "";
+  for (const byte of bytes) {
+    output += String.fromCodePoint(pdfDocEncodingCodePoints[byte]);
+  }
+  return output;
 }
 
 function decodeUtf16Bytes(bytes, startOffset, littleEndian) {

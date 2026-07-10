@@ -50,6 +50,25 @@ test("parsePdfValue parses primitive object types", () => {
   assert.deepEqual(entries.Ref, { type: "ref", objectNumber: 3, generationNumber: 0 });
 });
 
+test("pdfTextStringValue decodes PDFDocEncoding and BOM-prefixed UTF-16", () => {
+  assert.equal(
+    pdfTextStringValue({ type: "hex-string", value: "188084939596A0E9" }),
+    "˘•—ﬁŁŒ€é"
+  );
+  assert.equal(
+    pdfTextStringValue({ type: "hex-string", value: "7F9FAD" }),
+    "\ufffd\ufffd\ufffd"
+  );
+  assert.equal(
+    pdfTextStringValue({ type: "hex-string", value: "FEFF00412713" }),
+    "A✓"
+  );
+  assert.equal(
+    pdfTextStringValue({ type: "hex-string", value: "FFFE41001327" }),
+    "A✓"
+  );
+});
+
 test("parsePdfDocument resolves classic xref entries, trailer, objects, and streams", async () => {
   const bytes = await readFile(fixturePath);
   const document = parsePdfDocument(bytes);
@@ -138,6 +157,25 @@ test("parsePdfDocument resolves outlines and uses them as structure signals", as
   assert.deepEqual(
     result.diagnostics.extraction.outlines.map(({ title, depth }) => ({ title, depth })),
     outlineSummary
+  );
+});
+
+test("parsePdfDocument decodes PDFDocEncoding and UTF-16 outline titles", () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R /Outlines 3 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+    "<< /Type /Outlines /First 4 0 R /Last 5 0 R /Count 2 >>",
+    "<< /Title <52E973756DE92080> /Parent 3 0 R /Next 5 0 R >>",
+    "<< /Title <FEFF0055006E00690063006F0064006500202713> /Parent 3 0 R >>"
+  ]);
+  const document = parsePdfDocument(bytes);
+
+  assert.deepEqual(
+    document.outlines.map(({ title, depth }) => ({ title, depth })),
+    [
+      { title: "Résumé •", depth: 1 },
+      { title: "Unicode ✓", depth: 1 }
+    ]
   );
 });
 

@@ -2114,6 +2114,32 @@ test("convertPdfToMarkdown extracts form, annotation, attachment, and signature 
   );
 });
 
+test("convertPdfToMarkdown decodes PDFDocEncoding interaction metadata", async () => {
+  const result = await convertPdfToMarkdown(createPdfDocEncodingInteractionPdf());
+  const field = result.diagnostics.extraction.forms.fields[0];
+  const annotation = result.diagnostics.extraction.annotations.annotations[0];
+  const attachment = result.diagnostics.extraction.attachments.files[0];
+
+  assert.deepEqual(pickFormField(field), {
+    name: "field•",
+    label: "Label €",
+    fieldType: "text",
+    rawFieldType: "Tx",
+    value: "Résumé",
+    valueSource: "V",
+    pageIndex: 0,
+    x: 72,
+    y: 650,
+    width: 228,
+    height: 20
+  });
+  assert.equal(annotation.title, "QA ™");
+  assert.equal(annotation.contents, "Note —");
+  assert.equal(attachment.name, "report•.txt");
+  assert.equal(attachment.fileName, "rapport-✓.txt");
+  assert.equal(attachment.description, "Résumé €");
+});
+
 test("convertPdfToMarkdown inherits split field geometry and appearance from its widget", async () => {
   const result = await convertPdfToMarkdown(createSplitFieldWidgetPdf());
   const field = result.diagnostics.extraction.forms.fields[0];
@@ -2549,6 +2575,20 @@ function createInteractiveDocumentPdf() {
     streamObject("attached report\n", "/Type /EmbeddedFile /Subtype /text#2Fplain /Params << /Size 16 >>")
   ];
   return createPdf(objects);
+}
+
+function createPdfDocEncodingInteractionPdf() {
+  return createPdf([
+    "<< /Type /Catalog /Pages 2 0 R /AcroForm 6 0 R /Names << /EmbeddedFiles << /Names [<7265706F7274802E747874> 8 0 R] >> >> >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R /Annots [7 0 R 9 0 R] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject(`${textOperation(72, 720, 22, "PDFDocEncoding Fixture")}\n`),
+    "<< /Fields [9 0 R] >>",
+    "<< /Type /Annot /Subtype /Text /Rect [72 600 92 620] /T <51412092> /Contents <4E6F74652084> >>",
+    "<< /Type /Filespec /F <7265706F7274802E747874> /UF <FEFF0072006100700070006F00720074002D2713002E007400780074> /Desc <52E973756DE920A0> >>",
+    "<< /Type /Annot /Subtype /Widget /FT /Tx /T <6669656C6480> /TU <4C6162656C20A0> /V <52E973756DE9> /Rect [72 650 300 670] /P 3 0 R >>"
+  ]);
 }
 
 function createSplitFieldWidgetPdf() {

@@ -155,6 +155,9 @@ passwords are reported as `security.password_incorrect`. Missing passwords are
 reported as `security.password_required`. The implemented Standard revision 2
 RC4-40 path decrypts content streams and indirect-object strings used by
 outlines, forms, annotations, structure, and other parsed metadata.
+PDF text strings in those surfaces are decoded as BOM-prefixed UTF-16 when
+present and otherwise as PDFDocEncoding. Undefined PDFDocEncoding byte values
+are represented with the Unicode replacement character.
 
 ### Security Limits
 
