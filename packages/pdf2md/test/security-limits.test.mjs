@@ -5,6 +5,32 @@ import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
 
 const fixturePath = new URL("../../../corpus/generated/synthetic-simple-text.pdf", import.meta.url);
 
+test("converter validates every security limit before reading path input", async () => {
+  const missingPath = new URL("missing-security-limit-fixture.pdf", import.meta.url).pathname;
+  const invalidLimits = [
+    ["maxBytes", Number.NaN, "non-negative integer"],
+    ["maxDecodedStreamBytes", Number.POSITIVE_INFINITY, "non-negative integer"],
+    ["maxTotalDecodedStreamBytes", 1.5, "non-negative integer"],
+    ["maxPages", Number.NaN, "non-negative integer"],
+    ["maxObjects", Number.POSITIVE_INFINITY, "non-negative integer"],
+    ["maxDepth", 1.5, "non-negative integer"],
+    ["maxCMapMappings", Number.NaN, "non-negative integer"],
+    ["maxContentStreamOperations", Number.POSITIVE_INFINITY, "non-negative integer"],
+    ["maxContentStreamOutputs", 1.5, "non-negative integer"],
+    ["maxImagePixels", Number.NaN, "positive finite number"],
+    ["timeoutMs", Number.POSITIVE_INFINITY, "non-negative finite number"]
+  ];
+
+  for (const [name, value, requirement] of invalidLimits) {
+    await assert.rejects(
+      () => convertPdfToMarkdown(missingPath, { security: { [name]: value } }),
+      (error) =>
+        error instanceof RangeError &&
+        error.message === `security.${name} must be a ${requirement}`
+    );
+  }
+});
+
 test("converter reports maxBytes violations without panicking", async () => {
   const bytes = await readFile(fixturePath);
   const result = await convertPdfToMarkdown(bytes, {

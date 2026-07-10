@@ -52,6 +52,11 @@ Resource limits are enabled by default through `options.security`:
 | `maxImagePixels` | `100000000` |
 | `timeoutMs` | `120000` |
 
+Every security limit is validated before path input is read. Byte, stream,
+page, object, depth, CMap, and content-work limits require non-negative
+integers; `maxImagePixels` requires a positive finite number, and `timeoutMs`
+requires a non-negative finite number.
+
 Keep these limits visible when adding parser, raster, OCR, WebGPU, or corpus
 behavior. Security-limit violations should preserve warning codes documented in
 [Security Limits](security-limits.md).

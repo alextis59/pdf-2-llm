@@ -1235,42 +1235,31 @@ function throwIfAborted(signal) {
 }
 
 function validateSecurityLimits(security) {
-  if (!Number.isInteger(security.maxDecodedStreamBytes) || security.maxDecodedStreamBytes < 0) {
-    throw new RangeError("security.maxDecodedStreamBytes must be a non-negative integer");
+  const nonNegativeIntegerLimits = [
+    "maxBytes",
+    "maxDecodedStreamBytes",
+    "maxTotalDecodedStreamBytes",
+    "maxPages",
+    "maxObjects",
+    "maxDepth",
+    "maxCMapMappings",
+    "maxContentStreamOperations",
+    "maxContentStreamOutputs"
+  ];
+  for (const name of nonNegativeIntegerLimits) {
+    if (!Number.isInteger(security[name]) || security[name] < 0) {
+      throw new RangeError(`security.${name} must be a non-negative integer`);
+    }
   }
-  if (
-    !Number.isInteger(security.maxTotalDecodedStreamBytes) ||
-    security.maxTotalDecodedStreamBytes < 0
-  ) {
-    throw new RangeError("security.maxTotalDecodedStreamBytes must be a non-negative integer");
+  if (!Number.isFinite(security.maxImagePixels) || security.maxImagePixels < 1) {
+    throw new RangeError("security.maxImagePixels must be a positive finite number");
   }
-  if (!Number.isInteger(security.maxPages) || security.maxPages < 0) {
-    throw new RangeError("security.maxPages must be a non-negative integer");
-  }
-  if (!Number.isInteger(security.maxDepth) || security.maxDepth < 0) {
-    throw new RangeError("security.maxDepth must be a non-negative integer");
-  }
-  if (!Number.isInteger(security.maxCMapMappings) || security.maxCMapMappings < 0) {
-    throw new RangeError("security.maxCMapMappings must be a non-negative integer");
-  }
-  if (
-    !Number.isInteger(security.maxContentStreamOperations) ||
-    security.maxContentStreamOperations < 0
-  ) {
-    throw new RangeError("security.maxContentStreamOperations must be a non-negative integer");
-  }
-  if (
-    !Number.isInteger(security.maxContentStreamOutputs) ||
-    security.maxContentStreamOutputs < 0
-  ) {
-    throw new RangeError("security.maxContentStreamOutputs must be a non-negative integer");
+  if (!Number.isFinite(security.timeoutMs) || security.timeoutMs < 0) {
+    throw new RangeError("security.timeoutMs must be a non-negative finite number");
   }
 }
 
 function createDeadline(timeoutMs, startedAt) {
-  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
-    throw new RangeError("security.timeoutMs must be a non-negative finite number");
-  }
   return startedAt + timeoutMs;
 }
 

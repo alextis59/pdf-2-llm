@@ -194,7 +194,9 @@ Defaults:
 
 Security limit violations are reported with warnings and parser diagnostics
 when the converter can return a structured result. `timeoutMs` is enforced by
-throwing `TimeoutError` at checkpoints.
+throwing `TimeoutError` at checkpoints. Limit values are validated before input
+paths are read; see [Security limits](security-limits.md#invalid-limit-values)
+for the per-option invariants.
 
 ### OCR
 

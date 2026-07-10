@@ -318,18 +318,22 @@ try {
 
 ## Invalid Limit Values
 
-Some invalid security values throw `RangeError` before conversion starts:
+Invalid security values throw `RangeError` before conversion starts or an input
+path is read:
 
 | Option | Validation |
 | --- | --- |
+| `maxBytes` | Non-negative integer. |
 | `maxDecodedStreamBytes` | Non-negative integer. |
 | `maxTotalDecodedStreamBytes` | Non-negative integer. |
 | `maxPages` | Non-negative integer. |
+| `maxObjects` | Non-negative integer. |
 | `maxDepth` | Non-negative integer. |
+| `maxCMapMappings` | Non-negative integer. |
 | `maxContentStreamOperations` | Non-negative integer. |
 | `maxContentStreamOutputs` | Non-negative integer. |
 | `timeoutMs` | Non-negative finite number. |
-| `maxImagePixels` | Positive finite number when raster planning is created. |
+| `maxImagePixels` | Positive finite number. |
 
 `raster.dpi` and `raster.thumbnailDpi` must also be positive finite numbers.
 
