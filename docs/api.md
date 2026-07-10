@@ -336,9 +336,16 @@ the converter records `webgpu.unavailable` and continues with CPU fallback.
 }
 ```
 
-Detected ruled tables are emitted as GFM tables when possible and HTML when
-spans require it. CSV sidecars are enabled by default unless
-`tables.csvSidecars` is false or `tables.enabled` is false.
+Table detection and serialization are enabled by default. Set `tables.enabled`
+to `false` to leave table-shaped source lines as ordinary text and skip ruled
+grid/span detection, table diagnostics, table IR, and CSV sidecars.
+
+Detected ruled tables are emitted as GFM tables when possible. HTML fallback is
+enabled by default for spans and one-row tables. When `tables.htmlFallback` is
+`false`, those tables use a lossy GFM projection with covered span cells left
+empty; document IR still preserves the original row and column spans. CSV
+sidecars are enabled by default unless `tables.csvSidecars` is false or table
+detection is disabled.
 
 ### Equations
 

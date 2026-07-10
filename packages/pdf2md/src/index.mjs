@@ -228,11 +228,11 @@ export async function convertPdfToMarkdown(input, options = {}) {
     }
   }
   const { textLines, rulingLines, imageDraws } = extractedContent;
-  const rulingGrids = inferRulingGrids(rulingLines);
-  const rulingTables = detectTableCellSpans(
-    assignTextLinesToGridCells(rulingGrids, textLines),
-    rulingLines
-  );
+  const tablesEnabled = options.tables?.enabled !== false;
+  const rulingGrids = tablesEnabled ? inferRulingGrids(rulingLines) : [];
+  const rulingTables = tablesEnabled
+    ? detectTableCellSpans(assignTextLinesToGridCells(rulingGrids, textLines), rulingLines)
+    : [];
   const rasterPlan = createRasterPlan(pdfDocument?.pages ?? [], {
     enabled: options.raster?.enabled === true,
     renderer: options.raster?.renderer,
@@ -284,13 +284,15 @@ export async function convertPdfToMarkdown(input, options = {}) {
     enabled: options.ocr?.debugSidecars === true
   });
   const tableCsvSidecars = createTableCsvSidecars(rulingTables, {
-    enabled: options.tables?.enabled !== false && options.tables?.csvSidecars !== false
+    enabled: tablesEnabled && options.tables?.csvSidecars !== false
   });
   throwIfAborted(options.signal);
   throwIfTimedOut(deadline);
   let markdownResult = linesToMarkdownWithSourceMap(markdownTextLines, {
     pageAnchors: options.markdown?.pageAnchors === true,
     preserveRunningTitles: options.markdown?.preserveRunningTitles === true,
+    tablesEnabled,
+    tableHtmlFallback: options.tables?.htmlFallback !== false,
     rulingTables,
     tableCsvSidecarsByTable: tableCsvSidecars.byTable,
     outlines: pdfDocument?.outlines ?? [],

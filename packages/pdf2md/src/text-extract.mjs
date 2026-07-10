@@ -190,6 +190,7 @@ export function linesToMarkdown(lines, options = {}) {
 }
 
 export function linesToMarkdownWithSourceMap(lines, options = {}) {
+  const tablesEnabled = options.tablesEnabled !== false;
   const pageNumberRegions = pageNumberRegionsByPage(lines);
   lines = removeRepeatedRunningContent(lines, {
     preserveRunningTitles: options.preserveRunningTitles === true
@@ -206,8 +207,9 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
   const equationModel = createEquationModel(lines);
   const rulingTableExports = createRulingTableExports(
     lines,
-    options.rulingTables ?? [],
-    options.tableCsvSidecarsByTable
+    tablesEnabled ? options.rulingTables ?? [] : [],
+    options.tableCsvSidecarsByTable,
+    { htmlFallback: options.tableHtmlFallback !== false }
   );
   const lowConfidenceTables = [];
   const lowConfidenceTableLines = new Set();
@@ -245,7 +247,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       continue;
     }
 
-    const table = readTableAt(lines, index);
+    const table = tablesEnabled ? readTableAt(lines, index) : null;
     if (table?.lowConfidence) {
       recordLowConfidenceTable(table, lowConfidenceTables, lowConfidenceTableLines);
     } else if (table) {
@@ -291,7 +293,8 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       index,
       headingModel,
       equationModel,
-      rulingTableExports
+      rulingTableExports,
+      tablesEnabled
     );
     if (equationBlock) {
       const formulaOcr = formulaOcrForEquation(
@@ -322,7 +325,8 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       index,
       headingModel,
       codeModel,
-      rulingTableExports
+      rulingTableExports,
+      tablesEnabled
     );
     if (codeBlock) {
       previousWasList = false;
@@ -362,7 +366,15 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
     }
 
     previousWasList = false;
-    const paragraph = readParagraphAt(lines, index, text, headingModel, rulingTableExports, equationModel);
+    const paragraph = readParagraphAt(
+      lines,
+      index,
+      text,
+      headingModel,
+      rulingTableExports,
+      equationModel,
+      tablesEnabled
+    );
     blocks.push(
       createMarkdownBlock(formatParagraphMarkdown(paragraph), "paragraph", paragraph.sourceLines)
     );
@@ -477,7 +489,14 @@ function createCodeModel(lines) {
   };
 }
 
-function readCodeBlockAt(lines, startIndex, headingModel, codeModel, rulingTableExports = new Map()) {
+function readCodeBlockAt(
+  lines,
+  startIndex,
+  headingModel,
+  codeModel,
+  rulingTableExports = new Map(),
+  tablesEnabled = true
+) {
   const sourceLines = [];
   let hasMonospace = false;
   let index = startIndex;
@@ -490,7 +509,7 @@ function readCodeBlockAt(lines, startIndex, headingModel, codeModel, rulingTable
       parseListItem(text) ||
       headingLevelForLine(line, headingModel) !== null ||
       readRulingTableAt(index, rulingTableExports) ||
-      readConfidentTableAt(lines, index)
+      (tablesEnabled && readConfidentTableAt(lines, index))
     ) {
       break;
     }
@@ -614,7 +633,14 @@ function createEquationModel(lines) {
   };
 }
 
-function readEquationAt(lines, startIndex, headingModel, equationModel, rulingTableExports = new Map()) {
+function readEquationAt(
+  lines,
+  startIndex,
+  headingModel,
+  equationModel,
+  rulingTableExports = new Map(),
+  tablesEnabled = true
+) {
   const sourceLines = [];
   let index = startIndex;
 
@@ -628,7 +654,7 @@ function readEquationAt(lines, startIndex, headingModel, equationModel, rulingTa
       startsWithMarkdownBlockMarker(text) ||
       readRulingTableAt(index, rulingTableExports) ||
       isRulingTableSourceLineAt(index, rulingTableExports) ||
-      readConfidentTableAt(lines, index) ||
+      (tablesEnabled && readConfidentTableAt(lines, index)) ||
       !isEquationLine(line, equationModel)
     ) {
       break;
@@ -1125,7 +1151,8 @@ function readParagraphAt(
   firstText,
   headingModel,
   rulingTableExports = new Map(),
-  equationModel = createEquationModel(lines)
+  equationModel = createEquationModel(lines),
+  tablesEnabled = true
 ) {
   const parts = [firstText];
   let previous = lines[startIndex];
@@ -1142,7 +1169,7 @@ function readParagraphAt(
       readRulingTableAt(index, rulingTableExports) ||
       isRulingTableSourceLineAt(index, rulingTableExports) ||
       isEquationLine(line, equationModel) ||
-      readConfidentTableAt(lines, index) ||
+      (tablesEnabled && readConfidentTableAt(lines, index)) ||
       !isParagraphContinuation(previous, line)
     ) {
       break;
@@ -2142,7 +2169,12 @@ function endsWithParagraphTerminal(text) {
   return /[.!?:;)\u3002\uff01\uff1f\uff0e\uff61]$/.test(text);
 }
 
-function createRulingTableExports(lines, rulingTables, tableCsvSidecarsByTable = new Map()) {
+function createRulingTableExports(
+  lines,
+  rulingTables,
+  tableCsvSidecarsByTable = new Map(),
+  { htmlFallback = true } = {}
+) {
   const exportsByStart = new Map();
   if (!Array.isArray(rulingTables) || rulingTables.length === 0) {
     return {
@@ -2156,7 +2188,8 @@ function createRulingTableExports(lines, rulingTables, tableCsvSidecarsByTable =
     const tableExport = createRulingTableExport(
       table,
       lineIndexes,
-      tableCsvSidecarsByTable?.get(table)?.id
+      tableCsvSidecarsByTable?.get(table)?.id,
+      { htmlFallback }
     );
     if (!tableExport) {
       continue;
@@ -2178,13 +2211,18 @@ function createRulingTableExports(lines, rulingTables, tableCsvSidecarsByTable =
   };
 }
 
-function createRulingTableExport(table, lineIndexes, csvSidecarAssetId = null) {
+function createRulingTableExport(
+  table,
+  lineIndexes,
+  csvSidecarAssetId = null,
+  { htmlFallback = true } = {}
+) {
   if (!isRulingTableExportable(table)) {
     return null;
   }
 
   const hasSpans = hasRulingTableSpans(table);
-  const outputAsHtml = hasSpans || table.rows === 1;
+  const outputAsHtml = htmlFallback && (hasSpans || table.rows === 1);
   const rows = rulingTableRows(table);
   if (
     rows.length < 1 ||
@@ -2221,7 +2259,7 @@ function createRulingTableExport(table, lineIndexes, csvSidecarAssetId = null) {
     columns: output.columns,
     output: outputAsHtml ? "html" : "gfm",
     confidence: rulingTableConfidence(hasSpans),
-    irRows: rulingTableIrRows(table, rows, { outputAsHtml }),
+    irRows: rulingTableIrRows(table, rows, { preserveSpans: hasSpans }),
     csvSidecarAssetId,
     hasSpans,
     numericColumns: numericColumnIndexes(rows),
@@ -2233,8 +2271,8 @@ function createRulingTableExport(table, lineIndexes, csvSidecarAssetId = null) {
   };
 }
 
-function rulingTableIrRows(table, rows, { outputAsHtml }) {
-  if (!outputAsHtml) {
+function rulingTableIrRows(table, rows, { preserveSpans }) {
+  if (!preserveSpans) {
     return rows.map((row) =>
       row.map((text) => ({
         text,

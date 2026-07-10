@@ -32,6 +32,10 @@ const visibleTableFixturePath = new URL(
   "../../../corpus/generated/synthetic-visible-table.pdf",
   import.meta.url
 );
+const complexSpannedTableFixturePath = new URL(
+  "../../../corpus/generated/synthetic-complex-spanned-table.pdf",
+  import.meta.url
+);
 const rotatedPageFixturePath = new URL(
   "../../../corpus/generated/synthetic-rotated-page.pdf",
   import.meta.url
@@ -2343,6 +2347,49 @@ test("convertPdfToMarkdown can disable table CSV sidecars", async () => {
   assert.equal(
     result.diagnostics.extraction.rulingTables.pages[0].tables[0].csvSidecarAssetId,
     null
+  );
+});
+
+test("convertPdfToMarkdown honors table detection and HTML fallback options", async () => {
+  const disabled = await convertPdfToMarkdown(visibleTableFixturePath.pathname, {
+    tables: { enabled: false }
+  });
+
+  assert.doesNotMatch(disabled.markdown, /^\|/m);
+  assert.doesNotMatch(disabled.markdown, /<table>/);
+  assert.match(disabled.markdown, /Quarter/);
+  assert.deepEqual(disabled.diagnostics.extraction.tables, []);
+  assert.deepEqual(disabled.diagnostics.extraction.lowConfidenceTables, []);
+  assert.equal(disabled.diagnostics.extraction.rulingGrids.total, 0);
+  assert.equal(disabled.diagnostics.extraction.rulingTables.total, 0);
+  assert.deepEqual(disabled.assets, []);
+  assert.equal(
+    disabled.ir.pages[0].elements.some((element) => element.type === "table"),
+    false
+  );
+
+  const noHtml = await convertPdfToMarkdown(complexSpannedTableFixturePath.pathname, {
+    tables: { htmlFallback: false, csvSidecars: false }
+  });
+  assert.equal(
+    noHtml.markdown,
+    '# Complex Spanned Table\n\n| Revenue &lt;Total&gt; |  |\n| --- | --- |\n| Q1 &amp; Q2 | 100 "net" |\n'
+  );
+  assert.equal(noHtml.diagnostics.extraction.tables[0].output, "gfm");
+  assert.equal(noHtml.diagnostics.extraction.tables[0].hasSpans, true);
+  assert.deepEqual(
+    noHtml.ir.pages[0].elements.find((element) => element.type === "table"),
+    {
+      type: "table",
+      rows: [
+        [{ text: "Revenue <Total>", rowSpan: 1, colSpan: 2 }],
+        [
+          { text: "Q1 & Q2", rowSpan: 1, colSpan: 1 },
+          { text: '100 "net"', rowSpan: 1, colSpan: 1 }
+        ]
+      ],
+      confidence: 0.9
+    }
   );
 });
 
