@@ -1368,7 +1368,7 @@ const fixtures = [
     ],
     reviewNotes: "The figure is represented by vector paths plus a visible caption.",
     expectedMarkdown:
-      "# Vector Figure Fixture\n\n![Figure 1](assets/synthetic-vector-figure-page-1-figure-1.png)\n\nFigure 1. A generated vector box.\n",
+      "# Vector Figure Fixture\n\n*[Figure 1 preview unavailable; metadata retained.]*\n\nFigure 1. A generated vector box.\n",
     pages: [
       {
         operations: [
