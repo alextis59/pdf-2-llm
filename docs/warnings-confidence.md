@@ -434,7 +434,7 @@ function assessConversion(result) {
 Focused checks:
 
 ```sh
-node --test test/schema.test.mjs test/convert.test.mjs test/parser.test.mjs
+node --test packages/pdf2md/test/schema.test.mjs packages/pdf2md/test/convert.test.mjs packages/pdf2md/test/parser.test.mjs
 ```
 
 Corpus warning checks:
