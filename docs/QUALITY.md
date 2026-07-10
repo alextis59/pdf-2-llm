@@ -23,7 +23,7 @@ fuzz smoke, build, and API tests.
 | --- | --- |
 | Documentation only | Inspect changed links and run a nearby lightweight command when docs reference behavior. |
 | JavaScript syntax or scripts | `npm run lint` |
-| Public API or package entrypoints | `npm run test:api` |
+| Public API or package entrypoints | `npm run test:api`; use `npm run test:types` for a focused declaration/runtime-shape check. |
 | CLI behavior | `node packages/pdf2md/src/cli.mjs --help` plus a fixture conversion, then `npm run test:api` when parsing/output changed. |
 | Parser, stream filters, fonts, or text extraction | Focused `node --test packages/pdf2md/test/<area>.test.mjs`, then `npm run test:api`. |
 | Security limits or malformed PDFs | `node --test packages/pdf2md/test/security-limits.test.mjs packages/pdf2md/test/malicious-pdf.test.mjs` and `npm run qa:malformed`. |
@@ -81,6 +81,9 @@ fuzz smoke, build, and API tests.
 - Text-only corpus runs can emit baseline warnings such as `ocr.disabled` and
   `text.heuristic_content_stream`; do not treat those as unexpected unless the
   acceptance file or test says so.
+- `npm run test:types` converts the visible-table fixture with raster planning,
+  serializes that real result as a TypeScript `satisfies ConvertResult`
+  assertion under `.temp/qa/type-contract/`, and compiles it in strict mode.
 
 ## Reports
 

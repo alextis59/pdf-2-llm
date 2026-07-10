@@ -138,10 +138,12 @@
     "rust:build:wasm:threaded": "node scripts/build/build-threaded-wasm.mjs",
     "rust:build:wasm:threaded:required": "node scripts/build/build-threaded-wasm.mjs --required",
     "rust:test": "cargo test --workspace",
-    "test:api": "npm run test --workspace @pdf-2-llm/pdf2md",
+    "test:api": "npm run test --workspace @pdf-2-llm/pdf2md && npm run test:types",
+    "test:types": "node scripts/qa/check-types.mjs",
     "wasm:build": "npm run rust:build:wasm && node scripts/build/copy-wasm.mjs"
   },
   "devDependencies": {
+    "typescript": "^7.0.2",
     "yaml": "^2.8.3"
   }
 }

@@ -153,8 +153,13 @@ export type Diagnostics = {
     taggedStructureConflicts: number;
     layout: LayoutDiagnostics;
     ocr: OcrDiagnostics;
+    tables: TableDiagnostics[];
+    lowConfidenceTables: LowConfidenceTableDiagnostics[];
     raster: RasterDiagnostics;
     scanDetection: ScanDetectionDiagnostics;
+    rulingLines: RulingLineDiagnostics;
+    rulingGrids: RulingGridDiagnostics;
+    rulingTables: RulingTableDiagnostics;
     parser: Record<string, unknown>;
     equations: EquationDiagnostics;
     figures: FigureDiagnostics;
@@ -567,6 +572,113 @@ export type OcrAdapterDiagnostics = {
   notes: string;
 };
 
+export type TableDiagnostics = {
+  tableIndex: number;
+  source: "ruling-grid" | "borderless-heuristic";
+  pageIndex: number | null;
+  rows: number;
+  columns: number;
+  output: "gfm" | "html";
+  confidence: number;
+  hasSpans: boolean;
+  numericColumns: number[];
+  sourceLines: number;
+};
+
+export type LowConfidenceTableDiagnostics = {
+  tableIndex: number;
+  source: "borderless-heuristic";
+  pageIndex: number | null;
+  rows: number;
+  columns: number;
+  confidence: number;
+  reason: string;
+  sourceLines: number;
+};
+
+export type RulingLineDiagnostics = {
+  total: number;
+  horizontal: number;
+  vertical: number;
+  pages: RulingLinePageDiagnostics[];
+};
+
+export type RulingLinePageDiagnostics = {
+  pageIndex: number | null;
+  total: number;
+  horizontal: number;
+  vertical: number;
+};
+
+export type RulingGridDiagnostics = {
+  total: number;
+  complete: number;
+  pages: RulingGridPageDiagnostics[];
+};
+
+export type RulingGridPageDiagnostics = {
+  pageIndex: number | null;
+  total: number;
+  complete: number;
+  grids: RulingGridItemDiagnostics[];
+};
+
+export type RulingGridItemDiagnostics = {
+  rows: number;
+  columns: number;
+  cells: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  complete: boolean;
+};
+
+export type RulingTableDiagnostics = {
+  total: number;
+  assignedTextLines: number;
+  nonEmptyCells: number;
+  rowSpans: number;
+  columnSpans: number;
+  coveredCells: number;
+  csvSidecars: number;
+  pages: RulingTablePageDiagnostics[];
+};
+
+export type RulingTablePageDiagnostics = {
+  pageIndex: number | null;
+  total: number;
+  assignedTextLines: number;
+  nonEmptyCells: number;
+  rowSpans: number;
+  columnSpans: number;
+  coveredCells: number;
+  csvSidecars: number;
+  tables: RulingTableItemDiagnostics[];
+};
+
+export type RulingTableItemDiagnostics = {
+  rows: number;
+  columns: number;
+  assignedTextLines: number;
+  nonEmptyCells: number;
+  rowSpans: number;
+  columnSpans: number;
+  coveredCells: number;
+  hasSpans: boolean;
+  csvSidecarAssetId: string | null;
+  cells: RulingTableCellDiagnostics[];
+};
+
+export type RulingTableCellDiagnostics = {
+  rowIndex: number;
+  columnIndex: number;
+  text: string;
+  lineCount: number;
+  rowSpan: number;
+  columnSpan: number;
+};
+
 export type RasterDiagnostics = {
   enabled: boolean;
   dpi: number;
@@ -575,7 +687,15 @@ export type RasterDiagnostics = {
   limitedPages: number;
   limitedThumbnails: number;
   renderer: RasterRendererDiagnostics;
+  retention: RasterRetentionDiagnostics;
   pages: RasterPageDiagnostics[];
+};
+
+export type RasterRetentionDiagnostics = {
+  strategy: "metadata-only";
+  pagePixelsRetained: false;
+  thumbnailPixelsRetained: false;
+  retainedBytes: number;
 };
 
 export type RasterRendererDiagnostics = {
