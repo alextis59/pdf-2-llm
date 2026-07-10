@@ -1197,6 +1197,7 @@ function isSecurityLimitParseWarning(warning) {
     warning?.details?.code === "pdf.depth_limit_exceeded" ||
     warning?.details?.code === "pdf.interactions.depth_limit_exceeded" ||
     warning?.details?.code === "pdf.cmap_mapping_limit_exceeded" ||
+    warning?.details?.code === "pdf.cmap_destination_limit_exceeded" ||
     warning?.details?.code === warningCodes.PageCountExceeded
   );
 }

@@ -220,9 +220,12 @@ use:
 
 ```txt
 pdf.cmap_mapping_limit_exceeded
+pdf.cmap_destination_limit_exceeded
 ```
 
-This blocks fallback extraction and returns empty Markdown.
+Both limits block fallback extraction and return empty Markdown. Destinations
+that are not complete UTF-16BE code units instead report
+`pdf.cmap_destination_malformed` as a structured parse failure.
 
 ### `maxPages`
 

@@ -18,6 +18,7 @@ export function runFontEncodingFuzz({ iterations = 200, seed = 0xf07a } = {}) {
   let decodedStrings = 0;
   let malformedCMaps = 0;
   let mappingLimitChecks = 0;
+  let destinationBoundaryChecks = 0;
   let trustedSimpleEncodings = 0;
 
   for (let index = 0; index < iterations; index += 1) {
@@ -54,9 +55,14 @@ export function runFontEncodingFuzz({ iterations = 200, seed = 0xf07a } = {}) {
   }
 
   for (let index = 0; index < iterations; index += 1) {
-    const cmap = parseToUnicodeCMap(randomMalformedCMap(rng));
-    assert.ok(Array.isArray(cmap.codespaces));
-    assert.equal(cmap.entries, cmap.map.size);
+    try {
+      const cmap = parseToUnicodeCMap(randomMalformedCMap(rng));
+      assert.ok(Array.isArray(cmap.codespaces));
+      assert.equal(cmap.entries, cmap.map.size);
+    } catch (error) {
+      assert.ok(error instanceof PdfCMapParseError);
+      assert.equal(error.code, "pdf.cmap_destination_malformed");
+    }
     malformedCMaps += 1;
   }
 
@@ -74,6 +80,26 @@ export function runFontEncodingFuzz({ iterations = 200, seed = 0xf07a } = {}) {
     mappingLimitChecks += 1;
   }
 
+  for (let index = 0; index < iterations; index += 1) {
+    const codeUnits = randomInt(rng, 1, 256);
+    const destination = Array.from({ length: codeUnits }, () => randomUnicodeDestination(rng)).join("");
+    const cmap = parseToUnicodeCMap(bfcharCMap(destination));
+
+    assert.equal(cmap.map.get("00")?.length, codeUnits);
+    assert.throws(
+      () => parseToUnicodeCMap(bfcharCMap("0041".repeat(257 + randomInt(rng, 0, 4)))),
+      (error) =>
+        error instanceof PdfCMapParseError &&
+        error.code === "pdf.cmap_destination_limit_exceeded"
+    );
+    assert.throws(
+      () => parseToUnicodeCMap(bfcharCMap(`${destination.slice(0, 1020)}00`)),
+      (error) =>
+        error instanceof PdfCMapParseError && error.code === "pdf.cmap_destination_malformed"
+    );
+    destinationBoundaryChecks += 1;
+  }
+
   return {
     target: "font-encoding",
     seed,
@@ -82,6 +108,7 @@ export function runFontEncodingFuzz({ iterations = 200, seed = 0xf07a } = {}) {
     decodedStrings,
     malformedCMaps,
     mappingLimitChecks,
+    destinationBoundaryChecks,
     trustedSimpleEncodings
   };
 }
@@ -140,6 +167,10 @@ function rangeCMap(start, end) {
     `<${byteToHex(start)}> <${byteToHex(end)}> <0041>`,
     "endbfrange"
   ].join("\n");
+}
+
+function bfcharCMap(destination) {
+  return ["1 beginbfchar", `<00> <${destination}>`, "endbfchar"].join("\n");
 }
 
 function randomByteHex(rng, min = 0, max = 255) {

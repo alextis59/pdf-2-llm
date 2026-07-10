@@ -84,7 +84,10 @@ decoded and while unique entries are merged across hybrid and incremental xref
 sections, so over-budget indexes stop before object materialization.
 
 `maxCMapMappings` bounds both individual ToUnicode ranges and aggregate mapping
-work so compact font CMaps cannot expand into unbounded entries.
+work so compact font CMaps cannot expand into unbounded entries. Each mapping
+destination is also capped at the PDF-defined 512-byte maximum and decoded
+incrementally, preventing one mapping from triggering an unbounded function
+call or output allocation.
 
 Content stream interpretation tokenizes incrementally. The operation budget
 applies to both parsed operand tokens (including values nested in arrays and

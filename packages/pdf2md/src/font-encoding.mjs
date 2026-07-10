@@ -4,6 +4,8 @@ import {
   unicodeForGlyphName
 } from "./simple-font-encodings.mjs";
 
+const maxCMapDestinationBytes = 512;
+
 export class PdfCMapParseError extends Error {
   constructor(message, { code = "pdf.cmap_parse_failed" } = {}) {
     super(message);
@@ -122,6 +124,7 @@ function parseBfRangeBlock(block, map, mappingBudget) {
 
     if (match[3]) {
       const destinationStart = normalizeHex(match[3]);
+      validateCMapDestinationHex(destinationStart);
       const destinationCode = Number.parseInt(destinationStart, 16);
       if (!Number.isSafeInteger(destinationCode)) {
         continue;
@@ -237,11 +240,25 @@ function codeFallsInCodespace(hex, codespace) {
 
 function utf16BeHexToString(value) {
   const hex = normalizeHex(value);
-  const codeUnits = [];
+  validateCMapDestinationHex(hex);
+  let output = "";
   for (let index = 0; index + 3 < hex.length; index += 4) {
-    codeUnits.push(Number.parseInt(hex.slice(index, index + 4), 16));
+    output += String.fromCharCode(Number.parseInt(hex.slice(index, index + 4), 16));
   }
-  return String.fromCharCode(...codeUnits);
+  return output;
+}
+
+function validateCMapDestinationHex(hex) {
+  if (hex.length > maxCMapDestinationBytes * 2) {
+    throw new PdfCMapParseError("ToUnicode CMap destination exceeds the 512-byte limit.", {
+      code: "pdf.cmap_destination_limit_exceeded"
+    });
+  }
+  if (hex.length % 4 !== 0) {
+    throw new PdfCMapParseError("ToUnicode CMap destination is malformed UTF-16BE.", {
+      code: "pdf.cmap_destination_malformed"
+    });
+  }
 }
 
 function normalizeHex(value) {

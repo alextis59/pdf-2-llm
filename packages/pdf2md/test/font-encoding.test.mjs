@@ -132,6 +132,31 @@ test("parseToUnicodeCMap enforces the aggregate mapping limit across blocks", ()
   );
 });
 
+test("parseToUnicodeCMap accepts a destination at the 512-byte boundary", () => {
+  const destination = "0041".repeat(256);
+  const cmap = parseToUnicodeCMap(bfcharCMap(destination));
+
+  assert.equal(cmap.map.get("00"), "A".repeat(256));
+});
+
+test("parseToUnicodeCMap rejects oversized and malformed UTF-16BE destinations", () => {
+  assert.throws(
+    () => parseToUnicodeCMap(bfcharCMap("0041".repeat(257))),
+    (error) =>
+      error instanceof PdfCMapParseError &&
+      error.code === "pdf.cmap_destination_limit_exceeded"
+  );
+  assert.throws(
+    () => parseToUnicodeCMap(bfcharCMap("004100")),
+    (error) =>
+      error instanceof PdfCMapParseError && error.code === "pdf.cmap_destination_malformed"
+  );
+});
+
 function cmapWithBody(body) {
   return ["1 beginbfrange", body, "endbfrange"].join("\n");
+}
+
+function bfcharCMap(destination) {
+  return ["1 beginbfchar", `<00> <${destination}>`, "endbfchar"].join("\n");
 }
