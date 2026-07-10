@@ -2095,6 +2095,44 @@ test("convertPdfToMarkdown extracts form, annotation, attachment, and signature 
   );
 });
 
+test("convertPdfToMarkdown inherits split field geometry and appearance from its widget", async () => {
+  const result = await convertPdfToMarkdown(createSplitFieldWidgetPdf());
+  const field = result.diagnostics.extraction.forms.fields[0];
+
+  assert.deepEqual(pickFormField(field), {
+    name: "split_checkbox",
+    label: "Split checkbox",
+    fieldType: "button",
+    rawFieldType: "Btn",
+    value: "Yes",
+    valueSource: "V",
+    pageIndex: 0,
+    x: 90,
+    y: 620,
+    width: 24,
+    height: 24,
+    buttonType: "checkbox",
+    state: "Off",
+    checked: false
+  });
+  assert.deepEqual(
+    result.ir.pages[0].elements.find((element) => element.type === "form-field"),
+    {
+      type: "form-field",
+      name: "split_checkbox",
+      label: "Split checkbox",
+      value: "Yes",
+      fieldType: "button",
+      buttonType: "checkbox",
+      checked: false,
+      x: 90,
+      y: 620,
+      width: 24,
+      height: 24
+    }
+  );
+});
+
 test("convertPdfToMarkdown bounds AcroForm and EmbeddedFiles trees with maxDepth", async () => {
   const maxDepth = 4;
   const fieldBoundary = await convertPdfToMarkdown(createDeepFieldTreePdf(maxDepth + 1), {
@@ -2422,6 +2460,19 @@ function createInteractiveDocumentPdf() {
     streamObject("attached report\n", "/Type /EmbeddedFile /Subtype /text#2Fplain /Params << /Size 16 >>")
   ];
   return createPdf(objects);
+}
+
+function createSplitFieldWidgetPdf() {
+  return createPdf([
+    "<< /Type /Catalog /Pages 2 0 R /AcroForm 6 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R /Annots [7 0 R] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject(`${textOperation(72, 720, 22, "Split Widget Fixture")}\n`),
+    "<< /Fields [8 0 R] >>",
+    "<< /Type /Annot /Subtype /Widget /Parent 8 0 R /Rect [90 620 114 644] /AS /Off /P 3 0 R >>",
+    "<< /FT /Btn /T (split_checkbox) /TU (Split checkbox) /V /Yes /Kids [7 0 R] >>"
+  ]);
 }
 
 function createDeepFieldTreePdf(levels) {

@@ -259,16 +259,15 @@ function createFieldDiagnostic(fieldObject, fieldRef, inherited, children, pdfDo
   const value = fieldValue(field.entries.V, pdfDocument.getObject);
   const defaultValue = fieldValue(field.entries.DV, pdfDocument.getObject);
   const fieldType = normalizedFieldType(inherited.fieldType);
-  const button = fieldType === "button" ? buttonState(field, inherited.flags, value, pdfDocument.getObject) : {};
-  const rect = rectFromValue(field.entries.Rect, pdfDocument.getObject);
-  const widgetRefs = [
-    refKey(fieldRef),
-    objectKey(fieldObject),
-    ...children
-      .filter((child) => pdfNameValue(child.object.value.entries.Subtype) === "Widget")
-      .flatMap((child) => [refKey(child.ref), objectKey(child.object)])
-  ].filter(Boolean);
-  const pageIndex = firstPageIndexForRefs(widgetRefs, annotationIndex);
+  const widget = selectFieldWidget(fieldObject, fieldRef, children, annotationIndex);
+  const button =
+    fieldType === "button"
+      ? buttonState(field, widget.dictionary, inherited.flags, value, pdfDocument.getObject)
+      : {};
+  const rect = rectFromValue(
+    widget.dictionary.entries.Rect ?? field.entries.Rect,
+    pdfDocument.getObject
+  );
   const signature = inherited.fieldType === "Sig" ? signatureValue(field.entries.V, pdfDocument.getObject) : null;
 
   return removeNullish({
@@ -290,11 +289,43 @@ function createFieldDiagnostic(fieldObject, fieldRef, inherited, children, pdfDo
     readOnly: Boolean(inherited.flags & fieldFlagBits.readOnly),
     required: Boolean(inherited.flags & fieldFlagBits.required),
     noExport: Boolean(inherited.flags & fieldFlagBits.noExport),
-    pageIndex,
+    pageIndex: widget.pageIndex,
     ...rect,
     ...button,
     ...optionalProperty("signature", signature)
   });
+}
+
+function selectFieldWidget(fieldObject, fieldRef, children, annotationIndex) {
+  const childWidgets = children.filter(
+    (child) => pdfNameValue(child.object.value.entries.Subtype) === "Widget"
+  );
+  const candidates = [
+    ...(pdfNameValue(fieldObject.value.entries.Subtype) === "Widget"
+      ? [{ ref: fieldRef, object: fieldObject }]
+      : []),
+    ...childWidgets
+  ].map((candidate) => ({
+    ...candidate,
+    pageIndex: firstPageIndexForRefs(
+      [refKey(candidate.ref), objectKey(candidate.object)].filter(Boolean),
+      annotationIndex
+    )
+  }));
+  const selected = candidates.find((candidate) => Number.isInteger(candidate.pageIndex)) ?? candidates[0];
+  const fallbackPageIndex = firstPageIndexForRefs(
+    [
+      refKey(fieldRef),
+      objectKey(fieldObject),
+      ...childWidgets.flatMap((child) => [refKey(child.ref), objectKey(child.object)])
+    ].filter(Boolean),
+    annotationIndex
+  );
+
+  return {
+    dictionary: selected?.object.value ?? fieldObject.value,
+    pageIndex: selected?.pageIndex ?? fallbackPageIndex
+  };
 }
 
 function fallbackFieldName(fieldObject) {
@@ -355,9 +386,11 @@ function scalarValue(value, getObject) {
   return null;
 }
 
-function buttonState(field, flags, value, getObject) {
+function buttonState(field, widget, flags, value, getObject) {
   const buttonType = flags & fieldFlagBits.radio ? "radio" : flags & fieldFlagBits.pushButton ? "pushbutton" : "checkbox";
-  const appearanceState = pdfNameValue(resolvePdfValue(field.entries.AS, getObject));
+  const appearanceState = pdfNameValue(
+    resolvePdfValue(widget.entries.AS ?? field.entries.AS, getObject)
+  );
   const state = appearanceState ?? value.value ?? null;
   const checked = buttonType === "checkbox" ? state != null && state !== "Off" : undefined;
   const selectedValue = buttonType === "radio" ? value.value : undefined;
