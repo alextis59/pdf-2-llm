@@ -71,6 +71,28 @@ test("adaptiveThresholdRgbaCpu preserves zero bias for non-border pixels and cla
   );
 });
 
+test("adaptiveThresholdRgbaCpu matches a naive neighborhood scan", () => {
+  const width = 11;
+  const height = 9;
+  const input = new Uint8Array(width * height * 4);
+  for (let pixel = 0, offset = 0; pixel < width * height; pixel += 1, offset += 4) {
+    input[offset] = (pixel * 29 + 7) % 256;
+    input[offset + 1] = (pixel * 47 + 11) % 256;
+    input[offset + 2] = (pixel * 71 + 13) % 256;
+    input[offset + 3] = (pixel * 17 + 19) % 256;
+  }
+
+  for (const radius of [1, 2, 4, 20]) {
+    for (const bias of [-17, 0, 23]) {
+      const options = { bias, height, radius, width };
+      assert.deepEqual(
+        adaptiveThresholdRgbaCpu(input, options),
+        naiveAdaptiveThresholdRgbaCpu(input, options)
+      );
+    }
+  }
+});
+
 test("packRgbaWords and unpackRgbaWords preserve channel order", () => {
   const input = new Uint8Array([
     1, 2, 3, 4,
@@ -226,6 +248,38 @@ test("binarizeRgbaCpu rejects non-RGBA input", () => {
     /multiple of 4/
   );
 });
+
+function naiveAdaptiveThresholdRgbaCpu(input, { bias, height, radius, width }) {
+  const luma = new Uint16Array(width * height);
+  for (let pixel = 0, offset = 0; pixel < luma.length; pixel += 1, offset += 4) {
+    luma[pixel] = (77 * input[offset] + 150 * input[offset + 1] + 29 * input[offset + 2]) >>> 8;
+  }
+  const output = new Uint8Array(input.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixel = y * width + x;
+      let sum = luma[pixel];
+      let count = 1;
+      if (x >= radius && y >= radius && x + radius < width && y + radius < height) {
+        sum = 0;
+        count = 0;
+        for (let sampleY = y - radius; sampleY <= y + radius; sampleY += 1) {
+          for (let sampleX = x - radius; sampleX <= x + radius; sampleX += 1) {
+            sum += luma[sampleY * width + sampleX];
+            count += 1;
+          }
+        }
+      }
+      const value = luma[pixel] + bias >= Math.floor(sum / count) ? 255 : 0;
+      const offset = pixel * 4;
+      output[offset] = value;
+      output[offset + 1] = value;
+      output[offset + 2] = value;
+      output[offset + 3] = input[offset + 3];
+    }
+  }
+  return output;
+}
 
 function createMapFailureDevice(destroyed) {
   return {

@@ -57,29 +57,36 @@ export function adaptiveThresholdRgbaCpu(
   for (let pixel = 0, offset = 0; pixel < geometry.pixelCount; pixel += 1, offset += 4) {
     luma[pixel] = (77 * input[offset] + 150 * input[offset + 1] + 29 * input[offset + 2]) >>> 8;
   }
+  const windowSize = normalizedRadius * 2 + 1;
+  const windowPixelCount = windowSize * windowSize;
+  const summedArea =
+    geometry.width > normalizedRadius * 2 && geometry.height > normalizedRadius * 2
+      ? createSummedAreaTable(luma, geometry)
+      : null;
 
   const output = new Uint8Array(input.length);
   for (let y = 0; y < geometry.height; y += 1) {
     for (let x = 0; x < geometry.width; x += 1) {
       const index = y * geometry.width + x;
-      let sum = 0;
-      let count = 0;
+      let sum = luma[index];
+      let count = 1;
       if (
-        x < normalizedRadius ||
-        y < normalizedRadius ||
-        x + normalizedRadius >= geometry.width ||
-        y + normalizedRadius >= geometry.height
+        x >= normalizedRadius &&
+        y >= normalizedRadius &&
+        x + normalizedRadius < geometry.width &&
+        y + normalizedRadius < geometry.height
       ) {
-        sum = luma[index];
-        count = 1;
-      } else {
-        for (let sampleY = y - normalizedRadius; sampleY <= y + normalizedRadius; sampleY += 1) {
-          const rowOffset = sampleY * geometry.width;
-          for (let sampleX = x - normalizedRadius; sampleX <= x + normalizedRadius; sampleX += 1) {
-            sum += luma[rowOffset + sampleX];
-            count += 1;
-          }
-        }
+        const stride = geometry.width + 1;
+        const left = x - normalizedRadius;
+        const right = x + normalizedRadius + 1;
+        const top = y - normalizedRadius;
+        const bottom = y + normalizedRadius + 1;
+        sum =
+          summedArea[bottom * stride + right] -
+          summedArea[top * stride + right] -
+          summedArea[bottom * stride + left] +
+          summedArea[top * stride + left];
+        count = windowPixelCount;
       }
       const offset = index * 4;
       const average = Math.floor(sum / count);
@@ -91,6 +98,22 @@ export function adaptiveThresholdRgbaCpu(
     }
   }
   return output;
+}
+
+function createSummedAreaTable(luma, { height, width }) {
+  const stride = width + 1;
+  const summedArea = new Float64Array(stride * (height + 1));
+  for (let y = 0; y < height; y += 1) {
+    const sourceRow = y * width;
+    const previousRow = y * stride;
+    const outputRow = (y + 1) * stride;
+    let rowSum = 0;
+    for (let x = 0; x < width; x += 1) {
+      rowSum += luma[sourceRow + x];
+      summedArea[outputRow + x + 1] = summedArea[previousRow + x + 1] + rowSum;
+    }
+  }
+  return summedArea;
 }
 
 export function createBinarizeRgbaShaderSource({ workgroupSize = defaultWorkgroupSize } = {}) {

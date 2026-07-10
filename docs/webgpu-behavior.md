@@ -334,8 +334,10 @@ kernel when `requestAdapter()` succeeds. The harness includes
 initialization on Linux. Chrome receives a two-second graceful shutdown window
 before the harness escalates to `SIGKILL`; both waits are bounded so server and
 profile cleanup still run. Without a usable adapter it writes an explicit
-not-applicable summary. On a WebGPU-capable host, use the strict form to require
-measurable speedup:
+not-applicable summary. Software adapters such as SwiftShader, llvmpipe, and
+lavapipe still execute the kernel and must preserve parity, but their speedup is
+reported as not applicable rather than as hardware acceleration. On a
+hardware-backed WebGPU host, use the strict form to require measurable speedup:
 
 ```sh
 node scripts/qa/browser-webgpu-preprocess.mjs \
@@ -377,3 +379,9 @@ Chrome exposed `navigator.gpu`, but `requestAdapter()` returned no adapter.
 This usually means the local browser/GPU stack cannot run WebGPU compute in the
 current environment. The harness records this as not-applicable unless
 `--require-speedup` is used.
+
+`qa:webgpu-preprocess` reports `software-adapter`
+
+Chrome executed the parity workload through a software WebGPU adapter. The
+summary retains its adapter identity and timing evidence, but does not claim
+acceleration. `--require-speedup` still fails on this status.

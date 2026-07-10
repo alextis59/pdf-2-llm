@@ -20,6 +20,34 @@ const defaultWorkload = adaptiveThresholdWorkload;
 const defaultAdaptiveRadius = 12;
 const defaultAdaptiveBias = 7;
 
+export function isSoftwareWebGpuAdapter(info) {
+  if (info?.isFallbackAdapter === true) {
+    return true;
+  }
+  const identity = [info?.vendor, info?.architecture, info?.device, info?.description]
+    .filter((value) => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+  return /swiftshader|llvmpipe|lavapipe|software (?:adapter|rasterizer)/.test(identity);
+}
+
+export function classifyWebGpuPreprocessingSummary(summary) {
+  if (
+    summary?.status === "failed" &&
+    summary.reason === "speedup-threshold" &&
+    summary.parity === true &&
+    isSoftwareWebGpuAdapter(summary.adapterInfo)
+  ) {
+    return {
+      ...summary,
+      status: "not-applicable",
+      reason: "software-adapter",
+      speedupRequired: false
+    };
+  }
+  return summary;
+}
+
 function readOption(name) {
   const index = args.indexOf(name);
   if (index === -1) {
@@ -272,6 +300,13 @@ async function main() {
   if (!adapter) {
     return { ...base, reason: "adapter-unavailable" };
   }
+  const adapterInfo = {
+    vendor: adapter.info?.vendor ?? null,
+    architecture: adapter.info?.architecture ?? null,
+    device: adapter.info?.device ?? null,
+    description: adapter.info?.description ?? null,
+    isFallbackAdapter: adapter.isFallbackAdapter === true
+  };
   const device = await adapter.requestDevice();
   const runner = createRunner(device);
   const sample = createInput(config.pixels);
@@ -292,6 +327,7 @@ async function main() {
     ...base,
     sampleHeight: sample.height,
     sampleWidth: sample.width,
+    adapterInfo,
     selectedProvider: "webgpu",
     status: parity && speedupRatio >= config.minSpeedup ? "passed" : "failed",
     reason: parity ? "speedup-threshold" : "parity-mismatch",
@@ -610,7 +646,7 @@ async function main() {
   const url = `http://127.0.0.1:${address.port}/`;
   try {
     const result = await runChrome(chrome, url, { timeoutMs });
-    const summary = {
+    const summary = classifyWebGpuPreprocessingSummary({
       ...result.summary,
       chrome: chrome.version,
       chromeExitStatus: result.status,
@@ -618,7 +654,7 @@ async function main() {
         .split(/\r?\n/)
         .filter((line) => line.trim().length > 0)
         .slice(0, 10)
-    };
+    });
     await writeSummary(summaryPath, summary);
     printSummary(summary);
     if (

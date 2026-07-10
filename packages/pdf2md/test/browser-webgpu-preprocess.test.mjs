@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
-import { stopChrome } from "../../../scripts/qa/browser-webgpu-preprocess.mjs";
+import {
+  classifyWebGpuPreprocessingSummary,
+  isSoftwareWebGpuAdapter,
+  stopChrome
+} from "../../../scripts/qa/browser-webgpu-preprocess.mjs";
 
 class FakeChrome extends EventEmitter {
   constructor({ closeOnSignal = null } = {}) {
@@ -43,4 +47,34 @@ test("stopChrome remains bounded when close never arrives after SIGKILL", async 
   assert.equal(await stopChrome(child, { gracePeriodMs: 1, killWaitMs: 1 }), null);
   assert.deepEqual(child.signals, ["SIGTERM", "SIGKILL"]);
   assert.equal(child.listenerCount("close"), 0);
+});
+
+test("software WebGPU adapters keep parity evidence without claiming speedup", () => {
+  assert.equal(
+    isSoftwareWebGpuAdapter({ description: "llvmpipe (LLVM 19.1.7, 256 bits)" }),
+    true
+  );
+  assert.equal(isSoftwareWebGpuAdapter({ vendor: "Google", device: "SwiftShader" }), true);
+  assert.equal(
+    isSoftwareWebGpuAdapter({ vendor: "Intel", architecture: "gen-12lp" }),
+    false
+  );
+
+  assert.deepEqual(
+    classifyWebGpuPreprocessingSummary({
+      status: "failed",
+      reason: "speedup-threshold",
+      parity: true,
+      adapterInfo: { description: "llvmpipe" },
+      speedupRatio: 0.8
+    }),
+    {
+      status: "not-applicable",
+      reason: "software-adapter",
+      parity: true,
+      adapterInfo: { description: "llvmpipe" },
+      speedupRatio: 0.8,
+      speedupRequired: false
+    }
+  );
 });
