@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { deflateSync } from "node:zlib";
+import { parse } from "yaml";
 import {
   visibleUnicodeText,
   visibleVerticalUnicodeText
@@ -11,6 +12,7 @@ import {
 const repoRoot = process.cwd();
 const generatedAt = "2026-07-02";
 const command = "npm run corpus:generate";
+const generatedSkipReason = "Generated fixture requires explicit human review before gating.";
 
 function pdfString(value) {
   return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
@@ -510,7 +512,7 @@ function yamlForms(forms = []) {
     .join("\n");
 }
 
-function acceptanceYaml(fixture) {
+function acceptanceYaml(fixture, approval = unreviewedApproval(fixture)) {
   const snippets = fixture.snippets
     .map((snippet) => `  - page: ${snippet.page}\n    contains: ${yamlQuoted(snippet.contains)}`)
     .join("\n");
@@ -570,8 +572,8 @@ function acceptanceYaml(fixture) {
 gate: ${fixture.gate}
 sourceType: ${fixture.sourceType ?? "digital"}
 expectedMode: ${fixture.expectedMode ?? "pdf-text"}
-gating: true
-must:
+gating: ${approval.gating ? "true" : "false"}
+${approval.gating ? "" : `skipReason: ${yamlQuoted(approval.skipReason)}\n`}must:
 ${yamlList(fixture.must)}
 mustNot:
 ${yamlList([
@@ -604,10 +606,49 @@ ${allowedWarnings}
 assets:
   required: []
 review:
-  humanReviewedBy: "codex"
-  reviewedAt: "${fixture.reviewedAt ?? generatedAt}"
-  notes: ${yamlQuoted(fixture.reviewNotes)}
+  humanReviewedBy: ${yamlQuoted(approval.humanReviewedBy)}
+  reviewedAt: ${yamlQuoted(approval.reviewedAt)}
+  notes: ${yamlQuoted(approval.notes)}
 `;
+}
+
+function unreviewedApproval(fixture) {
+  return {
+    gating: false,
+    skipReason: generatedSkipReason,
+    humanReviewedBy: "",
+    reviewedAt: "",
+    notes: fixture.reviewNotes
+  };
+}
+
+async function readApprovedAcceptance(acceptancePath) {
+  let existingText;
+  try {
+    existingText = await readFile(acceptancePath, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+
+  const existing = parse(existingText, { maxAliasCount: 0, uniqueKeys: true });
+  const humanReviewedBy = nonEmptyString(existing?.review?.humanReviewedBy);
+  const reviewedAt = nonEmptyString(existing?.review?.reviewedAt);
+  if (
+    existing?.gating === true &&
+    humanReviewedBy &&
+    reviewedAt &&
+    /^\d{4}-\d{2}-\d{2}$/.test(reviewedAt)
+  ) {
+    return existingText;
+  }
+  return null;
+}
+
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
 function manifestEntry(fixture, pdfBytes) {
@@ -1470,15 +1511,16 @@ const fixtures = [
 
 async function writeFixtureFiles(fixture) {
   const pdfBytes = (fixture.createPdf ?? createPdf)({ pages: fixture.pages });
+  const acceptancePath = path.join(repoRoot, "corpus", "accepted", `${fixture.id}.yaml`);
+  const approvedAcceptance = await readApprovedAcceptance(acceptancePath);
   await writeFile(path.join(repoRoot, "corpus", "generated", `${fixture.id}.pdf`), pdfBytes);
   await writeFile(
     path.join(repoRoot, "corpus", "expected", `${fixture.id}.md`),
     fixture.expectedMarkdown
   );
-  await writeFile(
-    path.join(repoRoot, "corpus", "accepted", `${fixture.id}.yaml`),
-    acceptanceYaml(fixture)
-  );
+  if (!approvedAcceptance) {
+    await writeFile(acceptancePath, acceptanceYaml(fixture));
+  }
   if (fixture.ocrResults) {
     await writeFile(
       path.join(repoRoot, "corpus", "ocr", `${fixture.id}.json`),

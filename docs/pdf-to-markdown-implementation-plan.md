@@ -276,6 +276,8 @@ Checklist:
 - [x] Add expected warnings for unsupported features.
 - [x] Add explicit skip reasons for local-only or future-gate PDFs.
 - [x] Require human review for every acceptance file before it becomes gating.
+- [x] Generate new fixture criteria as non-gating and never overwrite an
+  explicitly approved acceptance file during regeneration.
 
 ### 0.6 Initial Acceptance Review Workflow
 

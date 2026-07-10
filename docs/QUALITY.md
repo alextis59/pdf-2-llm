@@ -39,6 +39,10 @@ fuzz smoke, build, and API tests.
 ## Corpus Expectations
 
 - Every gating PDF must have a manifest entry and acceptance file.
+- Generated acceptance files start non-gating with empty reviewer/date fields.
+  The generator does not overwrite an explicitly approved acceptance file;
+  fixture changes remain visible through the preserved gate until a reviewer
+  updates the criteria.
 - Acceptance YAML is parsed structurally against a closed repository schema.
   Unknown top-level or nested keys, invalid field types, orphan acceptance
   files, duplicate manifest references, and warning codes outside the public

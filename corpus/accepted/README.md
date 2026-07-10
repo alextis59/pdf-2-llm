@@ -83,6 +83,12 @@ expected behavior has been written here.
   entry, and its `id` must match both the filename and manifest entry.
 - Every `warnings.allowed` value must come from the public `warningCodes`
   registry.
+- `npm run corpus:generate` creates new acceptance criteria as non-gating with
+  empty reviewer/date fields. After evidence is reviewed, promotion to
+  `gating: true` and reviewer metadata is an explicit human edit.
+- Regeneration never overwrites an approved acceptance file. If fixture output
+  changes, its preserved gate should fail until a reviewer explicitly updates
+  the criteria and approval metadata.
 
 Validate acceptance files with:
 
