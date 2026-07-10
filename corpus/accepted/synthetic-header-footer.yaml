@@ -13,12 +13,22 @@ mustNot:
   - repeat_running_header_in_body
 metrics:
   minTextCoverage: 1
+  minRunningContentPrecision: 1
+  minRunningContentRecall: 1
   maxUnexpectedWarnings: 0
 snippets:
   - page: 1
     contains: "First page body."
   - page: 2
     contains: "Second page body."
+runningContent:
+  expectedRemoved:
+    - "Running Header"
+    - "Page Footer"
+  expectedRetained:
+    - "Header Footer Fixture"
+    - "First page body."
+    - "Second page body."
 structure:
   expected:
     - multi_page
