@@ -33,9 +33,9 @@ const result = await convertPdfToMarkdown(bytes, {
 | `maxTotalDecodedStreamBytes` | `209715200` | Retained decoded bytes across all stream objects. |
 | `maxPages` | `5000` | Parsed page count before page extraction. |
 | `maxObjects` | `100000` | XRef/object count during parsing and repair. |
-| `maxDepth` | `100` | PDF value parsing, page tree, outlines, and structure traversal. |
+| `maxDepth` | `100` | PDF/content value nesting, page tree, outlines, structure traversal, and content stacks. |
 | `maxCMapMappings` | `65536` | Per-range and aggregate ToUnicode CMap mappings. |
-| `maxContentStreamOperations` | `1000000` | Operator tokens interpreted per document extraction channel. |
+| `maxContentStreamOperations` | `1000000` | Operand tokens parsed and operators interpreted per document extraction channel. |
 | `maxContentStreamOutputs` | `1000000` | Text units and path/image records expanded per document extraction channel. |
 | `maxImagePixels` | `100000000` | Raster page and thumbnail planning. |
 | `timeoutMs` | `120000` | Conversion checkpoints. |
@@ -158,8 +158,10 @@ This blocks fallback extraction and returns empty Markdown.
 
 ### Content stream work limits
 
-`maxContentStreamOperations` caps operator tokens interpreted across the
-document for each text, ruling-line, and image extraction channel.
+`maxContentStreamOperations` independently caps parsed operand tokens and
+interpreted operators across the document for each text, ruling-line, and image
+extraction channel. Nested array and dictionary values count toward the token
+budget before they can expand recursively.
 `maxContentStreamOutputs` caps decoded text code units plus stored/emitted path
 and image records before large output arrays are constructed. Content stream
 tokens are consumed incrementally instead of first materializing the full token
@@ -167,8 +169,9 @@ list. Inline-image binary payloads are kept out of the operator stream and stay
 bounded by the decoded-stream byte limits; an unterminated payload is skipped
 through the end of its content stream.
 
-The existing `maxDepth` value also applies to content stream graphics-state and
-marked-content stacks. Limit failures block extraction and use one of these
+The existing `maxDepth` value also applies to content stream array/dictionary
+nesting, graphics-state stacks, and marked-content stacks. Limit failures block
+extraction and use one of these
 parser warning detail codes:
 
 ```txt

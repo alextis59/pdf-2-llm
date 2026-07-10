@@ -34,7 +34,7 @@ export function extractContentStreamTextLines(streamText, options = {}) {
     lineSerial: 0
   });
 
-  for (const token of iterateContentStreamTokens(streamText)) {
+  for (const token of iterateContentStreamTokens(streamText, context)) {
     if (token.type === "inline-image") {
       consumeContentStreamOperation(context);
       operands.length = 0;
@@ -64,7 +64,7 @@ export function extractContentStreamRulingLines(streamText, options = {}) {
     state
   });
 
-  for (const token of iterateContentStreamTokens(streamText)) {
+  for (const token of iterateContentStreamTokens(streamText, context)) {
     if (token.type === "inline-image") {
       consumeContentStreamOperation(context);
       operands.length = 0;
@@ -94,7 +94,7 @@ export function extractContentStreamImageDraws(streamText, options = {}) {
     state
   });
 
-  for (const token of iterateContentStreamTokens(streamText)) {
+  for (const token of iterateContentStreamTokens(streamText, context)) {
     if (token.type === "inline-image") {
       consumeContentStreamOperation(context);
       emitInlineImageDraw(token, context);
@@ -155,11 +155,12 @@ export function mergeRulingLines(rulingLines, options = {}) {
   return clusters.map(finalizeMergedRulingLine);
 }
 
-export function tokenizeContentStream(streamText) {
-  return [...iterateContentStreamTokens(streamText)];
+export function tokenizeContentStream(streamText, options = {}) {
+  const context = createExecutionContext("tokenizer", options, {});
+  return [...iterateContentStreamTokens(streamText, context)];
 }
 
-function* iterateContentStreamTokens(streamText) {
+function* iterateContentStreamTokens(streamText, context) {
   const source = typeof streamText === "string" ? streamText : runtimeBytesToLatin1(streamText);
   let offset = 0;
 
@@ -171,31 +172,36 @@ function* iterateContentStreamTokens(streamText) {
 
     const char = source[offset];
     if (char === "/") {
+      consumeContentStreamToken(context);
       const token = readName(source, offset);
       yield token.value;
       offset = token.offset;
       continue;
     }
     if (char === "(") {
+      consumeContentStreamToken(context);
       const token = readLiteralString(source, offset);
       yield token.value;
       offset = token.offset;
       continue;
     }
     if (char === "<" && source[offset + 1] !== "<") {
+      consumeContentStreamToken(context);
       const token = readHexString(source, offset);
       yield token.value;
       offset = token.offset;
       continue;
     }
     if (char === "<" && source[offset + 1] === "<") {
-      const token = readDictionary(source, offset);
+      consumeContentStreamToken(context);
+      const token = readDictionary(source, offset, context, 1);
       yield token.value;
       offset = token.offset;
       continue;
     }
     if (char === "[") {
-      const token = readArray(source, offset);
+      consumeContentStreamToken(context);
+      const token = readArray(source, offset, context, 1);
       yield token.value;
       offset = token.offset;
       continue;
@@ -203,6 +209,7 @@ function* iterateContentStreamTokens(streamText) {
 
     const numberToken = readNumber(source, offset);
     if (numberToken) {
+      consumeContentStreamToken(context);
       yield numberToken.value;
       offset = numberToken.offset;
       continue;
@@ -213,8 +220,9 @@ function* iterateContentStreamTokens(streamText) {
       offset += 1;
       continue;
     }
+    consumeContentStreamToken(context);
     if (word.value.value === "BI") {
-      const inlineImage = readInlineImage(source, word.offset);
+      const inlineImage = readInlineImage(source, word.offset, context);
       yield inlineImage.value;
       offset = inlineImage.offset;
       continue;
@@ -245,6 +253,17 @@ function consumeContentStreamOperation(context) {
   );
 }
 
+function consumeContentStreamToken(context) {
+  consumeContentStreamBudget(
+    context,
+    "tokens",
+    1,
+    context.limits.maxOperations,
+    "pdf.content_stream.operation_limit_exceeded",
+    "Content stream token limit exceeded."
+  );
+}
+
 function consumeContentStreamOutput(context, amount = 1) {
   consumeContentStreamBudget(
     context,
@@ -258,7 +277,7 @@ function consumeContentStreamOutput(context, amount = 1) {
 
 function consumeContentStreamBudget(context, field, amount, configuredLimit, code, message) {
   const limit = configuredLimit ?? Number.POSITIVE_INFINITY;
-  const actual = context.budget[field] + amount;
+  const actual = (context.budget[field] ?? 0) + amount;
   if (actual > limit) {
     throw new PdfContentStreamLimitError(message, {
       code,
@@ -1528,12 +1547,17 @@ function syntheticDecodedGlyph(text) {
   };
 }
 
-function readInlineImage(source, startOffset) {
+function readInlineImage(source, startOffset, context) {
   const entries = {};
   let offset = startOffset;
 
+  enforceContentStreamDepth(context, 1, "syntax");
+
   while (offset < source.length) {
     offset = skipWhitespaceAndComments(source, offset);
+    if (offset >= source.length) {
+      break;
+    }
     const marker = readWord(source, offset);
     if (marker.value.value === "ID") {
       const separator = consumeInlineImageDataSeparator(source, marker.offset);
@@ -1551,14 +1575,15 @@ function readInlineImage(source, startOffset) {
     }
 
     if (source[offset] !== "/") {
-      const skipped = readValue(source, offset);
+      const skipped = readValue(source, offset, context, 1);
       offset = skipped?.offset > offset ? skipped.offset : offset + 1;
       continue;
     }
 
+    consumeContentStreamToken(context);
     const key = readName(source, offset);
     offset = skipWhitespaceAndComments(source, key.offset);
-    const value = readValue(source, offset);
+    const value = readValue(source, offset, context, 1);
     if (!value || value.offset === offset) {
       offset += 1;
       continue;
@@ -1703,12 +1728,17 @@ function tokenBoolean(token) {
   return token?.type === "word" && token.value === "true";
 }
 
-function readArray(source, startOffset) {
+function readArray(source, startOffset, context, depth) {
   const items = [];
   let offset = startOffset + 1;
 
+  enforceContentStreamDepth(context, depth, "syntax");
+
   while (offset < source.length) {
     offset = skipWhitespaceAndComments(source, offset);
+    if (offset >= source.length) {
+      break;
+    }
     if (source[offset] === "]") {
       return {
         value: {
@@ -1719,7 +1749,7 @@ function readArray(source, startOffset) {
       };
     }
 
-    const item = readValue(source, offset);
+    const item = readValue(source, offset, context, depth);
     if (!item || item.offset === offset) {
       offset += 1;
       continue;
@@ -1737,7 +1767,8 @@ function readArray(source, startOffset) {
   };
 }
 
-function readValue(source, offset) {
+function readValue(source, offset, context, depth) {
+  consumeContentStreamToken(context);
   const char = source[offset];
   if (char === "/") {
     return readName(source, offset);
@@ -1749,20 +1780,25 @@ function readValue(source, offset) {
     return readHexString(source, offset);
   }
   if (char === "<" && source[offset + 1] === "<") {
-    return readDictionary(source, offset);
+    return readDictionary(source, offset, context, depth + 1);
   }
   if (char === "[") {
-    return readArray(source, offset);
+    return readArray(source, offset, context, depth + 1);
   }
   return readNumber(source, offset) ?? readWord(source, offset);
 }
 
-function readDictionary(source, startOffset) {
+function readDictionary(source, startOffset, context, depth) {
   const entries = {};
   let offset = startOffset + 2;
 
+  enforceContentStreamDepth(context, depth, "syntax");
+
   while (offset < source.length) {
     offset = skipWhitespaceAndComments(source, offset);
+    if (offset >= source.length) {
+      break;
+    }
     if (source[offset] === ">" && source[offset + 1] === ">") {
       return {
         value: {
@@ -1773,13 +1809,14 @@ function readDictionary(source, startOffset) {
       };
     }
 
+    consumeContentStreamToken(context);
     const key = readName(source, offset);
     if (!key || key.offset === offset || key.value.type !== "name") {
       offset += 1;
       continue;
     }
     offset = skipWhitespaceAndComments(source, key.offset);
-    const value = readValue(source, offset);
+    const value = readValue(source, offset, context, depth);
     if (!value || value.offset === offset) {
       offset += 1;
       continue;

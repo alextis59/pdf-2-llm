@@ -133,9 +133,9 @@ function appendContentStreamExtraction(
 
 function createContentStreamBudgets() {
   return {
-    text: { operations: 0, outputs: 0 },
-    ruling: { operations: 0, outputs: 0 },
-    image: { operations: 0, outputs: 0 }
+    text: { tokens: 0, operations: 0, outputs: 0 },
+    ruling: { tokens: 0, operations: 0, outputs: 0 },
+    image: { tokens: 0, operations: 0, outputs: 0 }
   };
 }
 

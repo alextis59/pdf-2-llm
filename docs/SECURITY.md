@@ -66,10 +66,12 @@ also retain an unnecessary Latin-1 copy.
 `maxCMapMappings` bounds both individual ToUnicode ranges and aggregate mapping
 work so compact font CMaps cannot expand into unbounded entries.
 
-Content stream interpretation tokenizes incrementally. The operation and
-output budgets apply across the document for each text, ruling-line, and image
-extraction channel; `maxDepth` also caps graphics-state and marked-content
-stacks. Limit failures return `pdf.parse_failed` with a specific
+Content stream interpretation tokenizes incrementally. The operation budget
+applies to both parsed operand tokens (including values nested in arrays and
+dictionaries) and interpreted operators across the document for each text,
+ruling-line, and image extraction channel. The output budget applies to emitted
+records; `maxDepth` caps syntax nesting as well as graphics-state and
+marked-content stacks. Limit failures return `pdf.parse_failed` with a specific
 `pdf.content_stream.*_limit_exceeded` detail code.
 
 Inline-image data is consumed as one binary token inside the already bounded

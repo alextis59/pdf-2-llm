@@ -233,6 +233,70 @@ test("content stream depth limits cover graphics and marked-content stacks", () 
   );
 });
 
+test("content stream limits bound nested syntax depth and operand tokens", () => {
+  const deeplyNestedArray = `${"[".repeat(10_000)}(A)${"]".repeat(10_000)}`;
+
+  assert.doesNotThrow(() =>
+    tokenizeContentStream("[[[(A)]]]", {
+      contentStreamLimits: { maxDepth: 3 }
+    })
+  );
+  assert.throws(
+    () =>
+      tokenizeContentStream(deeplyNestedArray, {
+        contentStreamLimits: { maxDepth: 32 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.depth_limit_exceeded" &&
+      error.details.stackType === "syntax" &&
+      error.details.limit === 32 &&
+      error.details.actual === 33 &&
+      error.details.extractor === "tokenizer"
+  );
+  assert.throws(
+    () =>
+      extractContentStreamTextLines(`BT /F1 12 Tf ${deeplyNestedArray} TJ ET`, {
+        resources,
+        contentStreamLimits: { maxDepth: 32 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.depth_limit_exceeded" &&
+      error.details.stackType === "syntax" &&
+      error.details.actual === 33 &&
+      error.details.extractor === "text"
+  );
+  assert.throws(
+    () =>
+      tokenizeContentStream("<< /A << /B 1 >> >>", {
+        contentStreamLimits: { maxDepth: 1 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.depth_limit_exceeded" &&
+      error.details.stackType === "syntax" &&
+      error.details.actual === 2
+  );
+  assert.doesNotThrow(() =>
+    tokenizeContentStream("[0 1 2 3]", {
+      contentStreamLimits: { maxOperations: 5 }
+    })
+  );
+  assert.throws(
+    () =>
+      tokenizeContentStream("[0 1 2 3]", {
+        contentStreamLimits: { maxOperations: 4 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.operation_limit_exceeded" &&
+      error.details.limit === 4 &&
+      error.details.actual === 5 &&
+      error.details.extractor === "tokenizer"
+  );
+});
+
 test("content stream output limits bound text, path, and image expansion", () => {
   assert.equal(
     extractContentStreamTextLines("BT (AB) Tj ET", {
