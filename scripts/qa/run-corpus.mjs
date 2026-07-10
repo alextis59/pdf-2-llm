@@ -859,9 +859,6 @@ function checkSnippets(snippets, result) {
 
 function snippetAppearsOnPage(result, text, pageIndex) {
   const entries = result.sourceMap?.entries ?? [];
-  if (entries.length === 0) {
-    return true;
-  }
   let index = result.markdown.indexOf(text);
   while (index !== -1) {
     const end = index + text.length;

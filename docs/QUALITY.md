@@ -60,6 +60,9 @@ fuzz smoke, build, and API tests.
   structure, asset, snippet, warning, source-type, and expected-mode assertion.
   Unknown criteria fail closed; recognizing a criterion name is not evidence
   that it passed.
+- Page-scoped snippets require overlapping source-map provenance for the
+  declared page. Markdown text without source-map entries cannot satisfy a page
+  assertion.
 - Every `warnings.allowed` entry must be a value from the public
   `warningCodes` registry. `maxUnexpectedWarnings` is a non-negative instance
   budget for emitted non-baseline warning codes that are not explicitly

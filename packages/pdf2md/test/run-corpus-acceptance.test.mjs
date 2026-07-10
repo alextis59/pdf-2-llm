@@ -126,6 +126,27 @@ test("checkAcceptanceOutput enforces snippets on the expected source page", () =
   assert.match(output.errors.join("\n"), /wrong or unmapped page 2/);
 });
 
+test("checkAcceptanceOutput rejects page snippets without source-map evidence", () => {
+  const acceptance = parseAcceptanceText(
+    [
+      "must:",
+      "  - extract_main_text",
+      "mustNot:",
+      "  - emit_binary_garbage",
+      "snippets:",
+      "  - page: 1",
+      "    contains: \"Alpha\"",
+      "warnings:",
+      "  allowed: []"
+    ].join("\n")
+  );
+  const result = fakeResult();
+  result.sourceMap.entries = [];
+
+  const output = checkAcceptanceOutput(acceptance, result);
+  assert.match(output.errors.join("\n"), /wrong or unmapped page 1/);
+});
+
 test("checkAcceptanceOutput applies allowed warnings and max unexpected warning budget", () => {
   const acceptance = parseAcceptanceText(
     [

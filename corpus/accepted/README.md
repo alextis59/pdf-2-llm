@@ -83,6 +83,9 @@ expected behavior has been written here.
   entry, and its `id` must match both the filename and manifest entry.
 - Every `warnings.allowed` value must come from the public `warningCodes`
   registry.
+- Every snippet is page-scoped. Its text must overlap a source-map entry whose
+  region names the declared page; missing or regionless source maps fail the
+  assertion even when the text appears elsewhere in Markdown.
 - `npm run corpus:generate` creates new acceptance criteria as non-gating with
   empty reviewer/date fields. After evidence is reviewed, promotion to
   `gating: true` and reviewer metadata is an explicit human edit.
