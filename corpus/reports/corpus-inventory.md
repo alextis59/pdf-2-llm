@@ -36,9 +36,9 @@ Entries analyzed: 37
 | synthetic-scanned-text | 828 | 440455e37d18dd2ec8eadbb0be3ba2377cb8b24d3837780f1c8fbbd366ed7967 | 1.4 | 1 | scanned, image-dominant, ocr-results |
 | synthetic-searchable-scan-regions | 944 | 68e125ff1c95202c1b758113945b6494d467a0faf73682c056796953fc03a220 | 1.4 | 1 | searchable-scan, hidden-ocr-overlay, mixed-region-reconciliation |
 | synthetic-government-form | 1260 | 38dc2c41a780c0991cdcac568f7750fc5b0a922d82628fdfa74a0f2c8200cbfa | 1.4 | 1 | born-digital, acroform, government-form, checkbox, radio, acroForm, annotations |
-| synthetic-rtl-text | 1211 | fcb5cf826d1c33c8504efcd24bcf6b36b28ab74b98d66204afcabbc0b944efc9 | 1.4 | 1 | born-digital, to-unicode, rtl, bidi |
-| synthetic-cjk-text | 1267 | 6b46c52c1099955970c723ae5a10fb8c1dd2cba0550b9fccd0a2ec18578b43fb | 1.4 | 1 | born-digital, to-unicode, cjk, wrapped-lines |
-| synthetic-vertical-writing | 1250 | f9ca3b21b10ab781adbcdd5a1cd4b564c34ebb4b3b511a20eb1234f686af5748 | 1.4 | 1 | born-digital, to-unicode, cjk, vertical-writing |
+| synthetic-rtl-text | 3324 | d1ada8f3d54b61af4bd71872d55eebd235eefbe2a1c5a86abbd04cf0e4418460 | 1.4 | 1 | born-digital, to-unicode, rtl, bidi, visible-vector-glyphs |
+| synthetic-cjk-text | 7774 | 8e9d9b1cfb266cfdfe40025c5fab7e9f4c289ab789f289eb88e0bd234a0ff342 | 1.4 | 1 | born-digital, to-unicode, cjk, wrapped-lines, visible-vector-glyphs |
+| synthetic-vertical-writing | 5429 | 2424794db934f6a26039f82fe5477c621102fa961664e51227872e855eb73b7d | 1.4 | 1 | born-digital, to-unicode, cjk, vertical-writing, visible-vector-glyphs |
 | synthetic-hyphenated-line | 778 | f81d3334d967d4ec95836e6732b3a7aded73f49917536d2a1ee84bec59b9e969 | 1.4 | 1 | born-digital, paragraphs, hyphenation |
 | plos-interpretable-ml-reliability-2023 | 3038998 | 7922442d77ef0ab40547dad4f9aa0ee36b3ac4b47b479a87a65637647f556348 | 1.6 | 24 | born-digital, scientific-paper, two-column, figures, equations, references, untagged, annotations, metadata |
 | plos-metagenomic-ml-meta-analysis-2016 | 4232685 | c4a4f794173e03ddbbc3750742bb0373a75beb2324b5fd16ae138b8503bac29c | 1.4 | 26 | born-digital, scientific-paper, two-column, visible-table, figures, references, untagged, annotations, metadata |

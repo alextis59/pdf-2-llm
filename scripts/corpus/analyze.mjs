@@ -16,6 +16,7 @@ const selectedIds = readOptions("--id");
 const selectedFiles = readOptions("--file");
 const skipTools = hasFlag("--no-tools");
 const toolsOnly = hasFlag("--tools-only");
+const inventoryOnly = hasFlag("--inventory-only");
 const maxToolBytes = Number.parseInt(readOption("--max-tool-bytes") ?? `${5 * 1024 * 1024}`, 10);
 const analyzedAt = readOption("--analyzed-at") ?? new Date().toISOString();
 
@@ -54,6 +55,7 @@ Options:
   --max-tool-bytes <n>     Maximum captured bytes per external tool.
   --analyzed-at <iso>      Timestamp to write into analysis JSON.
   --tools-only             Refresh selected external-tool captures without analysis or inventory files.
+  --inventory-only         Refresh the inventory without rewriting per-entry analysis files.
 `;
 }
 
@@ -607,6 +609,11 @@ async function writeAnalysis(id, analysis) {
 
 async function writeInventoryReport(analyses) {
   const reportPath = path.join(repoRoot, "corpus", "reports", "corpus-inventory.md");
+  await writeFile(reportPath, createInventoryReport(analyses));
+  return reportPath;
+}
+
+export function createInventoryReport(analyses) {
   const lines = [
     "# Corpus Inventory",
     "",
@@ -634,14 +641,19 @@ async function writeInventoryReport(analyses) {
     lines.push("| _none_ | 0 |  | unknown | 0 | none |");
   }
 
-  await writeFile(reportPath, `${lines.join("\n")}\n`);
-  return reportPath;
+  return `${lines.join("\n")}\n`;
 }
 
 async function main() {
   if (hasFlag("--help") || hasFlag("-h")) {
     console.log(usage());
     return;
+  }
+  if (toolsOnly && inventoryOnly) {
+    throw new Error("--tools-only and --inventory-only are mutually exclusive");
+  }
+  if (toolsOnly && skipTools) {
+    throw new Error("--tools-only cannot be combined with --no-tools");
   }
 
   const fileTargets = selectFileEntries();
@@ -683,9 +695,13 @@ async function main() {
       continue;
     }
     const analysis = await analyzePdf(target);
-    const analysisPath = await writeAnalysis(target.id, analysis);
     analyses.push(analysis);
-    console.log(`${target.id}: wrote ${relativeToRoot(analysisPath)}`);
+    if (inventoryOnly) {
+      console.log(`${target.id}: refreshed inventory data`);
+    } else {
+      const analysisPath = await writeAnalysis(target.id, analysis);
+      console.log(`${target.id}: wrote ${relativeToRoot(analysisPath)}`);
+    }
   }
 
   if (!toolsOnly && fileTargets.length === 0) {
