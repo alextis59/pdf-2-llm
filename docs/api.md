@@ -152,7 +152,9 @@ input.addEventListener("change", async () => {
 
 Unsupported encryption is reported as `security.unsupported_encryption`. Wrong
 passwords are reported as `security.password_incorrect`. Missing passwords are
-reported as `security.password_required`.
+reported as `security.password_required`. The implemented Standard revision 2
+RC4-40 path decrypts content streams and indirect-object strings used by
+outlines, forms, annotations, structure, and other parsed metadata.
 
 ### Security Limits
 

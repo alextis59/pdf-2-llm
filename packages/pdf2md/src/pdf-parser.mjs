@@ -1,5 +1,6 @@
 import { PdfCMapParseError, parseToUnicodeCMap } from "./font-encoding.mjs";
 import {
+  bytesToHex,
   bytesToLatin1,
   hexToBytes,
   int32LittleEndianBytes,
@@ -161,7 +162,7 @@ function createEncryptionContext(trailer, entries, source, bytes, options) {
     });
   }
 
-  const { dictionary } = resolveEncryptionDictionary(
+  const { dictionary, objectNumber, generationNumber } = resolveEncryptionDictionary(
     trailer.entries.Encrypt,
     entries,
     source,
@@ -169,11 +170,27 @@ function createEncryptionContext(trailer, entries, source, bytes, options) {
     options
   );
   const fileKey = computeStandardRevision2FileKey(dictionary, trailer, options.password);
+  const encryptionDictionaryKey = Number.isInteger(objectNumber)
+    ? objectKey(objectNumber, generationNumber ?? 0)
+    : null;
+
+  function decryptObjectBytes(objectNumberValue, generationNumberValue, input) {
+    const key = computeObjectRc4Key(fileKey, objectNumberValue, generationNumberValue);
+    return rc4(key, input);
+  }
 
   return {
+    shouldDecryptObject(objectNumberValue, generationNumberValue, value) {
+      return (
+        objectKey(objectNumberValue, generationNumberValue) !== encryptionDictionaryKey &&
+        nameValue(value?.entries?.Type) !== "XRef"
+      );
+    },
+    decryptStringBytes(objectNumberValue, generationNumberValue, stringBytes) {
+      return decryptObjectBytes(objectNumberValue, generationNumberValue, stringBytes);
+    },
     decryptStreamBytes(objectNumber, generationNumber, streamBytes) {
-      const key = computeObjectRc4Key(fileKey, objectNumber, generationNumber);
-      return rc4(key, streamBytes);
+      return decryptObjectBytes(objectNumber, generationNumber, streamBytes);
     }
   };
 }
@@ -321,6 +338,37 @@ function bytesFromPdfString(value) {
   }
 
   return null;
+}
+
+function decryptPdfValueStrings(value, decryptBytes, maxDepth = 100, depth = 0) {
+  enforceDepthLimit(depth, maxDepth, null);
+  if (typeof value === "string") {
+    return bytesToLatin1(decryptBytes(latin1ToBytes(value)));
+  }
+  if (value?.type === "hex-string") {
+    const encryptedBytes = bytesFromPdfString(value);
+    if (encryptedBytes) {
+      value.value = bytesToHex(decryptBytes(encryptedBytes));
+    }
+    return value;
+  }
+  if (value?.type === "array") {
+    for (let index = 0; index < value.items.length; index += 1) {
+      value.items[index] = decryptPdfValueStrings(
+        value.items[index],
+        decryptBytes,
+        maxDepth,
+        depth + 1
+      );
+    }
+    return value;
+  }
+  if (isDict(value)) {
+    for (const [key, item] of Object.entries(value.entries)) {
+      value.entries[key] = decryptPdfValueStrings(item, decryptBytes, maxDepth, depth + 1);
+    }
+  }
+  return value;
 }
 
 function computeObjectRc4Key(fileKey, objectNumber, generationNumber) {
@@ -865,6 +913,20 @@ function xrefStreamEntry(objectNumber, type, field2, field3) {
 function parseIndirectObjectAt(source, bytes, offset, options = {}) {
   const parsedObject = parseIndirectObjectHeaderAndValue(source, offset, options);
   const { objectNumber, generationNumber } = parsedObject;
+  const decryptObject =
+    options.encryption?.shouldDecryptObject(
+      objectNumber,
+      generationNumber,
+      parsedObject.value
+    ) === true;
+  if (decryptObject) {
+    parsedObject.value = decryptPdfValueStrings(
+      parsedObject.value,
+      (stringBytes) =>
+        options.encryption.decryptStringBytes(objectNumber, generationNumber, stringBytes),
+      options.maxDepth
+    );
+  }
   let cursor = skipWhitespaceAndComments(source, parsedObject.valueEndOffset);
 
   let stream = null;
@@ -892,7 +954,7 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
 
     const streamBytes = bytes.subarray(streamStart, streamEnd);
     const decodedInputBytes =
-      options.encryption && shouldDecryptStream(parsedObject.value)
+      decryptObject && shouldDecryptStream(parsedObject.value)
         ? options.encryption.decryptStreamBytes(objectNumber, generationNumber, streamBytes)
         : streamBytes;
     const maxDecodedStreamBytes = options.maxDecodedStreamBytes ?? 50 * 1024 * 1024;

@@ -91,6 +91,10 @@ instead of being reinterpreted as text or graphics operators.
 - Missing, incorrect, and unsupported encryption are represented with
   `security.password_required`, `security.password_incorrect`, and
   `security.unsupported_encryption`.
+- The supported Standard security handler revision 2 RC4-40 path decrypts both
+  streams and literal/hex strings throughout each indirect object with its
+  object/generation key. The encryption dictionary and XRef objects are never
+  decrypted as ordinary objects.
 - The parser supports only the implemented encryption path. Unsupported
   security handlers must stay explicit warnings, not silent extraction.
 

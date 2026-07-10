@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { deflateSync } from "node:zlib";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -6,7 +7,8 @@ import {
   ByteReader,
   PdfSyntaxError,
   parsePdfDocument,
-  parsePdfValue
+  parsePdfValue,
+  pdfTextStringValue
 } from "../src/pdf-parser.mjs";
 import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
 
@@ -738,6 +740,27 @@ test("parser and converter decrypt Standard revision 2 RC4-40 PDFs with the user
   assert.equal(JSON.stringify(result).includes(secret), false);
 });
 
+test("parser decrypts literal and hex strings in encrypted indirect objects", async () => {
+  const secret = "stringpass";
+  const fixture = createEncryptedStringTestPdf(secret);
+  const document = parsePdfDocument(fixture.bytes, { password: secret });
+  const result = await convertPdfToMarkdown(fixture.bytes, { password: secret });
+  const info = document.getObject(11).value;
+  const nested = info.entries.Custom.entries.Nested.items;
+  const field = result.diagnostics.extraction.forms.fields[0];
+
+  assert.equal(document.outlines[0].title, "Secret Outline");
+  assert.equal(pdfTextStringValue(info.entries.Title), "Encrypted Metadata");
+  assert.equal(pdfTextStringValue(info.entries.Author), "Ada");
+  assert.deepEqual(nested.map(pdfTextStringValue), ["Nested Hex", "Nested Literal"]);
+  assert.equal(document.getObject(6).value.entries.O.value, fixture.ownerKeyHex);
+  assert.match(result.markdown, /Encrypted object strings/);
+  assert.equal(field.name, "secret_name");
+  assert.equal(field.label, "Secret name");
+  assert.equal(field.value, "Ada Encrypted");
+  assert.equal(JSON.stringify(result).includes(secret), false);
+});
+
 test("converter reports wrong passwords for Standard revision 2 RC4-40 PDFs", async () => {
   const bytes = await readFile(encryptedRc4FixturePath);
   const result = await convertPdfToMarkdown(bytes, { password: "wrongpass" });
@@ -830,6 +853,101 @@ function createEncryptedTestPdf(label) {
     ],
     { trailerEntries: " /Encrypt 6 0 R" }
   );
+}
+
+function createEncryptedStringTestPdf(password) {
+  const padding = Buffer.from([
+    0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41,
+    0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08,
+    0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80,
+    0x2f, 0x0c, 0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a
+  ]);
+  const ownerKey = Buffer.from(Array.from({ length: 32 }, (_, index) => index + 1));
+  const fileId = Buffer.from("00112233445566778899aabbccddeeff", "hex");
+  const permission = -4;
+  const permissionBytes = Buffer.alloc(4);
+  permissionBytes.writeInt32LE(permission);
+  const paddedPassword = Buffer.alloc(32);
+  const passwordBytes = Buffer.from(password, "latin1").subarray(0, 32);
+  passwordBytes.copy(paddedPassword);
+  padding.copy(paddedPassword, passwordBytes.length, 0, 32 - passwordBytes.length);
+  const fileKey = createHash("md5")
+    .update(Buffer.concat([paddedPassword, ownerKey, permissionBytes, fileId]))
+    .digest()
+    .subarray(0, 5);
+  const userKey = testRc4(fileKey, padding);
+
+  function encryptObjectBytes(objectNumber, value) {
+    const suffix = Buffer.from([
+      objectNumber & 0xff,
+      (objectNumber >> 8) & 0xff,
+      (objectNumber >> 16) & 0xff,
+      0,
+      0
+    ]);
+    const objectKey = createHash("md5")
+      .update(Buffer.concat([fileKey, suffix]))
+      .digest()
+      .subarray(0, 10);
+    return testRc4(objectKey, Buffer.isBuffer(value) ? value : Buffer.from(value, "latin1"));
+  }
+
+  function encryptedHex(objectNumber, value) {
+    return `<${encryptObjectBytes(objectNumber, value).toString("hex").toUpperCase()}>`;
+  }
+
+  function encryptedLiteral(objectNumber, value) {
+    const escaped = [...encryptObjectBytes(objectNumber, value)]
+      .map((byte) => `\\${byte.toString(8).padStart(3, "0")}`)
+      .join("");
+    return `(${escaped})`;
+  }
+
+  const ownerKeyHex = ownerKey.toString("hex").toUpperCase();
+  const fileIdHex = fileId.toString("hex").toUpperCase();
+  const content = encryptObjectBytes(
+    5,
+    "BT /F1 16 Tf 20 200 Td (Encrypted object strings) Tj ET\n"
+  ).toString("binary");
+  const bytes = createTestPdf(
+    [
+      "<< /Type /Catalog /Pages 2 0 R /Outlines 7 0 R /AcroForm 9 0 R >>",
+      "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /Font << /F1 3 0 R >> >> /MediaBox [0 0 300 400] >>",
+      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+      "<< /Type /Page /Parent 2 0 R /Contents 5 0 R /Annots [10 0 R] >>",
+      streamObject(content),
+      `<< /Filter /Standard /V 1 /R 2 /Length 40 /O <${ownerKeyHex}> /U <${userKey.toString("hex").toUpperCase()}> /P ${permission} >>`,
+      "<< /Type /Outlines /First 8 0 R /Last 8 0 R /Count 1 >>",
+      `<< /Title ${encryptedLiteral(8, "Secret Outline")} /Parent 7 0 R >>`,
+      "<< /Fields [10 0 R] >>",
+      `<< /Type /Annot /Subtype /Widget /FT /Tx /T ${encryptedHex(10, "secret_name")} /TU ${encryptedLiteral(10, "Secret name")} /V ${encryptedHex(10, "Ada Encrypted")} /Rect [20 120 180 145] /P 4 0 R >>`,
+      `<< /Title ${encryptedLiteral(11, "Encrypted Metadata")} /Author ${encryptedHex(11, "Ada")} /Custom << /Nested [${encryptedHex(11, "Nested Hex")} ${encryptedLiteral(11, "Nested Literal")}] >> >>`
+    ],
+    {
+      trailerEntries: ` /Encrypt 6 0 R /Info 11 0 R /ID [<${fileIdHex}> <${fileIdHex}>]`
+    }
+  );
+  return { bytes, ownerKeyHex };
+}
+
+function testRc4(key, input) {
+  const state = Uint8Array.from({ length: 256 }, (_, index) => index);
+  let j = 0;
+  for (let index = 0; index < 256; index += 1) {
+    j = (j + state[index] + key[index % key.length]) & 0xff;
+    [state[index], state[j]] = [state[j], state[index]];
+  }
+
+  const output = Buffer.alloc(input.length);
+  let i = 0;
+  j = 0;
+  for (let index = 0; index < input.length; index += 1) {
+    i = (i + 1) & 0xff;
+    j = (j + state[i]) & 0xff;
+    [state[i], state[j]] = [state[j], state[i]];
+    output[index] = input[index] ^ state[(state[i] + state[j]) & 0xff];
+  }
+  return output;
 }
 
 function createXrefStreamTestPdf(objects) {
