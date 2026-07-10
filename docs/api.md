@@ -322,6 +322,9 @@ not render full image buffers. Page and thumbnail targets that exceed
 }
 ```
 
+Adaptive preprocessing bias is rounded to an integer and clamped to `-255`
+through `255`; an explicit zero selects an unbiased local-threshold comparison.
+
 The WebGPU path performs capability detection, OCR batch planning, and
 conversion-routed OCR preprocessing diagnostics. In Node, the stable GPU
 execution path falls back to CPU unless a caller supplies a concrete browser

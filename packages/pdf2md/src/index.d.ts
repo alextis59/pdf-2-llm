@@ -88,6 +88,7 @@ export type ConvertOptions = {
       workload?: "binarize-rgba" | "adaptive-threshold-rgba";
       threshold?: number;
       radius?: number;
+      /** Integer adaptive-threshold bias clamped to -255 through 255. Defaults to 7. */
       bias?: number;
       maxSamplePixelsPerPage?: number;
       minSpeedup?: number;
@@ -268,6 +269,7 @@ export type WebGpuPreprocessingRunner = {
   run(
     rgba: Uint8Array,
     options?: {
+      /** Integer adaptive-threshold bias clamped to -255 through 255. Defaults to 7. */
       bias?: number;
       height?: number;
       radius?: number;

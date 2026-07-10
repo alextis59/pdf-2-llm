@@ -42,6 +42,11 @@ function readPositiveNumberOption(name, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function readFiniteNumberOption(name, fallback) {
+  const parsed = Number.parseFloat(readOption(name) ?? "");
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function readWorkloadOption() {
   const workload = readOption("--workload") ?? defaultWorkload;
   if (workload === adaptiveThresholdWorkload || workload === binarizeWorkload) {
@@ -592,7 +597,7 @@ async function main() {
   }
 
   const pageHtml = createPageHtml({
-    bias: readPositiveNumberOption("--bias", defaultAdaptiveBias),
+    bias: readFiniteNumberOption("--bias", defaultAdaptiveBias),
     iterations: readPositiveIntegerOption("--iterations", defaultIterations),
     minSpeedup: readPositiveNumberOption("--min-speedup", defaultMinSpeedup),
     pixels: readPositiveIntegerOption("--pixels", defaultPixels),

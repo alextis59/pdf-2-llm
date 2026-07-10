@@ -47,7 +47,7 @@ Supported options:
 | `preprocessing.workload` | `"binarize-rgba"` | Selects `binarize-rgba` or compute-heavy `adaptive-threshold-rgba` diagnostics. |
 | `preprocessing.threshold` | `128` | Binarization threshold used by WebGPU preprocessing samples. |
 | `preprocessing.radius` | `8` | Adaptive threshold local-window radius. Border pixels use self-thresholding. |
-| `preprocessing.bias` | `7` | Adaptive threshold bias added to the current pixel luma before comparison. |
+| `preprocessing.bias` | `7` | Adaptive threshold bias added to current-pixel luma; rounded and clamped to the complete signed 8-bit range `-255` through `255`. Zero is preserved. |
 | `preprocessing.maxSamplePixelsPerPage` | `262144` | Maximum deterministic sample pixels per routed OCR page. |
 | `preprocessing.minSpeedup` | `1.05` | Minimum preprocessing speed ratio used for diagnostic pass/fail status. |
 | `preprocessing.runner` | `undefined` | Test and integration hook for injecting a compatible preprocessing runner. |

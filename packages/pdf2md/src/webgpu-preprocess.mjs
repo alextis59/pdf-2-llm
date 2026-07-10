@@ -4,6 +4,8 @@ const defaultMaxSamplePixelsPerPage = 262_144;
 const defaultMinSpeedup = 1.05;
 const defaultAdaptiveRadius = 8;
 const defaultAdaptiveBias = 7;
+const minAdaptiveBias = -255;
+const maxAdaptiveBias = 255;
 const adaptiveThresholdWorkload = "adaptive-threshold-rgba";
 const binarizeWorkload = "binarize-rgba";
 
@@ -50,7 +52,7 @@ export function adaptiveThresholdRgbaCpu(
   const input = normalizeRgbaInput(rgba);
   const geometry = normalizeImageGeometry(input, { height, width });
   const normalizedRadius = normalizePositiveInteger(radius, defaultAdaptiveRadius);
-  const normalizedBias = Math.round(normalizePositiveNumber(bias, defaultAdaptiveBias));
+  const normalizedBias = normalizeAdaptiveBias(bias);
   const luma = new Uint16Array(geometry.pixelCount);
   for (let pixel = 0, offset = 0; pixel < geometry.pixelCount; pixel += 1, offset += 4) {
     luma[pixel] = (77 * input[offset] + 150 * input[offset + 1] + 29 * input[offset + 2]) >>> 8;
@@ -146,7 +148,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
   let width = params[1];
   let height = params[2];
   let radius = params[3];
-  let bias = params[4];
+  let bias = bitcast<i32>(params[4]);
   let workgroupsPerRow = params[5];
   let index = id.x + id.y * workgroupsPerRow * ${normalizedWorkgroupSize}u;
   if (index >= pixelCount) {
@@ -183,7 +185,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
 
   let alpha = pixel & 4278190080u;
   let average = sum / count;
-  let value = select(0u, 255u, current + bias >= average);
+  let value = select(0u, 255u, i32(current) + bias >= i32(average));
   outputPixels[index] = value | (value << 8u) | (value << 16u) | alpha;
 }
 `.trim();
@@ -333,7 +335,7 @@ export function createWebGpuAdaptiveThresholdRgbaRunner({
       const inputWords = packRgbaWords(input);
       const size = inputWords.byteLength;
       const normalizedRadius = normalizePositiveInteger(radius, defaultAdaptiveRadius);
-      const normalizedBias = Math.round(normalizePositiveNumber(bias, defaultAdaptiveBias));
+      const normalizedBias = normalizeAdaptiveBias(bias);
       const dispatch = createDispatchPlan(inputWords.length, {
         maxWorkgroupsPerDimension: readMaxComputeWorkgroupsPerDimension(device),
         workgroupSize: normalizedWorkgroupSize
@@ -370,7 +372,7 @@ export function createWebGpuAdaptiveThresholdRgbaRunner({
             geometry.width,
             geometry.height,
             normalizedRadius,
-            normalizedBias,
+            normalizedBias >>> 0,
             dispatch.workgroupsPerRow,
             0,
             0
@@ -437,7 +439,7 @@ export async function createWebGpuPreprocessingDiagnostics({
   const workload = normalizeWorkload(preprocessingOptions.workload);
   const threshold = normalizeThreshold(preprocessingOptions.threshold ?? defaultThreshold);
   const radius = normalizePositiveInteger(preprocessingOptions.radius, defaultAdaptiveRadius);
-  const bias = normalizePositiveNumber(preprocessingOptions.bias, defaultAdaptiveBias);
+  const bias = normalizeAdaptiveBias(preprocessingOptions.bias);
   const maxSamplePixelsPerPage = normalizePositiveInteger(
     preprocessingOptions.maxSamplePixelsPerPage,
     defaultMaxSamplePixelsPerPage
@@ -634,6 +636,14 @@ function normalizeThreshold(value) {
 function normalizePositiveNumber(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function normalizeAdaptiveBias(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return defaultAdaptiveBias;
+  }
+  return Math.max(minAdaptiveBias, Math.min(maxAdaptiveBias, Math.round(number)));
 }
 
 function normalizePositiveInteger(value, fallback) {
