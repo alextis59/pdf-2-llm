@@ -883,6 +883,27 @@ test("linesToMarkdown can add page anchors", () => {
   );
 });
 
+test("linesToMarkdown starts a new list block after a page anchor", () => {
+  const result = linesToMarkdownWithSourceMap(
+    [
+      { text: "- First page item", fontSize: 12, x: 10, y: 40, pageIndex: 0 },
+      { text: "- Second page item", fontSize: 12, x: 10, y: 40, pageIndex: 1 }
+    ],
+    { pageAnchors: true }
+  );
+
+  assert.equal(
+    result.markdown,
+    '<a id="page-1"></a>\n\n- First page item\n\n<a id="page-2"></a>\n\n- Second page item\n'
+  );
+  assert.deepEqual(
+    result.sourceMap.entries.map((entry) => entry.kind),
+    ["page_anchor", "list", "page_anchor", "list"]
+  );
+  assert.equal(result.sourceMap.entries[1].regions[0].pageIndex, 0);
+  assert.equal(result.sourceMap.entries[3].regions[0].pageIndex, 1);
+});
+
 test("linesToMarkdown groups wrapped lines into paragraphs", () => {
   const markdown = linesToMarkdown([
     { text: "A wrapped paragraph continues", fontSize: 12, x: 72, y: 680, pageIndex: 0 },

@@ -282,7 +282,9 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
       continue;
     }
 
-    appendPageAnchor(blocks, line.pageIndex, options, anchoredPages);
+    if (appendPageAnchor(blocks, line.pageIndex, options, anchoredPages)) {
+      previousWasList = false;
+    }
 
     const equationBlock = readEquationAt(
       lines,
@@ -348,7 +350,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
         listItem,
         listIndentLevelForLine(line, listIndentModel)
       );
-      if (previousWasList) {
+      if (previousWasList && blocks.at(-1)?.kind === "list") {
         const listBlock = blocks[blocks.length - 1];
         listBlock.text = `${listBlock.text}\n${item}`;
         listBlock.sourceLines.push(line);
@@ -380,7 +382,7 @@ export function linesToMarkdownWithSourceMap(lines, options = {}) {
 
 function appendPageAnchor(blocks, pageIndex, options, anchoredPages) {
   if (!options.pageAnchors || !Number.isInteger(pageIndex) || anchoredPages.has(pageIndex)) {
-    return;
+    return false;
   }
   anchoredPages.add(pageIndex);
   blocks.push(
@@ -388,6 +390,7 @@ function appendPageAnchor(blocks, pageIndex, options, anchoredPages) {
       { pageIndex }
     ])
   );
+  return true;
 }
 
 function parseListItem(text) {
