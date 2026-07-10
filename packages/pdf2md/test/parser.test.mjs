@@ -294,6 +294,32 @@ test("parsePdfDocument resolves indirect stream Length before slicing Flate byte
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PdfParseFailed));
 });
 
+test("parsePdfDocument caps indirect stream Length reference hops at maxDepth", () => {
+  const boundary = createIndirectLengthChainPdf(["5 0 R", "3"]);
+  const overLimit = createIndirectLengthChainPdf(["5 0 R", "6 0 R", "3"]);
+
+  const document = parsePdfDocument(boundary, { maxDepth: 2 });
+  assert.equal(document.getObject(3).stream.rawLength, 3);
+
+  assert.throws(
+    () => parsePdfDocument(overLimit, { maxDepth: 2 }),
+    (error) =>
+      error instanceof PdfSyntaxError && error.code === "pdf.stream.length_depth_exceeded"
+  );
+
+  const tolerantDocument = parsePdfDocument(overLimit, { maxDepth: 2, mode: "tolerant" });
+  assert.equal(tolerantDocument.getObject(3).stream.rawLength, 3);
+});
+
+test("parsePdfDocument detects indirect stream Length reference cycles", () => {
+  const bytes = createIndirectLengthChainPdf(["5 0 R", "4 0 R"]);
+
+  assert.throws(
+    () => parsePdfDocument(bytes, { maxDepth: 2 }),
+    (error) => error instanceof PdfSyntaxError && error.code === "pdf.stream.length_cycle"
+  );
+});
+
 test("parsePdfDocument records metadata for raster image XObject filters", async () => {
   const bytes = createTestPdf([
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -902,6 +928,15 @@ function createTestPdf(objects, { trailerEntries = "" } = {}) {
   body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${trailerEntries} >>\n`;
   body += `startxref\n${xrefOffset}\n%%EOF\n`;
   return Buffer.from(body, "binary");
+}
+
+function createIndirectLengthChainPdf(lengthObjects) {
+  return createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [] /Count 0 >>",
+    streamObjectWithIndirectLength("abc", 4),
+    ...lengthObjects
+  ]);
 }
 
 function corruptFirstXrefEntry(bytes) {

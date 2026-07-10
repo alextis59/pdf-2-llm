@@ -33,7 +33,7 @@ const result = await convertPdfToMarkdown(bytes, {
 | `maxTotalDecodedStreamBytes` | `209715200` | Retained decoded bytes across all stream objects. |
 | `maxPages` | `5000` | Parsed page count before page extraction. |
 | `maxObjects` | `100000` | XRef/object count during parsing and repair. |
-| `maxDepth` | `100` | PDF/content value nesting, page tree, outlines, structure traversal, and content stacks. |
+| `maxDepth` | `100` | PDF/content value nesting, indirect stream-length references, page tree, outlines, structure traversal, and content stacks. |
 | `maxCMapMappings` | `65536` | Per-range and aggregate ToUnicode CMap mappings. |
 | `maxContentStreamOperations` | `1000000` | Operand tokens parsed and operators interpreted per document extraction channel. |
 | `maxContentStreamOutputs` | `1000000` | Text units and path/image records expanded per document extraction channel. |
@@ -194,12 +194,15 @@ This blocks fallback extraction and returns empty Markdown.
 
 ### `maxDepth`
 
-`maxDepth` limits nested PDF value parsing and recursive document structures
-such as page trees, outlines, and tagged structure trees. When exceeded, the
-parser warning details use:
+`maxDepth` limits nested PDF value parsing, iterative indirect stream `/Length`
+reference walks, and recursive document structures such as page trees,
+outlines, and tagged structure trees. Stream-length references use an indexed
+xref lookup and reject cycles independently. When exceeded, parser warning
+details use:
 
 ```txt
 pdf.depth_limit_exceeded
+pdf.stream.length_depth_exceeded
 ```
 
 This blocks fallback extraction and returns empty Markdown.

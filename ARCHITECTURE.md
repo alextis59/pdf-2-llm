@@ -63,7 +63,7 @@ can make policy decisions without losing the result object.
 | Module | Responsibility |
 | --- | --- |
 | `runtime.mjs` | Runtime-neutral byte helpers, hashing, bounded native/portable Flate decoding, Node builtin access, encoding helpers, and fallback MD5. |
-| `pdf-parser.mjs` | PDF byte reading, xref/object parsing and repair, supported decryption, page tree, outlines, structure, recursive Form/resource graphs, and parser limits. |
+| `pdf-parser.mjs` | PDF byte reading, indexed xref/object and stream-length resolution, repair, supported decryption, page tree, outlines, structure, recursive Form/resource graphs, and parser limits. |
 | `stream-filters.mjs` | Stream filter decoding and decoded-stream byte caps. |
 | `content-stream.mjs` | Incremental PDF graphics/text and nested Form interpretation with syntax/token/stack budgets, transformed bounds, and bounded inline-image handling. |
 | `font-encoding.mjs` | ToUnicode CMap parsing with source-code preservation, standard simple-font encoding tables and `Differences`, encoding fallbacks, and trust checks. |

@@ -86,9 +86,11 @@ export function parsePdfDocument(bytes, options = {}) {
   });
   const { startXref, entries, trailer, xrefMode, sections, repaired = false, repairReason = null } = xref;
   enforceObjectLimit(entries.length, maxObjects);
+  const xrefEntryIndex = createXrefEntryIndex(entries);
   const encryption = createEncryptionContext(trailer, entries, source, reader.bytes, {
     maxDecodedStreamBytes,
     decodedStreamBudget,
+    xrefEntryIndex,
     mode,
     password: options.password
   });
@@ -106,7 +108,8 @@ export function parsePdfDocument(bytes, options = {}) {
       maxDepth,
       mode,
       encryption,
-      entries
+      entries,
+      xrefEntryIndex
     });
     objects.set(objectKey(object.objectNumber, object.generationNumber), object);
     if (object.stream) {
@@ -208,14 +211,18 @@ function resolveEncryptionDictionary(encryptValue, entries, source, bytes, optio
     throwUnsupportedEncryption();
   }
 
-  const entry = entries.find(
-    (item) =>
-      item.inUse &&
-      item.objectNumber === encryptValue.objectNumber &&
-      item.generationNumber === encryptValue.generationNumber &&
-      item.offset > 0 &&
-      !item.compressed
-  );
+  const entry =
+    options.xrefEntryIndex?.get(
+      objectKey(encryptValue.objectNumber, encryptValue.generationNumber)
+    ) ??
+    entries.find(
+      (item) =>
+        item.inUse &&
+        item.objectNumber === encryptValue.objectNumber &&
+        item.generationNumber === encryptValue.generationNumber &&
+        item.offset > 0 &&
+        !item.compressed
+    );
   if (!entry) {
     throwUnsupportedEncryption();
   }
@@ -681,6 +688,16 @@ function mergeXrefEntries(sections) {
   return entries;
 }
 
+function createXrefEntryIndex(entries) {
+  const index = new Map();
+  for (const entry of entries) {
+    if (entry.inUse && entry.offset > 0 && !entry.compressed) {
+      index.set(objectKey(entry.objectNumber, entry.generationNumber), entry);
+    }
+  }
+  return index;
+}
+
 function formatXrefMode(sections) {
   const modes = [...new Set(sections.map((section) => section.mode))];
   const mode = modes.length === 1 ? modes[0] : modes.join("+");
@@ -948,6 +965,7 @@ function parseIndirectObjectAt(source, bytes, offset, options = {}) {
     const streamEnd = resolveStreamEnd(source, bytes, streamStart, parsedObject.value, {
       mode: options.mode,
       entries: options.entries,
+      xrefEntryIndex: options.xrefEntryIndex,
       maxDepth: options.maxDepth,
       streamLengthStack: new Set([objectKey(objectNumber, generationNumber)])
     });
@@ -1250,71 +1268,97 @@ function readDirectStreamLength(value) {
 }
 
 function readIndirectStreamLength(reference, source, options = {}) {
-  const stack = options.streamLengthStack ?? new Set();
-  const key = objectKey(reference.objectNumber, reference.generationNumber);
-  if (stack.has(key)) {
-    return {
-      length: null,
-      error: new PdfSyntaxError("Indirect stream Length contains a reference cycle.", {
-        code: "pdf.stream.length_cycle"
-      })
-    };
-  }
+  const seen = new Set(options.streamLengthStack ?? []);
+  const maxDepth = options.maxDepth ?? 100;
+  let currentReference = reference;
+  let referenceHops = 0;
 
-  const offset = findIndirectStreamLengthObjectOffset(reference, source, options.entries);
-  if (!Number.isInteger(offset)) {
-    return {
-      length: null,
-      error: new PdfSyntaxError("Indirect stream Length object is unavailable.", {
-        code: "pdf.stream.length_unresolved"
-      })
-    };
-  }
+  while (currentReference?.type === "ref") {
+    const key = objectKey(currentReference.objectNumber, currentReference.generationNumber);
+    if (seen.has(key)) {
+      return {
+        length: null,
+        error: new PdfSyntaxError("Indirect stream Length contains a reference cycle.", {
+          code: "pdf.stream.length_cycle"
+        })
+      };
+    }
+    if (referenceHops >= maxDepth) {
+      return {
+        length: null,
+        error: new PdfSyntaxError("Indirect stream Length exceeds the reference depth limit.", {
+          code: "pdf.stream.length_depth_exceeded"
+        })
+      };
+    }
+    seen.add(key);
+    referenceHops += 1;
 
-  let object;
-  try {
-    object = parseIndirectObjectHeaderAndValue(source, offset, { maxDepth: options.maxDepth });
-  } catch (error) {
-    if (!(error instanceof PdfSyntaxError)) {
-      throw error;
+    const offset = findIndirectStreamLengthObjectOffset(currentReference, source, options);
+    if (!Number.isInteger(offset)) {
+      return {
+        length: null,
+        error: new PdfSyntaxError("Indirect stream Length object is unavailable.", {
+          code: "pdf.stream.length_unresolved"
+        })
+      };
+    }
+
+    let object;
+    try {
+      object = parseIndirectObjectHeaderAndValue(source, offset, { maxDepth });
+    } catch (error) {
+      if (!(error instanceof PdfSyntaxError)) {
+        throw error;
+      }
+      return {
+        length: null,
+        error: new PdfSyntaxError("Indirect stream Length object could not be parsed.", {
+          offset,
+          code: "pdf.stream.length_unresolved"
+        })
+      };
+    }
+
+    if (Number.isInteger(object.value) && object.value >= 0) {
+      return {
+        length: object.value,
+        error: null
+      };
+    }
+    if (object.value?.type === "ref") {
+      currentReference = object.value;
+      continue;
     }
     return {
       length: null,
-      error: new PdfSyntaxError("Indirect stream Length object could not be parsed.", {
-        offset,
-        code: "pdf.stream.length_unresolved"
-      })
+      error: new PdfSyntaxError(
+        "Indirect stream Length object must resolve to a non-negative integer.",
+        {
+          offset: object.offset,
+          code: "pdf.stream.length_invalid"
+        }
+      )
     };
-  }
-
-  if (Number.isInteger(object.value) && object.value >= 0) {
-    return {
-      length: object.value,
-      error: null
-    };
-  }
-
-  if (object.value?.type === "ref") {
-    const nextStack = new Set(stack);
-    nextStack.add(key);
-    return readIndirectStreamLength(object.value, source, {
-      ...options,
-      streamLengthStack: nextStack
-    });
   }
 
   return {
     length: null,
-    error: new PdfSyntaxError("Indirect stream Length object must resolve to a non-negative integer.", {
-      offset: object.offset,
+    error: new PdfSyntaxError("Indirect stream Length object must resolve to a reference.", {
       code: "pdf.stream.length_invalid"
     })
   };
 }
 
-function findIndirectStreamLengthObjectOffset(reference, source, entries) {
-  if (Array.isArray(entries)) {
-    const entry = entries.find(
+function findIndirectStreamLengthObjectOffset(reference, source, options) {
+  if (options.xrefEntryIndex instanceof Map) {
+    return (
+      options.xrefEntryIndex.get(objectKey(reference.objectNumber, reference.generationNumber))
+        ?.offset ?? null
+    );
+  }
+  if (Array.isArray(options.entries)) {
+    const entry = options.entries.find(
       (item) =>
         item.inUse &&
         item.objectNumber === reference.objectNumber &&

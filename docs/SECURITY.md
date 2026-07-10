@@ -63,6 +63,10 @@ validation.
 objects, while stream text is materialized lazily so binary image streams do not
 also retain an unnecessary Latin-1 copy.
 
+Indirect stream `/Length` references are resolved iteratively through an indexed
+xref lookup. `maxDepth` caps reference hops, and cycles are rejected before any
+stream bytes are sliced.
+
 `maxCMapMappings` bounds both individual ToUnicode ranges and aggregate mapping
 work so compact font CMaps cannot expand into unbounded entries.
 
