@@ -61,6 +61,12 @@ Keep these limits visible when adding parser, raster, OCR, WebGPU, or corpus
 behavior. Security-limit violations should preserve warning codes documented in
 [Security Limits](security-limits.md).
 
+Repository corpus downloads are bounded separately by
+`scripts/corpus/retrieve.mjs --max-download-bytes`. The retriever checks
+`Content-Length` when present, hashes and validates PDF magic while streaming to
+a temporary file, stops when the configured byte cap is crossed, and deletes
+partial files before reporting failure.
+
 `maxDecodedStreamBytes` is passed to Flate decompression as an output bound, so
 high-ratio compressed streams are rejected before the full decoded buffer is
 allocated. Node uses its bounded native inflater; browser and worker runtimes

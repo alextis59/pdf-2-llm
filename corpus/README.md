@@ -102,6 +102,13 @@ Use these storage thresholds unless a later release policy changes them:
 - Over 50 MiB: keep outside Git unless the file is essential and explicitly
   approved.
 
+`scripts/corpus/retrieve.mjs` treats remote responses as untrusted. It rejects a
+declared `Content-Length` above 100 MiB by default, streams accepted bodies to a
+temporary file, and aborts plus removes the partial file if streamed bytes cross
+the same cap. Use `--max-download-bytes <positive-integer>` to set a stricter or
+explicitly approved larger ceiling. Local candidate imports are checked against
+the same limit before they are read.
+
 Run `npm run corpus:validate` after modifying the manifest or any tracked
 corpus file.
 

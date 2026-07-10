@@ -173,6 +173,8 @@ Implement retrieval as a reproducible script, not a manual browser download.
 - [x] Add `scripts/corpus/retrieve.mjs`.
 - [x] Add support for `--id`, `--group`, `--all`, and `--dry-run`.
 - [x] Write downloads to a temporary file before moving into `corpus/raw/`.
+- [x] Enforce a configured byte limit from `Content-Length` and streamed body
+  bytes before publishing a retrieved candidate.
 - [x] Verify `Content-Type` and magic bytes.
 - [x] Compute SHA-256 immediately after download.
 - [x] Refuse to overwrite an existing PDF unless `--update` is passed.

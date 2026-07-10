@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createReadStream, createWriteStream } from "node:fs";
 import {
   mkdir,
   readFile,
@@ -9,6 +10,8 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 const args = process.argv.slice(2);
 const repoRoot = path.resolve(readOption("--root") ?? process.cwd());
@@ -20,6 +23,7 @@ const update = hasFlag("--update");
 const selectAll = hasFlag("--all");
 const selectedIds = readOptions("--id");
 const selectedGroups = readOptions("--group");
+const defaultMaxDownloadBytes = 100 * 1024 * 1024;
 
 const allowedKinds = new Set([
   "synthetic",
@@ -101,6 +105,7 @@ function usage() {
 Options:
   --candidate-file <path>  Candidate registry path.
   --root <path>            Repository root. Defaults to cwd.
+  --max-download-bytes <n> Maximum bytes per remote or local candidate. Defaults to 104857600.
   --dry-run                Validate and print selected candidates only.
   --update                 Allow replacing an existing target file.
 `;
@@ -313,8 +318,19 @@ function selectCandidates(registry) {
   return selected;
 }
 
-function sha256(bytes) {
-  return createHash("sha256").update(bytes).digest("hex");
+function readMaxDownloadBytes() {
+  const value = readOption("--max-download-bytes");
+  if (value === undefined) {
+    return defaultMaxDownloadBytes;
+  }
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new Error("--max-download-bytes must be a positive integer");
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error("--max-download-bytes must be a safe positive integer");
+  }
+  return parsed;
 }
 
 function ensurePdfMagic(bytes, candidate) {
@@ -334,12 +350,45 @@ function ensureContentType(contentType, candidate) {
   }
 }
 
-async function readCandidateBytes(candidate) {
+function readContentLength(value, candidate) {
+  if (value === null) {
+    return null;
+  }
+  const normalized = value.trim();
+  if (!/^\d+$/.test(normalized)) {
+    throw new Error(`${candidate.id}: invalid Content-Length "${value}"`);
+  }
+  const contentLength = Number(normalized);
+  if (!Number.isSafeInteger(contentLength)) {
+    throw new Error(`${candidate.id}: Content-Length exceeds the safe integer range`);
+  }
+  return contentLength;
+}
+
+function enforceCandidateByteLimit(byteLength, maxDownloadBytes, candidate, source) {
+  if (byteLength > maxDownloadBytes) {
+    throw new Error(
+      `${candidate.id}: ${source} ${byteLength} exceeds max download size ${maxDownloadBytes}`
+    );
+  }
+}
+
+async function stageCandidate(candidate, tempPath, maxDownloadBytes) {
   if (candidate.sourceType === "local-file") {
     const absoluteSource = path.resolve(repoRoot, candidate.localPath);
-    const bytes = await readFile(absoluteSource);
+    const sourceStats = await stat(absoluteSource);
+    if (!sourceStats.isFile()) {
+      throw new Error(`${candidate.id}: local source is not a file`);
+    }
+    enforceCandidateByteLimit(sourceStats.size, maxDownloadBytes, candidate, "local file size");
+    const measured = await streamCandidateToFile(
+      createReadStream(absoluteSource),
+      tempPath,
+      candidate,
+      maxDownloadBytes
+    );
     return {
-      bytes,
+      ...measured,
       source: {
         type: "local-file",
         finalUrl: null,
@@ -356,16 +405,38 @@ async function readCandidateBytes(candidate) {
     redirect: "follow"
   });
 
-  const contentType = response.headers.get("content-type");
-  ensureContentType(contentType, candidate);
-
-  if (!response.ok) {
-    throw new Error(`${candidate.id}: HTTP ${response.status} for ${candidate.url}`);
+  let contentType;
+  try {
+    contentType = response.headers.get("content-type");
+    ensureContentType(contentType, candidate);
+    if (!response.ok) {
+      throw new Error(`${candidate.id}: HTTP ${response.status} for ${candidate.url}`);
+    }
+    const contentLength = readContentLength(response.headers.get("content-length"), candidate);
+    if (contentLength !== null) {
+      enforceCandidateByteLimit(
+        contentLength,
+        maxDownloadBytes,
+        candidate,
+        "Content-Length"
+      );
+    }
+    if (!response.body) {
+      throw new Error(`${candidate.id}: response did not include a body`);
+    }
+  } catch (error) {
+    await response.body?.cancel().catch(() => {});
+    throw error;
   }
 
-  const bytes = Buffer.from(await response.arrayBuffer());
+  const measured = await streamCandidateToFile(
+    Readable.fromWeb(response.body),
+    tempPath,
+    candidate,
+    maxDownloadBytes
+  );
   return {
-    bytes,
+    ...measured,
     source: {
       type: "url",
       finalUrl: response.url,
@@ -375,23 +446,79 @@ async function readCandidateBytes(candidate) {
   };
 }
 
-async function writeRetrievedCandidate(candidate, bytes, source) {
-  ensurePdfMagic(bytes, candidate);
+async function streamCandidateToFile(sourceStream, tempPath, candidate, maxDownloadBytes) {
+  let byteLength = 0;
+  let header = Buffer.alloc(0);
+  const hash = createHash("sha256");
+  const meter = new Transform({
+    transform(chunk, _encoding, callback) {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      const nextByteLength = byteLength + bytes.length;
+      if (!Number.isSafeInteger(nextByteLength) || nextByteLength > maxDownloadBytes) {
+        callback(
+          new Error(
+            `${candidate.id}: streamed body exceeds max download size ${maxDownloadBytes}`
+          )
+        );
+        return;
+      }
 
-  const actualHash = sha256(bytes);
+      byteLength = nextByteLength;
+      hash.update(bytes);
+      if (header.length < 5) {
+        const required = 5 - header.length;
+        header = Buffer.concat([header, bytes.subarray(0, required)]);
+        if (header.length === 5) {
+          try {
+            ensurePdfMagic(header, candidate);
+          } catch (error) {
+            callback(error);
+            return;
+          }
+        }
+      }
+      callback(null, bytes);
+    }
+  });
+
+  try {
+    await pipeline(sourceStream, meter, createWriteStream(tempPath, { flags: "wx" }));
+    ensurePdfMagic(header, candidate);
+  } catch (error) {
+    await unlink(tempPath).catch(() => {});
+    throw error;
+  }
+
+  return {
+    actualHash: hash.digest("hex"),
+    byteLength
+  };
+}
+
+async function sha256File(filePath) {
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(filePath)) {
+    hash.update(chunk);
+  }
+  return hash.digest("hex");
+}
+
+async function finalizeRetrievedCandidate(
+  candidate,
+  { tempPath, source, actualHash, byteLength }
+) {
   if (candidate.expectedSha256 && candidate.expectedSha256 !== actualHash) {
     throw new Error(`${candidate.id}: expected SHA-256 ${candidate.expectedSha256}, found ${actualHash}`);
   }
 
   const targetPath = path.join(repoRoot, candidate.targetPath);
-  await mkdir(path.dirname(targetPath), { recursive: true });
 
   try {
-    const existing = await readFile(targetPath);
-    const existingHash = sha256(existing);
+    const existingHash = await sha256File(targetPath);
     if (existingHash === actualHash) {
+      await unlink(tempPath);
       console.log(`${candidate.id}: unchanged at ${candidate.targetPath}`);
-      return writeRetrievalRecord(candidate, source, actualHash, bytes.length);
+      return writeRetrievalRecord(candidate, source, actualHash, byteLength);
     }
     if (!update) {
       throw new Error(`${candidate.id}: target exists with different hash; pass --update to replace it`);
@@ -402,8 +529,6 @@ async function writeRetrievedCandidate(candidate, bytes, source) {
     }
   }
 
-  const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
-  await writeFile(tempPath, bytes);
   try {
     await rename(tempPath, targetPath);
   } catch (error) {
@@ -411,8 +536,8 @@ async function writeRetrievedCandidate(candidate, bytes, source) {
     throw error;
   }
 
-  console.log(`${candidate.id}: wrote ${candidate.targetPath} (${bytes.length} bytes, ${actualHash})`);
-  return writeRetrievalRecord(candidate, source, actualHash, bytes.length);
+  console.log(`${candidate.id}: wrote ${candidate.targetPath} (${byteLength} bytes, ${actualHash})`);
+  return writeRetrievalRecord(candidate, source, actualHash, byteLength);
 }
 
 async function writeRetrievalRecord(candidate, source, actualHash, byteLength) {
@@ -467,12 +592,19 @@ async function writeRetrievalRecord(candidate, source, actualHash, byteLength) {
   console.log(`${candidate.id}: wrote retrieval record ${path.relative(repoRoot, recordPath)}`);
 }
 
-async function retrieveCandidate(candidate) {
+async function retrieveCandidate(candidate, maxDownloadBytes) {
   console.log(
     `${candidate.id}: ${candidate.sourceType}, redistributable=${candidate.redistributable}, license=${candidate.licenseName}`
   );
-  const { bytes, source } = await readCandidateBytes(candidate);
-  await writeRetrievedCandidate(candidate, bytes, source);
+  const targetPath = path.join(repoRoot, candidate.targetPath);
+  const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
+  await mkdir(path.dirname(targetPath), { recursive: true });
+  try {
+    const staged = await stageCandidate(candidate, tempPath, maxDownloadBytes);
+    await finalizeRetrievedCandidate(candidate, { tempPath, ...staged });
+  } finally {
+    await unlink(tempPath).catch(() => {});
+  }
 }
 
 async function main() {
@@ -485,6 +617,8 @@ async function main() {
     console.error(usage());
     process.exit(1);
   }
+
+  const maxDownloadBytes = readMaxDownloadBytes();
 
   const registry = JSON.parse(await readFile(candidateFile, "utf8"));
   const errors = validateRegistry(registry);
@@ -508,12 +642,14 @@ async function main() {
         `${candidate.id}: group=${candidate.group}, source=${candidate.sourceType}, target=${candidate.targetPath}, disposition=${candidate.disposition}, redistributable=${candidate.redistributable}, license=${candidate.licenseName}`
       );
     }
-    console.log(`Dry run selected ${selected.length} candidate(s).`);
+    console.log(
+      `Dry run selected ${selected.length} candidate(s), maxDownloadBytes=${maxDownloadBytes}.`
+    );
     return;
   }
 
   for (const candidate of selected) {
-    await retrieveCandidate(candidate);
+    await retrieveCandidate(candidate, maxDownloadBytes);
   }
 }
 
