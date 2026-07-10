@@ -99,6 +99,12 @@ attempt. If Cargo cannot produce the shared-memory artifact, the report records
 `status: "unavailable"` and no stale `pdf2md_core.threaded.wasm` remains for a
 later package build to include.
 
+The API suite also instantiates a minimal threaded fixture that imports a real
+shared `WebAssembly.Memory`, exposes the preflight export contract, rejects
+ordinary non-shared memory, and exercises single-thread fallback. This keeps
+the loader's thread contract executable even on stable Rust toolchains that
+cannot build the optional shared-memory artifact.
+
 Future full-parser artifact names from the study are still expected to be split
 into single-threaded and threaded modules.
 
