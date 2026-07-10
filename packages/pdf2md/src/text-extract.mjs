@@ -2,6 +2,9 @@ import {
   extractContentStreamImageDraws,
   extractContentStreamRulingLines,
   extractContentStreamTextLines,
+  extractContentStreamsImageDraws,
+  extractContentStreamsRulingLines,
+  extractContentStreamsTextLines,
   mergeRulingLines
 } from "./content-stream.mjs";
 import { bytesToLatin1 } from "./runtime.mjs";
@@ -62,20 +65,16 @@ function extractParsedDocumentContent(document, { contentStreamBudgets, contentS
     const structureByPage = structureSignalsByPage(document.structure);
     for (const page of document.pages) {
       const structureByMcid = structureByPage.get(page.pageIndex) ?? new Map();
-      for (let streamIndex = 0; streamIndex < page.contentStreams.length; streamIndex += 1) {
-        const stream = page.contentStreams[streamIndex];
-        appendContentStreamExtraction(
-          content,
-          stream.text,
-          {
-            pageIndex: page.pageIndex,
-            resources: page.resources,
-            streamIndex,
-            structureByMcid
-          },
-          { contentStreamBudgets, contentStreamLimits }
-        );
-      }
+      appendPageContentStreamExtraction(
+        content,
+        page.contentStreams,
+        {
+          pageIndex: page.pageIndex,
+          resources: page.resources,
+          structureByMcid
+        },
+        { contentStreamBudgets, contentStreamLimits }
+      );
     }
     content.rulingLines = mergeRulingLines(content.rulingLines);
     return content;
@@ -91,6 +90,40 @@ function extractParsedDocumentContent(document, { contentStreamBudgets, contentS
   }
   content.rulingLines = mergeRulingLines(content.rulingLines);
   return content;
+}
+
+function appendPageContentStreamExtraction(
+  content,
+  contentStreams,
+  options,
+  { contentStreamBudgets, contentStreamLimits }
+) {
+  const streams = contentStreams.map((stream, streamIndex) => ({
+    text: stream.text,
+    streamIndex
+  }));
+  content.textLines.push(
+    ...extractContentStreamsTextLines(streams, {
+      ...options,
+      contentStreamBudget: contentStreamBudgets.text,
+      contentStreamLimits
+    })
+  );
+  content.rulingLines.push(
+    ...extractContentStreamsRulingLines(streams, {
+      ...options,
+      contentStreamBudget: contentStreamBudgets.ruling,
+      contentStreamLimits,
+      mergeRulingLines: false
+    })
+  );
+  content.imageDraws.push(
+    ...extractContentStreamsImageDraws(streams, {
+      ...options,
+      contentStreamBudget: contentStreamBudgets.image,
+      contentStreamLimits
+    })
+  );
 }
 
 function createEmptyExtractedContent() {

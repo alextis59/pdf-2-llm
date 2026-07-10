@@ -59,6 +59,70 @@ test("extractDocumentContent streams parsed page content into text, rulings, and
   assert.equal(content.imageDraws[0].name, "Im1");
 });
 
+test("extractDocumentContent carries page graphics and text state across Contents streams", () => {
+  const bytes = Buffer.from("%PDF-1.4\n", "binary");
+  const document = {
+    pages: [
+      {
+        pageIndex: 0,
+        resources: {
+          fonts: {
+            F1: {
+              subtype: "Type1",
+              baseFont: "Helvetica",
+              encoding: "WinAnsiEncoding",
+              hasToUnicode: false,
+              toUnicode: null
+            }
+          },
+          xobjects: {
+            Im1: {
+              subtype: "Image",
+              objectNumber: 5,
+              width: 10,
+              height: 20
+            }
+          }
+        },
+        contentStreams: [
+          { text: "q 2 0 0 2 10 20 cm 0 0 m BT /F1 12 Tf 10 20 Td" },
+          { text: "(Split text) Tj ET 5 0 l S /Im1 Do Q /Im1 Do" }
+        ]
+      }
+    ],
+    streams: [],
+    structure: { markedContent: [] }
+  };
+
+  const content = extractDocumentContent(bytes, { document });
+
+  assert.equal(content.textLines[0].text, "Split text");
+  assert.equal(content.textLines[0].streamIndex, 1);
+  assert.deepEqual(
+    content.rulingLines.map(({ x1, y1, x2, y2, streamIndex }) => ({
+      x1,
+      y1,
+      x2,
+      y2,
+      streamIndex
+    })),
+    [{ x1: 10, y1: 20, x2: 20, y2: 20, streamIndex: 1 }]
+  );
+  assert.deepEqual(
+    content.imageDraws.map(({ x, y, width, height, streamIndex }) => ({
+      x,
+      y,
+      width,
+      height,
+      streamIndex
+    })),
+    [
+      { x: 10, y: 20, width: 2, height: 2, streamIndex: 1 },
+      { x: 0, y: 0, width: 1, height: 1, streamIndex: 1 }
+    ]
+  );
+});
+
 test("linesToMarkdown normalizes common ligatures and whitespace", () => {
   const markdown = linesToMarkdown([
     {

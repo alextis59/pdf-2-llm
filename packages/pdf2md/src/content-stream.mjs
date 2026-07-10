@@ -21,6 +21,13 @@ export class PdfContentStreamLimitError extends Error {
 }
 
 export function extractContentStreamTextLines(streamText, options = {}) {
+  return extractContentStreamsTextLines(
+    [{ text: streamText, streamIndex: options.streamIndex ?? null }],
+    options
+  );
+}
+
+export function extractContentStreamsTextLines(streams, options = {}) {
   const state = createInitialState(options.resources);
   const stack = [];
   const operands = [];
@@ -34,12 +41,19 @@ export function extractContentStreamTextLines(streamText, options = {}) {
     lineSerial: 0
   });
 
-  interpretContentStream(streamText, context, executeOperator);
+  interpretContentStreams(streams, context, executeOperator);
 
   return lines.map(({ mergeKey, ...line }) => line);
 }
 
 export function extractContentStreamRulingLines(streamText, options = {}) {
+  return extractContentStreamsRulingLines(
+    [{ text: streamText, streamIndex: options.streamIndex ?? null }],
+    options
+  );
+}
+
+export function extractContentStreamsRulingLines(streams, options = {}) {
   const state = createInitialPathState(options.resources);
   const stack = [];
   const operands = [];
@@ -51,12 +65,19 @@ export function extractContentStreamRulingLines(streamText, options = {}) {
     state
   });
 
-  interpretContentStream(streamText, context, executePathOperator);
+  interpretContentStreams(streams, context, executePathOperator);
 
   return options.mergeRulingLines === false ? lines : mergeRulingLines(lines, options);
 }
 
 export function extractContentStreamImageDraws(streamText, options = {}) {
+  return extractContentStreamsImageDraws(
+    [{ text: streamText, streamIndex: options.streamIndex ?? null }],
+    options
+  );
+}
+
+export function extractContentStreamsImageDraws(streams, options = {}) {
   const state = createInitialImageState(options.resources);
   const stack = [];
   const operands = [];
@@ -68,7 +89,7 @@ export function extractContentStreamImageDraws(streamText, options = {}) {
     state
   });
 
-  interpretContentStream(streamText, context, executeImageOperator);
+  interpretContentStreams(streams, context, executeImageOperator);
 
   return images;
 }
@@ -138,6 +159,19 @@ function interpretContentStream(streamText, context, execute) {
     execute(token.value, context);
     context.operands.length = 0;
   }
+}
+
+function interpretContentStreams(streams, context, execute) {
+  const baseOptions = context.options;
+  for (let index = 0; index < streams.length; index += 1) {
+    const stream = streams[index];
+    context.options = {
+      ...baseOptions,
+      streamIndex: Object.hasOwn(stream, "streamIndex") ? stream.streamIndex : index
+    };
+    interpretContentStream(stream.text, context, execute);
+  }
+  context.options = baseOptions;
 }
 
 function* iterateContentStreamTokens(streamText, context) {
@@ -1009,6 +1043,7 @@ function emitText(decodedGlyphs, context) {
     lastLine.glyphs.push(...metrics.glyphs);
     mergeLineVisibility(lastLine, span);
     mergeLineStructure(lastLine, structure);
+    mergeTextLineStreamIndex(lastLine, context.options.streamIndex ?? null);
     advanceTextPosition(context.state, decodedGlyphs);
     return;
   }
@@ -1052,7 +1087,8 @@ function canAppendTextToLine(line, context, metrics, direction, mergeKey) {
   }
   if (
     line.pageIndex !== (context.options.pageIndex ?? null) ||
-    line.streamIndex !== (context.options.streamIndex ?? null) ||
+    (line.pageIndex == null &&
+      line.streamIndex !== (context.options.streamIndex ?? null)) ||
     line.fontName !== context.state.fontName ||
     line.direction !== direction ||
     direction === "vertical"
@@ -1066,6 +1102,12 @@ function canAppendTextToLine(line, context, metrics, direction, mergeKey) {
     gap >= -fontSize * 0.1 &&
     gap <= fontSize * 0.1
   );
+}
+
+function mergeTextLineStreamIndex(line, streamIndex) {
+  if (line.streamIndex !== streamIndex) {
+    line.streamIndex = null;
+  }
 }
 
 function emitSyntheticSpace(context, width) {
@@ -1245,7 +1287,11 @@ function nextDecodedText(items, startIndex, font) {
 }
 
 function currentMergeKey(context) {
-  return `${context.options.pageIndex ?? ""}:${context.options.streamIndex ?? ""}:${context.textObjectId}:${context.lineSerial}`;
+  const scope =
+    context.options.pageIndex == null
+      ? `stream:${context.options.streamIndex ?? ""}`
+      : `page:${context.options.pageIndex}`;
+  return `${scope}:${context.textObjectId}:${context.lineSerial}`;
 }
 
 function readMarkedContent(operands, operator, options) {
