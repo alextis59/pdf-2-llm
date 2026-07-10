@@ -632,6 +632,113 @@ test("extractContentStreamImageDraws preserves marked-content alt text", () => {
   assert.equal(images[0].altText, "Tagged image figure");
 });
 
+test("content stream extractors execute nested Form XObjects with composed matrices", () => {
+  const inner = {
+    objectNumber: 12,
+    generationNumber: 0,
+    subtype: "Form",
+    matrix: [2, 0, 0, 2, 5, 7],
+    stream: {
+      text: [
+        "BT /F1 10 Tf 0 0 Td (Nested) Tj ET",
+        "0 0 10 5 re S",
+        "q 4 0 0 3 1 2 cm /ImScan Do Q"
+      ].join("\n")
+    },
+    resources: {
+      fonts: resources.fonts,
+      xobjects: { ImScan: resources.xobjects.ImScan }
+    }
+  };
+  const outer = {
+    objectNumber: 11,
+    generationNumber: 0,
+    subtype: "Form",
+    matrix: [1, 0, 0, 1, 100, 200],
+    stream: { text: "/Inner Do" },
+    resources: {
+      fonts: {},
+      xobjects: { Inner: inner }
+    }
+  };
+  const formResources = {
+    fonts: {},
+    xobjects: { Outer: outer }
+  };
+  const stream = "q 3 0 0 3 10 20 cm /Outer Do Q";
+  const [line] = extractContentStreamTextLines(stream, {
+    resources: formResources,
+    pageIndex: 2,
+    streamIndex: 4
+  });
+  const rulings = extractContentStreamRulingLines(stream, {
+    resources: formResources,
+    pageIndex: 2,
+    streamIndex: 4
+  });
+  const [image] = extractContentStreamImageDraws(stream, {
+    resources: formResources,
+    pageIndex: 2,
+    streamIndex: 4
+  });
+
+  assert.deepEqual(
+    [line.text, line.x, line.y, line.width, line.height, line.fontSize],
+    ["Nested", 325, 641, 180, 60, 60]
+  );
+  assert.deepEqual(
+    rulings.map((item) => [item.orientation, item.x1, item.y1, item.x2, item.y2]),
+    [
+      ["horizontal", 325, 641, 385, 641],
+      ["vertical", 385, 641, 385, 671],
+      ["horizontal", 325, 671, 385, 671],
+      ["vertical", 325, 641, 325, 671]
+    ]
+  );
+  assert.deepEqual(
+    [image.name, image.objectNumber, image.x, image.y, image.width, image.height],
+    ["ImScan", 8, 331, 653, 24, 18]
+  );
+  assert.throws(
+    () =>
+      extractContentStreamTextLines(stream, {
+        resources: formResources,
+        contentStreamLimits: { maxDepth: 1 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.depth_limit_exceeded" &&
+      error.details.stackType === "form-xobject" &&
+      error.details.actual === 2
+  );
+});
+
+test("content stream Form XObject cycles fail with a stable error", () => {
+  const cyclic = {
+    objectNumber: 20,
+    generationNumber: 0,
+    subtype: "Form",
+    matrix: [1, 0, 0, 1, 0, 0],
+    stream: { text: "/Self Do" },
+    resources: null
+  };
+  cyclic.resources = { fonts: {}, xobjects: { Self: cyclic } };
+
+  assert.throws(
+    () =>
+      extractContentStreamTextLines("/Cycle Do", {
+        resources: { fonts: {}, xobjects: { Cycle: cyclic } },
+        contentStreamLimits: { maxDepth: 10 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.form_cycle_detected" &&
+      error.details.stackType === "form-xobject" &&
+      error.details.actual === 2 &&
+      error.details.extractor === "text"
+  );
+});
+
 test("extractContentStreamRulingLines merges near-collinear path fragments", () => {
   const lines = extractContentStreamRulingLines(
     [

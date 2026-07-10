@@ -80,6 +80,11 @@ dictionary supplies enough information; other payloads require a delimited
 `EI` operator, and unterminated payloads consume the remainder of the stream
 instead of being reinterpreted as text or graphics operators.
 
+Form XObject streams share the same per-channel work budgets as their invoking
+page stream. Form resource graphs and execution are capped by `maxDepth`, and
+an object/generation stack rejects recursive Form cycles with
+`pdf.content_stream.form_cycle_detected`.
+
 ## Passwords And Encryption
 
 - Passwords may be supplied as strings or callbacks for encrypted PDFs.

@@ -34,26 +34,13 @@ export function extractContentStreamTextLines(streamText, options = {}) {
     lineSerial: 0
   });
 
-  for (const token of iterateContentStreamTokens(streamText, context)) {
-    if (token.type === "inline-image") {
-      consumeContentStreamOperation(context);
-      operands.length = 0;
-      continue;
-    }
-    if (token.type !== "word") {
-      operands.push(token);
-      continue;
-    }
-    consumeContentStreamOperation(context);
-    executeOperator(token.value, context);
-    operands.length = 0;
-  }
+  interpretContentStream(streamText, context, executeOperator);
 
   return lines.map(({ mergeKey, ...line }) => line);
 }
 
 export function extractContentStreamRulingLines(streamText, options = {}) {
-  const state = createInitialPathState();
+  const state = createInitialPathState(options.resources);
   const stack = [];
   const operands = [];
   const lines = [];
@@ -64,20 +51,7 @@ export function extractContentStreamRulingLines(streamText, options = {}) {
     state
   });
 
-  for (const token of iterateContentStreamTokens(streamText, context)) {
-    if (token.type === "inline-image") {
-      consumeContentStreamOperation(context);
-      operands.length = 0;
-      continue;
-    }
-    if (token.type !== "word") {
-      operands.push(token);
-      continue;
-    }
-    consumeContentStreamOperation(context);
-    executePathOperator(token.value, context);
-    operands.length = 0;
-  }
+  interpretContentStream(streamText, context, executePathOperator);
 
   return options.mergeRulingLines === false ? lines : mergeRulingLines(lines, options);
 }
@@ -94,21 +68,7 @@ export function extractContentStreamImageDraws(streamText, options = {}) {
     state
   });
 
-  for (const token of iterateContentStreamTokens(streamText, context)) {
-    if (token.type === "inline-image") {
-      consumeContentStreamOperation(context);
-      emitInlineImageDraw(token, context);
-      operands.length = 0;
-      continue;
-    }
-    if (token.type !== "word") {
-      operands.push(token);
-      continue;
-    }
-    consumeContentStreamOperation(context);
-    executeImageOperator(token.value, context);
-    operands.length = 0;
-  }
+  interpretContentStream(streamText, context, executeImageOperator);
 
   return images;
 }
@@ -158,6 +118,26 @@ export function mergeRulingLines(rulingLines, options = {}) {
 export function tokenizeContentStream(streamText, options = {}) {
   const context = createExecutionContext("tokenizer", options, {});
   return [...iterateContentStreamTokens(streamText, context)];
+}
+
+function interpretContentStream(streamText, context, execute) {
+  for (const token of iterateContentStreamTokens(streamText, context)) {
+    if (token.type === "inline-image") {
+      consumeContentStreamOperation(context);
+      if (context.extractor === "image") {
+        emitInlineImageDraw(token, context);
+      }
+      context.operands.length = 0;
+      continue;
+    }
+    if (token.type !== "word") {
+      context.operands.push(token);
+      continue;
+    }
+    consumeContentStreamOperation(context);
+    execute(token.value, context);
+    context.operands.length = 0;
+  }
 }
 
 function* iterateContentStreamTokens(streamText, context) {
@@ -342,6 +322,10 @@ function executePathOperator(operator, context) {
     if ([a, b, c, d, e, f].every(Number.isFinite)) {
       state.ctm = multiplyMatrices(state.ctm, [a, b, c, d, e, f]);
     }
+    return;
+  }
+  if (operator === "Do") {
+    executeFormXObject(context);
     return;
   }
   if (operator === "w") {
@@ -589,13 +573,14 @@ function clearCurrentPath(state) {
   state.subpathStart = null;
 }
 
-function createInitialPathState() {
+function createInitialPathState(resources = null) {
   return {
     ctm: [...identityMatrix],
     lineWidth: 1,
     segments: [],
     currentPoint: null,
     subpathStart: null,
+    resources,
     markedContent: []
   };
 }
@@ -639,7 +624,9 @@ function executeImageOperator(operator, context) {
     return;
   }
   if (operator === "Do") {
-    emitImageDraw(context);
+    if (!executeFormXObject(context)) {
+      emitImageDraw(context);
+    }
   }
 }
 
@@ -671,6 +658,92 @@ function emitImageDraw(context) {
     source: "xobject-do",
     ...markedContentProperties(structure)
   });
+}
+
+function executeFormXObject(context) {
+  const name = tokenName(context.operands.at(-1));
+  const form = name ? context.state.resources?.xobjects?.[name] : null;
+  if (!name || form?.subtype !== "Form" || !form.stream) {
+    return false;
+  }
+
+  const formStack = context.formStack ?? (context.formStack = []);
+  const actualDepth = formStack.length + 1;
+  enforceContentStreamDepth(context, actualDepth, "form-xobject");
+  const identity = Number.isInteger(form.objectNumber)
+    ? `${form.objectNumber}:${form.generationNumber ?? 0}`
+    : form;
+  if (formStack.includes(identity)) {
+    throw new PdfContentStreamLimitError("Content stream Form XObject cycle detected.", {
+      code: "pdf.content_stream.form_cycle_detected",
+      limit: context.limits.maxDepth ?? 100,
+      actual: actualDepth,
+      extractor: context.extractor,
+      stackType: "form-xobject"
+    });
+  }
+
+  const parentState = context.state;
+  const parentOperands = context.operands;
+  const parentGraphicsStack = context.stack;
+  formStack.push(identity);
+  context.state = createFormExecutionState(context.extractor, parentState, form);
+  context.operands = [];
+  context.stack = [];
+  try {
+    interpretContentStream(form.stream.text, context, formOperatorExecutor(context.extractor));
+  } finally {
+    context.state = parentState;
+    context.operands = parentOperands;
+    context.stack = parentGraphicsStack;
+    formStack.pop();
+  }
+  return true;
+}
+
+function createFormExecutionState(extractor, parentState, form) {
+  const matrix = validMatrix(form.matrix) ? form.matrix : identityMatrix;
+  const ctm = multiplyMatrices(parentState.ctm, matrix);
+  const resources = form.resources ?? parentState.resources;
+  const markedContent = [...parentState.markedContent];
+  if (extractor === "text") {
+    return {
+      ...cloneState(parentState),
+      ctm,
+      resources,
+      markedContent
+    };
+  }
+  if (extractor === "ruling") {
+    return {
+      ctm,
+      lineWidth: parentState.lineWidth,
+      segments: [],
+      currentPoint: null,
+      subpathStart: null,
+      resources,
+      markedContent
+    };
+  }
+  return {
+    ctm,
+    resources,
+    markedContent
+  };
+}
+
+function formOperatorExecutor(extractor) {
+  if (extractor === "text") {
+    return executeOperator;
+  }
+  if (extractor === "ruling") {
+    return executePathOperator;
+  }
+  return executeImageOperator;
+}
+
+function validMatrix(value) {
+  return Array.isArray(value) && value.length === 6 && value.every(Number.isFinite);
 }
 
 function emitInlineImageDraw(token, context) {
@@ -766,6 +839,10 @@ function executeOperator(operator, context) {
     if ([a, b, c, d, e, f].every(Number.isFinite)) {
       state.ctm = multiplyMatrices(state.ctm, [a, b, c, d, e, f]);
     }
+    return;
+  }
+  if (operator === "Do") {
+    executeFormXObject(context);
     return;
   }
   if (operator === "BT") {

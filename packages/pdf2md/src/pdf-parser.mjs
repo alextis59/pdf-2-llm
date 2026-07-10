@@ -1759,7 +1759,16 @@ function walkPageNode(object, inherited, getObject, pages, context) {
   const rotation = typeof nextInherited.rotate === "number" ? nextInherited.rotate : 0;
   const userUnit = typeof nextInherited.userUnit === "number" ? nextInherited.userUnit : 1;
   const contentStreams = resolveContentStreams(dict.entries.Contents, getObject);
-  const resources = resolveResources(nextInherited.resources, getObject, context.maxCMapMappings);
+  const resources = resolveResources(
+    nextInherited.resources,
+    getObject,
+    context.maxCMapMappings,
+    {
+      depth: 0,
+      maxDepth: context.maxDepth,
+      formCache: new Map()
+    }
+  );
 
   pages.push({
     objectNumber: object.objectNumber,
@@ -1805,7 +1814,11 @@ function resolveContentStreams(contents, getObject) {
   return streams;
 }
 
-function resolveResources(resourcesValue, getObject, maxCMapMappings) {
+function resolveResources(resourcesValue, getObject, maxCMapMappings, options = {}) {
+  const depth = options.depth ?? 0;
+  const maxDepth = options.maxDepth ?? 100;
+  const formCache = options.formCache ?? new Map();
+  enforceDepthLimit(depth, maxDepth, null);
   const resources = resolveValue(resourcesValue, getObject);
   const fonts = {};
   const xobjects = {};
@@ -1867,7 +1880,7 @@ function resolveResources(resourcesValue, getObject, maxCMapMappings) {
       }
 
       const filters = xObject?.stream?.filters ?? filterNames(xObjectDict);
-      xobjects[name] = {
+      const summary = {
         objectNumber: xObject?.objectNumber ?? null,
         generationNumber: xObject?.generationNumber ?? null,
         subtype: nameValue(xObjectDict.entries.Subtype),
@@ -1881,6 +1894,44 @@ function resolveResources(resourcesValue, getObject, maxCMapMappings) {
         rawLength: xObject?.stream?.rawLength ?? null,
         decodedLength: xObject?.stream?.decodedLength ?? null
       };
+      if (summary.subtype !== "Form" || !xObject?.stream) {
+        xobjects[name] = summary;
+        continue;
+      }
+
+      const key = Number.isInteger(xObject.objectNumber)
+        ? objectKey(xObject.objectNumber, xObject.generationNumber ?? 0)
+        : null;
+      const cached = key ? formCache.get(key) : null;
+      if (cached) {
+        xobjects[name] = cached;
+        continue;
+      }
+
+      summary.matrix = formMatrix(xObjectDict.entries.Matrix, getObject);
+      summary.bbox = formBoundingBox(xObjectDict.entries.BBox, getObject);
+      Object.defineProperties(summary, {
+        stream: {
+          value: xObject.stream,
+          enumerable: false
+        },
+        resources: {
+          value: null,
+          writable: true,
+          enumerable: false
+        }
+      });
+      if (key) {
+        formCache.set(key, summary);
+      }
+      summary.resources = xObjectDict.entries.Resources
+        ? resolveResources(xObjectDict.entries.Resources, getObject, maxCMapMappings, {
+            depth: depth + 1,
+            maxDepth,
+            formCache
+          })
+        : null;
+      xobjects[name] = summary;
     }
   }
 
@@ -1989,6 +2040,16 @@ function fontEncoding(fontDict, getObject) {
     name: nameValue(baseEncoding),
     differences: Object.keys(differences).length > 0 ? differences : null
   };
+}
+
+function formMatrix(value, getObject) {
+  const matrix = numberArray(resolveValue(value, getObject));
+  return matrix?.length === 6 ? [...matrix] : [1, 0, 0, 1, 0, 0];
+}
+
+function formBoundingBox(value, getObject) {
+  const bbox = numberArray(resolveValue(value, getObject));
+  return bbox?.length === 4 ? [...bbox] : null;
 }
 
 function numberArray(value) {

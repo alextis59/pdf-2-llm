@@ -178,6 +178,7 @@ parser warning detail codes:
 pdf.content_stream.operation_limit_exceeded
 pdf.content_stream.output_limit_exceeded
 pdf.content_stream.depth_limit_exceeded
+pdf.content_stream.form_cycle_detected
 ```
 
 ### `maxObjects`

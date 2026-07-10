@@ -335,6 +335,76 @@ test("parsePdfDocument records metadata for raster image XObject filters", async
   );
 });
 
+test("parsePdfDocument executes nested Form XObjects with local resources", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 /Resources << /XObject << /Outer 6 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 5 0 R >>",
+    streamObject("q 2 0 0 2 10 20 cm /Outer Do Q\n"),
+    streamObject(
+      "/Inner Do\n",
+      "/Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 100 100] /Matrix [1 0 0 1 100 200] /Resources << /XObject << /Inner 7 0 R >> >>"
+    ),
+    streamObject(
+      [
+        "BT /F1 10 Tf 0 0 Td (Nested) Tj ET",
+        "0 0 10 5 re S",
+        "q 4 0 0 3 1 2 cm /Im1 Do Q"
+      ].join("\n"),
+      "/Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 20 10] /Matrix [2 0 0 2 5 7] /Resources << /Font << /F1 3 0 R >> /XObject << /Im1 8 0 R >> >>"
+    ),
+    streamObject(
+      "abc",
+      "/Type /XObject /Subtype /Image /Width 20 /Height 10 /ColorSpace /DeviceRGB /BitsPerComponent 8"
+    )
+  ]);
+  const document = parsePdfDocument(bytes);
+  const result = await convertPdfToMarkdown(bytes);
+  const outer = document.pages[0].resources.xobjects.Outer;
+  const inner = outer.resources.xobjects.Inner;
+  const span = result.ir.pages[0].elements
+    .flatMap((element) => (element.type === "text" ? element.spans : []))[0];
+  const image = result.diagnostics.extraction.scanDetection.pages[0].imageDraws[0];
+
+  assert.equal(outer.subtype, "Form");
+  assert.deepEqual(outer.matrix, [1, 0, 0, 1, 100, 200]);
+  assert.deepEqual(outer.bbox, [0, 0, 100, 100]);
+  assert.match(outer.stream.text, /Inner Do/);
+  assert.equal(inner.resources.fonts.F1.baseFont, "Helvetica");
+  assert.equal(inner.resources.xobjects.Im1.subtype, "Image");
+  assert.doesNotThrow(() => JSON.stringify(document.pages[0].resources));
+  assert.match(result.markdown, /Nested/);
+  assert.deepEqual([span.x, span.y, span.width, span.height], [220, 434, 120, 40]);
+  assert.deepEqual(
+    [image.name, image.objectNumber, image.x, image.y, image.width, image.height],
+    ["Im1", 8, 224, 442, 16, 12]
+  );
+});
+
+test("parsePdfDocument bounds cyclic Form XObject resources", async () => {
+  const bytes = createTestPdf([
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 /Resources << /XObject << /Self 5 0 R >> >> /MediaBox [0 0 300 400] >>",
+    "<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>",
+    streamObject("/Self Do\n"),
+    streamObject(
+      "/Self Do\n",
+      "/Type /XObject /Subtype /Form /BBox [0 0 10 10] /Resources << /XObject << /Self 5 0 R >> >>"
+    )
+  ]);
+  const document = parsePdfDocument(bytes);
+  const form = document.pages[0].resources.xobjects.Self;
+  const result = await convertPdfToMarkdown(bytes);
+  const warning = result.warnings.find((item) => item.code === warningCodes.PdfParseFailed);
+
+  assert.equal(form.resources.xobjects.Self, form);
+  assert.doesNotThrow(() => JSON.stringify(document.pages[0].resources));
+  assert.equal(warning.details.code, "pdf.content_stream.form_cycle_detected");
+  assert.equal(warning.details.stackType, "form-xobject");
+  assert.equal(result.markdown, "");
+});
+
 test("parsePdfDocument resolves xref stream entries", async () => {
   const bytes = createXrefStreamTestPdf([
     "<< /Type /Catalog /Pages 2 0 R >>",

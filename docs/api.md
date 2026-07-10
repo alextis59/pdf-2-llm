@@ -425,7 +425,9 @@ axis-aligned page-space bounds after applying the content stream's text matrix
 and current transformation matrix, including rotation and skew. Font advances
 come from each original PDF character code before its ToUnicode text is placed
 in that region, including mappings that expand one glyph into multiple Unicode
-characters.
+characters. Text, paths, and images invoked through nested Form XObjects use
+their composed Form matrices and local resources in the same page coordinate
+space.
 
 ### `assets`
 
