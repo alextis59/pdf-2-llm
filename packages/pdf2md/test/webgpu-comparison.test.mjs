@@ -25,7 +25,8 @@ test("evaluateWebGpuComparisonReport passes parity and skips speedup when WebGPU
       speedupComparisonCount: 0,
       speedupFailures: [],
       fallbackReasons: ["node-stable-gpu-path-unavailable"],
-      speedupStatus: "not-applicable"
+      speedupStatus: "not-applicable",
+      validationErrors: []
     }
   );
 });
@@ -114,4 +115,60 @@ test("evaluateWebGpuComparisonReport fails parity mismatches and required missin
   );
   assert.equal(missing.passed, false);
   assert.equal(missing.speedupStatus, "missing");
+});
+
+test("evaluateWebGpuComparisonReport rejects empty and missing comparison evidence", () => {
+  const empty = evaluateWebGpuComparisonReport({ comparisons: [] });
+  assert.equal(empty.passed, false);
+  assert.equal(empty.speedupStatus, "invalid");
+  assert.deepEqual(empty.validationErrors, [
+    "report.comparisons must contain at least one comparison"
+  ]);
+
+  const missing = evaluateWebGpuComparisonReport({});
+  assert.equal(missing.passed, false);
+  assert.deepEqual(missing.validationErrors, ["report.comparisons must be an array"]);
+});
+
+test("evaluateWebGpuComparisonReport rejects malformed comparisons before evaluating them", () => {
+  const summary = evaluateWebGpuComparisonReport({
+    comparisons: [
+      {
+        id: "scan",
+        equivalentAcceptedOutput: "true",
+        webgpuSelectedProvider: "gpu",
+        pagesPerSecondRatio: "1.2"
+      }
+    ]
+  });
+
+  assert.equal(summary.passed, false);
+  assert.equal(summary.speedupStatus, "invalid");
+  assert.deepEqual(summary.parityFailures, []);
+  assert.deepEqual(summary.speedupFailures, []);
+  assert.deepEqual(summary.validationErrors, [
+    "report.comparisons[0].equivalentAcceptedOutput must be a boolean",
+    'report.comparisons[0].webgpuSelectedProvider must be "cpu" or "webgpu"',
+    "report.comparisons[0].pagesPerSecondRatio must be null or a finite non-negative number"
+  ]);
+});
+
+test("evaluateWebGpuComparisonReport rejects invalid speedup thresholds", () => {
+  const report = {
+    comparisons: [
+      {
+        id: "scan",
+        equivalentAcceptedOutput: true,
+        webgpuSelectedProvider: "webgpu",
+        pagesPerSecondRatio: 1.2
+      }
+    ]
+  };
+
+  assert.deepEqual(evaluateWebGpuComparisonReport(report, { minSpeedup: Number.NaN }).validationErrors, [
+    "minSpeedup must be a finite number greater than zero"
+  ]);
+  assert.deepEqual(evaluateWebGpuComparisonReport(report, { minSpeedup: 0 }).validationErrors, [
+    "minSpeedup must be a finite number greater than zero"
+  ]);
 });

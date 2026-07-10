@@ -319,7 +319,9 @@ and WebGPU-preferred modes. It compares canonical SHA-256 hashes of the complete
 public conversion result, excluding only elapsed timing and the WebGPU request
 flags/provider diagnostics that necessarily describe the selected execution
 path. In Node, the WebGPU-preferred mode is expected to select CPU with
-`node-stable-gpu-path-unavailable`.
+`node-stable-gpu-path-unavailable`. The comparison gate rejects empty reports,
+malformed comparison records, and non-finite or non-positive speedup thresholds
+before evaluating parity or speedup.
 
 ```sh
 npm run qa:webgpu-preprocess

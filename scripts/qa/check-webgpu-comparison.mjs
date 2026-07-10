@@ -5,8 +5,87 @@ import { pathToFileURL } from "node:url";
 
 const args = process.argv.slice(2);
 
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validateWebGpuComparisonReport(report, { minSpeedup, requireSpeedup }) {
+  const errors = [];
+  if (!Number.isFinite(minSpeedup) || minSpeedup <= 0) {
+    errors.push("minSpeedup must be a finite number greater than zero");
+  }
+  if (typeof requireSpeedup !== "boolean") {
+    errors.push("requireSpeedup must be a boolean");
+  }
+  if (!isRecord(report)) {
+    errors.push("report must be an object");
+    return errors;
+  }
+  if (!Array.isArray(report.comparisons)) {
+    errors.push("report.comparisons must be an array");
+    return errors;
+  }
+  if (report.comparisons.length === 0) {
+    errors.push("report.comparisons must contain at least one comparison");
+    return errors;
+  }
+
+  const ids = new Set();
+  for (const [index, comparison] of report.comparisons.entries()) {
+    const location = `report.comparisons[${index}]`;
+    if (!isRecord(comparison)) {
+      errors.push(`${location} must be an object`);
+      continue;
+    }
+    if (typeof comparison.id !== "string" || comparison.id.trim() === "") {
+      errors.push(`${location}.id must be a non-empty string`);
+    } else if (ids.has(comparison.id)) {
+      errors.push(`${location}.id must be unique`);
+    } else {
+      ids.add(comparison.id);
+    }
+    if (typeof comparison.equivalentAcceptedOutput !== "boolean") {
+      errors.push(`${location}.equivalentAcceptedOutput must be a boolean`);
+    }
+    if (!new Set(["cpu", "webgpu"]).has(comparison.webgpuSelectedProvider)) {
+      errors.push(`${location}.webgpuSelectedProvider must be \"cpu\" or \"webgpu\"`);
+    }
+    for (const metric of ["speedupRatio", "pagesPerSecondRatio"]) {
+      const value = comparison[metric];
+      if (value !== undefined && value !== null && (!Number.isFinite(value) || value < 0)) {
+        errors.push(`${location}.${metric} must be null or a finite non-negative number`);
+      }
+    }
+    const selectedRatio = comparison.speedupRatio ?? comparison.pagesPerSecondRatio;
+    if (
+      comparison.webgpuSelectedProvider === "webgpu" &&
+      (!Number.isFinite(selectedRatio) || selectedRatio < 0)
+    ) {
+      errors.push(`${location} must include a finite non-negative speedup ratio`);
+    }
+  }
+  return errors;
+}
+
 export function evaluateWebGpuComparisonReport(report, { minSpeedup = 1.05, requireSpeedup = false } = {}) {
-  const comparisons = report.comparisons ?? [];
+  const validationErrors = validateWebGpuComparisonReport(report, { minSpeedup, requireSpeedup });
+  if (validationErrors.length > 0) {
+    return {
+      passed: false,
+      comparisonCount: Array.isArray(report?.comparisons) ? report.comparisons.length : 0,
+      equivalentAcceptedOutputs: 0,
+      parityFailures: [],
+      minSpeedup,
+      speedupAvailable: false,
+      speedupComparisonCount: 0,
+      speedupFailures: [],
+      fallbackReasons: [],
+      speedupStatus: "invalid",
+      validationErrors
+    };
+  }
+
+  const comparisons = report.comparisons;
   const parityFailures = comparisons.filter((comparison) => !comparison.equivalentAcceptedOutput);
   const webgpuComparisons = comparisons.filter(
     (comparison) => comparison.webgpuSelectedProvider === "webgpu"
@@ -44,7 +123,8 @@ export function evaluateWebGpuComparisonReport(report, { minSpeedup = 1.05, requ
           : "failed"
         : requireSpeedup
           ? "missing"
-          : "not-applicable"
+          : "not-applicable",
+    validationErrors
   };
 }
 
@@ -80,6 +160,9 @@ async function main() {
   }
 
   const prefix = summary.passed ? "PASS" : "FAIL";
+  for (const error of summary.validationErrors) {
+    console.error(`FAIL webgpu comparison report: ${error}`);
+  }
   console.log(
     `${prefix} webgpu parity comparisons=${summary.comparisonCount} equivalent=${summary.equivalentAcceptedOutputs}/${summary.comparisonCount}`
   );

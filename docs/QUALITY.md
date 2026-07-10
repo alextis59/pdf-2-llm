@@ -32,7 +32,7 @@ fuzz smoke, build, and API tests.
 | Accepted Markdown behavior | Relevant `npm run corpus:run:*` command with `--assert-markdown` behavior where the script supports it. |
 | Tables | `npm run corpus:run:tables`, `npm run qa:table-detection`, and related table adjacency/span/CSV checks when touched. |
 | OCR planning or injected OCR text | OCR-focused API tests and `npm run qa:benchmark:ocr-throughput` when performance is relevant. |
-| WebGPU | `npm run qa:webgpu-comparison` and `npm run qa:webgpu-preprocess`; parity hashes the complete public result contract except elapsed timing and WebGPU request/provider diagnostics, and speedup is meaningful only when a real browser provider is selected. |
+| WebGPU | `npm run qa:webgpu-comparison` and `npm run qa:webgpu-preprocess`; the comparison gate requires non-empty, schema-valid evidence and a finite positive threshold, parity hashes the complete public result contract except elapsed timing and WebGPU request/provider diagnostics, and speedup is meaningful only when a real browser provider is selected. |
 | Rust/WASM bridge | `npm run rust:test`, `npm run wasm:build`, and WASM loader tests when the JS bridge changes. |
 | Package or release surface | `npm run build`, package export smoke checks, CLI smoke, `npm pack --dry-run`, and a clean temp-consumer install for publishability claims. |
 
