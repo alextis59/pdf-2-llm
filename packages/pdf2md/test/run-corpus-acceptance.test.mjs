@@ -7,7 +7,8 @@ import {
   checkAcceptanceOutput,
   parseAcceptanceText
 } from "../../../scripts/qa/run-corpus.mjs";
-import { warningCodes } from "../src/index.mjs";
+import { compareReadingOrder } from "../../../scripts/qa/compare-oracles.mjs";
+import { convertPdfToMarkdown, warningCodes } from "../src/index.mjs";
 import {
   evaluateAcceptanceCriteria,
   evaluateStructureExpectations
@@ -16,6 +17,18 @@ import {
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const runCorpusPath = fileURLToPath(
   new URL("../../../scripts/qa/run-corpus.mjs", import.meta.url)
+);
+const damagedXrefAcceptance = new URL(
+  "../../../corpus/accepted/synthetic-damaged-xref.yaml",
+  import.meta.url
+);
+const damagedXrefExpected = new URL(
+  "../../../corpus/expected/synthetic-damaged-xref.md",
+  import.meta.url
+);
+const damagedXrefFixture = new URL(
+  "../../../corpus/generated/synthetic-damaged-xref.pdf",
+  import.meta.url
 );
 
 function runCommand(file, args, options) {
@@ -224,6 +237,42 @@ test("recognized behavior criteria execute predicates instead of passing by name
 
   assert.match(output.errors.join("\n"), /must criterion "emit_gfm_table" failed/);
   assert.match(output.errors.join("\n"), /mustNot criterion "emit_empty_markdown" failed/);
+});
+
+test("damaged-xref acceptance executes paragraph-order evidence after tolerant repair", async () => {
+  const acceptance = parseAcceptanceText(await readFile(damagedXrefAcceptance, "utf8"));
+  const expected = await readFile(damagedXrefExpected, "utf8");
+  const result = await convertPdfToMarkdown(fileURLToPath(damagedXrefFixture), {
+    parser: { mode: "tolerant" }
+  });
+  const readingOrder = compareReadingOrder(expected, result.markdown);
+  const context = {
+    acceptance,
+    entry: { features: ["damaged-xref", "repair-mode"] },
+    evidence: {
+      expectedMarkdownMatch: result.markdown === expected,
+      readingOrderPassed:
+        readingOrder.readingOrderDistance <= acceptance.maxReadingOrderDistance
+    },
+    result
+  };
+
+  assert.ok(acceptance.must.includes("preserve_paragraph_order"));
+  assert.ok(!acceptance.must.includes("preserve_decrypted_text_order"));
+  assert.equal(readingOrder.readingOrderDistance, 0);
+  assert.deepEqual(evaluateAcceptanceCriteria(acceptance, context), {
+    errors: [],
+    checked: 6
+  });
+
+  const failed = evaluateAcceptanceCriteria(acceptance, {
+    ...context,
+    evidence: { ...context.evidence, readingOrderPassed: false }
+  });
+  assert.match(
+    failed.errors.join("\n"),
+    /must criterion "preserve_paragraph_order" failed/
+  );
 });
 
 test("every committed criterion and structure expectation has an executable checker", async () => {
