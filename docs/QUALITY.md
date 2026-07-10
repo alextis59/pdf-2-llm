@@ -94,7 +94,12 @@ Performance-sensitive changes need one of:
 startup, and long-memory measurements under `.temp/qa/`, compares them with the
 checked-in baselines under `corpus/reports/`, and only then writes the committed
 regression summary. The checker rejects any current/baseline path pair that
-resolves to the same file.
+resolves to the same file. Text and OCR throughput measurements use 10 measured
+iterations after 2 warmups for both ephemeral runs and checked-in baselines.
+Each workload must retain at least 80 percent of its baseline throughput. The
+20 percent allowance covers variance from the small synthetic cases on shared
+CI hosts; widening it requires repeated, method-matched measurements that show
+the existing floor is unstable.
 
 ## Release Readiness
 

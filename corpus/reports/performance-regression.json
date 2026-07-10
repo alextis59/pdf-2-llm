@@ -1,7 +1,8 @@
 {
-  "generatedAt": "2026-07-09T23:21:38.052Z",
+  "generatedAt": "2026-07-10T02:11:37.658Z",
   "budget": {
-    "minPagesPerSecondRatio": 0.02,
+    "minTextPagesPerSecondRatio": 0.8,
+    "minOcrPagesPerSecondRatio": 0.8,
     "minPagesPerSecond": 10,
     "maxStartupMeanRatio": 8,
     "maxStartupMeanMs": 250,
@@ -34,9 +35,9 @@
       "id": "synthetic-headings-lists",
       "metric": "pagesPerSecond",
       "direction": "at-least",
-      "actual": 73.15676411830442,
-      "baseline": 619.8769110417744,
-      "threshold": 12.397538220835488,
+      "actual": 555.2195791645341,
+      "baseline": 493.87929897235813,
+      "threshold": 395.1034391778865,
       "passed": true
     },
     {
@@ -44,9 +45,19 @@
       "id": "synthetic-simple-text",
       "metric": "pagesPerSecond",
       "direction": "at-least",
-      "actual": 327.2119610369086,
-      "baseline": 833.2066164937438,
-      "threshold": 16.664132329874878,
+      "actual": 845.5308994569804,
+      "baseline": 759.8077247456376,
+      "threshold": 607.8461797965101,
+      "passed": true
+    },
+    {
+      "profile": "text-throughput",
+      "id": "synthetic-hyphenated-line",
+      "metric": "pagesPerSecond",
+      "direction": "at-least",
+      "actual": 846.0221776253653,
+      "baseline": 895.2439271128223,
+      "threshold": 716.195141690258,
       "passed": true
     },
     {
@@ -64,9 +75,9 @@
       "id": "synthetic-scanned-text",
       "metric": "pagesPerSecond",
       "direction": "at-least",
-      "actual": 65.1947219656991,
-      "baseline": 596.4048121518667,
-      "threshold": 11.928096243037334,
+      "actual": 727.4277355101856,
+      "baseline": 709.6845365495816,
+      "threshold": 567.7476292396653,
       "passed": true
     },
     {
@@ -74,9 +85,9 @@
       "id": "synthetic-searchable-scan-regions",
       "metric": "pagesPerSecond",
       "direction": "at-least",
-      "actual": 293.6098746873058,
-      "baseline": 589.8822801427609,
-      "threshold": 11.79764560285522,
+      "actual": 978.7711071989293,
+      "baseline": 842.4613237707114,
+      "threshold": 673.9690590165692,
       "passed": true
     },
     {
@@ -94,7 +105,7 @@
       "id": "node-entrypoint",
       "metric": "totalStartupMeanMs",
       "direction": "at-most",
-      "actual": 32.771201000000005,
+      "actual": 36.015225,
       "baseline": 25.312643333333337,
       "threshold": 202.5011466666667,
       "passed": true
@@ -104,7 +115,7 @@
       "id": "browser-entrypoint",
       "metric": "totalStartupMeanMs",
       "direction": "at-most",
-      "actual": 34.423726,
+      "actual": 36.069505,
       "baseline": 25.417073333333335,
       "threshold": 203.33658666666668,
       "passed": true
@@ -124,7 +135,7 @@
       "id": "nist-sp800-63b-4",
       "metric": "rssPeakDeltaBytes",
       "direction": "at-most",
-      "actual": 155848704,
+      "actual": 159223808,
       "baseline": 151023616,
       "threshold": 268435456,
       "passed": true

@@ -480,7 +480,8 @@ test("performance regression report evaluates throughput startup and memory budg
     memory: memoryReport("manual-a", 100)
   };
   const budget = {
-    minPagesPerSecondRatio: 0.2,
+    minTextPagesPerSecondRatio: 0.2,
+    minOcrPagesPerSecondRatio: 0.3,
     minPagesPerSecond: 5,
     maxStartupMeanRatio: 5,
     maxStartupMeanMs: 100,
@@ -522,6 +523,32 @@ test("performance regression report evaluates throughput startup and memory budg
   assert.equal(report.passed, false);
   assert.equal(report.violations.length, 2);
   assert.equal(report.inputs.currentText, "current.json");
+});
+
+test("performance regression defaults reject throughput below 80 percent of baseline", () => {
+  const currentReports = {
+    text: throughputReport("text-throughput", "text-a", 79),
+    ocr: throughputReport("ocr-throughput", "ocr-a", 79),
+    startup: startupReport("node-entrypoint", 10),
+    memory: memoryReport("manual-a", 100)
+  };
+  const baselineReports = {
+    text: throughputReport("text-throughput", "text-a", 100),
+    ocr: throughputReport("ocr-throughput", "ocr-a", 100),
+    startup: startupReport("node-entrypoint", 10),
+    memory: memoryReport("manual-a", 100)
+  };
+
+  const violations = evaluatePerformanceRegression({ currentReports, baselineReports }).filter(
+    (check) => !check.passed
+  );
+  assert.deepEqual(
+    violations.map(({ profile, metric, threshold }) => ({ profile, metric, threshold })),
+    [
+      { profile: "text-throughput", metric: "pagesPerSecond", threshold: 80 },
+      { profile: "ocr-throughput", metric: "pagesPerSecond", threshold: 80 }
+    ]
+  );
 });
 
 test("performance regression inputs reject current report self-comparisons", () => {

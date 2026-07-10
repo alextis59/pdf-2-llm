@@ -17,7 +17,8 @@ const defaultInputs = Object.freeze({
 });
 
 const defaultBudget = Object.freeze({
-  minPagesPerSecondRatio: 0.02,
+  minTextPagesPerSecondRatio: 0.8,
+  minOcrPagesPerSecondRatio: 0.8,
   minPagesPerSecond: 10,
   maxStartupMeanRatio: 8,
   maxStartupMeanMs: 250,
@@ -31,12 +32,16 @@ export function evaluatePerformanceRegression({ currentReports, baselineReports 
       currentReport: currentReports.text,
       baselineReport: baselineReports.text,
       profileName: "text-throughput",
+      minPagesPerSecondRatio:
+        budget.minTextPagesPerSecondRatio ?? budget.minPagesPerSecondRatio,
       budget
     }),
     ...throughputChecks({
       currentReport: currentReports.ocr,
       baselineReport: baselineReports.ocr,
       profileName: "ocr-throughput",
+      minPagesPerSecondRatio:
+        budget.minOcrPagesPerSecondRatio ?? budget.minPagesPerSecondRatio,
       budget
     }),
     ...startupChecks({
@@ -91,7 +96,13 @@ export function findPerformanceInputSelfComparisons(inputs, repoRoot = process.c
     }));
 }
 
-function throughputChecks({ currentReport, baselineReport, profileName, budget }) {
+function throughputChecks({
+  currentReport,
+  baselineReport,
+  profileName,
+  minPagesPerSecondRatio,
+  budget
+}) {
   const checks = [
     profilePassedCheck({
       profileName,
@@ -109,7 +120,7 @@ function throughputChecks({ currentReport, baselineReport, profileName, budget }
     }
     const baseline = finiteNumber(baselineCase.pagesPerSecond);
     const actual = finiteNumber(currentCase.pagesPerSecond);
-    const threshold = Math.max(baseline * budget.minPagesPerSecondRatio, budget.minPagesPerSecond);
+    const threshold = Math.max(baseline * minPagesPerSecondRatio, budget.minPagesPerSecond);
     checks.push({
       profile: profileName,
       id: baselineCase.id,
@@ -283,7 +294,9 @@ Options:
   --baseline-startup <path>             Baseline startup benchmark report.
   --current-memory <path>               Current long-memory report.
   --baseline-memory <path>              Baseline long-memory report.
-  --min-pages-per-second-ratio <n>      Throughput ratio floor. Defaults to ${defaultBudget.minPagesPerSecondRatio}.
+  --min-text-pages-per-second-ratio <n> Text throughput ratio floor. Defaults to ${defaultBudget.minTextPagesPerSecondRatio}.
+  --min-ocr-pages-per-second-ratio <n>  OCR throughput ratio floor. Defaults to ${defaultBudget.minOcrPagesPerSecondRatio}.
+  --min-pages-per-second-ratio <n>      Override both ratio floors unless a workload-specific value is set.
   --min-pages-per-second <n>            Absolute throughput floor. Defaults to ${defaultBudget.minPagesPerSecond}.
   --max-startup-mean-ratio <n>          Startup ratio ceiling. Defaults to ${defaultBudget.maxStartupMeanRatio}.
   --max-startup-mean-ms <n>             Absolute startup ceiling. Defaults to ${defaultBudget.maxStartupMeanMs}.
@@ -326,10 +339,15 @@ async function main() {
         .join(", ")}`
     );
   }
+  const sharedThroughputRatio = readNumberOption("--min-pages-per-second-ratio", undefined);
   const budget = {
-    minPagesPerSecondRatio: readNumberOption(
-      "--min-pages-per-second-ratio",
-      defaultBudget.minPagesPerSecondRatio
+    minTextPagesPerSecondRatio: readNumberOption(
+      "--min-text-pages-per-second-ratio",
+      sharedThroughputRatio ?? defaultBudget.minTextPagesPerSecondRatio
+    ),
+    minOcrPagesPerSecondRatio: readNumberOption(
+      "--min-ocr-pages-per-second-ratio",
+      sharedThroughputRatio ?? defaultBudget.minOcrPagesPerSecondRatio
     ),
     minPagesPerSecond: readNumberOption(
       "--min-pages-per-second",

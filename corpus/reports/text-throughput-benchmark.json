@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-07-03T03:13:56.550Z",
-  "iterations": 3,
-  "warmup": 1,
+  "generatedAt": "2026-07-10T02:11:34.211Z",
+  "iterations": 10,
+  "warmup": 2,
   "providerModes": [
     "cpu"
   ],
@@ -9,32 +9,32 @@
   "throughputProfile": {
     "profileType": "text-throughput",
     "scope": "gate:text-mvp",
-    "resultCount": 2,
+    "resultCount": 3,
     "passed": true,
     "totals": {
-      "pages": 2,
-      "bytes": 1632,
-      "outputChars": 203,
-      "textLines": 8
+      "pages": 3,
+      "bytes": 2410,
+      "outputChars": 293,
+      "textLines": 11
     },
     "rates": {
       "pagesPerSecond": {
-        "min": 619.8769110417744,
-        "max": 833.2066164937438,
-        "mean": 726.5417637677591,
-        "median": 726.5417637677591
+        "min": 493.87929897235813,
+        "max": 895.2439271128223,
+        "mean": 716.3103169436059,
+        "median": 759.8077247456376
       },
       "outputCharsPerSecond": {
-        "min": 54549.168171676145,
-        "max": 95818.76089678053,
-        "mean": 75183.96453422833,
-        "median": 75183.96453422833
+        "min": 43461.37830956752,
+        "max": 87377.88834574833,
+        "mean": 70470.40669848995,
+        "median": 80571.95344015401
       },
       "inputBytesPerSecond": {
-        "min": 515737.58998675627,
-        "max": 666565.293194995,
-        "mean": 591151.4415908756,
-        "median": 591151.4415908756
+        "min": 410907.57674500195,
+        "max": 696499.7752937758,
+        "mean": 571751.1772784293,
+        "median": 607846.1797965101
       }
     },
     "cases": [
@@ -53,15 +53,15 @@
         "bytes": 832,
         "outputChars": 88,
         "textLines": 5,
-        "iterations": 3,
-        "warmup": 1,
-        "startupMs": 2.9322909999999993,
-        "throughputIterations": 2,
-        "throughputMeanMs": 1.6132235000000001,
-        "throughputMedianMs": 1.6132235000000001,
-        "pagesPerSecond": 619.8769110417744,
-        "outputCharsPerSecond": 54549.168171676145,
-        "inputBytesPerSecond": 515737.58998675627,
+        "iterations": 10,
+        "warmup": 2,
+        "startupMs": 2.0464409999999873,
+        "throughputIterations": 9,
+        "throughputMeanMs": 2.0247862222222213,
+        "throughputMedianMs": 2.098315999999997,
+        "pagesPerSecond": 493.87929897235813,
+        "outputCharsPerSecond": 43461.37830956752,
+        "inputBytesPerSecond": 410907.57674500195,
         "passed": true
       },
       {
@@ -79,15 +79,41 @@
         "bytes": 800,
         "outputChars": 115,
         "textLines": 3,
-        "iterations": 3,
-        "warmup": 1,
-        "startupMs": 1.895933999999997,
-        "throughputIterations": 2,
-        "throughputMeanMs": 1.2001824999999968,
-        "throughputMedianMs": 1.2001824999999968,
-        "pagesPerSecond": 833.2066164937438,
-        "outputCharsPerSecond": 95818.76089678053,
-        "inputBytesPerSecond": 666565.293194995,
+        "iterations": 10,
+        "warmup": 2,
+        "startupMs": 1.7495270000000005,
+        "throughputIterations": 9,
+        "throughputMeanMs": 1.3161224444444442,
+        "throughputMedianMs": 1.25107899999999,
+        "pagesPerSecond": 759.8077247456376,
+        "outputCharsPerSecond": 87377.88834574833,
+        "inputBytesPerSecond": 607846.1797965101,
+        "passed": true
+      },
+      {
+        "id": "synthetic-hyphenated-line",
+        "gate": "text-mvp",
+        "kind": "synthetic",
+        "features": [
+          "born-digital",
+          "paragraphs",
+          "hyphenation"
+        ],
+        "workload": "conversion",
+        "providerMode": "cpu",
+        "pages": 1,
+        "bytes": 778,
+        "outputChars": 90,
+        "textLines": 3,
+        "iterations": 10,
+        "warmup": 2,
+        "startupMs": 0.9103149999999971,
+        "throughputIterations": 9,
+        "throughputMeanMs": 1.1170139999999975,
+        "throughputMedianMs": 1.0598509999999948,
+        "pagesPerSecond": 895.2439271128223,
+        "outputCharsPerSecond": 80571.95344015401,
+        "inputBytesPerSecond": 696499.7752937758,
         "passed": true
       }
     ]
@@ -106,8 +132,8 @@
       "providerMode": "cpu",
       "bytes": 832,
       "pdfVersion": "1.4",
-      "iterations": 3,
-      "warmup": 1,
+      "iterations": 10,
+      "warmup": 2,
       "pages": 1,
       "outputChars": 88,
       "textLines": 5,
@@ -115,12 +141,13 @@
         "ocr.disabled",
         "text.heuristic_content_stream"
       ],
-      "minMs": 1.5387229999999974,
-      "maxMs": 2.9322909999999993,
-      "meanMs": 2.0529126666666664,
-      "medianMs": 1.6877240000000029,
+      "acceptedOutputHash": "sha256:d05da03fe05137cc3e1dfaee60c236e0b015cf3b663388ac01361babfeb14e2b",
+      "minMs": 1.207329999999999,
+      "maxMs": 3.336376999999999,
+      "meanMs": 2.026951699999998,
+      "medianMs": 2.072378499999992,
       "startup": {
-        "durationMs": 2.9322909999999993
+        "durationMs": 2.0464409999999873
       },
       "modelLoad": {
         "durationMs": 0,
@@ -136,35 +163,58 @@
         ]
       },
       "throughput": {
-        "iterations": 2,
-        "minMs": 1.5387229999999974,
-        "maxMs": 1.6877240000000029,
-        "meanMs": 1.6132235000000001,
-        "medianMs": 1.6132235000000001,
-        "pagesPerSecond": 619.8769110417744
+        "iterations": 9,
+        "minMs": 1.207329999999999,
+        "maxMs": 3.336376999999999,
+        "meanMs": 2.0247862222222213,
+        "medianMs": 2.098315999999997,
+        "pagesPerSecond": 493.87929897235813
       },
-      "pagesPerSecond": 619.8769110417744,
+      "pagesPerSecond": 493.87929897235813,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
         "fallbackReason": "not-requested",
         "runtime": "node",
         "executionProvider": "cpu",
-        "executionStatus": "no-routed-pages"
+        "executionStatus": "no-routed-pages",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 0,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
       },
       "memory": {
-        "rssDeltaBytes": 786432,
-        "heapUsedDeltaBytes": -179064,
-        "externalDeltaBytes": -81937,
-        "arrayBuffersDeltaBytes": -81977
+        "rssDeltaBytes": 1572864,
+        "heapUsedDeltaBytes": 1732048,
+        "externalDeltaBytes": -10719,
+        "arrayBuffersDeltaBytes": 13471
       },
       "peakMemory": {
-        "rssPeakBytes": 59899904,
-        "heapUsedPeakBytes": 8395080,
-        "externalPeakBytes": 2125286,
-        "arrayBuffersPeakBytes": 115636,
-        "rssPeakDeltaBytes": 786432,
-        "heapUsedPeakDeltaBytes": 0
+        "rssPeakBytes": 63221760,
+        "heapUsedPeakBytes": 9618048,
+        "externalPeakBytes": 2280093,
+        "arrayBuffersPeakBytes": 232622,
+        "rssPeakDeltaBytes": 1572864,
+        "heapUsedPeakDeltaBytes": 1851928
       },
       "gpuMemory": {
         "provider": "cpu",
@@ -195,8 +245,8 @@
       "providerMode": "cpu",
       "bytes": 800,
       "pdfVersion": "1.4",
-      "iterations": 3,
-      "warmup": 1,
+      "iterations": 10,
+      "warmup": 2,
       "pages": 1,
       "outputChars": 115,
       "textLines": 3,
@@ -204,12 +254,13 @@
         "ocr.disabled",
         "text.heuristic_content_stream"
       ],
-      "minMs": 1.1742260000000044,
-      "maxMs": 1.895933999999997,
-      "meanMs": 1.4320996666666634,
-      "medianMs": 1.2261389999999892,
+      "acceptedOutputHash": "sha256:8cc20099f4890082c64d2063fcff6f65d7d25b48f163e4fa9ce8e837f0262324",
+      "minMs": 0.9177860000000067,
+      "maxMs": 1.7495270000000005,
+      "meanMs": 1.3594628999999998,
+      "medianMs": 1.279993999999995,
       "startup": {
-        "durationMs": 1.895933999999997
+        "durationMs": 1.7495270000000005
       },
       "modelLoad": {
         "durationMs": 0,
@@ -225,35 +276,171 @@
         ]
       },
       "throughput": {
-        "iterations": 2,
-        "minMs": 1.1742260000000044,
-        "maxMs": 1.2261389999999892,
-        "meanMs": 1.2001824999999968,
-        "medianMs": 1.2001824999999968,
-        "pagesPerSecond": 833.2066164937438
+        "iterations": 9,
+        "minMs": 0.9177860000000067,
+        "maxMs": 1.7201090000000079,
+        "meanMs": 1.3161224444444442,
+        "medianMs": 1.25107899999999,
+        "pagesPerSecond": 759.8077247456376
       },
-      "pagesPerSecond": 833.2066164937438,
+      "pagesPerSecond": 759.8077247456376,
       "acceleration": {
         "requested": "disabled",
         "selectedProvider": "cpu",
         "fallbackReason": "not-requested",
         "runtime": "node",
         "executionProvider": "cpu",
-        "executionStatus": "no-routed-pages"
+        "executionStatus": "no-routed-pages",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 0,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
       },
       "memory": {
-        "rssDeltaBytes": 786432,
-        "heapUsedDeltaBytes": -383872,
-        "externalDeltaBytes": 5800,
-        "arrayBuffersDeltaBytes": 5800
+        "rssDeltaBytes": 335872,
+        "heapUsedDeltaBytes": 631888,
+        "externalDeltaBytes": 10524,
+        "arrayBuffersDeltaBytes": 10524
       },
       "peakMemory": {
-        "rssPeakBytes": 61341696,
-        "heapUsedPeakBytes": 8807816,
-        "externalPeakBytes": 2052485,
-        "arrayBuffersPeakBytes": 41659,
-        "rssPeakDeltaBytes": 786432,
-        "heapUsedPeakDeltaBytes": 0
+        "rssPeakBytes": 63819776,
+        "heapUsedPeakBytes": 10107928,
+        "externalPeakBytes": 2282531,
+        "arrayBuffersPeakBytes": 244643,
+        "rssPeakDeltaBytes": 335872,
+        "heapUsedPeakDeltaBytes": 657136
+      },
+      "gpuMemory": {
+        "provider": "cpu",
+        "source": "webgpu-execution-plan",
+        "estimatedBytes": 0,
+        "maxBatchEstimatedBytes": 0,
+        "limitBytes": 268435456,
+        "plannedPages": 0,
+        "skippedPages": 0
+      },
+      "memoryLimits": {
+        "maxRssDeltaBytes": null,
+        "maxHeapUsedDeltaBytes": null
+      },
+      "memoryLimitViolations": [],
+      "passed": true
+    },
+    {
+      "id": "synthetic-hyphenated-line",
+      "gate": "text-mvp",
+      "kind": "synthetic",
+      "features": [
+        "born-digital",
+        "paragraphs",
+        "hyphenation"
+      ],
+      "workload": "conversion",
+      "providerMode": "cpu",
+      "bytes": 778,
+      "pdfVersion": "1.4",
+      "iterations": 10,
+      "warmup": 2,
+      "pages": 1,
+      "outputChars": 90,
+      "textLines": 3,
+      "warnings": [
+        "ocr.disabled",
+        "text.heuristic_content_stream"
+      ],
+      "acceptedOutputHash": "sha256:be0155fafe70919d9d2edd81b5c8ed9e8766e5dddf8d4e1928e58ecd6352d0a6",
+      "minMs": 0.757119000000003,
+      "maxMs": 1.6568609999999921,
+      "meanMs": 1.0963440999999974,
+      "medianMs": 0.9850829999999959,
+      "startup": {
+        "durationMs": 0.9103149999999971
+      },
+      "modelLoad": {
+        "durationMs": 0,
+        "measured": false,
+        "reason": "ocr-disabled-or-lazy",
+        "strategy": "lazy",
+        "source": "adapter-default",
+        "languages": [
+          "eng"
+        ],
+        "modelFiles": [
+          "eng.traineddata"
+        ]
+      },
+      "throughput": {
+        "iterations": 9,
+        "minMs": 0.757119000000003,
+        "maxMs": 1.6568609999999921,
+        "meanMs": 1.1170139999999975,
+        "medianMs": 1.0598509999999948,
+        "pagesPerSecond": 895.2439271128223
+      },
+      "pagesPerSecond": 895.2439271128223,
+      "acceleration": {
+        "requested": "disabled",
+        "selectedProvider": "cpu",
+        "fallbackReason": "not-requested",
+        "runtime": "node",
+        "executionProvider": "cpu",
+        "executionStatus": "no-routed-pages",
+        "preprocessing": {
+          "enabled": true,
+          "provider": "cpu",
+          "status": "cpu-fallback",
+          "workload": "ocr-preprocess-binarize-rgba",
+          "threshold": 128,
+          "radius": 8,
+          "bias": 7,
+          "minSpeedup": 1.05,
+          "routedPages": 0,
+          "plannedPages": 0,
+          "processedPages": 0,
+          "maxSamplePixelsPerPage": 262144,
+          "totalSamplePixels": 0,
+          "parity": null,
+          "cpuMs": null,
+          "gpuMs": null,
+          "speedupRatio": null,
+          "speedupPassed": false,
+          "fallbackReason": "not-requested",
+          "error": null,
+          "pages": []
+        }
+      },
+      "memory": {
+        "rssDeltaBytes": 1048576,
+        "heapUsedDeltaBytes": 1136280,
+        "externalDeltaBytes": 12608,
+        "arrayBuffersDeltaBytes": 12608
+      },
+      "peakMemory": {
+        "rssPeakBytes": 66048000,
+        "heapUsedPeakBytes": 10473888,
+        "externalPeakBytes": 2293951,
+        "arrayBuffersPeakBytes": 256063,
+        "rssPeakDeltaBytes": 2228224,
+        "heapUsedPeakDeltaBytes": 1136280
       },
       "gpuMemory": {
         "provider": "cpu",
