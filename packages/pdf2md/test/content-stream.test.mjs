@@ -4,6 +4,7 @@ import {
   PdfContentStreamLimitError,
   extractContentStreamImageDraws,
   extractContentStreamRulingLines,
+  extractContentStreamSignals,
   extractContentStreamTextLines,
   mergeRulingLines,
   tokenizeContentStream
@@ -735,6 +736,67 @@ test("content stream Form XObject cycles fail with a stable error", () => {
       error.code === "pdf.content_stream.form_cycle_detected" &&
       error.details.stackType === "form-xobject" &&
       error.details.actual === 2 &&
+      error.details.extractor === "text"
+  );
+});
+
+test("combined content stream extraction walks nested Forms once with identical signals", () => {
+  const formText = [
+    "BT /F1 10 Tf 0 0 Td (Shared) Tj ET",
+    "0 0 10 5 re S",
+    "q 4 0 0 3 1 2 cm /ImScan Do Q"
+  ].join("\n");
+  let formStreamReads = 0;
+  const form = {
+    objectNumber: 30,
+    generationNumber: 0,
+    subtype: "Form",
+    matrix: [2, 0, 0, 2, 5, 7],
+    stream: {
+      get text() {
+        formStreamReads += 1;
+        return formText;
+      }
+    },
+    resources: {
+      fonts: resources.fonts,
+      xobjects: { ImScan: resources.xobjects.ImScan }
+    }
+  };
+  const options = {
+    resources: { fonts: {}, xobjects: { Shared: form } },
+    pageIndex: 2,
+    streamIndex: 4
+  };
+  const stream = "q 3 0 0 3 10 20 cm /Shared Do Q";
+  const expected = {
+    textLines: extractContentStreamTextLines(stream, options),
+    rulingLines: extractContentStreamRulingLines(stream, options),
+    imageDraws: extractContentStreamImageDraws(stream, options)
+  };
+  assert.equal(formStreamReads, 3);
+
+  formStreamReads = 0;
+  assert.deepEqual(extractContentStreamSignals(stream, options), expected);
+  assert.equal(formStreamReads, 1);
+});
+
+test("combined content stream extraction preserves bounded token errors", () => {
+  assert.throws(
+    () =>
+      extractContentStreamSignals("[0 1 2 3]", {
+        contentStreamBudgets: {
+          text: { tokens: 0, operations: 0, outputs: 0 },
+          ruling: { tokens: 0, operations: 0, outputs: 0 },
+          image: { tokens: 0, operations: 0, outputs: 0 }
+        },
+        contentStreamLimits: { maxOperations: 4 }
+      }),
+    (error) =>
+      error instanceof PdfContentStreamLimitError &&
+      error.code === "pdf.content_stream.operation_limit_exceeded" &&
+      error.details.limit === 4 &&
+      error.details.actual === 5 &&
       error.details.extractor === "text"
   );
 });

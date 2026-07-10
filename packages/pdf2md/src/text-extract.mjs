@@ -1,10 +1,6 @@
 import {
-  extractContentStreamImageDraws,
-  extractContentStreamRulingLines,
-  extractContentStreamTextLines,
-  extractContentStreamsImageDraws,
-  extractContentStreamsRulingLines,
-  extractContentStreamsTextLines,
+  extractContentStreamSignals,
+  extractContentStreamsSignals,
   mergeRulingLines
 } from "./content-stream.mjs";
 import { bytesToLatin1 } from "./runtime.mjs";
@@ -144,28 +140,13 @@ function appendPageContentStreamExtraction(
     text: stream.text,
     streamIndex
   }));
-  content.textLines.push(
-    ...extractContentStreamsTextLines(streams, {
-      ...options,
-      contentStreamBudget: contentStreamBudgets.text,
-      contentStreamLimits
-    })
-  );
-  content.rulingLines.push(
-    ...extractContentStreamsRulingLines(streams, {
-      ...options,
-      contentStreamBudget: contentStreamBudgets.ruling,
-      contentStreamLimits,
-      mergeRulingLines: false
-    })
-  );
-  content.imageDraws.push(
-    ...extractContentStreamsImageDraws(streams, {
-      ...options,
-      contentStreamBudget: contentStreamBudgets.image,
-      contentStreamLimits
-    })
-  );
+  const extracted = extractContentStreamsSignals(streams, {
+    ...options,
+    contentStreamBudgets,
+    contentStreamLimits,
+    mergeRulingLines: false
+  });
+  appendExtractedSignals(content, extracted);
 }
 
 function createEmptyExtractedContent() {
@@ -182,28 +163,19 @@ function appendContentStreamExtraction(
   options,
   { contentStreamBudgets, contentStreamLimits }
 ) {
-  content.textLines.push(
-    ...extractContentStreamTextLines(streamText, {
-      ...options,
-      contentStreamBudget: contentStreamBudgets.text,
-      contentStreamLimits
-    })
-  );
-  content.rulingLines.push(
-    ...extractContentStreamRulingLines(streamText, {
-      ...options,
-      contentStreamBudget: contentStreamBudgets.ruling,
-      contentStreamLimits,
-      mergeRulingLines: false
-    })
-  );
-  content.imageDraws.push(
-    ...extractContentStreamImageDraws(streamText, {
-      ...options,
-      contentStreamBudget: contentStreamBudgets.image,
-      contentStreamLimits
-    })
-  );
+  const extracted = extractContentStreamSignals(streamText, {
+    ...options,
+    contentStreamBudgets,
+    contentStreamLimits,
+    mergeRulingLines: false
+  });
+  appendExtractedSignals(content, extracted);
+}
+
+function appendExtractedSignals(content, extracted) {
+  content.textLines.push(...extracted.textLines);
+  content.rulingLines.push(...extracted.rulingLines);
+  content.imageDraws.push(...extracted.imageDraws);
 }
 
 function createContentStreamBudgets() {

@@ -98,6 +98,62 @@ export function extractContentStreamsImageDraws(streams, options = {}) {
   return images;
 }
 
+export function extractContentStreamSignals(streamText, options = {}) {
+  return extractContentStreamsSignals(
+    [{ text: streamText, streamIndex: options.streamIndex ?? null }],
+    options
+  );
+}
+
+export function extractContentStreamsSignals(streams, options = {}) {
+  const textOptions = signalExtractorOptions(options, "text");
+  const rulingOptions = signalExtractorOptions(options, "ruling");
+  const imageOptions = signalExtractorOptions(options, "image");
+  const textContext = createExecutionContext("text", textOptions, {
+    lines: [],
+    operands: [],
+    stack: [],
+    state: createInitialState(
+      options.resources,
+      options.initialMatrix,
+      options.initialTextOrientationMatrix
+    ),
+    textObjectId: 0,
+    lineSerial: 0
+  });
+  const rulingContext = createExecutionContext("ruling", rulingOptions, {
+    lines: [],
+    operands: [],
+    stack: [],
+    state: createInitialPathState(options.resources, options.initialMatrix)
+  });
+  const imageContext = createExecutionContext("image", imageOptions, {
+    images: [],
+    operands: [],
+    stack: [],
+    state: createInitialImageState(options.resources, options.initialMatrix)
+  });
+
+  interpretContentStreamsSignals(streams, [textContext, rulingContext, imageContext]);
+
+  return {
+    textLines: textContext.lines.map(({ mergeKey, ...line }) => line),
+    rulingLines:
+      options.mergeRulingLines === false
+        ? rulingContext.lines
+        : mergeRulingLines(rulingContext.lines, options),
+    imageDraws: imageContext.images
+  };
+}
+
+function signalExtractorOptions(options, extractor) {
+  return {
+    ...options,
+    contentStreamBudget:
+      options.contentStreamBudgets?.[extractor] ?? options.contentStreamBudget
+  };
+}
+
 export function mergeRulingLines(rulingLines, options = {}) {
   const coordinateTolerance = Number(options.mergeCoordinateTolerance ?? 0.5);
   const gapTolerance = Number(options.mergeGapTolerance ?? 1);
@@ -542,6 +598,66 @@ function interpretContentStreams(streams, context, execute) {
   context.options = baseOptions;
 }
 
+function interpretContentStreamsSignals(streams, contexts) {
+  const baseOptions = contexts.map((context) => context.options);
+  try {
+    for (let index = 0; index < streams.length; index += 1) {
+      const stream = streams[index];
+      for (let contextIndex = 0; contextIndex < contexts.length; contextIndex += 1) {
+        contexts[contextIndex].options = {
+          ...baseOptions[contextIndex],
+          streamIndex: Object.hasOwn(stream, "streamIndex") ? stream.streamIndex : index
+        };
+      }
+      interpretContentStreamSignals(stream.text, contexts);
+    }
+  } finally {
+    for (let index = 0; index < contexts.length; index += 1) {
+      contexts[index].options = baseOptions[index];
+    }
+  }
+}
+
+function interpretContentStreamSignals(streamText, contexts) {
+  const operands = [];
+  const tokenContext = { extractorContexts: contexts };
+  for (const token of iterateContentStreamTokens(streamText, tokenContext)) {
+    for (const context of contexts) {
+      context.operands = operands;
+    }
+    if (token.type === "inline-image") {
+      for (const context of contexts) {
+        consumeContentStreamOperation(context);
+      }
+      emitInlineImageDraw(token, contexts[2]);
+      operands.length = 0;
+      continue;
+    }
+    if (token.type !== "word") {
+      operands.push(token);
+      continue;
+    }
+    for (const context of contexts) {
+      consumeContentStreamOperation(context);
+    }
+    executeSignalOperator(token.value, contexts);
+    operands.length = 0;
+  }
+}
+
+function executeSignalOperator(operator, contexts) {
+  if (operator === "Do") {
+    const form = sharedFormXObject(contexts);
+    if (form) {
+      executeFormXObjectSignals(contexts, form);
+      return;
+    }
+  }
+  executeOperator(operator, contexts[0]);
+  executePathOperator(operator, contexts[1]);
+  executeImageOperator(operator, contexts[2]);
+}
+
 function* iterateContentStreamTokens(streamText, context) {
   const source = typeof streamText === "string" ? streamText : runtimeBytesToLatin1(streamText);
   let offset = 0;
@@ -640,7 +756,7 @@ function consumeContentStreamToken(context) {
     context,
     "tokens",
     1,
-    context.limits.maxOperations,
+    context.limits?.maxOperations,
     "pdf.content_stream.operation_limit_exceeded",
     "Content stream token limit exceeded."
   );
@@ -658,6 +774,19 @@ function consumeContentStreamOutput(context, amount = 1) {
 }
 
 function consumeContentStreamBudget(context, field, amount, configuredLimit, code, message) {
+  if (context.extractorContexts) {
+    for (const extractorContext of context.extractorContexts) {
+      consumeContentStreamBudget(
+        extractorContext,
+        field,
+        amount,
+        extractorContext.limits.maxOperations,
+        code,
+        message
+      );
+    }
+    return;
+  }
   const limit = configuredLimit ?? Number.POSITIVE_INFINITY;
   const actual = (context.budget[field] ?? 0) + amount;
   if (actual > limit) {
@@ -682,6 +811,12 @@ function pushMarkedContent(context, item) {
 }
 
 function enforceContentStreamDepth(context, actual, stackType) {
+  if (context.extractorContexts) {
+    for (const extractorContext of context.extractorContexts) {
+      enforceContentStreamDepth(extractorContext, actual, stackType);
+    }
+    return;
+  }
   const limit = context.limits.maxDepth ?? Number.POSITIVE_INFINITY;
   if (actual > limit) {
     throw new PdfContentStreamLimitError("Content stream stack depth limit exceeded.", {
@@ -1063,9 +1198,8 @@ function emitImageDraw(context) {
 }
 
 function executeFormXObject(context) {
-  const name = tokenName(context.operands.at(-1));
-  const form = name ? context.state.resources?.xobjects?.[name] : null;
-  if (!name || form?.subtype !== "Form" || !form.stream) {
+  const form = formXObjectForContext(context);
+  if (!form) {
     return false;
   }
 
@@ -1101,6 +1235,68 @@ function executeFormXObject(context) {
     formStack.pop();
   }
   return true;
+}
+
+function formXObjectForContext(context) {
+  const name = tokenName(context.operands.at(-1));
+  const form = name ? context.state.resources?.xobjects?.[name] : null;
+  return form?.subtype === "Form" && form.stream ? form : null;
+}
+
+function sharedFormXObject(contexts) {
+  const form = formXObjectForContext(contexts[0]);
+  return form && contexts.every((context) => formXObjectForContext(context) === form)
+    ? form
+    : null;
+}
+
+function executeFormXObjectSignals(contexts, form) {
+  const frames = contexts.map((context) => {
+    const formStack = context.formStack ?? (context.formStack = []);
+    const actualDepth = formStack.length + 1;
+    enforceContentStreamDepth(context, actualDepth, "form-xobject");
+    const identity = Number.isInteger(form.objectNumber)
+      ? `${form.objectNumber}:${form.generationNumber ?? 0}`
+      : form;
+    if (formStack.includes(identity)) {
+      throw new PdfContentStreamLimitError("Content stream Form XObject cycle detected.", {
+        code: "pdf.content_stream.form_cycle_detected",
+        limit: context.limits.maxDepth ?? 100,
+        actual: actualDepth,
+        extractor: context.extractor,
+        stackType: "form-xobject"
+      });
+    }
+    return {
+      context,
+      formStack,
+      identity,
+      parentGraphicsStack: context.stack,
+      parentOperands: context.operands,
+      parentState: context.state
+    };
+  });
+
+  try {
+    for (const frame of frames) {
+      frame.formStack.push(frame.identity);
+      frame.context.state = createFormExecutionState(
+        frame.context.extractor,
+        frame.parentState,
+        form
+      );
+      frame.context.operands = [];
+      frame.context.stack = [];
+    }
+    interpretContentStreamSignals(form.stream.text, contexts);
+  } finally {
+    for (const frame of frames) {
+      frame.context.state = frame.parentState;
+      frame.context.operands = frame.parentOperands;
+      frame.context.stack = frame.parentGraphicsStack;
+      frame.formStack.pop();
+    }
+  }
 }
 
 function createFormExecutionState(extractor, parentState, form) {

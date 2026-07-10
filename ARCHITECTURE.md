@@ -40,9 +40,10 @@ The main orchestration path is `convertPdfToMarkdown()` in
 4. Resolve password callbacks only for encrypted PDFs that request a password.
    Password values must not be copied into diagnostics.
 5. Incrementally tokenize bounded content streams, treating each page's ordered
-   `/Contents` array as one stateful graphics program, and extract page
-   geometry, text lines, ruling lines, images, outlines, structure signals,
-   forms, annotations, attachments, and signature metadata where supported.
+   `/Contents` array as one stateful graphics program. One token walk fans out
+   to independent text, ruling-line, and image interpreter states, including
+   nested Form XObjects, before the pipeline extracts outlines, structure
+   signals, forms, annotations, attachments, and signature metadata.
 6. Plan OCR, raster, WebGPU, and preprocessing diagnostics. OCR model loading
    is currently contract-first; OCR text comes from caller-supplied
    `options.ocr.results`.
