@@ -95,6 +95,7 @@ export declare function createMarkdownSourceMap(options?: {
 
 export declare const warningJsonSchema: Readonly<Record<string, unknown>>;
 export declare const assetJsonSchema: Readonly<Record<string, unknown>>;
+export declare const pageElementJsonSchema: Readonly<Record<string, unknown>>;
 export declare const pageIrJsonSchema: Readonly<Record<string, unknown>>;
 export declare const documentIrJsonSchema: Readonly<Record<string, unknown>>;
 export declare const markdownSourceMapJsonSchema: Readonly<Record<string, unknown>>;

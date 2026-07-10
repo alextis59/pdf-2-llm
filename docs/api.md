@@ -21,6 +21,7 @@ The schema entrypoint exports JSON schemas and warning constants:
 import {
   documentIrJsonSchema,
   markdownSourceMapJsonSchema,
+  pageElementJsonSchema,
   schemaVersion,
   warningCodes
 } from "pdf-2-llm/schema";
@@ -471,7 +472,9 @@ Structured document IR with pages, page elements, assets, metadata, and
 warnings. Page text elements come from the reconciled PDF/OCR lines selected
 for Markdown, and emitted tables become table elements instead of duplicated
 text elements. Table elements reference their CSV sidecar asset when one is
-enabled. The schema is exported as `documentIrJsonSchema`.
+enabled. The document schema validates each page element through the exported
+discriminated `pageElementJsonSchema`; unknown types, missing required fields,
+and undeclared properties are rejected.
 
 ### `warnings`
 
@@ -526,6 +529,7 @@ The package exports:
 - `schemaVersion`
 - `warningCodes`
 - `documentIrJsonSchema`
+- `pageElementJsonSchema`
 - `markdownSourceMapJsonSchema`
 
 The repository tests serialize conversion outputs against these schemas, so

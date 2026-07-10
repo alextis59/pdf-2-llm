@@ -97,6 +97,133 @@ export const assetJsonSchema = Object.freeze({
   }
 });
 
+const textSpanJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["text", "x", "y", "width", "height", "direction", "confidence", "source"],
+  properties: {
+    text: { type: "string" },
+    glyphIds: { type: "array", items: { type: "integer" } },
+    fontName: { type: "string" },
+    x: { type: "number" },
+    y: { type: "number" },
+    width: { type: "number" },
+    height: { type: "number" },
+    direction: { enum: ["ltr", "rtl", "vertical", "unknown"] },
+    confidence: { type: "number" },
+    source: { enum: ["pdf-text", "ocr", "tagged-pdf"] }
+  }
+};
+
+const tableCellJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["text", "rowSpan", "colSpan"],
+  properties: {
+    text: { type: "string" },
+    rowSpan: { type: "integer" },
+    colSpan: { type: "integer" }
+  }
+};
+
+const optionalGeometryProperties = {
+  x: { type: "number" },
+  y: { type: "number" },
+  width: { type: "number" },
+  height: { type: "number" }
+};
+
+export const pageElementJsonSchema = Object.freeze({
+  oneOf: [
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["type", "spans"],
+      properties: {
+        type: { const: "text" },
+        spans: { type: "array", items: textSpanJsonSchema }
+      }
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["type", "rows", "confidence"],
+      properties: {
+        type: { const: "table" },
+        rows: {
+          type: "array",
+          items: { type: "array", items: tableCellJsonSchema }
+        },
+        confidence: { type: "number" },
+        htmlFallback: { type: "string" },
+        csvSidecarAssetId: { type: "string" }
+      }
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["type"],
+      properties: {
+        type: { const: "figure" },
+        caption: { type: "string" },
+        assetId: { type: "string" },
+        altText: { type: "string" },
+        altTextSource: { type: "string" },
+        ...optionalGeometryProperties
+      }
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["type"],
+      properties: {
+        type: { const: "equation" },
+        text: { type: "string" },
+        latex: { type: "string" },
+        assetId: { type: "string" },
+        ...optionalGeometryProperties
+      }
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["type", "name"],
+      properties: {
+        type: { const: "form-field" },
+        name: { type: "string" },
+        value: { type: "string" },
+        label: { type: ["string", "null"] },
+        fieldType: { type: "string" },
+        buttonType: { type: "string" },
+        checked: { type: "boolean" },
+        selectedValue: { type: ["string", "null"] },
+        ...optionalGeometryProperties
+      }
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["type", "subtype"],
+      properties: {
+        type: { const: "annotation" },
+        subtype: { type: "string" },
+        contents: { type: "string" },
+        uri: { type: "string" },
+        ...optionalGeometryProperties
+      }
+    },
+    {
+      type: "object",
+      additionalProperties: false,
+      required: ["type", "assetId"],
+      properties: {
+        type: { const: "asset-reference" },
+        assetId: { type: "string" }
+      }
+    }
+  ]
+});
+
 export const pageIrJsonSchema = Object.freeze({
   type: "object",
   additionalProperties: false,
@@ -109,9 +236,7 @@ export const pageIrJsonSchema = Object.freeze({
     sourceType: { enum: sourceTypes },
     elements: {
       type: "array",
-      items: {
-        type: "object"
-      }
+      items: pageElementJsonSchema
     }
   }
 });
