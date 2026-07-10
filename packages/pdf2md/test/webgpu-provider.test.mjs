@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createWebGpuExecutionPlan } from "../src/webgpu-provider.mjs";
+
+const declarationPath = new URL("../src/index.d.ts", import.meta.url);
 
 test("createWebGpuExecutionPlan falls back to CPU when WebGPU is not selected", () => {
   const plan = createWebGpuExecutionPlan({
@@ -153,6 +156,39 @@ test("createWebGpuExecutionPlan skips a single page that exceeds the batch pixel
       status: "exceeds-batch-pixel-limit"
     }
   ]);
+});
+
+test("public skipped-page status declaration matches every runtime outcome", async () => {
+  const declaration = await readFile(declarationPath, "utf8");
+  const typeBody = declaration.match(
+    /export type WebGpuExecutionSkippedPageDiagnostics = \{([\s\S]*?)\n\};/
+  )?.[1];
+  const statusUnion = typeBody?.match(/status:\s*([^;]+);/)?.[1];
+  const declaredStatuses = [...(statusUnion?.matchAll(/"([^"]+)"/g) ?? [])]
+    .map((match) => match[1])
+    .sort();
+  const planFor = (rasterPage, options = {}) =>
+    createWebGpuExecutionPlan({
+      options,
+      rasterPlan: { pages: rasterPage ? [rasterPage] : [] },
+      scanDetection: {
+        pages: [{ pageIndex: 0, sourceType: "scanned" }]
+      },
+      webgpu: { selectedProvider: "webgpu" }
+    });
+  const runtimeStatuses = [
+    planFor(null).skipped[0].status,
+    planFor(
+      { pageIndex: 0, status: "planned", pixelCount: 12_000 },
+      { maxBatchPixels: 10_000, maxMemoryBytes: 1_000_000 }
+    ).skipped[0].status,
+    planFor(
+      { pageIndex: 0, status: "planned", pixelCount: 50 },
+      { maxMemoryBytes: 100 }
+    ).skipped[0].status
+  ].sort();
+
+  assert.deepEqual(declaredStatuses, runtimeStatuses);
 });
 
 test("createWebGpuExecutionPlan keeps OCR output contracts provider-compatible", () => {

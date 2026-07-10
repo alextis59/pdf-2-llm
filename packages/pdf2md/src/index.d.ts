@@ -262,7 +262,7 @@ export type WebGpuExecutionSkippedPageDiagnostics = {
   rasterStatus: string;
   pixelCount: number | null;
   estimatedBytes: number | null;
-  status: "missing-raster" | "exceeds-memory-limit";
+  status: "missing-raster" | "exceeds-batch-pixel-limit" | "exceeds-memory-limit";
 };
 
 export type WebGpuPreprocessingRunner = {
