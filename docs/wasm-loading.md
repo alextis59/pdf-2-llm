@@ -94,6 +94,11 @@ The current packaged artifact is:
 src/wasm/pdf2md_core.wasm
 ```
 
+The optional threaded build removes its packaged destination before each build
+attempt. If Cargo cannot produce the shared-memory artifact, the report records
+`status: "unavailable"` and no stale `pdf2md_core.threaded.wasm` remains for a
+later package build to include.
+
 Future full-parser artifact names from the study are still expected to be split
 into single-threaded and threaded modules.
 

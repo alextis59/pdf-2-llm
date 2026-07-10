@@ -1,4 +1,4 @@
-import { copyFile, mkdir, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
@@ -14,6 +14,8 @@ const rustflags = [
   "-C link-arg=--shared-memory",
   "-C link-arg=--max-memory=67108864"
 ].join(" ");
+
+await rm(artifactPath, { force: true });
 
 const result = spawnSync(
   "cargo",
