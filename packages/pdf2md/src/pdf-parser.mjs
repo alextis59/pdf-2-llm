@@ -2551,6 +2551,11 @@ function decodePdfString(value) {
       continue;
     }
 
+    if (next === "\n" || next === "\r") {
+      index += next === "\r" && value[index + 2] === "\n" ? 2 : 1;
+      continue;
+    }
+
     if (/[0-7]/.test(next)) {
       const octal = value.slice(index + 1).match(/^[0-7]{1,3}/)?.[0] ?? "";
       output += String.fromCharCode(Number.parseInt(octal, 8));

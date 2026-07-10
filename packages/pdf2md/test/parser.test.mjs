@@ -50,6 +50,17 @@ test("parsePdfValue parses primitive object types", () => {
   assert.deepEqual(entries.Ref, { type: "ref", objectNumber: 3, generationNumber: 0 });
 });
 
+test("parsePdfValue removes escaped literal-string line continuations", () => {
+  const slash = "\\";
+  const entries = parsePdfValue(
+    `<< /CR (left${slash}\rright) /LF (left${slash}\nright) /CRLF (left${slash}\r\nright) >>`
+  ).value.entries;
+
+  assert.equal(entries.CR, "leftright");
+  assert.equal(entries.LF, "leftright");
+  assert.equal(entries.CRLF, "leftright");
+});
+
 test("pdfTextStringValue decodes PDFDocEncoding and BOM-prefixed UTF-16", () => {
   assert.equal(
     pdfTextStringValue({ type: "hex-string", value: "188084939596A0E9" }),
