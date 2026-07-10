@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "comparisonCount": 3,
+  "equivalentAcceptedOutputs": 3,
+  "parityFailures": [],
+  "minSpeedup": 1.05,
+  "speedupAvailable": false,
+  "speedupComparisonCount": 0,
+  "speedupFailures": [],
+  "fallbackReasons": [
+    "node-stable-gpu-path-unavailable"
+  ],
+  "speedupStatus": "not-applicable",
+  "validationErrors": []
+}

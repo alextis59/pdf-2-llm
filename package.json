@@ -83,7 +83,7 @@
     "fuzz:smoke": "npm run fuzz:smoke --workspace @pdf-2-llm/pdf2md",
     "lint": "node scripts/qa/lint.mjs",
     "qa:benchmark": "node scripts/qa/benchmark.mjs --gate text-mvp",
-    "qa:benchmark:webgpu": "node --expose-gc scripts/qa/benchmark.mjs --id synthetic-scanned-text --id synthetic-searchable-scan-regions --id synthetic-two-column --webgpu-comparison --iterations 1 --warmup 0 --report corpus/reports/webgpu-benchmark.json",
+    "qa:benchmark:webgpu": "node --expose-gc scripts/qa/benchmark.mjs --id synthetic-scanned-text --id synthetic-searchable-scan-regions --id synthetic-two-column --webgpu-comparison --iterations 1 --warmup 0 --report .temp/qa/webgpu-benchmark-smoke.json",
     "qa:benchmark:long-memory": "node --expose-gc scripts/qa/benchmark.mjs --memory-limit-gated --iterations 1 --warmup 0 --report .temp/qa/long-memory-profile.json",
     "qa:benchmark:long-memory:report": "node --expose-gc scripts/qa/benchmark.mjs --memory-limit-gated --iterations 1 --warmup 0 --report corpus/reports/long-memory-profile.json",
     "qa:benchmark:smoke": "npm run qa:benchmark:text-throughput",

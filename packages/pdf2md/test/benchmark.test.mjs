@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   compareProviderResults,
@@ -32,6 +33,21 @@ import {
   createWasmSizeReport,
   evaluateWasmSizeBudget
 } from "../../../scripts/qa/check-wasm-size.mjs";
+
+const rootPackagePath = new URL("../../../package.json", import.meta.url);
+
+test("WebGPU smoke and stable report scripts keep separate evidence paths", async () => {
+  const packageJson = JSON.parse(await readFile(rootPackagePath, "utf8"));
+  const smoke = packageJson.scripts["qa:benchmark:webgpu"];
+  const report = packageJson.scripts["qa:webgpu-comparison:report"];
+
+  assert.match(smoke, /--iterations 1 --warmup 0/);
+  assert.match(smoke, /--report \.temp\/qa\/webgpu-benchmark-smoke\.json/);
+  assert.doesNotMatch(smoke, /corpus\/reports/);
+  assert.match(report, /--iterations 3 --warmup 1/);
+  assert.match(report, /--report corpus\/reports\/webgpu-benchmark\.json/);
+  assert.match(report, /--summary corpus\/reports\/webgpu-comparison\.json/);
+});
 
 test("benchmark duration summary reports min max mean and median", () => {
   assert.deepEqual(summarizeDurations([9, 1, 5, 3]), {

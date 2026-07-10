@@ -97,6 +97,12 @@ Performance-sensitive changes need one of:
 - A short not-applicable rationale when the change cannot affect runtime,
   memory, or package size.
 
+`npm run qa:benchmark:webgpu` is a one-iteration, zero-warmup smoke command and
+writes only to `.temp/qa/`. Stable WebGPU evidence is produced by
+`npm run qa:webgpu-comparison:report`, which uses three measured iterations
+after one warmup and writes both the benchmark and evaluated summary under
+`corpus/reports/`.
+
 `npm run qa:performance-regression:report` always generates fresh text, OCR,
 startup, and long-memory measurements under `.temp/qa/`, compares them with the
 checked-in baselines under `corpus/reports/`, and only then writes the committed
