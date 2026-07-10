@@ -239,6 +239,45 @@ test("recognized behavior criteria execute predicates instead of passing by name
   assert.match(output.errors.join("\n"), /mustNot criterion "emit_empty_markdown" failed/);
 });
 
+test("ignore-newest-revision evidence accepts every followed Prev chain", () => {
+  const acceptance = {
+    must: [],
+    mustNot: ["ignore_newest_xref_revision"]
+  };
+  const context = {
+    acceptance,
+    result: {
+      markdown: "# Synthetic Simple Text\n",
+      diagnostics: {
+        extraction: {
+          parser: { mode: "classic-xref+prev" }
+        }
+      }
+    }
+  };
+
+  assert.deepEqual(evaluateAcceptanceCriteria(acceptance, context), {
+    errors: [],
+    checked: 1
+  });
+
+  const failed = evaluateAcceptanceCriteria(acceptance, {
+    ...context,
+    result: {
+      ...context.result,
+      diagnostics: {
+        extraction: {
+          parser: { mode: "classic-xref" }
+        }
+      }
+    }
+  });
+  assert.match(
+    failed.errors.join("\n"),
+    /mustNot criterion "ignore_newest_xref_revision" failed/
+  );
+});
+
 test("damaged-xref acceptance executes paragraph-order evidence after tolerant repair", async () => {
   const acceptance = parseAcceptanceText(await readFile(damagedXrefAcceptance, "utf8"));
   const expected = await readFile(damagedXrefExpected, "utf8");

@@ -418,7 +418,7 @@ const mustNotCriterionPredicates = new Map([
   ["flatten_table_to_unstructured_paragraph", passWhen(hasTable)],
   ["flatten_vertical_columns", passWhen(hasVerticalMarkup)],
   ["fold_note_into_table", passWhen((c) => hasTableNote(c) && exactOrCharacterFidelity(c))],
-  ["ignore_newest_xref_revision", passWhen(hasNewestRevision)],
+  ["ignore_newest_xref_revision", passWhen(parserFollowedPrev)],
   ["insert_synthetic_cjk_spaces", passWhen(exactOrCharacterFidelity)],
   ["interleave_columns_line_by_line", passWhen(readingOrderPassed)],
   ["interleave_footnote_inside_body_sentence", passWhen(exactOrCharacterFidelity)],
