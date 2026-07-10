@@ -841,6 +841,60 @@ test("mergeRulingLines merges parsed page streams without crossing unknown pages
   assert.equal(unknownPageLines.length, 2);
 });
 
+test("mergeRulingLines preserves adjacent buckets and late transitive merges", () => {
+  const boundary = mergeRulingLines([
+    testRulingLine({ orientation: "horizontal", start: 0, end: 10, coordinate: 0.49 }),
+    testRulingLine({ orientation: "horizontal", start: 9.5, end: 20, coordinate: 0.51 })
+  ]);
+  assert.deepEqual(
+    boundary.map((line) => [line.x1, line.y1, line.x2, line.y2, line.segmentCount]),
+    [[0, 0.5, 20, 0.5, 2]]
+  );
+
+  const transitive = mergeRulingLines([
+    testRulingLine({ orientation: "vertical", start: 23.12, end: 24.1, coordinate: 3.621 }),
+    testRulingLine({ orientation: "vertical", start: 27.25, end: 28.36, coordinate: 3.859 }),
+    testRulingLine({ orientation: "vertical", start: 25.87, end: 30.88, coordinate: 4.069 }),
+    testRulingLine({ orientation: "vertical", start: 21.24, end: 25.72, coordinate: 4.2 })
+  ]);
+  assert.deepEqual(
+    transitive.map((line) => [line.x1, line.y1, line.x2, line.y2, line.segmentCount]),
+    [[3.93725, 21.24, 3.93725, 30.88, 4]]
+  );
+});
+
+test("mergeRulingLines indexes large disjoint ruling sets", () => {
+  const lines = Array.from({ length: 10_000 }, (_, index) =>
+    testRulingLine({
+      orientation: "horizontal",
+      start: index * 3,
+      end: index * 3 + 1,
+      coordinate: 10
+    })
+  );
+
+  const merged = mergeRulingLines(lines);
+  assert.equal(merged.length, lines.length);
+  assert.deepEqual(merged[0], lines[0]);
+  assert.deepEqual(merged.at(-1), lines.at(-1));
+});
+
+function testRulingLine({ coordinate, end, orientation, start }) {
+  return {
+    type: "ruling-line",
+    orientation,
+    x1: orientation === "horizontal" ? start : coordinate,
+    y1: orientation === "horizontal" ? coordinate : start,
+    x2: orientation === "horizontal" ? end : coordinate,
+    y2: orientation === "horizontal" ? coordinate : end,
+    width: 1,
+    segmentCount: 1,
+    pageIndex: 0,
+    streamIndex: 0,
+    source: "path-operator"
+  };
+}
+
 test("extractContentStreamTextLines applies ToUnicode font maps to string bytes", () => {
   const lines = extractContentStreamTextLines("BT /F2 12 Tf 10 20 Td <0102> Tj ET", {
     resources

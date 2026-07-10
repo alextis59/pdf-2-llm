@@ -99,45 +99,409 @@ export function extractContentStreamsImageDraws(streams, options = {}) {
 }
 
 export function mergeRulingLines(rulingLines, options = {}) {
-  const coordinateTolerance = options.mergeCoordinateTolerance ?? 0.5;
-  const gapTolerance = options.mergeGapTolerance ?? 1;
-  const clusters = [];
+  const coordinateTolerance = Number(options.mergeCoordinateTolerance ?? 0.5);
+  const gapTolerance = Number(options.mergeGapTolerance ?? 1);
+  if (coordinateTolerance < 0 || Number.isNaN(gapTolerance) || gapTolerance === -Infinity) {
+    return rulingLines.map((line) => finalizeMergedRulingLine(cloneRulingLine(line)));
+  }
 
-  for (const line of rulingLines) {
-    const cluster = clusters.find((item) =>
-      canMergeRulingLines(item, line, { coordinateTolerance, gapTolerance })
-    );
-    if (cluster) {
-      mergeRulingLineInto(cluster, line);
+  const groups = new Map();
+  for (let index = 0; index < rulingLines.length; index += 1) {
+    const line = rulingLines[index];
+    const key = rulingLineScopeKey(line);
+    const group = groups.get(key) ?? [];
+    group.push({ index, line });
+    groups.set(key, group);
+  }
+
+  return [...groups.values()]
+    .flatMap((group) =>
+      mergeRulingLineGroup(group, { coordinateTolerance, gapTolerance })
+    )
+    .sort((left, right) => left.firstIndex - right.firstIndex)
+    .map((cluster) => finalizeMergedRulingLine(cluster.line));
+}
+
+function mergeRulingLineGroup(entries, tolerances) {
+  const state = {
+    activeBuckets: new Map(),
+    clusters: [],
+    pairHeap: [],
+    tolerances
+  };
+
+  for (const entry of entries) {
+    if (!hasFiniteRulingGeometry(entry.line)) {
+      state.clusters.push({
+        active: true,
+        bucket: null,
+        firstIndex: entry.index,
+        indexed: false,
+        indexStart: null,
+        line: cloneRulingLine(entry.line),
+        version: 0
+      });
       continue;
     }
-    clusters.push(cloneRulingLine(line));
+    const match = queryRulingClusters(state, entry.line)
+      .filter((cluster) => canMergeRulingLines(cluster.line, entry.line, tolerances))
+      .sort((left, right) => left.firstIndex - right.firstIndex)[0];
+    if (match) {
+      removeIndexedRulingCluster(state, match);
+      mergeRulingLineInto(match.line, entry.line);
+      match.version += 1;
+      insertIndexedRulingCluster(state, match);
+      continue;
+    }
+
+    const cluster = {
+      active: true,
+      bucket: null,
+      firstIndex: entry.index,
+      indexed: false,
+      indexStart: null,
+      line: cloneRulingLine(entry.line),
+      version: 0
+    };
+    state.clusters.push(cluster);
+    insertIndexedRulingCluster(state, cluster);
   }
 
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (let leftIndex = 0; leftIndex < clusters.length; leftIndex += 1) {
-      for (let rightIndex = leftIndex + 1; rightIndex < clusters.length; rightIndex += 1) {
-        if (
-          canMergeRulingLines(clusters[leftIndex], clusters[rightIndex], {
-            coordinateTolerance,
-            gapTolerance
-          })
-        ) {
-          mergeRulingLineInto(clusters[leftIndex], clusters[rightIndex]);
-          clusters.splice(rightIndex, 1);
-          changed = true;
-          break;
-        }
+  for (const cluster of state.clusters) {
+    enqueueBestLaterRulingPair(state, cluster);
+  }
+  mergeQueuedRulingPairs(state);
+  return state.clusters.filter((cluster) => cluster.active);
+}
+
+function mergeQueuedRulingPairs(state) {
+  while (state.pairHeap.length > 0) {
+    const pair = popRulingPairHeap(state.pairHeap);
+    if (!pair.left.active) {
+      continue;
+    }
+    if (
+      pair.left.version !== pair.leftVersion ||
+      !pair.right.active ||
+      pair.right.version !== pair.rightVersion
+    ) {
+      enqueueBestLaterRulingPair(state, pair.left);
+      if (pair.right.active) {
+        enqueueBestEarlierRulingPair(state, pair.right);
       }
-      if (changed) {
-        break;
-      }
+      continue;
+    }
+    if (!canMergeRulingLines(pair.left.line, pair.right.line, state.tolerances)) {
+      enqueueBestLaterRulingPair(state, pair.left);
+      continue;
+    }
+
+    removeIndexedRulingCluster(state, pair.left);
+    removeIndexedRulingCluster(state, pair.right);
+    mergeRulingLineInto(pair.left.line, pair.right.line);
+    pair.left.version += 1;
+    pair.right.active = false;
+    pair.right.version += 1;
+    insertIndexedRulingCluster(state, pair.left);
+    enqueueBestLaterRulingPair(state, pair.left);
+    enqueueBestEarlierRulingPair(state, pair.left);
+  }
+}
+
+function enqueueBestLaterRulingPair(state, left) {
+  if (!left.active || !left.indexed) {
+    return;
+  }
+  const right = queryRulingClusters(state, left.line)
+    .filter(
+      (candidate) =>
+        candidate.firstIndex > left.firstIndex &&
+        canMergeRulingLines(left.line, candidate.line, state.tolerances)
+    )
+    .sort((first, second) => first.firstIndex - second.firstIndex)[0];
+  if (right) {
+    pushRulingPairHeap(state.pairHeap, createRulingPair(left, right));
+  }
+}
+
+function enqueueBestEarlierRulingPair(state, right) {
+  if (!right.active || !right.indexed) {
+    return;
+  }
+  const left = queryRulingClusters(state, right.line)
+    .filter(
+      (candidate) =>
+        candidate.firstIndex < right.firstIndex &&
+        canMergeRulingLines(candidate.line, right.line, state.tolerances)
+    )
+    .sort((first, second) => first.firstIndex - second.firstIndex)[0];
+  if (left) {
+    pushRulingPairHeap(state.pairHeap, createRulingPair(left, right));
+  }
+}
+
+function createRulingPair(left, right) {
+  return {
+    left,
+    leftVersion: left.version,
+    right,
+    rightVersion: right.version
+  };
+}
+
+function queryRulingClusters(state, line) {
+  if (!hasFiniteRulingGeometry(line)) {
+    return [];
+  }
+  const matches = [];
+  const queryStart = lineStart(line) - state.tolerances.gapTolerance;
+  const queryEnd = lineEnd(line) + state.tolerances.gapTolerance;
+  for (const bucket of neighboringRulingBuckets(line, state.tolerances.coordinateTolerance)) {
+    const root = state.activeBuckets.get(bucket);
+    if (root) {
+      queryRulingIntervalTree(root, queryStart, queryEnd, matches);
     }
   }
+  return matches;
+}
 
-  return clusters.map(finalizeMergedRulingLine);
+function insertIndexedRulingCluster(state, cluster) {
+  cluster.bucket = rulingCoordinateBucket(cluster.line, state.tolerances.coordinateTolerance);
+  cluster.indexStart = lineStart(cluster.line);
+  const node = createRulingIntervalNode(cluster);
+  state.activeBuckets.set(
+    cluster.bucket,
+    insertRulingIntervalNode(state.activeBuckets.get(cluster.bucket) ?? null, node)
+  );
+  cluster.indexed = true;
+}
+
+function removeIndexedRulingCluster(state, cluster) {
+  if (!cluster.indexed) {
+    return;
+  }
+  const root = removeRulingIntervalNode(
+    state.activeBuckets.get(cluster.bucket) ?? null,
+    cluster.indexStart,
+    cluster.firstIndex
+  );
+  if (root) {
+    state.activeBuckets.set(cluster.bucket, root);
+  } else {
+    state.activeBuckets.delete(cluster.bucket);
+  }
+  cluster.indexed = false;
+}
+
+function hasFiniteRulingGeometry(line) {
+  return (
+    Number.isFinite(lineAxisCoordinate(line)) &&
+    Number.isFinite(lineStart(line)) &&
+    Number.isFinite(lineEnd(line))
+  );
+}
+
+function createRulingIntervalNode(cluster) {
+  return updateRulingIntervalNode({
+    cluster,
+    end: lineEnd(cluster.line),
+    left: null,
+    maxEnd: lineEnd(cluster.line),
+    priority: rulingIntervalPriority(cluster.firstIndex),
+    right: null,
+    start: cluster.indexStart
+  });
+}
+
+function insertRulingIntervalNode(root, node) {
+  if (!root) {
+    return node;
+  }
+  if (node.priority < root.priority) {
+    const [left, right] = splitRulingIntervalTree(root, node.start, node.cluster.firstIndex);
+    node.left = left;
+    node.right = right;
+    return updateRulingIntervalNode(node);
+  }
+  if (
+    compareRulingIntervalKeys(
+      node.start,
+      node.cluster.firstIndex,
+      root.start,
+      root.cluster.firstIndex
+    ) < 0
+  ) {
+    root.left = insertRulingIntervalNode(root.left, node);
+  } else {
+    root.right = insertRulingIntervalNode(root.right, node);
+  }
+  return updateRulingIntervalNode(root);
+}
+
+function removeRulingIntervalNode(root, start, firstIndex) {
+  if (!root) {
+    return null;
+  }
+  const comparison = compareRulingIntervalKeys(
+    start,
+    firstIndex,
+    root.start,
+    root.cluster.firstIndex
+  );
+  if (comparison === 0) {
+    return mergeRulingIntervalTrees(root.left, root.right);
+  }
+  if (comparison < 0) {
+    root.left = removeRulingIntervalNode(root.left, start, firstIndex);
+  } else {
+    root.right = removeRulingIntervalNode(root.right, start, firstIndex);
+  }
+  return updateRulingIntervalNode(root);
+}
+
+function splitRulingIntervalTree(root, start, firstIndex) {
+  if (!root) {
+    return [null, null];
+  }
+  if (
+    compareRulingIntervalKeys(root.start, root.cluster.firstIndex, start, firstIndex) < 0
+  ) {
+    const [left, right] = splitRulingIntervalTree(root.right, start, firstIndex);
+    root.right = left;
+    return [updateRulingIntervalNode(root), right];
+  }
+  const [left, right] = splitRulingIntervalTree(root.left, start, firstIndex);
+  root.left = right;
+  return [left, updateRulingIntervalNode(root)];
+}
+
+function mergeRulingIntervalTrees(left, right) {
+  if (!left) {
+    return right;
+  }
+  if (!right) {
+    return left;
+  }
+  if (left.priority < right.priority) {
+    left.right = mergeRulingIntervalTrees(left.right, right);
+    return updateRulingIntervalNode(left);
+  }
+  right.left = mergeRulingIntervalTrees(left, right.left);
+  return updateRulingIntervalNode(right);
+}
+
+function queryRulingIntervalTree(root, queryStart, queryEnd, matches) {
+  if (!root || root.maxEnd < queryStart) {
+    return;
+  }
+  queryRulingIntervalTree(root.left, queryStart, queryEnd, matches);
+  if (root.start <= queryEnd && root.end >= queryStart && root.cluster.active) {
+    matches.push(root.cluster);
+  }
+  if (root.start <= queryEnd) {
+    queryRulingIntervalTree(root.right, queryStart, queryEnd, matches);
+  }
+}
+
+function updateRulingIntervalNode(node) {
+  node.maxEnd = Math.max(
+    node.end,
+    node.left?.maxEnd ?? Number.NEGATIVE_INFINITY,
+    node.right?.maxEnd ?? Number.NEGATIVE_INFINITY
+  );
+  return node;
+}
+
+function compareRulingIntervalKeys(leftStart, leftIndex, rightStart, rightIndex) {
+  return leftStart - rightStart || leftIndex - rightIndex;
+}
+
+function rulingIntervalPriority(firstIndex) {
+  let value = (firstIndex + 1) >>> 0;
+  value ^= value >>> 16;
+  value = Math.imul(value, 0x7feb352d);
+  value ^= value >>> 15;
+  value = Math.imul(value, 0x846ca68b);
+  value ^= value >>> 16;
+  return value >>> 0;
+}
+
+function pushRulingPairHeap(heap, pair) {
+  heap.push(pair);
+  let index = heap.length - 1;
+  while (index > 0) {
+    const parent = Math.floor((index - 1) / 2);
+    if (compareRulingPairs(heap[parent], pair) <= 0) {
+      break;
+    }
+    heap[index] = heap[parent];
+    index = parent;
+  }
+  heap[index] = pair;
+}
+
+function popRulingPairHeap(heap) {
+  const first = heap[0];
+  const last = heap.pop();
+  if (heap.length === 0) {
+    return first;
+  }
+  let index = 0;
+  while (true) {
+    const left = index * 2 + 1;
+    const right = left + 1;
+    if (left >= heap.length) {
+      break;
+    }
+    const child =
+      right < heap.length && compareRulingPairs(heap[right], heap[left]) < 0
+        ? right
+        : left;
+    if (compareRulingPairs(heap[child], last) >= 0) {
+      break;
+    }
+    heap[index] = heap[child];
+    index = child;
+  }
+  heap[index] = last;
+  return first;
+}
+
+function compareRulingPairs(left, right) {
+  return (
+    left.left.firstIndex - right.left.firstIndex ||
+    left.right.firstIndex - right.right.firstIndex
+  );
+}
+
+function rulingLineScopeKey(line) {
+  const pageIndex = line.pageIndex ?? null;
+  return JSON.stringify([
+    pageIndex,
+    line.source ?? null,
+    line.orientation ?? null,
+    pageIndex == null ? line.streamIndex ?? null : null
+  ]);
+}
+
+function rulingCoordinateBucket(line, coordinateTolerance) {
+  const coordinate = lineAxisCoordinate(line);
+  if (Number.isFinite(coordinateTolerance) && coordinateTolerance > 0) {
+    return Number.isFinite(coordinate)
+      ? Math.floor(coordinate / coordinateTolerance)
+      : `non-finite:${coordinate}`;
+  }
+  if (coordinateTolerance === 0) {
+    return coordinate;
+  }
+  return "all-coordinates";
+}
+
+function neighboringRulingBuckets(line, coordinateTolerance) {
+  const bucket = rulingCoordinateBucket(line, coordinateTolerance);
+  return typeof bucket === "number" && coordinateTolerance > 0
+    ? [bucket - 1, bucket, bucket + 1]
+    : [bucket];
 }
 
 export function tokenizeContentStream(streamText, options = {}) {
