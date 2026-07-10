@@ -3,8 +3,13 @@
 Source study: [WebAssembly + WebGPU PDF-to-Markdown Study](pdf-to-markdown-webassembly-study.md)
 
 This plan turns the study into a tracked implementation sequence for an
-AI-agent-friendly PDF-to-Markdown npm package backed by a Rust/WebAssembly core,
-TypeScript orchestration, optional OCR, and optional WebGPU acceleration.
+AI-agent-friendly PDF-to-Markdown npm package. The current extraction pipeline
+runs in JavaScript; Rust/WebAssembly provides preflight only, rasterization is a
+metadata planner, OCR text is caller-supplied, and WebGPU executes bounded
+preprocessing samples. The executable boundaries are authoritative in
+[Architecture: Current Boundaries](../ARCHITECTURE.md#current-boundaries),
+[Raster Planning](api.md#raster-planning), [OCR](api.md#ocr), and
+[WASM Preflight](api.md#wasm-preflight).
 
 The first implementation milestone is not code generation. It is a validation
 corpus with clear acceptance criteria. PDF extraction quality cannot be judged
@@ -15,6 +20,11 @@ forms, annotations, and graceful failure on malformed files.
 ## Tracking Rules
 
 - Do not check an item until its tests, fixtures, or review artifact exist.
+- A checked planning or contract item must say that it is planning or contract
+  work. It does not satisfy a separate executable milestone.
+- Leave executable milestones unchecked until the production conversion path
+  performs the work; caller-supplied fixtures and metadata-only plans must be
+  labeled explicitly.
 - Every externally retrieved PDF must have source URL, retrieval date, license
   notes, redistribution status, SHA-256, and file size recorded in the corpus
   manifest.
@@ -319,12 +329,13 @@ Goal: create stable contracts so agents can implement modules independently.
 
 - [x] Create Rust workspace.
 - [x] Create TypeScript package workspace.
-- [x] Add `wasm-bindgen` or equivalent WASM bridge.
+- [x] Add the `wasm-bindgen` WASM preflight bridge.
 - [x] Add Node build target.
 - [x] Add browser build target.
 - [x] Add worker bundle target.
-- [x] Add single-threaded WASM build.
-- [x] Add threaded WASM build behind feature detection.
+- [x] Add the single-threaded WASM preflight build.
+- [x] Add an optional threaded WASM preflight build and load plan behind feature
+  detection.
 - [x] Add local examples for Node and browser.
 - [x] Add CI commands for Rust tests, TypeScript tests, lint, build, and corpus
   smoke tests.
@@ -425,7 +436,10 @@ Gate 1 acceptance:
 - [x] No parser panics on the full initial corpus.
 - [x] Unsupported PDFs produce structured warnings or future-gate skips.
 - [x] CLI can convert a local PDF to Markdown.
-- [x] Browser example can convert a small PDF through WASM.
+- [x] Browser example validates a small PDF through WASM preflight before the
+  JavaScript conversion path ([WASM loading](wasm-loading.md)).
+- [ ] Move production PDF parsing and extraction through the Rust/WASM core
+  before claiming browser conversion through WASM.
 
 ## Phase 3: Gate 2 - Robust PDF Parsing
 
@@ -565,14 +579,22 @@ Gate 4 acceptance:
 
 Goal: support scanned and hybrid PDFs through an OCR path.
 
+Gate status: open. Scan routing and caller-supplied OCR are executable; page
+pixel rendering and automatic OCR model execution remain future work.
+
 ### 6.1 Page Rasterization
 
-- [x] Select rendering dependency or implement scoped rasterization path.
-- [x] Render pages at configurable DPI.
-- [x] Respect page boxes and rotation.
-- [x] Enforce image pixel limits.
-- [x] Add thumbnail render path for previews and layout models.
-- [x] Add tests for rotated and cropped pages.
+- [x] Define the scoped `internal-page-geometry` raster planning adapter
+  ([Raster Planning](api.md#raster-planning)).
+- [ ] Integrate a renderer that returns bounded page pixel buffers.
+- [x] Compute page target dimensions at configurable DPI without retaining
+  pixels.
+- [ ] Render page pixels at the configured DPI.
+- [x] Apply page boxes, rotation, and `UserUnit` to raster target geometry.
+- [x] Enforce image pixel limits before a planned allocation.
+- [x] Compute metadata-only thumbnail targets for previews and layout models.
+- [ ] Render bounded thumbnail pixel buffers.
+- [x] Add raster-plan geometry tests for rotated and cropped pages.
 
 ### 6.2 Scan Detection
 
@@ -585,10 +607,12 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 
 ### 6.3 OCR Integration
 
-- [x] Select CPU OCR adapter.
+- [x] Select and expose the CPU OCR adapter contract and diagnostics.
 - [x] Define OCR model loading and cache behavior.
-- [x] Implement OCR text boxes with confidence.
-- [x] Implement deskew/preprocessing where practical.
+- [x] Accept caller-supplied OCR text boxes with confidence.
+- [ ] Execute the CPU OCR model on rendered page pixels during conversion.
+- [x] Define preprocessing plans and execute supplied RGBA validation samples.
+- [ ] Apply deskew and preprocessing to rendered page pixels in conversion.
 - [x] Reconcile PDF text layer and OCR text for hybrid pages.
 - [x] Prefer PDF text only when it aligns with visible geometry.
 - [x] Add OCR sidecar outputs for debugging.
@@ -596,15 +620,22 @@ Goal: support scanned and hybrid PDFs through an OCR path.
 
 Gate 5 acceptance:
 
-- [x] Scanned text fixtures meet OCR character/word error thresholds.
+- [x] Scanned text fixtures with reviewed caller-supplied OCR boxes meet
+  character/word error thresholds.
+- [ ] Automatically rasterize and OCR scanned fixtures to the same thresholds.
 - [x] Searchable scan fixtures choose reliable text per region.
 - [x] Bad OCR overlay fixtures do not blindly trust hidden text.
 - [x] OCR can be disabled and produces a clear warning.
-- [x] Browser and Node paths both work for at least one scanned fixture.
+- [x] Browser and Node paths both consume caller-supplied OCR for at least one
+  scanned fixture.
+- [ ] Browser and Node paths both execute automatic OCR for a scanned fixture.
 
 ## Phase 7: Gate 6 - WebGPU Acceleration
 
 Goal: accelerate OCR/layout workloads where available without changing results.
+
+Gate status: open for OCR/layout model execution. Real WebGPU adaptive-threshold
+preprocessing is implemented and benchmarked independently.
 
 ### 7.1 Capability Detection
 
@@ -616,27 +647,36 @@ Goal: accelerate OCR/layout workloads where available without changing results.
 
 ### 7.2 GPU Providers
 
-- [x] Integrate GPU execution provider for OCR or layout models.
-- [x] Batch page images where memory allows.
+- [x] Integrate a WebGPU adaptive-threshold preprocessing runner for a supplied
+  `GPUDevice` ([WebGPU](api.md#webgpu)).
+- [ ] Integrate a GPU execution provider into automatic OCR or layout models.
+- [x] Plan page-image batches within pixel and memory budgets.
+- [ ] Execute planned batches on rendered page images during conversion.
 - [x] Enforce GPU memory limits.
 - [x] Handle device loss.
-- [x] Keep model outputs compatible with CPU path.
-- [x] Add provider parity tests.
+- [x] Keep WebGPU preprocessing bytes compatible with the CPU path.
+- [x] Add preprocessing-provider parity tests.
 
 ### 7.3 Benchmarks
 
-- [x] Benchmark OCR CPU versus WebGPU.
-- [x] Benchmark layout model CPU versus WebGPU.
-- [x] Track startup/model-load time separately from page throughput.
+- [x] Benchmark adaptive-threshold preprocessing on CPU versus WebGPU.
+- [ ] Benchmark automatic OCR on CPU versus WebGPU.
+- [ ] Benchmark an integrated layout model on CPU versus WebGPU.
+- [x] Track preprocessing startup separately from sample throughput.
+- [ ] Track OCR/layout model-load time separately from page throughput after
+  model integration.
 - [x] Track peak CPU and GPU memory.
 - [x] Publish benchmark reports under `corpus/reports/`.
 
 Gate 6 acceptance:
 
-- [x] CPU and WebGPU paths produce equivalent accepted outputs.
-- [x] WebGPU is measurably faster on selected workloads.
+- [x] CPU and WebGPU preprocessing produce byte-equivalent output.
+- [x] WebGPU preprocessing is measurably faster on the selected RGBA workload.
 - [x] Unsupported WebGPU environments pass the same corpus through CPU fallback.
 - [x] Device errors produce structured diagnostics.
+- [ ] CPU and WebGPU automatic OCR/layout paths produce equivalent accepted
+  outputs.
+- [ ] WebGPU is measurably faster for an integrated OCR or layout model.
 
 Speedup validation status, 2026-07-03:
 
@@ -662,17 +702,21 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 - [x] Detect equation-like regions.
 - [x] Preserve Unicode equations when text extraction is reliable.
 - [x] Add optional formula OCR to LaTeX.
-- [x] Preserve equation images when OCR confidence is low.
+- [x] Preserve low-confidence equation metadata without emitting broken image
+  links.
+- [ ] Preserve renderable equation preview images when raster bytes exist.
 - [x] Add source maps for equation regions.
 
 ### 8.2 Figures, Charts, And Diagrams
 
 - [x] Group images and vector regions into figures.
 - [x] Attach captions to figures.
-- [x] Extract figure assets.
+- [x] Preserve figure regions and metadata without emitting broken image links.
+- [ ] Extract renderable figure preview assets when raster bytes exist.
 - [x] Preserve alt text from tagged PDFs where present.
 - [x] Do not invent chart data from visual charts.
-- [x] Emit asset links and warnings for low-semantic visual content.
+- [x] Emit metadata-only markers and warnings for low-semantic visual content.
+- [ ] Emit figure asset links after preview bytes are materialized.
 
 ### 8.3 Forms, Annotations, Attachments, And Signatures
 
@@ -695,8 +739,10 @@ Goal: expand high-value difficult content after the core pipeline is stable.
 
 Gate 7 acceptance:
 
-- [x] Equation fixtures preserve useful math representation or assets.
-- [x] Figure fixtures preserve captions and asset links.
+- [x] Equation fixtures preserve useful text/LaTeX or explicit metadata-only
+  fallback.
+- [x] Figure fixtures preserve captions and explicit metadata-only fallback.
+- [ ] Equation and figure fixtures materialize preview assets from raster bytes.
 - [x] Government form fixtures extract fields and values.
 - [x] Annotation and attachment fixtures produce expected sidecars.
 - [x] RTL, CJK, and vertical fixtures meet script-specific acceptance criteria.
@@ -722,10 +768,13 @@ Goal: make the package safe and predictable enough for real use.
 ### 9.2 Performance
 
 - [x] Stream page processing where possible.
-- [x] Avoid retaining full page rasters unnecessarily.
+- [x] Keep metadata-only raster plans at zero retained pixel bytes.
+- [ ] Stream or release rendered page buffers once a renderer is integrated.
 - [x] Add memory profile for long manuals.
 - [x] Add throughput benchmark for text-only PDFs.
-- [x] Add throughput benchmark for OCR PDFs.
+- [x] Add throughput benchmark for conversion with reviewed caller-supplied OCR
+  results.
+- [ ] Add an automatic raster-and-OCR throughput benchmark.
 - [x] Add startup benchmark for browser and Node.
 - [x] Add package-size budget.
 - [x] Add model-size budget.
@@ -835,7 +884,10 @@ Minimum release bars for a serious beta:
 
 - [x] Layout V1 accepted corpus passes.
 - [x] Tables V1 accepted corpus passes for simple and visible-border tables.
-- [x] OCR V1 accepted corpus passes for selected scanned and hybrid PDFs.
+- [x] Caller-supplied OCR V1 accepted corpus passes for selected scanned and
+  hybrid PDFs.
+- [ ] Automatic raster-and-OCR V1 accepted corpus passes for selected scanned
+  and hybrid PDFs.
 - [x] Full corpus reports are generated in CI or release CI.
 - [x] Performance budgets are enforced.
 - [x] Browser fallback behavior is documented and tested.
