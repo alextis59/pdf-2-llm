@@ -8,10 +8,10 @@ Entries analyzed: 37
 | --- | ---: | --- | --- | ---: | --- |
 | nist-sp800-207-zero-trust | 966908 | 0290d6ece24874287316f4bf430fef770aa4ec08a2227c8f2c1e5b2ff975e03d | 1.6 | 59 | born-digital, tagged, government-report, headings, figures, references, optimized-pdf, annotations, outlines, metadata |
 | nist-sp800-218-secure-software | 739891 | 617746e553a9e2da49bfbd4eef0dfc3094758a39b869314e4173ac36605cde22 | 1.6 | 36 | born-digital, tagged, government-report, headings, tables, references, optimized-pdf, annotations, outlines, metadata |
-| nist-sp800-61r2-incident-handling | 1744473 | b1c5ead0632dcfb979c59d8c462b094ad2465ddaf62d5c246289d6d9b4419df1 | 1.6 | 80 | born-digital, tagged, government-report, withdrawn-notice, headings, lists, tables, references, acroform-metadata, acroForm, annotations, metadata |
+| nist-sp800-61r2-incident-handling | 1744473 | b1c5ead0632dcfb979c59d8c462b094ad2465ddaf62d5c246289d6d9b4419df1 | 1.6 | 80 | born-digital, tagged, government-report, withdrawn-notice, headings, lists, tables, references, acroform-metadata, acroform, annotations, metadata |
 | nist-sp800-30r1-risk-assessment | 826897 | f214087f0bdb35932a28c16eb93932a33c67a6edfb5e6f1638866bd201c98e04 | 1.5 | 95 | born-digital, tagged, government-report, headings, lists, tables, appendices, annotations, outlines, metadata |
 | nist-sp800-213-iot-device | 2386815 | 8f90d1fc02a3436444dca859b2f66e97942f443c07109798aeaee1315a6c60ae | 1.6 | 47 | born-digital, tagged, government-report, headings, lists, references, optimized-pdf, annotations, outlines, metadata |
-| nist-sp800-63b-4 | 993734 | d9ab89576b5ae2cfb3ba37781110788dea27a85a5079496dbfc1a79834670afd | 1.7 | 129 | born-digital, tagged, long-document, government-report, headings, tables, references, acroform-metadata, acroForm, annotations, outlines, metadata |
+| nist-sp800-63b-4 | 993734 | d9ab89576b5ae2cfb3ba37781110788dea27a85a5079496dbfc1a79834670afd | 1.7 | 129 | born-digital, tagged, long-document, government-report, headings, tables, references, acroform-metadata, acroform, annotations, outlines, metadata |
 | synthetic-borderless-table | 976 | e5c532de1d67a53ce41a768bb6ea12ae0f68313b7a33c124a0a67c602a03bbef | 1.4 | 1 | born-digital, borderless-table, aligned-columns |
 | synthetic-cropped-page | 723 | cf4240dfdf2d34917a6ca5d9e8b5977ca852322c5b1bdf135fb8cfc026ee15af | 1.4 | 1 | born-digital, cropped-page |
 | synthetic-damaged-xref | 800 | fa0fbdbfd99feabaac67f8853564d5e9f43e505d200c09a73eb2d2c1bdfaeb8e | 1.4 | 1 | born-digital, damaged-xref, repair-mode |
@@ -35,7 +35,7 @@ Entries analyzed: 37
 | synthetic-complex-spanned-table | 839 | 59cd704b1489fe78e3c22ad77e19e4d42d5f30ae9932cae57d6d76cdc7e8cc31 | 1.4 | 1 | born-digital, visible-table, ruling-lines, column-span, html-table |
 | synthetic-scanned-text | 828 | 440455e37d18dd2ec8eadbb0be3ba2377cb8b24d3837780f1c8fbbd366ed7967 | 1.4 | 1 | scanned, image-dominant, ocr-results |
 | synthetic-searchable-scan-regions | 944 | 68e125ff1c95202c1b758113945b6494d467a0faf73682c056796953fc03a220 | 1.4 | 1 | searchable-scan, hidden-ocr-overlay, mixed-region-reconciliation |
-| synthetic-government-form | 1260 | 38dc2c41a780c0991cdcac568f7750fc5b0a922d82628fdfa74a0f2c8200cbfa | 1.4 | 1 | born-digital, acroform, government-form, checkbox, radio, acroForm, annotations |
+| synthetic-government-form | 1260 | 38dc2c41a780c0991cdcac568f7750fc5b0a922d82628fdfa74a0f2c8200cbfa | 1.4 | 1 | born-digital, acroform, government-form, checkbox, radio, annotations |
 | synthetic-rtl-text | 3324 | d1ada8f3d54b61af4bd71872d55eebd235eefbe2a1c5a86abbd04cf0e4418460 | 1.4 | 1 | born-digital, to-unicode, rtl, bidi, visible-vector-glyphs |
 | synthetic-cjk-text | 7774 | 8e9d9b1cfb266cfdfe40025c5fab7e9f4c289ab789f289eb88e0bd234a0ff342 | 1.4 | 1 | born-digital, to-unicode, cjk, wrapped-lines, visible-vector-glyphs |
 | synthetic-vertical-writing | 5429 | 2424794db934f6a26039f82fe5477c621102fa961664e51227872e855eb73b7d | 1.4 | 1 | born-digital, to-unicode, cjk, vertical-writing, visible-vector-glyphs |

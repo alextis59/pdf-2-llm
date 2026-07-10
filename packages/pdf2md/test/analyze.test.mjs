@@ -4,6 +4,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  canonicalDetectedFeatures,
+  createInventoryReport,
   portableToolArgument,
   toolVersionFromResult
 } from "../../../scripts/corpus/analyze.mjs";
@@ -34,6 +36,41 @@ test("analysis tool captures retain the first reported version line", () => {
     toolVersionFromResult({ available: false, error: "not found" }),
     null
   );
+});
+
+test("inventory features use the canonical external vocabulary", () => {
+  assert.deepEqual(
+    canonicalDetectedFeatures({
+      tagged: true,
+      roleMap: true,
+      acroForm: true,
+      xfa: false,
+      annotations: true
+    }),
+    ["tagged", "role-map", "acroform", "annotations"]
+  );
+  assert.throws(
+    () => canonicalDetectedFeatures({ futureSignal: true }),
+    /Missing canonical inventory feature for detector property: futureSignal/
+  );
+
+  const inventory = createInventoryReport([
+    {
+      id: "form-sample",
+      bytes: 10,
+      sha256: "a".repeat(64),
+      pdfVersion: "1.7",
+      pages: { manifest: 1 },
+      manifest: { features: ["born-digital", "acroform", "acroform-metadata"] },
+      documentFeatures: { acroForm: true, annotations: true }
+    }
+  ]);
+
+  assert.match(
+    inventory,
+    /\| form-sample \| 10 \| a{64} \| 1\.7 \| 1 \| born-digital, acroform, acroform-metadata, annotations \|/
+  );
+  assert.doesNotMatch(inventory, /acroForm/);
 });
 
 test("committed inventory byte and hash identities match the manifest", async () => {

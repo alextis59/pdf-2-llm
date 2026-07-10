@@ -613,6 +613,30 @@ async function writeInventoryReport(analyses) {
   return reportPath;
 }
 
+const detectedFeatureVocabulary = Object.freeze({
+  tagged: "tagged",
+  roleMap: "role-map",
+  acroForm: "acroform",
+  xfa: "xfa",
+  annotations: "annotations",
+  outlines: "outlines",
+  attachments: "attachments",
+  signatures: "signatures",
+  metadata: "metadata"
+});
+
+export function canonicalDetectedFeatures(documentFeatures = {}) {
+  return Object.entries(documentFeatures)
+    .filter(([, enabled]) => enabled)
+    .map(([name]) => {
+      const feature = detectedFeatureVocabulary[name];
+      if (!feature) {
+        throw new Error(`Missing canonical inventory feature for detector property: ${name}`);
+      }
+      return feature;
+    });
+}
+
 export function createInventoryReport(analyses) {
   const lines = [
     "# Corpus Inventory",
@@ -626,9 +650,7 @@ export function createInventoryReport(analyses) {
   ];
 
   for (const analysis of analyses) {
-    const detectedFeatures = Object.entries(analysis.documentFeatures)
-      .filter(([, enabled]) => enabled)
-      .map(([name]) => name);
+    const detectedFeatures = canonicalDetectedFeatures(analysis.documentFeatures);
     const manifestFeatures = analysis.manifest?.features ?? [];
     const features = [...new Set([...manifestFeatures, ...detectedFeatures])].join(", ");
     const pages = analysis.pages.pdfinfo ?? analysis.pages.manifest ?? analysis.pages.staticPageObjectCount ?? 0;
