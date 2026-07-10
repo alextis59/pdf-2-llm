@@ -77,6 +77,39 @@ test("compareTableDetection reports false positives and false negatives", () => 
   assert.equal(negativeComparison.precision, 0);
 });
 
+test("compareTableDetection does not count unrelated replacement tables", () => {
+  const expected = ["| Product | Count |", "| --- | ---: |", "| Pencil | 4 |"].join("\n");
+  const unrelated = ["| Region | Users |", "| --- | ---: |", "| North | 120 |"].join("\n");
+  const comparison = compareTableDetection(expected, unrelated);
+
+  assert.equal(comparison.passed, false);
+  assert.equal(comparison.truePositives, 0);
+  assert.equal(comparison.falsePositives, 1);
+  assert.equal(comparison.falseNegatives, 1);
+  assert.equal(comparison.precision, 0);
+  assert.equal(comparison.recall, 0);
+});
+
+test("compareTableDetection matches normalized cells only within the same table format", () => {
+  const expected = ["| Product | Count |", "| --- | ---: |", "| Pencil | 4 |"].join("\n");
+  const whitespaceVariant = [
+    "|   Product   | Count |",
+    "| :--- | ---: |",
+    "| Pencil |    4   |"
+  ].join("\n");
+  assert.equal(compareTableDetection(expected, whitespaceVariant).passed, true);
+
+  const htmlVariant = [
+    "<table>",
+    "  <tr><th>Product</th><th>Count</th></tr>",
+    "  <tr><td>Pencil</td><td>4</td></tr>",
+    "</table>"
+  ].join("\n");
+  const formatMismatch = compareTableDetection(expected, htmlVariant);
+  assert.equal(formatMismatch.truePositives, 0);
+  assert.equal(formatMismatch.passed, false);
+});
+
 test("createTableDetectionReport aggregates precision and recall", () => {
   const report = createTableDetectionReport([
     compareTableDetection("| A |\n| --- |\n| 1 |\n", "| A |\n| --- |\n| 1 |\n"),

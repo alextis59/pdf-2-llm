@@ -39,9 +39,22 @@ export function extractTableBlocks(markdown) {
 export function compareTableDetection(expectedMarkdown, actualMarkdown) {
   const expectedTables = extractTableBlocks(expectedMarkdown);
   const actualTables = extractTableBlocks(actualMarkdown);
-  const truePositives = Math.min(expectedTables.length, actualTables.length);
-  const falsePositives = Math.max(0, actualTables.length - expectedTables.length);
-  const falseNegatives = Math.max(0, expectedTables.length - actualTables.length);
+  const actualMatchCounts = new Map();
+  for (const table of actualTables) {
+    const key = tableMatchKey(table);
+    actualMatchCounts.set(key, (actualMatchCounts.get(key) ?? 0) + 1);
+  }
+  let truePositives = 0;
+  for (const table of expectedTables) {
+    const key = tableMatchKey(table);
+    const remaining = actualMatchCounts.get(key) ?? 0;
+    if (remaining > 0) {
+      truePositives += 1;
+      actualMatchCounts.set(key, remaining - 1);
+    }
+  }
+  const falsePositives = actualTables.length - truePositives;
+  const falseNegatives = expectedTables.length - truePositives;
   const precision =
     actualTables.length === 0 ? (expectedTables.length === 0 ? 1 : 0) : truePositives / actualTables.length;
   const recall =
@@ -95,6 +108,67 @@ function normalizeHtmlTable(value) {
     .map((line) => line.trim())
     .filter(Boolean)
     .join("\n");
+}
+
+function tableMatchKey(table) {
+  const rows = table.format === "gfm" ? readGfmRows(table.text) : readHtmlRows(table.text);
+  return JSON.stringify([table.format, rows]);
+}
+
+function readGfmRows(value) {
+  return value
+    .split("\n")
+    .filter((_, index) => index !== 1)
+    .map(splitGfmRow);
+}
+
+function splitGfmRow(value) {
+  const trimmed = value.trim();
+  const source = trimmed.slice(trimmed.startsWith("|") ? 1 : 0, trimmed.endsWith("|") ? -1 : undefined);
+  const cells = [];
+  let current = "";
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === "\\" && source[index + 1] === "|") {
+      current += "|";
+      index += 1;
+    } else if (character === "|") {
+      cells.push(normalizeCellValue(current));
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  cells.push(normalizeCellValue(current));
+  return cells;
+}
+
+function readHtmlRows(value) {
+  const rows = [];
+  for (const rowMatch of value.matchAll(/<tr(?:\s[^>]*)?>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [];
+    for (const cellMatch of rowMatch[1].matchAll(/<(th|td)(\s[^>]*)?>([\s\S]*?)<\/\1>/gi)) {
+      cells.push({
+        type: cellMatch[1].toLowerCase(),
+        colspan: readHtmlSpan(cellMatch[2], "colspan"),
+        rowspan: readHtmlSpan(cellMatch[2], "rowspan"),
+        value: normalizeCellValue(cellMatch[3].replace(/<[^>]+>/g, " "))
+      });
+    }
+    rows.push(cells);
+  }
+  return rows.length > 0 ? rows : [[normalizeCellValue(value)]];
+}
+
+function readHtmlSpan(attributes, name) {
+  const match = String(attributes ?? "").match(
+    new RegExp(`\\b${name}\\s*=\\s*(?:\"([^\"]+)\"|'([^']+)'|([^\\s>]+))`, "i")
+  );
+  return match ? Number.parseInt(match[1] ?? match[2] ?? match[3], 10) : 1;
+}
+
+function normalizeCellValue(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
 function countFormats(tables) {
