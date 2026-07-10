@@ -40,10 +40,12 @@
       "properties": {
         "id": {
           "type": "string",
+          "minLength": 1,
           "pattern": "^[a-z0-9][a-z0-9-]*$"
         },
         "kind": {
           "type": "string",
+          "minLength": 1,
           "enum": [
             "synthetic",
             "born-digital",
@@ -79,22 +81,63 @@
           ]
         },
         "path": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "source": {
           "type": "object",
           "additionalProperties": false,
           "required": ["type", "description"],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "const": "url"
+                  }
+                },
+                "required": ["type"]
+              },
+              "then": {
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "enum": ["generated", "mutated"]
+                  }
+                },
+                "required": ["type"]
+              },
+              "then": {
+                "required": ["command"],
+                "properties": {
+                  "command": {
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          ],
           "properties": {
             "type": {
               "type": "string",
+              "minLength": 1,
               "enum": ["url", "generated", "mutated", "manual-import", "local-only"]
             },
             "url": {
               "type": "string"
             },
             "description": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "command": {
               "type": "string"
@@ -103,6 +146,7 @@
         },
         "retrievedAt": {
           "type": "string",
+          "minLength": 1,
           "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
         },
         "license": {
@@ -111,13 +155,15 @@
           "required": ["name", "notes"],
           "properties": {
             "name": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "url": {
               "type": "string"
             },
             "notes": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             }
           }
         },
@@ -126,6 +172,7 @@
         },
         "sha256": {
           "type": "string",
+          "minLength": 1,
           "pattern": "^[a-f0-9]{64}$"
         },
         "bytes": {
@@ -137,23 +184,28 @@
           "minimum": 0
         },
         "pdfVersion": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "features": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "uniqueItems": true
         },
         "acceptanceFile": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "ocrResultsFile": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "notes": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         }
       }
     }
