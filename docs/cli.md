@@ -22,6 +22,13 @@ npm exec -- pdf-2-llm <input.pdf> [--output <path>] [--json] [--debug]
 | --- | --- | --- |
 | `<input.pdf>` | Yes | Local path to the PDF to convert. |
 
+Unknown options, repeated options, and additional positional arguments are
+errors. Use `--` before an input path that starts with a dash:
+
+```sh
+pdf-2-llm -- --document.pdf
+```
+
 The CLI currently accepts local file paths only. For `ArrayBuffer`,
 `Uint8Array`, password callbacks, OCR result injection, WebGPU configuration,
 or custom security limits, use the JavaScript API documented in
@@ -114,7 +121,8 @@ pdf-2-llm document.pdf --debug-trace .temp/pdf-2-llm-debug.ndjson
 ## Exit Behavior
 
 The CLI exits successfully when conversion completes and output is written.
-Missing input prints usage and exits with a non-zero status.
+Missing input and invalid, duplicate, or extra arguments print usage and exit
+with a non-zero status.
 
 Document-level PDF problems generally appear as structured warnings in
 Markdown/JSON output rather than process failures. Examples include parse

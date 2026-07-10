@@ -3,10 +3,19 @@ import { appendFile, mkdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { convertPdfToMarkdown } from "./index.mjs";
 
 const args = process.argv.slice(2);
 let activeTrace = null;
+const knownOptionTokens = new Set([
+  "--help",
+  "-h",
+  "--json",
+  "--debug",
+  "--debug-trace",
+  "--output"
+]);
 
 function usage() {
   return `Usage:
@@ -14,7 +23,7 @@ function usage() {
 `;
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const parsed = {
     inputPath: undefined,
     outputPath: undefined,
@@ -24,59 +33,74 @@ function parseArgs(argv) {
     help: false,
     error: undefined
   };
+  const seenOptions = new Set();
+  let positionalOnly = false;
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--help" || arg === "-h") {
-      parsed.help = true;
+    if (!positionalOnly && arg === "--") {
+      positionalOnly = true;
       continue;
     }
-    if (arg === "--json") {
-      parsed.json = true;
-      continue;
-    }
-    if (arg === "--debug") {
-      parsed.debug = true;
-      continue;
-    }
-    if (arg === "--debug-trace") {
-      const value = argv[index + 1];
-      if (!value || value.startsWith("--")) {
-        parsed.error = "--debug-trace requires a path.";
+    if (!positionalOnly && knownOptionTokens.has(arg)) {
+      const option = arg === "-h" ? "--help" : arg;
+      if (seenOptions.has(option)) {
+        parsed.error = `Duplicate option: ${option}.`;
         return parsed;
       }
-      parsed.debug = true;
-      parsed.debugTracePath = value;
+      seenOptions.add(option);
+      if (option === "--help") {
+        parsed.help = true;
+        continue;
+      }
+      if (option === "--json") {
+        parsed.json = true;
+        continue;
+      }
+      if (option === "--debug") {
+        parsed.debug = true;
+        continue;
+      }
+      const value = argv[index + 1];
+      if (!value || value === "--" || knownOptionTokens.has(value)) {
+        parsed.error = `${option} requires a path.`;
+        return parsed;
+      }
+      if (option === "--debug-trace") {
+        parsed.debug = true;
+        parsed.debugTracePath = value;
+      } else {
+        parsed.outputPath = value;
+      }
       index += 1;
       continue;
     }
-    if (arg === "--output") {
-      const value = argv[index + 1];
-      if (!value || value.startsWith("--")) {
-        parsed.error = "--output requires a path.";
-        return parsed;
-      }
-      parsed.outputPath = value;
-      index += 1;
-      continue;
+    if (!positionalOnly && arg.startsWith("-")) {
+      parsed.error = `Unknown option: ${arg}.`;
+      return parsed;
     }
-    if (!arg.startsWith("--") && !parsed.inputPath) {
+    if (!parsed.inputPath) {
       parsed.inputPath = arg;
+      continue;
     }
+    parsed.error = `Unexpected positional argument: ${arg}.`;
+    return parsed;
   }
 
   return parsed;
 }
 
-try {
-  const exitCode = await runCli(args);
-  process.exitCode = exitCode;
-} catch (error) {
-  await activeTrace?.event("cli.error", {
-    error: serializeError(error)
-  });
-  reportFatalError(error, activeTrace);
-  process.exitCode = 1;
+async function main() {
+  try {
+    const exitCode = await runCli(args);
+    process.exitCode = exitCode;
+  } catch (error) {
+    await activeTrace?.event("cli.error", {
+      error: serializeError(error)
+    });
+    reportFatalError(error, activeTrace);
+    process.exitCode = 1;
+  }
 }
 
 async function runCli(argv) {
@@ -96,17 +120,17 @@ async function runCli(argv) {
     console.error(`Debug trace: ${activeTrace.path}`);
   }
 
-  if (parsed.help) {
-    await activeTrace?.event("cli.help");
-    console.log(usage());
-    return 0;
-  }
-
   if (parsed.error) {
     await activeTrace?.event("cli.argument_error", { message: parsed.error });
     console.error(parsed.error);
     console.log(usage());
     return 1;
+  }
+
+  if (parsed.help) {
+    await activeTrace?.event("cli.help");
+    console.log(usage());
+    return 0;
   }
 
   const { inputPath, outputPath, json } = parsed;
@@ -385,4 +409,8 @@ function shouldRedactTraceKey(key) {
 
 function byteLength(value) {
   return Buffer.byteLength(value, "utf8");
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
 }
