@@ -71,6 +71,10 @@ fuzz smoke, build, and API tests.
   synthetic snapshots, then runs every `tables-v1` acceptance contract. Public
   documents remain table-criterion and oracle driven unless a full-document
   Markdown snapshot has been deliberately reviewed.
+- `npm run corpus:run:robust`, `npm run corpus:run:forms`, and
+  `npm run corpus:run:advanced` exact-match every gating snapshot in those
+  scopes. The non-gating damaged-xref and password-protected snapshots are
+  exact-matched by API tests that supply their required parser mode or password.
 - Text coverage uses a reviewed Markdown snapshot when one exists and otherwise
   falls back to the stored text oracle. Raw text oracles remain the reference
   for repeated running-content removal checks.

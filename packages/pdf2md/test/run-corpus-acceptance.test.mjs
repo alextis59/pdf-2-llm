@@ -298,6 +298,7 @@ test("damaged-xref acceptance executes paragraph-order evidence after tolerant r
 
   assert.ok(acceptance.must.includes("preserve_paragraph_order"));
   assert.ok(!acceptance.must.includes("preserve_decrypted_text_order"));
+  assert.equal(result.markdown, expected);
   assert.equal(readingOrder.readingOrderDistance, 0);
   assert.deepEqual(evaluateAcceptanceCriteria(acceptance, context), {
     errors: [],

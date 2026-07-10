@@ -17,6 +17,10 @@ const encryptedRc4FixturePath = new URL(
   "../../../corpus/generated/synthetic-encrypted-rc4-40.pdf",
   import.meta.url
 );
+const encryptedRc4ExpectedPath = new URL(
+  "../../../corpus/expected/synthetic-encrypted-rc4-40.md",
+  import.meta.url
+);
 const damagedXrefFixturePath = new URL(
   "../../../corpus/generated/synthetic-damaged-xref.pdf",
   import.meta.url
@@ -948,6 +952,7 @@ test("converter invokes password callback and reports unsupported encrypted PDFs
 
 test("parser and converter decrypt Standard revision 2 RC4-40 PDFs with the user password", async () => {
   const bytes = await readFile(encryptedRc4FixturePath);
+  const expected = await readFile(encryptedRc4ExpectedPath, "utf8");
   const secret = "userpass";
 
   assert.throws(
@@ -961,10 +966,7 @@ test("parser and converter decrypt Standard revision 2 RC4-40 PDFs with the user
 
   assert.equal(document.pages.length, 1);
   assert.match(document.pages[0].contentStreams[0].text, /Synthetic Simple Text/);
-  assert.equal(
-    result.markdown,
-    "# Synthetic Simple Text\n\nThis fixture validates basic paragraph extraction.\n\nThe expected output is deterministic.\n"
-  );
+  assert.equal(result.markdown, expected);
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PasswordRequired));
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.PasswordIncorrect));
   assert.ok(!result.warnings.some((warning) => warning.code === warningCodes.UnsupportedEncryption));
