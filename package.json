@@ -137,5 +137,8 @@
     "rust:test": "cargo test --workspace",
     "test:api": "npm run test --workspace @pdf-2-llm/pdf2md",
     "wasm:build": "npm run rust:build:wasm && node scripts/build/copy-wasm.mjs"
+  },
+  "devDependencies": {
+    "yaml": "^2.8.3"
   }
 }

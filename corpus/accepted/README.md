@@ -76,6 +76,13 @@ expected behavior has been written here.
   numbers, and boilerplate that should disappear from Markdown.
 - `runningContent.expectedRetained` is for meaningful title, section, or body
   phrases that must survive running-content removal.
+- Validation parses YAML structurally and applies a closed schema. Unknown or
+  misspelled keys fail at every supported nesting level instead of being
+  ignored.
+- Every non-template YAML file must be referenced by exactly one manifest
+  entry, and its `id` must match both the filename and manifest entry.
+- Every `warnings.allowed` value must come from the public `warningCodes`
+  registry.
 
 Validate acceptance files with:
 

@@ -1,6 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { parseDocument } from "yaml";
 import { warningCodes } from "../../packages/pdf2md/src/index.mjs";
 
 const args = process.argv.slice(2);
@@ -37,21 +38,140 @@ const allowedExpectedModes = new Set([
   "unsupported"
 ]);
 const allowedWarningCodes = new Set(Object.values(warningCodes));
-const requiredTopLevelKeys = [
-  "id",
-  "gate",
-  "sourceType",
-  "expectedMode",
-  "gating",
-  "must",
-  "mustNot",
-  "metrics",
-  "snippets",
-  "structure",
-  "warnings",
-  "assets",
-  "review"
-];
+const nonEmptyStringSchema = { type: "string", minLength: 1 };
+const stringListSchema = {
+  type: "array",
+  items: nonEmptyStringSchema
+};
+const ratioSchema = { type: "number", minimum: 0, maximum: 1 };
+const nonNegativeIntegerSchema = { type: "integer", minimum: 0 };
+const acceptanceSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "id",
+    "gate",
+    "sourceType",
+    "expectedMode",
+    "gating",
+    "must",
+    "mustNot",
+    "metrics",
+    "snippets",
+    "structure",
+    "warnings",
+    "assets",
+    "review"
+  ],
+  properties: {
+    id: { ...nonEmptyStringSchema, pattern: idPattern },
+    gate: { type: "string", enum: [...allowedGates] },
+    sourceType: { type: "string", enum: [...allowedSourceTypes] },
+    expectedMode: { type: "string", enum: [...allowedExpectedModes] },
+    gating: { type: "boolean" },
+    skipReason: nonEmptyStringSchema,
+    must: { ...stringListSchema, minItems: 1 },
+    mustNot: { ...stringListSchema, minItems: 1 },
+    metrics: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        minTextCoverage: ratioSchema,
+        maxReadingOrderDistance: ratioSchema,
+        maxCharacterErrorRate: ratioSchema,
+        maxOcrCharacterErrorRate: ratioSchema,
+        maxOcrWordErrorRate: ratioSchema,
+        minRunningContentPrecision: ratioSchema,
+        minRunningContentRecall: ratioSchema,
+        minTableCellAdjacency: ratioSchema,
+        minTableCsvCellTextAccuracy: ratioSchema,
+        minTableSpanAccuracy: ratioSchema,
+        maxUnexpectedWarnings: nonNegativeIntegerSchema,
+        maxRssDeltaBytes: nonNegativeIntegerSchema,
+        maxHeapUsedDeltaBytes: nonNegativeIntegerSchema,
+        minTaggedMarkedContent: nonNegativeIntegerSchema,
+        maxTaggedStructureConflicts: nonNegativeIntegerSchema,
+        minRenderedHtmlTextChars: nonNegativeIntegerSchema,
+        minRenderedHtmlHeadings: nonNegativeIntegerSchema,
+        minRenderedHtmlParagraphs: nonNegativeIntegerSchema,
+        maxRenderedHtmlParagraphChars: nonNegativeIntegerSchema
+      }
+    },
+    snippets: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["page", "contains"],
+        properties: {
+          page: { type: "integer", minimum: 1 },
+          contains: nonEmptyStringSchema
+        }
+      }
+    },
+    runningContent: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        expectedRemoved: stringListSchema,
+        expectedRetained: stringListSchema
+      }
+    },
+    structure: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        expected: stringListSchema,
+        headings: stringListSchema,
+        tables: stringListSchema,
+        forms: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["name", "fieldType"],
+            properties: {
+              name: nonEmptyStringSchema,
+              label: nonEmptyStringSchema,
+              fieldType: nonEmptyStringSchema,
+              buttonType: nonEmptyStringSchema,
+              value: { type: ["string", "number", "boolean", "null"] },
+              checked: { type: "boolean" },
+              selectedValue: nonEmptyStringSchema
+            }
+          }
+        }
+      }
+    },
+    warnings: {
+      type: "object",
+      additionalProperties: false,
+      required: ["allowed"],
+      properties: {
+        allowed: stringListSchema
+      }
+    },
+    assets: {
+      type: "object",
+      additionalProperties: false,
+      required: ["required"],
+      properties: {
+        required: stringListSchema
+      }
+    },
+    review: {
+      type: "object",
+      additionalProperties: false,
+      required: ["humanReviewedBy", "reviewedAt", "notes"],
+      properties: {
+        humanReviewedBy: { type: "string" },
+        reviewedAt: { type: "string" },
+        notes: nonEmptyStringSchema
+      }
+    }
+  }
+};
 
 function hasFlag(name) {
   return args.includes(name);
@@ -103,147 +223,162 @@ async function listYamlFiles(dir) {
   return files.sort();
 }
 
-function readTopLevelScalars(text) {
-  const values = new Map();
-  for (const line of text.split(/\r?\n/)) {
-    if (/^\s*$/.test(line) || /^\s*#/.test(line) || /^\s/.test(line)) {
-      continue;
+function parseAcceptanceYaml(text, relativePath) {
+  const document = parseDocument(text, {
+    prettyErrors: false,
+    uniqueKeys: true
+  });
+  if (document.errors.length > 0) {
+    throw new Error(
+      `${relativePath}: invalid YAML: ${document.errors.map((error) => error.message).join("; ")}`
+    );
+  }
+  try {
+    return document.toJS({ maxAliasCount: 0 });
+  } catch (error) {
+    throw new Error(`${relativePath}: invalid YAML: ${error.message}`, { cause: error });
+  }
+}
+
+function validateClosedSchema(value, schema, location, relativePath, errors) {
+  if (!matchesType(value, schema.type)) {
+    errors.push(`${relativePath}: ${displayLocation(location)} must be ${describeType(schema.type)}`);
+    return;
+  }
+
+  if (schema.enum && !schema.enum.includes(value)) {
+    errors.push(
+      `${relativePath}: ${displayLocation(location)} must be one of ${schema.enum.join(", ")}`
+    );
+  }
+
+  if (typeof value === "string") {
+    if (schema.minLength !== undefined && value.length < schema.minLength) {
+      errors.push(`${relativePath}: ${displayLocation(location)} must not be empty`);
     }
-    const match = line.match(/^([A-Za-z][A-Za-z0-9]*):(?:\s*(.*))?$/);
-    if (match) {
-      values.set(match[1], match[2] ?? "");
+    if (schema.pattern && !schema.pattern.test(value)) {
+      errors.push(`${relativePath}: ${displayLocation(location)} must match ${schema.pattern}`);
     }
   }
-  return values;
-}
 
-function readTopLevelKeys(text) {
-  return new Set(readTopLevelScalars(text).keys());
-}
-
-function normalizeScalar(value) {
-  const trimmed = value.trim();
-  if (
-    (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1);
+  if (typeof value === "number") {
+    if (schema.minimum !== undefined && value < schema.minimum) {
+      errors.push(`${relativePath}: ${displayLocation(location)} must be at least ${schema.minimum}`);
+    }
+    if (schema.maximum !== undefined && value > schema.maximum) {
+      errors.push(`${relativePath}: ${displayLocation(location)} must be at most ${schema.maximum}`);
+    }
   }
-  return trimmed;
-}
 
-function readNestedScalar(text, section, key) {
-  const lines = text.split(/\r?\n/);
-  let inSection = false;
-  for (const line of lines) {
-    if (line.startsWith(`${section}:`)) {
-      inSection = true;
-      continue;
+  if (Array.isArray(value)) {
+    if (schema.minItems !== undefined && value.length < schema.minItems) {
+      errors.push(
+        `${relativePath}: ${displayLocation(location)} must contain at least ${schema.minItems} item(s)`
+      );
     }
-    if (inSection && /^[A-Za-z][A-Za-z0-9]*:/.test(line)) {
-      return null;
+    if (schema.items) {
+      value.forEach((item, index) => {
+        validateClosedSchema(item, schema.items, `${location}[${index}]`, relativePath, errors);
+      });
     }
-    if (inSection) {
-      const match = line.match(new RegExp(`^  ${key}:\\s*(.*)$`));
-      if (match) {
-        return normalizeScalar(match[1]);
+    return;
+  }
+
+  if (isPlainObject(value)) {
+    const properties = schema.properties ?? {};
+    for (const key of schema.required ?? []) {
+      if (!Object.hasOwn(value, key)) {
+        errors.push(`${relativePath}: missing key "${joinLocation(location, key)}"`);
       }
     }
-  }
-  return null;
-}
-
-function readNamedBlockScalars(text, blockName) {
-  const values = new Map();
-  const lines = text.split(/\r?\n/);
-  let inBlock = false;
-  for (const line of lines) {
-    if (!inBlock) {
-      inBlock = line.trim() === `${blockName}:`;
-      continue;
-    }
-    if (/^\S/.test(line)) {
-      break;
-    }
-    const match = line.match(/^\s{2}([A-Za-z][A-Za-z0-9]*):(?:\s*(.*))?$/);
-    if (match) {
-      values.set(match[1], normalizeScalar(match[2] ?? ""));
-    }
-  }
-  return values;
-}
-
-function readNamedStringLists(text, blockName) {
-  const values = new Map();
-  const lines = text.split(/\r?\n/);
-  let inBlock = false;
-  let currentList = null;
-
-  for (const line of lines) {
-    if (!inBlock) {
-      inBlock = line.trim() === `${blockName}:`;
-      continue;
-    }
-    if (/^\S/.test(line)) {
-      break;
-    }
-
-    const listMatch = line.match(/^\s{2}([A-Za-z][A-Za-z0-9]*):(?:\s*(\[\])\s*)?$/);
-    if (listMatch) {
-      currentList = listMatch[1];
-      values.set(currentList, []);
-      if (listMatch[2]) {
-        currentList = null;
+    for (const [key, child] of Object.entries(value)) {
+      const childSchema = properties[key];
+      if (!childSchema) {
+        if (schema.additionalProperties === false) {
+          errors.push(`${relativePath}: unknown key "${joinLocation(location, key)}"`);
+        }
+        continue;
       }
-      continue;
-    }
-
-    const itemMatch = line.match(/^\s{4}-\s+(.*)$/);
-    if (itemMatch && currentList) {
-      values.get(currentList).push(normalizeScalar(itemMatch[1]));
-    }
-  }
-
-  return values;
-}
-
-function readNumber(value) {
-  const parsed = Number.parseFloat(value ?? "");
-  return Number.isFinite(parsed) ? parsed : Number.NaN;
-}
-
-function sectionHasListItem(text, section) {
-  const lines = text.split(/\r?\n/);
-  let inSection = false;
-  for (const line of lines) {
-    if (line.startsWith(`${section}:`)) {
-      inSection = true;
-      continue;
-    }
-    if (inSection && /^[A-Za-z][A-Za-z0-9]*:/.test(line)) {
-      return false;
-    }
-    if (inSection && /^\s+-\s+\S/.test(line)) {
-      return true;
+      validateClosedSchema(
+        child,
+        childSchema,
+        joinLocation(location, key),
+        relativePath,
+        errors
+      );
     }
   }
-  return false;
+}
+
+function matchesType(value, expected) {
+  const types = Array.isArray(expected) ? expected : [expected];
+  return types.some((type) => {
+    if (type === "array") {
+      return Array.isArray(value);
+    }
+    if (type === "object") {
+      return isPlainObject(value);
+    }
+    if (type === "integer") {
+      return Number.isInteger(value);
+    }
+    if (type === "number") {
+      return typeof value === "number" && Number.isFinite(value);
+    }
+    if (type === "null") {
+      return value === null;
+    }
+    return typeof value === type;
+  });
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function describeType(type) {
+  return (Array.isArray(type) ? type : [type]).join(" or ");
+}
+
+function displayLocation(location) {
+  return location ? `"${location}"` : "document";
+}
+
+function joinLocation(parent, child) {
+  return parent ? `${parent}.${child}` : child;
 }
 
 async function loadManifestEntriesByAcceptancePath() {
   let manifest;
   try {
     manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  } catch {
-    return new Map();
+  } catch (error) {
+    return {
+      entries: new Map(),
+      errors: [
+        `${path.relative(repoRoot, manifestPath)}: unable to read manifest: ${error.message}`
+      ]
+    };
   }
 
-  const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
-  return new Map(
-    entries
-      .filter((entry) => typeof entry.acceptanceFile === "string")
-      .map((entry) => [path.resolve(repoRoot, entry.acceptanceFile), entry])
-  );
+  if (!Array.isArray(manifest.entries)) {
+    return {
+      entries: new Map(),
+      errors: [`${path.relative(repoRoot, manifestPath)}: entries must be an array`]
+    };
+  }
+
+  const entries = new Map();
+  for (const entry of manifest.entries) {
+    if (typeof entry.acceptanceFile !== "string") {
+      continue;
+    }
+    const acceptancePath = path.resolve(repoRoot, entry.acceptanceFile);
+    const candidates = entries.get(acceptancePath) ?? [];
+    candidates.push(entry);
+    entries.set(acceptancePath, candidates);
+  }
+  return { entries, errors: [] };
 }
 
 function isLocalOnlyEntry(entry) {
@@ -254,162 +389,74 @@ function isLocalOnlyEntry(entry) {
   );
 }
 
-function validateAcceptanceText(text, filePath, manifestEntry) {
+function validateAcceptanceData(data, filePath, manifestEntry) {
   const errors = [];
-  const topLevelKeys = readTopLevelKeys(text);
-  const scalars = readTopLevelScalars(text);
-  const metrics = readNamedBlockScalars(text, "metrics");
-  const warningsAllowed = readNamedStringLists(text, "warnings").get("allowed") ?? [];
   const relativePath = path.relative(repoRoot, filePath);
-
-  for (const key of requiredTopLevelKeys) {
-    if (!topLevelKeys.has(key)) {
-      errors.push(`${relativePath}: missing top-level key "${key}"`);
-    }
+  validateClosedSchema(data, acceptanceSchema, "", relativePath, errors);
+  if (!isPlainObject(data)) {
+    return errors;
   }
 
-  const id = normalizeScalar(scalars.get("id") ?? "");
-  if (!idPattern.test(id)) {
-    errors.push(`${relativePath}: id must match ${idPattern}`);
-  }
+  const id = typeof data.id === "string" ? data.id : "";
 
   const expectedStem = path.basename(filePath).replace(/\.ya?ml$/, "");
   if (expectedStem !== "template" && id && expectedStem !== id) {
     errors.push(`${relativePath}: file name must match id "${id}"`);
   }
-
-  const gate = normalizeScalar(scalars.get("gate") ?? "");
-  if (!allowedGates.has(gate)) {
-    errors.push(`${relativePath}: unsupported gate "${gate}"`);
+  if (manifestEntry && id && manifestEntry.id !== id) {
+    errors.push(
+      `${relativePath}: manifest entry id "${manifestEntry.id}" does not match acceptance id "${id}"`
+    );
   }
 
-  const sourceType = normalizeScalar(scalars.get("sourceType") ?? "");
-  if (!allowedSourceTypes.has(sourceType)) {
-    errors.push(`${relativePath}: unsupported sourceType "${sourceType}"`);
-  }
-
-  const expectedMode = normalizeScalar(scalars.get("expectedMode") ?? "");
-  if (!allowedExpectedModes.has(expectedMode)) {
-    errors.push(`${relativePath}: unsupported expectedMode "${expectedMode}"`);
-  }
-
-  const gatingValue = normalizeScalar(scalars.get("gating") ?? "");
-  if (!["true", "false"].includes(gatingValue)) {
-    errors.push(`${relativePath}: gating must be true or false`);
-  }
-
-  const skipReason = normalizeScalar(scalars.get("skipReason") ?? "");
+  const skipReason = typeof data.skipReason === "string" ? data.skipReason.trim() : "";
   const requiresSkipReason =
-    gatingValue === "false" || expectedMode === "unsupported" || isLocalOnlyEntry(manifestEntry);
+    data.gating === false || data.expectedMode === "unsupported" || isLocalOnlyEntry(manifestEntry);
   if (requiresSkipReason && !skipReason) {
     errors.push(
       `${relativePath}: non-gating, unsupported, and local-only entries require skipReason`
     );
   }
 
-  if (!sectionHasListItem(text, "must")) {
-    errors.push(`${relativePath}: must must contain at least one list item`);
-  }
-
-  if (!sectionHasListItem(text, "mustNot")) {
-    errors.push(`${relativePath}: mustNot must contain at least one list item`);
-  }
-
-  if (gatingValue === "true") {
-    const reviewer = readNestedScalar(text, "review", "humanReviewedBy");
-    const reviewedAt = readNestedScalar(text, "review", "reviewedAt");
-    if (!metrics.has("minTextCoverage")) {
+  if (data.gating === true) {
+    const reviewer = data.review?.humanReviewedBy;
+    const reviewedAt = data.review?.reviewedAt;
+    if (!Object.hasOwn(data.metrics ?? {}, "minTextCoverage")) {
       errors.push(`${relativePath}: gating files require metrics.minTextCoverage`);
     }
-    if (!reviewer) {
+    if (typeof reviewer !== "string" || reviewer.trim().length === 0) {
       errors.push(`${relativePath}: gating files require review.humanReviewedBy`);
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(reviewedAt ?? "")) {
+    if (typeof reviewedAt !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(reviewedAt)) {
       errors.push(`${relativePath}: gating files require review.reviewedAt as YYYY-MM-DD`);
     }
   }
 
-  if (topLevelKeys.has("runningContent")) {
-    const runningContent = readNamedStringLists(text, "runningContent");
-    const expectedRemoved = runningContent.get("expectedRemoved") ?? [];
-    const expectedRetained = runningContent.get("expectedRetained") ?? [];
+  if (isPlainObject(data.runningContent)) {
+    const expectedRemoved = Array.isArray(data.runningContent.expectedRemoved)
+      ? data.runningContent.expectedRemoved
+      : [];
+    const expectedRetained = Array.isArray(data.runningContent.expectedRetained)
+      ? data.runningContent.expectedRetained
+      : [];
     const labels = [...expectedRemoved, ...expectedRetained];
     if (labels.length === 0) {
       errors.push(`${relativePath}: runningContent must define at least one label`);
-    }
-    if (labels.some((label) => label.length === 0)) {
-      errors.push(`${relativePath}: runningContent labels must not be empty`);
     }
 
     for (const metricName of [
       "minRunningContentPrecision",
       "minRunningContentRecall"
     ]) {
-      const value = readNumber(metrics.get(metricName));
-      if (!Number.isFinite(value) || value < 0 || value > 1) {
-        errors.push(`${relativePath}: metrics.${metricName} must be a number from 0 to 1`);
+      if (!Object.hasOwn(data.metrics ?? {}, metricName)) {
+        errors.push(`${relativePath}: runningContent requires metrics.${metricName}`);
       }
     }
   }
 
-  for (const code of warningsAllowed) {
+  for (const code of Array.isArray(data.warnings?.allowed) ? data.warnings.allowed : []) {
     if (!allowedWarningCodes.has(code)) {
       errors.push(`${relativePath}: warnings.allowed contains unknown public code "${code}"`);
-    }
-  }
-
-  for (const metricName of [
-    "minTextCoverage",
-    "maxReadingOrderDistance",
-    "maxCharacterErrorRate",
-    "maxOcrCharacterErrorRate",
-    "maxOcrWordErrorRate",
-    "minTableCellAdjacency",
-    "minTableCsvCellTextAccuracy",
-    "minTableSpanAccuracy"
-  ]) {
-    if (!metrics.has(metricName)) {
-      continue;
-    }
-    const value = readNumber(metrics.get(metricName));
-    if (!Number.isFinite(value) || value < 0 || value > 1) {
-      errors.push(`${relativePath}: metrics.${metricName} must be a number from 0 to 1`);
-    }
-  }
-
-  for (const metricName of [
-    "maxUnexpectedWarnings",
-    "maxRssDeltaBytes",
-    "maxHeapUsedDeltaBytes"
-  ]) {
-    if (metrics.has(metricName)) {
-      const value = readNumber(metrics.get(metricName));
-      if (!Number.isInteger(value) || value < 0) {
-        errors.push(`${relativePath}: metrics.${metricName} must be a non-negative integer`);
-      }
-    }
-  }
-
-  for (const metricName of ["minTaggedMarkedContent", "maxTaggedStructureConflicts"]) {
-    if (metrics.has(metricName)) {
-      const value = readNumber(metrics.get(metricName));
-      if (!Number.isInteger(value) || value < 0) {
-        errors.push(`${relativePath}: metrics.${metricName} must be a non-negative integer`);
-      }
-    }
-  }
-
-  for (const metricName of [
-    "minRenderedHtmlTextChars",
-    "minRenderedHtmlHeadings",
-    "minRenderedHtmlParagraphs",
-    "maxRenderedHtmlParagraphChars"
-  ]) {
-    if (metrics.has(metricName)) {
-      const value = readNumber(metrics.get(metricName));
-      if (!Number.isInteger(value) || value < 0) {
-        errors.push(`${relativePath}: metrics.${metricName} must be a non-negative integer`);
-      }
     }
   }
 
@@ -422,11 +469,28 @@ async function validateFile(filePath) {
     return [`${filePath}: not a file`];
   }
   const text = await readFile(filePath, "utf8");
-  const manifestEntry = manifestEntriesByAcceptancePath.get(path.resolve(filePath));
-  return validateAcceptanceText(text, filePath, manifestEntry);
+  const relativePath = path.relative(repoRoot, filePath);
+  let data;
+  try {
+    data = parseAcceptanceYaml(text, relativePath);
+  } catch (error) {
+    return [error.message];
+  }
+
+  const manifestCandidates = manifestEntriesByAcceptancePath.get(path.resolve(filePath)) ?? [];
+  const mappingErrors = [];
+  const isTemplate = path.basename(filePath) === "template.yaml";
+  if (!isTemplate && manifestCandidates.length !== 1) {
+    mappingErrors.push(
+      `${relativePath}: expected exactly one manifest entry, found ${manifestCandidates.length}`
+    );
+  }
+  const manifestEntry = manifestCandidates.length === 1 ? manifestCandidates[0] : null;
+  return [...mappingErrors, ...validateAcceptanceData(data, filePath, manifestEntry)];
 }
 
-const manifestEntriesByAcceptancePath = await loadManifestEntriesByAcceptancePath();
+const manifestLookup = await loadManifestEntriesByAcceptancePath();
+const manifestEntriesByAcceptancePath = manifestLookup.entries;
 
 async function main() {
   if (hasFlag("--help") || hasFlag("-h")) {
@@ -453,7 +517,7 @@ async function main() {
     process.exit(1);
   }
 
-  const errors = [];
+  const errors = [...manifestLookup.errors];
   for (const file of files) {
     errors.push(...(await validateFile(file)));
   }

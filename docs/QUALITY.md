@@ -39,6 +39,10 @@ fuzz smoke, build, and API tests.
 ## Corpus Expectations
 
 - Every gating PDF must have a manifest entry and acceptance file.
+- Acceptance YAML is parsed structurally against a closed repository schema.
+  Unknown top-level or nested keys, invalid field types, orphan acceptance
+  files, duplicate manifest references, and warning codes outside the public
+  registry fail `npm run corpus:acceptance`.
 - `npm run corpus:review-audit` parses each gating case's preview index and
   validates every declared image. PNG evidence must have valid chunk CRCs and
   decodable scanlines; empty, corrupt, missing, oversized, or out-of-directory
