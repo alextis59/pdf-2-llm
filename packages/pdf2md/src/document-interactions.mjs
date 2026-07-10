@@ -600,10 +600,17 @@ function extractAttachments(pdfDocument, options) {
     options.maxDepth
   );
   const assets = [];
+  const assetFileNames = new Set();
   const files = entries.map((entry, index) => {
     const file = fileSpecDiagnostic(entry.value, entry.name, index, pdfDocument.getObject);
     if (options.extractAssets && file.embeddedFileObjectNumber !== null) {
-      const asset = attachmentAsset(file, entry.value, index, pdfDocument.getObject);
+      const asset = attachmentAsset(
+        file,
+        entry.value,
+        index,
+        pdfDocument.getObject,
+        assetFileNames
+      );
       if (asset) {
         assets.push(asset);
         file.assetId = asset.id;
@@ -685,12 +692,16 @@ function fileSpecDiagnostic(fileSpecValue, name, index, getObject) {
   });
 }
 
-function attachmentAsset(file, fileSpecValue, index, getObject) {
+function attachmentAsset(file, fileSpecValue, index, getObject, assetFileNames) {
   const embeddedFile = embeddedFileObject(resolveDictionaryObject(fileSpecValue, getObject)?.value, getObject);
   if (!embeddedFile?.stream?.decodedBytes) {
     return null;
   }
-  const safeName = safeAssetFileName(file.fileName || file.name || `attachment-${index + 1}`);
+  const safeName = uniqueAssetFileName(
+    file.fileName || file.name || `attachment-${index + 1}`,
+    index,
+    assetFileNames
+  );
   const id = `attachment-${index + 1}-${slugify(safeName)}`;
   return {
     id,
@@ -825,7 +836,27 @@ function safeAssetFileName(value) {
     .pop()
     ?.replace(/[^A-Za-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return cleaned || "attachment.bin";
+  return !cleaned || cleaned === "." || cleaned === ".." ? "attachment.bin" : cleaned;
+}
+
+function uniqueAssetFileName(value, index, usedNames) {
+  const baseName = safeAssetFileName(value);
+  let candidate = baseName;
+  let attempt = 0;
+  while (usedNames.has(candidate)) {
+    attempt += 1;
+    const suffix = attempt === 1 ? String(index + 1) : `${index + 1}-${attempt}`;
+    candidate = appendFileNameSuffix(baseName, suffix);
+  }
+  usedNames.add(candidate);
+  return candidate;
+}
+
+function appendFileNameSuffix(value, suffix) {
+  const extensionOffset = value.lastIndexOf(".");
+  return extensionOffset > 0
+    ? `${value.slice(0, extensionOffset)}-${suffix}${value.slice(extensionOffset)}`
+    : `${value}-${suffix}`;
 }
 
 function slugify(value) {

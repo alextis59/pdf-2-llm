@@ -154,7 +154,9 @@ remaining objects.
   glyphs; no system font file is read when fixtures are regenerated.
 - Asset paths returned by the API are logical sidecar paths unless the caller
   writes returned assets. The conversion API does not currently write asset
-  files to `assets.outputDir`.
+  files to `assets.outputDir`. Attachment asset paths discard directory and dot
+  segments and deterministically suffix sanitized filename collisions before a
+  caller materializes them.
 
 ## Dependency And Package Policy
 

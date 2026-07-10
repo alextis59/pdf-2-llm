@@ -2140,6 +2140,26 @@ test("convertPdfToMarkdown decodes PDFDocEncoding interaction metadata", async (
   assert.equal(attachment.description, "Résumé €");
 });
 
+test("convertPdfToMarkdown confines and deduplicates attachment asset paths", async () => {
+  const result = await convertPdfToMarkdown(createAttachmentNameSafetyPdf(), {
+    attachments: { extract: true }
+  });
+  const paths = result.assets.map((asset) => asset.path);
+
+  assert.deepEqual(paths, [
+    "assets/attachments/report.txt",
+    "assets/attachments/report-2.txt",
+    "assets/attachments/attachment.bin",
+    "assets/attachments/attachment-4.bin"
+  ]);
+  assert.equal(new Set(paths).size, paths.length);
+  assert.ok(paths.every((assetPath) => /^assets\/attachments\/[^/]+$/.test(assetPath)));
+  assert.deepEqual(
+    result.diagnostics.extraction.attachments.files.map((file) => file.assetPath),
+    paths
+  );
+});
+
 test("convertPdfToMarkdown inherits split field geometry and appearance from its widget", async () => {
   const result = await convertPdfToMarkdown(createSplitFieldWidgetPdf());
   const field = result.diagnostics.extraction.forms.fields[0];
@@ -2588,6 +2608,24 @@ function createPdfDocEncodingInteractionPdf() {
     "<< /Type /Annot /Subtype /Text /Rect [72 600 92 620] /T <51412092> /Contents <4E6F74652084> >>",
     "<< /Type /Filespec /F <7265706F7274802E747874> /UF <FEFF0072006100700070006F00720074002D2713002E007400780074> /Desc <52E973756DE920A0> >>",
     "<< /Type /Annot /Subtype /Widget /FT /Tx /T <6669656C6480> /TU <4C6162656C20A0> /V <52E973756DE9> /Rect [72 650 300 670] /P 3 0 R >>"
+  ]);
+}
+
+function createAttachmentNameSafetyPdf() {
+  return createPdf([
+    "<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Names [(first) 6 0 R (second) 7 0 R (dot) 8 0 R (dotdot) 9 0 R] >> >> >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    streamObject(`${textOperation(72, 720, 22, "Attachment Safety Fixture")}\n`),
+    "<< /Type /Filespec /F (report.txt) /EF << /F 10 0 R >> >>",
+    "<< /Type /Filespec /F (report.txt) /EF << /F 11 0 R >> >>",
+    "<< /Type /Filespec /F (.) /EF << /F 12 0 R >> >>",
+    "<< /Type /Filespec /F (..) /EF << /F 13 0 R >> >>",
+    streamObject("first attachment\n", "/Type /EmbeddedFile"),
+    streamObject("second attachment\n", "/Type /EmbeddedFile"),
+    streamObject("dot attachment\n", "/Type /EmbeddedFile"),
+    streamObject("dotdot attachment\n", "/Type /EmbeddedFile")
   ]);
 }
 

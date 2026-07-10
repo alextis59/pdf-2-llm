@@ -399,8 +399,11 @@ preview bytes, so these fallbacks do not create broken image links or assets.
 
 `attachments.extract` enables embedded file sidecar assets. Assets are returned
 in memory through `result.assets`; the conversion API does not write asset files
-to `assets.outputDir` yet. `assets.enabled` and `assets.outputDir` are reserved
-for asset adapter work and are currently diagnostic/contract fields only.
+to `assets.outputDir` yet. Attachment paths stay under `assets/attachments/`:
+directory components and dot-segment basenames are discarded, and sanitized
+filename collisions receive a deterministic attachment-index suffix.
+`assets.enabled` and `assets.outputDir` are reserved for asset adapter work and
+are currently diagnostic/contract fields only.
 
 ### Reserved Contract Fields
 
