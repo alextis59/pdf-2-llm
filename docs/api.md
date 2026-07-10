@@ -432,10 +432,14 @@ anchors.
 
 Maps Markdown string offsets back to page regions. The schema is exported as
 `markdownSourceMapJsonSchema`. Text, span, glyph, and source-map regions use
-axis-aligned page-space bounds after applying the content stream's text matrix
-and current transformation matrix, including rotation and skew. Font advances
-come from each original PDF character code before its ToUnicode text is placed
-in that region, including mappings that expand one glyph into multiple Unicode
+axis-aligned display-page bounds after translating the CropBox (or MediaBox)
+origin, scaling by `UserUnit`, and applying page rotation plus the content
+stream's text and current transformation matrices. Quarter-turned coordinate
+extents use the opposite unrotated page dimension together with the page's
+`rotation` field. Page rotation changes geometry but does not turn ordinary
+horizontal text into an intrinsic vertical-writing run. Font advances come from
+each original PDF character code before its ToUnicode text is placed in that
+region, including mappings that expand one glyph into multiple Unicode
 characters. Text, paths, and images invoked through nested Form XObjects use
 their composed Form matrices and local resources in the same page coordinate
 space.

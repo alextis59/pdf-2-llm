@@ -544,6 +544,21 @@ test("convertPdfToMarkdown raster diagnostics cover rotated and cropped generate
       heightPx: 228
     }
   });
+  assert.deepEqual(
+    rotated.sourceMap.entries.map((entry) => pickSourceRegionGeometry(entry.regions[0])),
+    [
+      { pageIndex: 0, x: 720, y: 320, width: 22, height: 220 },
+      { pageIndex: 0, x: 680, y: 234, width: 12, height: 306 }
+    ]
+  );
+  assert.deepEqual(
+    cropped.sourceMap.entries.map((entry) => pickSourceRegionGeometry(entry.regions[0])),
+    [
+      { pageIndex: 0, x: 36, y: 420, width: 220, height: 22 },
+      { pageIndex: 0, x: 36, y: 380, width: 102, height: 12 }
+    ]
+  );
+  assert.equal(rotated.ir.pages[0].elements[0].spans[0].direction, "ltr");
 });
 
 test("convertPdfToMarkdown reports image-dominant scan detection diagnostics", async () => {
@@ -2641,6 +2656,16 @@ function pickRasterFixtureFields(page) {
       widthPx: page.thumbnail.widthPx,
       heightPx: page.thumbnail.heightPx
     }
+  };
+}
+
+function pickSourceRegionGeometry(region) {
+  return {
+    pageIndex: region.pageIndex,
+    x: region.x,
+    y: region.y,
+    width: region.width,
+    height: region.height
   };
 }
 

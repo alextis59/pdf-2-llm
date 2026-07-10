@@ -69,6 +69,8 @@ function extractParsedDocumentContent(document, { contentStreamBudgets, contentS
         content,
         page.contentStreams,
         {
+          initialMatrix: normalizedPageTransform(page),
+          initialTextOrientationMatrix: pageUserUnitTransform(page),
           pageIndex: page.pageIndex,
           resources: page.resources,
           structureByMcid
@@ -90,6 +92,46 @@ function extractParsedDocumentContent(document, { contentStreamBudgets, contentS
   }
   content.rulingLines = mergeRulingLines(content.rulingLines);
   return content;
+}
+
+function normalizedPageTransform(page) {
+  const box = page.cropBox ?? page.mediaBox;
+  if (!Array.isArray(box) || box.length < 4 || !box.slice(0, 4).every(Number.isFinite)) {
+    return [1, 0, 0, 1, 0, 0];
+  }
+  const left = Math.min(box[0], box[2]);
+  const bottom = Math.min(box[1], box[3]);
+  const right = Math.max(box[0], box[2]);
+  const top = Math.max(box[1], box[3]);
+  const unit = normalizedPageUserUnit(page);
+
+  switch (normalizedPageRotation(page.rotation)) {
+    case 90:
+      return [0, -unit, unit, 0, -bottom * unit, right * unit];
+    case 180:
+      return [-unit, 0, 0, -unit, right * unit, top * unit];
+    case 270:
+      return [0, unit, -unit, 0, top * unit, -left * unit];
+    default:
+      return [unit, 0, 0, unit, -left * unit, -bottom * unit];
+  }
+}
+
+function pageUserUnitTransform(page) {
+  const unit = normalizedPageUserUnit(page);
+  return [unit, 0, 0, unit, 0, 0];
+}
+
+function normalizedPageUserUnit(page) {
+  return Number.isFinite(page.userUnit) && page.userUnit > 0 ? page.userUnit : 1;
+}
+
+function normalizedPageRotation(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  const rotation = ((value % 360) + 360) % 360;
+  return rotation === 90 || rotation === 180 || rotation === 270 ? rotation : 0;
 }
 
 function appendPageContentStreamExtraction(

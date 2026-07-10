@@ -123,6 +123,99 @@ test("extractDocumentContent carries page graphics and text state across Content
   );
 });
 
+test("extractDocumentContent normalizes page boxes, user units, and rotation", () => {
+  const bytes = Buffer.from("%PDF-1.4\n", "binary");
+  const resources = {
+    fonts: {
+      F1: {
+        subtype: "Type1",
+        baseFont: "Helvetica",
+        encoding: "WinAnsiEncoding",
+        hasToUnicode: false,
+        toUnicode: null
+      }
+    },
+    xobjects: {
+      Im1: {
+        subtype: "Image",
+        objectNumber: 5,
+        width: 10,
+        height: 20
+      }
+    }
+  };
+  const stream = {
+    text: [
+      "BT /F1 10 Tf 20 30 Td (A) Tj ET",
+      "20 30 m 40 30 l S",
+      "q 10 0 0 20 20 30 cm /Im1 Do Q"
+    ].join("\n")
+  };
+  const page = (pageIndex, properties) => ({
+    pageIndex,
+    mediaBox: [0, 0, 100, 200],
+    cropBox: null,
+    userUnit: 1,
+    rotation: 0,
+    resources,
+    contentStreams: [stream],
+    ...properties
+  });
+  const document = {
+    pages: [
+      page(0, { cropBox: [10, 20, 110, 220] }),
+      page(1, { userUnit: 2 }),
+      page(2, { cropBox: [10, 20, 110, 220], rotation: 90 })
+    ],
+    streams: [],
+    structure: { markedContent: [] }
+  };
+
+  const content = extractDocumentContent(bytes, { document });
+  const textGeometry = content.textLines.map(({ pageIndex, x, y, width, height, direction }) => ({
+    pageIndex,
+    x,
+    y,
+    width,
+    height,
+    direction
+  }));
+  const rulingGeometry = content.rulingLines.map(
+    ({ pageIndex, orientation, x1, y1, x2, y2 }) => ({
+      pageIndex,
+      orientation,
+      x1,
+      y1,
+      x2,
+      y2
+    })
+  );
+  const imageGeometry = content.imageDraws.map(({ pageIndex, x, y, width, height, area }) => ({
+    pageIndex,
+    x,
+    y,
+    width,
+    height,
+    area
+  }));
+
+  assert.deepEqual(textGeometry, [
+    { pageIndex: 0, x: 10, y: 10, width: 5, height: 10, direction: "ltr" },
+    { pageIndex: 1, x: 40, y: 60, width: 10, height: 20, direction: "ltr" },
+    { pageIndex: 2, x: 10, y: 85, width: 10, height: 5, direction: "ltr" }
+  ]);
+  assert.deepEqual(rulingGeometry, [
+    { pageIndex: 0, orientation: "horizontal", x1: 10, y1: 10, x2: 30, y2: 10 },
+    { pageIndex: 1, orientation: "horizontal", x1: 40, y1: 60, x2: 80, y2: 60 },
+    { pageIndex: 2, orientation: "vertical", x1: 10, y1: 70, x2: 10, y2: 90 }
+  ]);
+  assert.deepEqual(imageGeometry, [
+    { pageIndex: 0, x: 10, y: 10, width: 10, height: 20, area: 200 },
+    { pageIndex: 1, x: 40, y: 60, width: 20, height: 40, area: 800 },
+    { pageIndex: 2, x: 10, y: 80, width: 20, height: 10, area: 200 }
+  ]);
+});
+
 test("linesToMarkdown normalizes common ligatures and whitespace", () => {
   const markdown = linesToMarkdown([
     {

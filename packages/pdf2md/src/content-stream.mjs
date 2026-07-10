@@ -28,7 +28,11 @@ export function extractContentStreamTextLines(streamText, options = {}) {
 }
 
 export function extractContentStreamsTextLines(streams, options = {}) {
-  const state = createInitialState(options.resources);
+  const state = createInitialState(
+    options.resources,
+    options.initialMatrix,
+    options.initialTextOrientationMatrix
+  );
   const stack = [];
   const operands = [];
   const lines = [];
@@ -54,7 +58,7 @@ export function extractContentStreamRulingLines(streamText, options = {}) {
 }
 
 export function extractContentStreamsRulingLines(streams, options = {}) {
-  const state = createInitialPathState(options.resources);
+  const state = createInitialPathState(options.resources, options.initialMatrix);
   const stack = [];
   const operands = [];
   const lines = [];
@@ -78,7 +82,7 @@ export function extractContentStreamImageDraws(streamText, options = {}) {
 }
 
 export function extractContentStreamsImageDraws(streams, options = {}) {
-  const state = createInitialImageState(options.resources);
+  const state = createInitialImageState(options.resources, options.initialMatrix);
   const stack = [];
   const operands = [];
   const images = [];
@@ -607,9 +611,9 @@ function clearCurrentPath(state) {
   state.subpathStart = null;
 }
 
-function createInitialPathState(resources = null) {
+function createInitialPathState(resources = null, initialMatrix = identityMatrix) {
   return {
-    ctm: [...identityMatrix],
+    ctm: normalizedInitialMatrix(initialMatrix),
     lineWidth: 1,
     segments: [],
     currentPoint: null,
@@ -744,6 +748,7 @@ function createFormExecutionState(extractor, parentState, form) {
     return {
       ...cloneState(parentState),
       ctm,
+      textOrientationCtm: multiplyMatrices(parentState.textOrientationCtm, matrix),
       resources,
       markedContent
     };
@@ -830,9 +835,9 @@ function imageDrawGeometry(ctm) {
   };
 }
 
-function createInitialImageState(resources = null) {
+function createInitialImageState(resources = null, initialMatrix = identityMatrix) {
   return {
-    ctm: [...identityMatrix],
+    ctm: normalizedInitialMatrix(initialMatrix),
     resources,
     markedContent: []
   };
@@ -871,7 +876,9 @@ function executeOperator(operator, context) {
   if (operator === "cm") {
     const [a, b, c, d, e, f] = lastNumbers(operands, 6);
     if ([a, b, c, d, e, f].every(Number.isFinite)) {
-      state.ctm = multiplyMatrices(state.ctm, [a, b, c, d, e, f]);
+      const matrix = [a, b, c, d, e, f];
+      state.ctm = multiplyMatrices(state.ctm, matrix);
+      state.textOrientationCtm = multiplyMatrices(state.textOrientationCtm, matrix);
     }
     return;
   }
@@ -1344,9 +1351,14 @@ function mergeLineStructure(line, structure) {
   line.structurePath = structure.path ?? [];
 }
 
-function createInitialState(resources = null) {
+function createInitialState(
+  resources = null,
+  initialMatrix = identityMatrix,
+  initialTextOrientationMatrix = initialMatrix
+) {
   return {
-    ctm: [...identityMatrix],
+    ctm: normalizedInitialMatrix(initialMatrix),
+    textOrientationCtm: normalizedInitialMatrix(initialTextOrientationMatrix),
     textMatrix: [...identityMatrix],
     textLineMatrix: [...identityMatrix],
     inText: false,
@@ -1364,10 +1376,15 @@ function createInitialState(resources = null) {
   };
 }
 
+function normalizedInitialMatrix(value) {
+  return validMatrix(value) ? [...value] : [...identityMatrix];
+}
+
 function cloneState(state) {
   return {
     ...state,
     ctm: [...state.ctm],
+    textOrientationCtm: [...state.textOrientationCtm],
     textMatrix: [...state.textMatrix],
     textLineMatrix: [...state.textLineMatrix]
   };
@@ -1379,7 +1396,7 @@ function moveTextPosition(state, tx, ty) {
 }
 
 function isTextLineAdvance(state, tx, ty) {
-  const matrix = multiplyMatrices(state.ctm, state.textLineMatrix);
+  const matrix = multiplyMatrices(state.textOrientationCtm, state.textLineMatrix);
   const userDx = matrix[0] * tx + matrix[2] * ty;
   const userDy = matrix[1] * tx + matrix[3] * ty;
   if (textDirectionFromState(state) === "vertical") {
@@ -1394,7 +1411,7 @@ function currentTextPosition(state) {
 }
 
 function textDirectionFromState(state) {
-  const matrix = multiplyMatrices(state.ctm, state.textMatrix);
+  const matrix = multiplyMatrices(state.textOrientationCtm, state.textMatrix);
   return Math.abs(matrix[1]) > Math.abs(matrix[0]) * 1.25 ? "vertical" : "ltr";
 }
 

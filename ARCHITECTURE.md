@@ -46,8 +46,10 @@ The main orchestration path is `convertPdfToMarkdown()` in
 6. Plan OCR, raster, WebGPU, and preprocessing diagnostics. OCR model loading
    is currently contract-first; OCR text comes from caller-supplied
    `options.ocr.results`.
-7. Reconcile PDF text and OCR text, infer layout, tables, figures, equations,
-   running content, and page source types.
+7. Normalize parsed text, path, and image geometry through the visible page-box
+   origin, `UserUnit`, and page rotation; then reconcile PDF text and OCR text
+   and infer layout, tables, figures, equations, running content, and page
+   source types.
 8. Serialize Markdown and source maps from the reconciled content blocks. The
    same selected text lines and emitted tables populate page IR so suppressed
    PDF/OCR duplicates and table-cell text are not emitted twice. Detected
@@ -66,7 +68,7 @@ can make policy decisions without losing the result object.
 | `runtime.mjs` | Runtime-neutral byte helpers, hashing, bounded native/portable Flate decoding, Node builtin access, encoding helpers, and fallback MD5. |
 | `pdf-parser.mjs` | PDF byte reading, indexed xref/object and stream-length resolution, repair, supported decryption, page tree, outlines, structure, recursive Form/resource graphs, and parser limits. |
 | `stream-filters.mjs` | Stream filter decoding and decoded-stream byte caps. |
-| `content-stream.mjs` | Incremental PDF graphics/text and nested Form interpretation with syntax/token/stack budgets, transformed bounds, and bounded inline-image handling. |
+| `content-stream.mjs` | Incremental PDF graphics/text and nested Form interpretation with syntax/token/stack budgets, page-initial and Form transforms, transformed bounds, and bounded inline-image handling. |
 | `font-encoding.mjs` | ToUnicode CMap parsing with source-code preservation, standard simple-font encoding tables and `Differences`, encoding fallbacks, and trust checks. |
 | `text-extract.mjs` | Text extraction, layout grouping, Markdown/source-map serialization, page text/table IR projection, headings, lists, running content, equations, and table insertion. |
 | `table-grid.mjs` | Ruling-line grid inference, cell assignment, spans, and table geometry. |
