@@ -43,6 +43,21 @@ test("FlateDecode rejects high-ratio output through the bounded inflater", () =>
   );
 });
 
+test("FlateDecode supports a zero-byte output cap", () => {
+  const empty = deflateSync(Buffer.alloc(0));
+  assert.equal(decode(empty, "/FlateDecode", { maxBytes: 0 }).byteLength, 0);
+
+  for (const value of ["A", "AB"]) {
+    assert.throws(
+      () => decode(deflateSync(Buffer.from(value, "latin1")), "/FlateDecode", { maxBytes: 0 }),
+      (error) =>
+        error instanceof PdfStreamDecodeError &&
+        error.code === "pdf.stream.decoded_too_large" &&
+        error.message === "FlateDecode decoded output exceeds byte limit."
+    );
+  }
+});
+
 test("FlateDecode portable inflater decodes and bounds browser output", () => {
   const encodedText = deflateSync(Buffer.from("Portable Flate text", "latin1"));
   const expanded = Buffer.alloc(1024 * 1024, 0x41);

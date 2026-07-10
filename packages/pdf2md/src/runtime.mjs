@@ -44,7 +44,14 @@ export function inflateFlateSync(input, { maxOutputLength } = {}) {
   const bytes = toUint8Array(input);
   const zlib = getNodeBuiltin("zlib");
   if (zlib?.inflateSync) {
-    return new Uint8Array(zlib.inflateSync(bytes, { maxOutputLength }));
+    const nativeMaxOutputLength = maxOutputLength === 0 ? 1 : maxOutputLength;
+    const output = new Uint8Array(
+      zlib.inflateSync(bytes, { maxOutputLength: nativeMaxOutputLength })
+    );
+    if (maxOutputLength !== undefined && output.byteLength > maxOutputLength) {
+      throw createFlateOutputLimitError(maxOutputLength);
+    }
+    return output;
   }
   return inflateFlatePortableSync(bytes, { maxOutputLength });
 }

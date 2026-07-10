@@ -71,7 +71,9 @@ partial files before reporting failure.
 high-ratio compressed streams are rejected before the full decoded buffer is
 allocated. Node uses its bounded native inflater; browser and worker runtimes
 use a chunked synchronous portable inflater with the same limit and checksum
-validation.
+validation. A zero-byte cap permits only an empty decoded stream: the Node path
+uses the native inflater's minimum one-byte bound and checks the original zero
+limit before returning.
 
 `maxTotalDecodedStreamBytes` caps retained decoded bytes across all stream
 objects, while stream text is materialized lazily so binary image streams do not
