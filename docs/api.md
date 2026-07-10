@@ -345,7 +345,9 @@ enabled by default for spans and one-row tables. When `tables.htmlFallback` is
 `false`, those tables use a lossy GFM projection with covered span cells left
 empty; document IR still preserves the original row and column spans. CSV
 sidecars are enabled by default unless `tables.csvSidecars` is false or table
-detection is disabled.
+detection is disabled. To prevent spreadsheet formula execution from untrusted
+PDF cells, CSV values beginning with `=`, `+`, `-`, or `@` are prefixed with a
+single quote; Markdown and document IR retain the original cell text.
 
 ### Equations
 

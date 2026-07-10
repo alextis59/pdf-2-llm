@@ -650,7 +650,8 @@ function rulingTableCsvRows(table) {
 }
 
 function escapeCsvCell(value) {
-  const text = String(value ?? "");
+  const rawText = String(value ?? "");
+  const text = /^[=+\-@]/.test(rawText) ? `'${rawText}` : rawText;
   if (!/[",\r\n]/.test(text)) {
     return text;
   }

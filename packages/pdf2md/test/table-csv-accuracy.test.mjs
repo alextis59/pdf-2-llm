@@ -52,6 +52,24 @@ test("compareTableCsvCellTextAccuracy reports perfect accuracy for matching side
   });
 });
 
+test("compareTableCsvCellTextAccuracy decodes formula protection for logical comparison", () => {
+  const expected = [
+    "| A | B | C | D |",
+    "| --- | --- | --- | --- |",
+    "| =SUM(1,2) | +CMD | -2% | @LINK |"
+  ].join("\n");
+  const assets = [
+    {
+      kind: "table-csv",
+      tableIndex: 0,
+      content: `A,B,C,D\n"'=SUM(1,2)",'+CMD,'-2%,'@LINK\n`
+    }
+  ];
+
+  assert.equal(extractTableCsvCells(assets)[4].text, "'=SUM(1,2)");
+  assert.equal(compareTableCsvCellTextAccuracy(expected, assets).score, 1);
+});
+
 test("compareTableCsvCellTextAccuracy penalizes incorrect cell text", () => {
   const expected = [
     "| Quarter | Revenue | Cost |",

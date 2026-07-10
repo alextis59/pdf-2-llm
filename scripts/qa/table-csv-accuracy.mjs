@@ -4,7 +4,7 @@ export function compareTableCsvCellTextAccuracy(expectedMarkdown, assets) {
   const expectedCells = extractMarkdownTableCells(expectedMarkdown).map(csvComparableCell);
   const actualCells = extractTableCsvCells(assets)
     .filter((cell) => normalizeCellText(cell.text).length > 0)
-    .map(csvComparableCell);
+    .map((cell) => csvComparableCell(cell, { decodeFormulaProtection: true }));
   const actualCounts = countCells(actualCells);
   const missing = [];
   let matchedCells = 0;
@@ -98,12 +98,16 @@ function parseCsv(content) {
   return rows;
 }
 
-function csvComparableCell(cell) {
+function csvComparableCell(cell, { decodeFormulaProtection = false } = {}) {
+  const normalizedText = normalizeCellText(cell.text);
   const comparable = {
     tableIndex: cell.tableIndex,
     rowIndex: cell.rowIndex,
     columnIndex: cell.columnIndex,
-    text: normalizeCellText(cell.text)
+    text:
+      decodeFormulaProtection && /^'[=+\-@]/.test(normalizedText)
+        ? normalizedText.slice(1)
+        : normalizedText
   };
   return {
     ...comparable,

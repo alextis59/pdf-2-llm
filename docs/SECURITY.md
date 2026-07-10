@@ -26,6 +26,9 @@ document records the security behavior this repository can actually support.
   only by converter-owned formatting paths.
 - Generated code fences use a delimiter longer than every matching source run,
   so code containing backticks, tildes, or raw HTML cannot close its own block.
+- CSV table sidecars prefix cells beginning with `=`, `+`, `-`, or `@` with a
+  single quote before RFC 4180 escaping, preventing untrusted PDF text from
+  being opened as a spreadsheet formula. Markdown and IR values are unchanged.
 - When an untrusted font has no usable Unicode mapping, raw C0 and DEL bytes are
   rendered as visible Unicode control-picture symbols instead of invisible
   control characters. The result still carries `text.unicode_mapping_suspect`

@@ -2350,6 +2350,33 @@ test("convertPdfToMarkdown can disable table CSV sidecars", async () => {
   );
 });
 
+test("convertPdfToMarkdown neutralizes spreadsheet formulas in CSV sidecars", async () => {
+  const operations = [
+    textOperation(72, 720, 22, "CSV Formula Safety"),
+    ...[620, 650, 680].map((y) => `72 ${y} m 432 ${y} l S`),
+    ...[72, 162, 252, 342, 432].map((x) => `${x} 620 m ${x} 680 l S`),
+    ...["A", "B", "C", "D"].map((value, index) =>
+      textOperation(82 + index * 90, 660, 11, value)
+    ),
+    ...["=SUM(1,2)", "+CMD", "-2+3", "@HYPERLINK"].map((value, index) =>
+      textOperation(82 + index * 90, 630, 11, value)
+    )
+  ];
+  const result = await convertPdfToMarkdown(createSinglePageTextPdf(operations));
+  const csv = result.assets.find((asset) => asset.kind === "table-csv");
+
+  assert.equal(
+    csv?.content,
+    `A,B,C,D\n"'=SUM(1,2)",'+CMD,'-2+3,'@HYPERLINK\n`
+  );
+  assert.match(result.markdown, /=SUM\(1,2\)/);
+  assert.equal(
+    result.ir.pages[0].elements.find((element) => element.type === "table")?.rows[1][0]
+      .text,
+    "=SUM(1,2)"
+  );
+});
+
 test("convertPdfToMarkdown honors table detection and HTML fallback options", async () => {
   const disabled = await convertPdfToMarkdown(visibleTableFixturePath.pathname, {
     tables: { enabled: false }
